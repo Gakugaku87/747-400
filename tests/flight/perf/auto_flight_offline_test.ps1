@@ -187,6 +187,30 @@ Check ($null -eq (Get-AutoRunway ([string[]]@($cifp[1])) '27')) 'runway: none wi
 # KLAX 24R from X-Plane's CIFP when this PC has it (the 11-08 flight's)
 $klax = Get-AutoRunwayFromCifp 'KLAX' '24R'
 if ($klax) { Check ($klax.course_true -gt 255 -and $klax.course_true -lt 270 -and $klax.other -eq '06L') ('runway: KLAX 24R''s final course {0:0.0} true' -f $klax.course_true) }
+# on the final course (runway 27, inbound west): within 16 NM, 2 NM of it,
+# the track within 30 degrees
+Check (Test-AutoOnFinal 15 0.5 270 270) 'final: 15 NM out on the course'
+Check (-not (Test-AutoOnFinal 16.5 0 270 270)) 'final: not beyond 16 NM'
+Check (-not (Test-AutoOnFinal 12 2.5 270 270) -and -not (Test-AutoOnFinal 12 -2.5 270 270)) 'final: not 2.5 NM off'
+Check (-not (Test-AutoOnFinal 12 0 90 270)) 'final: not outbound'
+Check ((Test-AutoOnFinal 12 1 240 270) -and -not (Test-AutoOnFinal 12 1 235 270) -and (Test-AutoOnFinal 12 -1 300 270)) 'final: a 30-degree intercept yes, 35 no'
+Check (-not (Test-AutoOnFinal -1 0 270 270)) 'final: not past the threshold'
+Check ((Test-AutoOnFinal 10 0 5 350) -and -not (Test-AutoOnFinal 10 0 170 350)) 'final: across north (350 inbound, 005 flown)'
+# OMDB 30L (EDDF-OMDB's VUTE4D over ULDOT, then the ILS) when this PC has its
+# CIFP: ULDOT 15 NM out on the course, DB504 19 NM out, TUKAK the downwind's
+# start 4 NM to the left (earth_fix.dat's places)
+$omdb = Get-AutoRunwayFromCifp 'OMDB' '30L'
+if ($omdb) {
+    Check ($omdb.course_true -gt 300 -and $omdb.course_true -lt 303 -and $omdb.other -eq '12R') ('runway: OMDB 30L''s final course {0:0.0} true' -f $omdb.course_true)
+    $u = Get-AutoRwyFrame $omdb 25.102083333 55.635555556
+    Near $u.a 15.3 0.3 'frame: OMDB ULDOT 15.3 NM out'
+    Near $u.c 0 0.3 'frame: OMDB ULDOT on the course'
+    Check (Test-AutoOnFinal $u.a $u.c 301.5 $omdb.course_true) 'final: OMDB at ULDOT on the course'
+    $d4 = Get-AutoRwyFrame $omdb 25.067138889 55.698194444
+    Check ($d4.a -gt 18.8 -and $d4.a -lt 19.8 -and -not (Test-AutoOnFinal $d4.a $d4.c 301.5 $omdb.course_true)) ('final: OMDB DB504 {0:0.0} NM out, not yet' -f $d4.a)
+    $tk = Get-AutoRwyFrame $omdb 25.076944444 55.5325
+    Check ($tk.c -lt -3.8 -and $tk.c -gt -4.6 -and -not (Test-AutoOnFinal $tk.a $tk.c 121.5 $omdb.course_true)) ('final: OMDB TUKAK {0:0.0} NM left, the downwind' -f (-$tk.c))
+}
 # the vectors: runway 27 (inbound west), the defaults (the join 10 NM out, the
 # intercept from 2 NM: the base turn at 10 + 2 / tan 30 = 13.5 NM)
 function VecStep($S, $A, $C) { return Get-AutoVectorStep $S $A $C 270 }

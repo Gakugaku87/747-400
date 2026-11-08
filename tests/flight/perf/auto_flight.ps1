@@ -279,6 +279,18 @@ function Get-AutoVectorStep([string]$State, [double]$A, [double]$C, [double]$Cou
     }
     return [pscustomobject]@{ state = $s; hdg_true = ([math]::Atan2($de, $dn) / $r + 360) % 360 }
 }
+# on the final course: within $Within NM out, $Off NM of the course, the
+# track within $Angle degrees of it. A STAR that joins the final course with
+# no VECTORS leg (OMDB's VUTE4D: DB506 27 NM out, ULDOT 15 NM, the ILS 30L
+# from there) has the FMC on approach only past the approach's first fix
+# (SEDPO 10.8 NM out: B747.68.xt.fms.lua on_approach, the STAR's ULDOT kept),
+# half a minute before the G/S from 3,100 ft (9.4 NM). 16 NM is ours (an
+# estimate: inside the LOC's 18 NM, earth_nav.dat; flaps 5 and APP some 6 NM
+# before the G/S, as the first flight's vectors had them)
+function Test-AutoOnFinal([double]$A, [double]$C, [double]$TrackTrue, [double]$CourseTrue, [double]$Within = 16, [double]$Off = 2, [double]$Angle = 30) {
+    $d = [math]::Abs(((($TrackTrue - $CourseTrue) % 360) + 540) % 360 - 180)
+    return ($A -gt 0 -and $A -le $Within -and [math]::Abs($C) -le $Off -and $d -le $Angle)
+}
 # the destination runway from X-Plane's CIFP (Custom Data, else the default
 # data); $null when not found
 function Get-AutoRunwayFromCifp([string]$Icao, [string]$Rwy) {
@@ -943,7 +955,8 @@ function Watch-AutoCruise($Plan) {
 # 3) or a VECTORS leg the approach on the FCOM's maneuver speeds (flaps out
 # at or below the speed of the flaps before), each second: the vectors when
 # the route has them; flaps 1 below the UP speed; flaps 5 and APP once on
-# approach (or on the vectors' base or intercept); at G/S alive gear, flaps
+# approach (or on the vectors' base or intercept, or on the final course 16 NM
+# out: Test-AutoOnFinal); at G/S alive gear, flaps
 # 20, autobrake, speedbrake ARM; at the G/S's capture flaps 30; then the
 # autoland and the stop
 function Invoke-AutoApproach($Plan) {
@@ -968,6 +981,8 @@ function Invoke-AutoApproach($Plan) {
             # flight (2026-11-08) took that for G/S alive 22 NM out
             $vdef = [double](Get-XPDataref 'sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot')
             $gsOn = [int](Get-XPDataref 'sim/cockpit2/radios/indicators/nav1_display_vertical')
+            $lat = [double](Get-XPDataref 'sim/flightmodel/position/latitude'); $lon = [double](Get-XPDataref 'sim/flightmodel/position/longitude')
+            $trk = [double](Get-XPDataref 'sim/flightmodel/position/hpath')
             if ([int](Get-XPDataref 'sim/flightmodel/failures/onground_any') -eq 1) { throw 'on the ground before the G/S' }
         } catch { if ($_.Exception.Message -like 'on the ground*') { throw }; continue }
         Step-AutoVectors $Plan
@@ -975,8 +990,10 @@ function Invoke-AutoApproach($Plan) {
             Set-Flaps 1; $f1 = $true
             [void](Set-AutoSwitch 'laminar/B747/flt_ctrls/speedbrake_lever' 0 'sim/flight_controls/speed_brakes_down_one' 'sim/flight_controls/speed_brakes_up_one')
         }
-        $near = $onApp -eq 1 -or @('base', 'intercept', 'done') -contains $script:afVec.state -or $roll -eq 3
-        if ($f1 -and -not $f5spd -and $near) { Set-Mcp 'spd' $sp.f5; $f5spd = $true; Note info ('on approach: {0:0} kt' -f $sp.f5) }
+        $fr = if ($script:afRunway) { Get-AutoRwyFrame $script:afRunway $lat $lon } else { $null }
+        $near = if ($onApp -eq 1) { 'the FMC on approach' } elseif (@('base', 'intercept', 'done') -contains $script:afVec.state) { 'vectors: ' + $script:afVec.state }
+            elseif ($roll -eq 3) { 'LOC' } elseif ($fr -and (Test-AutoOnFinal $fr.a $fr.c $trk $script:afRunway.course_true)) { 'on the final course {0:0.0} NM out' -f $fr.a } else { $null }
+        if ($f1 -and -not $f5spd -and $near) { Set-Mcp 'spd' $sp.f5; $f5spd = $true; Note info ('on approach ({0}): {1:0} kt' -f $near, $sp.f5) }
         if ($f5spd -and -not $f5 -and $ias -lt $sp.f1 + 5) { Set-Flaps 5; $f5 = $true }
         if ($f5 -and -not $app) {
             Push-Auto 'laminar/B747/autopilot/approach'
