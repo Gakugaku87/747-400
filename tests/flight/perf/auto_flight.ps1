@@ -252,8 +252,14 @@ function Get-AutoRwyFrame($Rw, [double]$Lat, [double]$Lon) {
 # parallel to the course, 45 degrees away while within $Space NM of it) until
 # $A reaches the base turn ($Join + the intercept's run from $Ci NM), base
 # (square toward the course) until within $Ci NM, then the intercept (the
-# course 30 degrees toward it); forward only
-function Get-AutoVectorStep([string]$State, [double]$A, [double]$C, [double]$CourseTrue, [double]$Join = 13, [double]$Ci = 5, [double]$Space = 4) {
+# course 30 degrees toward it); forward only. The sizes are ours (estimates):
+# with the turns the LOC joins about 3 NM beyond $Join (13 NM out: 3 NM
+# before the G/S from 3,000 ft above the field at about 9.9 NM). The first
+# flight (2026-11-08) had $Join 13 and $Ci 5: from GADDO 4.2 NM off the
+# course the intercept at once at 21.7 NM out, the downwind to 23 NM, 43 NM
+# from GADDO to the touchdown (the plan's last leg 15 NM); these about 26 NM
+# (auto_flight_offline_test.ps1's simulation).
+function Get-AutoVectorStep([string]$State, [double]$A, [double]$C, [double]$CourseTrue, [double]$Join = 10, [double]$Ci = 2, [double]$Space = 4) {
     $r = [math]::PI / 180
     $side = if ($C -ge 0) { 1.0 } else { -1.0 }
     $baseAt = $Join + $Ci / [math]::Tan(30 * $r)
@@ -314,6 +320,16 @@ function Find-CduText([string[]]$Large, [string]$Text, [string]$Side = '', [swit
                 $hit = if ($exact) { $it.text -ceq $Text } else { $it.text.Length -eq $Text.Length + 1 -and $it.text.StartsWith($Text) -and ([string]$it.text[-1]) -cmatch '^[A-Z]$' }
                 if ($hit) { return [pscustomobject]@{ key = "$($it.side)$k"; text = $it.text; mark = $it.mark } }
             }
+        }
+    }
+    return $null
+}
+# the first word with a mark (<SEL>, <ACT>) on one side of a page's large
+# lines: its key, text and mark; none: $null
+function Find-CduMarked([string[]]$Large, [string]$Side) {
+    for ($k = 1; $k -le 6; $k++) {
+        foreach ($it in (Get-CduItems ([string]$Large[2 * $k]))) {
+            if ($it.side -eq $Side -and $it.mark) { return [pscustomobject]@{ key = "$($it.side)$k"; text = $it.text; mark = $it.mark } }
         }
     }
     return $null
@@ -435,6 +451,30 @@ $CduNames = @{ RTE = 'func_key/fpln'; LEGS = 'func_key/legs'; DEPARR = 'func_key
     INITREF = 'func_key/index'; PROG = 'func_key/prog'; NAVRAD = 'func_key/navrad'; VNAV = 'func_key/des'
     PREV = 'func_key/prev_pg'; NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; DEL = 'key/del'; CLR = 'key/clear'
     ATC = 'func_key/crz'; FMCCOMM = 'func_key/hold' }
+# the scratchpad (Line14): a message shows there over the typed text, and
+# while one shows nothing typed goes in (B747.68.cdu_model.lua; FMSPG p.39,
+# p.41). The first flight (2026-11-08): the route uplink's FLT NUMBER UPLINK
+# kept PERF INIT's entries out. CLR takes the message on top, else the last
+# character (FCOM p.1213).
+function Get-CduScratch { return ([string](Get-S 'laminar/B747/fms3/Line14_L')).Trim() }
+# (messages one under another: the first flight's FLT NUMBER UPLINK, then
+# NAV DATA OUT OF DATE, AIRAC 2610 on 2026-11-08)
+function Clear-CduScratch {
+    $seen = New-Object System.Collections.ArrayList
+    for ($i = 0; $i -lt 16; $i++) {
+        $sp = Get-CduScratch
+        if ($sp -eq '') {
+            if ($seen.Count -gt 0) { Note info ("the CDU's scratchpad cleared: '{0}'" -f ($seen -join "', '")) }
+            return
+        }
+        if ($seen.Count -eq 0 -or $seen[$seen.Count - 1] -cne $sp) { [void]$seen.Add($sp) }
+        Send-Cmd 'laminar/B747/fms1/key/clear'
+        Start-Sleep -Milliseconds 300
+    }
+    throw ("the CDU's scratchpad not cleared: '{0}'" -f (Get-CduScratch))
+}
+# keys and texts in turn; a text typed into the emptied scratchpad and
+# seen there before the next key (typed again once)
 function Send-Cdu([string[]]$Keys) {
     $chars = @{ '/' = 'key/slash'; '.' = 'key/period'; '-' = 'key/minus'; ' ' = 'key/space' }
     foreach ($k in $Keys) {
@@ -443,14 +483,20 @@ function Send-Cdu([string[]]$Keys) {
             Send-Cmd "laminar/B747/fms1/$($CduNames[$k])" $(if ($k -ceq 'EXEC') { 0.2 } else { 0 })
             Start-Sleep -Milliseconds 500; continue
         }
-        $prev = $null
-        foreach ($ch in $k.ToCharArray()) {
-            $c = [string]$ch
-            $cmd = if ($chars.ContainsKey($c)) { $chars[$c] } elseif ($c -cmatch '^[A-Z0-9]$') { "alphanum_key/$c" } else { throw "cdu: no key for '$c'" }
-            if ($c -ceq $prev) { Start-Sleep -Milliseconds 250 }
-            Send-Cmd "laminar/B747/fms1/$cmd"
-            Start-Sleep -Milliseconds 70
-            $prev = $c
+        for ($try = 1; $try -le 2; $try++) {
+            Clear-CduScratch
+            $prev = $null
+            foreach ($ch in $k.ToCharArray()) {
+                $c = [string]$ch
+                $cmd = if ($chars.ContainsKey($c)) { $chars[$c] } elseif ($c -cmatch '^[A-Z0-9]$') { "alphanum_key/$c" } else { throw "cdu: no key for '$c'" }
+                if ($c -ceq $prev) { Start-Sleep -Milliseconds 250 }
+                Send-Cmd "laminar/B747/fms1/$cmd"
+                Start-Sleep -Milliseconds 70
+                $prev = $c
+            }
+            if ($null -ne (Wait-AutoCond { (Get-CduScratch) -ceq $k } 3 200)) { break }
+            if ($try -eq 2) { throw ("the CDU's scratchpad shows '{0}' after '{1}' typed" -f (Get-CduScratch), $k) }
+            Note warn ("'{0}' typed, the scratchpad '{1}': typed again" -f $k, (Get-CduScratch))
         }
         Start-Sleep -Milliseconds 100
     }
@@ -547,8 +593,11 @@ function Start-AutoFlight($Init) {
         $loads = Get-XPAircraftLoads
         $ok = $false
         for ($try = 1; $try -le 3 -and -not $ok; $try++) {
-            Invoke-XPCommand 'sim/operation/reload_aircraft_no_art'
-            $ok = $null -ne (Wait-XP { (Get-XPAircraftLoads) -gt $loads } 60 1000)
+            # the command's request can time out while X-Plane reloads (the
+            # first flight, 2026-11-08: 30 s, the reload going on): the new
+            # load in Log.txt decides
+            try { Invoke-XPCommand 'sim/operation/reload_aircraft_no_art' } catch { Note warn ('the reload''s command: {0} (the wait for the load decides)' -f $_.Exception.Message) }
+            $ok = $null -ne (Wait-XP { (Get-XPAircraftLoads) -gt $loads } 90 1000)
         }
         if (-not $ok) { throw 'the aircraft did not reload' }
         $script:XPDrefs = @{}; $script:XPCmds = @{}
@@ -624,6 +673,14 @@ function Set-AutoFmc($Plan) {
     if (-not (Get-CduTitle).Contains('PERF INIT')) { throw ('no PERF INIT: ' + (Get-CduTitle)) }
     Send-Cdu @(('{0:0.0}' -f ($Plan.zfw_kg / 1000)), 'L3', ('{0:0.0}' -f ($Plan.reserves_kg / 1000)), 'L4', ('{0:0}' -f ($Plan.crz_ft / 100)), 'R1', ([string]$Plan.ci), 'L5')
     Start-Sleep -Seconds 1
+    # the page as entered (B744.fms.pages.perfinit.lua: ZFW at Line07,
+    # RESERVES Line09, COST INDEX Line11, each its line's first word)
+    $L = Get-CduLines 'L'
+    $word = { param($s) @(([string]$s).Trim() -split '\s+')[0] }
+    $got = [pscustomobject]@{ zfw = (& $word $L[6]); reserves = (& $word $L[8]); ci = (& $word $L[10]) }
+    if ($got.zfw -ne ('{0:0.0}' -f ($Plan.zfw_kg / 1000)) -or $got.reserves -ne ('{0:0.0}' -f ($Plan.reserves_kg / 1000)) -or $got.ci -ne [string]$Plan.ci) {
+        throw ('PERF INIT not as entered: ZFW {0}, RESERVES {1}, COST INDEX {2}' -f $got.zfw, $got.reserves, $got.ci)
+    }
     $crz = Get-N 'laminar/B747/autopilot/dist/cruise_alt'
     if ([math]::Abs($crz - $Plan.crz_ft) -gt 1) { throw ('the FMC''s cruise altitude is {0} (entered {1})' -f $crz, $Plan.crz_ft) }
     Note-Status 'fmc' ('TAKEOFF REF: flaps {0}, the V speeds' -f $Plan.takeoff_flaps)
@@ -650,13 +707,16 @@ function Set-AutoApproach($Plan) {
     }
     $pages = Read-CduPages $open
     if (-not ([string]$pages[0][0]).Contains("$($Plan.dest) ARRIVALS")) { Note warn ('DEP/ARR: no {0} ARRIVALS ({1})' -f $Plan.dest, $pages[0][0]); Send-Cdu @('RTE'); return }
+    $other = $null
     foreach ($pg in $pages) {
         $have = Find-CduText $pg $Plan.approach 'R' -Prefix -Marked
         if ($have) { Note info ('the uplink''s approach {0} ({1})' -f $have.text, $have.mark); Send-Cdu @('RTE'); return }
-        # another approach uplinked (an RNAV one): the ILS chosen instead (the autoland's)
-        $any = @(foreach ($k in 1..6) { Get-CduItems ([string]$pg[2 * $k]) | Where-Object { $_.side -eq 'R' -and $_.mark } })
-        if ($any.Count -gt 0) { Note warn ('the uplink''s approach {0}, not {1}: the ILS chosen' -f $any[0].text, $Plan.approach) }
+        if (-not $other) { $other = Find-CduMarked $pg 'R' }
     }
+    # another approach uplinked (an RNAV one): the ILS chosen instead (the
+    # autoland's). (The first flight's check took each line as one word: a
+    # warning on every page.)
+    if ($other) { Note warn ('the uplink''s approach {0}, not {1}: the ILS chosen' -f $other.text, $Plan.approach) }
     $hit = Select-CduItem $open $Plan.approach 'R' -Prefix
     if (-not $hit) { Note warn ('no approach {0} at {1}: the route without one' -f $Plan.approach, $Plan.dest); Send-Cdu @('RTE'); return }
     Start-Sleep -Milliseconds 500
@@ -902,7 +962,12 @@ function Invoke-AutoApproach($Plan) {
         try {
             $ias = [double](Get-XPDataref 'laminar/B747/gauges/indicators/airspeed_kts_pilot'); $roll = [int](Get-XPDataref 'laminar/B747/autopilot/FMA/active_roll_mode')
             $pitch = [int](Get-XPDataref 'laminar/B747/autopilot/FMA/active_pitch_mode'); $onApp = [int](Get-XPDataref 'laminar/B747/fms/vnav/on_app')
+            # the G/S's deflection (negative below it: B747.34.xt.gpws.lua)
+            # and whether its signal is there: out of its range (KLAX 24R's
+            # 18 NM, earth_nav.dat) the deflection is 0, and the first
+            # flight (2026-11-08) took that for G/S alive 22 NM out
             $vdef = [double](Get-XPDataref 'sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot')
+            $gsOn = [int](Get-XPDataref 'sim/cockpit2/radios/indicators/nav1_display_vertical')
             if ([int](Get-XPDataref 'sim/flightmodel/failures/onground_any') -eq 1) { throw 'on the ground before the G/S' }
         } catch { if ($_.Exception.Message -like 'on the ground*') { throw }; continue }
         Step-AutoVectors $Plan
@@ -921,7 +986,7 @@ function Invoke-AutoApproach($Plan) {
             Note info ('APP armed (roll {0}, pitch {1}); NAV1 {2}' -f (Get-N 'laminar/B747/autopilot/FMA/armed_roll_mode'), (Get-N 'laminar/B747/autopilot/FMA/armed_pitch_mode'),
                 (Get-N 'sim/cockpit2/radios/actuators/nav1_frequency_hz'))
         }
-        if ($app -and -not $f20 -and $roll -eq 3 -and $vdef -gt -2.0) {
+        if ($app -and -not $f20 -and $roll -eq 3 -and $gsOn -eq 1 -and $vdef -gt -2.0) {
             Set-Flaps 20
             Set-Mcp 'spd' $sp.f20
             Send-Cmd 'sim/flight_controls/landing_gear_down'

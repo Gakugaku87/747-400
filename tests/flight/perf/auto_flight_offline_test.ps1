@@ -187,29 +187,54 @@ Check ($null -eq (Get-AutoRunway ([string[]]@($cifp[1])) '27')) 'runway: none wi
 # KLAX 24R from X-Plane's CIFP when this PC has it (the 11-08 flight's)
 $klax = Get-AutoRunwayFromCifp 'KLAX' '24R'
 if ($klax) { Check ($klax.course_true -gt 255 -and $klax.course_true -lt 270 -and $klax.other -eq '06L') ('runway: KLAX 24R''s final course {0:0.0} true' -f $klax.course_true) }
-# the vectors: runway 27 (inbound west), the join 13 NM out, the intercept from 5 NM
-function VecStep($S, $A, $C) { return Get-AutoVectorStep $S $A $C 270 13 5 4 }
+# the vectors: runway 27 (inbound west), the defaults (the join 10 NM out, the
+# intercept from 2 NM: the base turn at 10 + 2 / tan 30 = 13.5 NM)
+function VecStep($S, $A, $C) { return Get-AutoVectorStep $S $A $C 270 }
 $v1 = VecStep $null 5 6
 Check ($v1.state -eq 'downwind' -and [math]::Abs($v1.hdg_true - 90) -lt 1e-6) ('vectors: downwind outbound east ({0} {1:0.0})' -f $v1.state, $v1.hdg_true)
 $v2 = VecStep 'downwind' 10 2
 Check ($v2.state -eq 'downwind' -and [math]::Abs($v2.hdg_true - 45) -lt 1e-6) ('vectors: within 4 NM, 45 degrees away ({0:0.0})' -f $v2.hdg_true)
-$v3 = VecStep 'downwind' 21 6
-Check ($v3.state -eq 'downwind') 'vectors: the downwind until the base turn (21.7 NM)'
-$v3 = VecStep 'downwind' 22 6
+$v3 = VecStep 'downwind' 13.4 6
+Check ($v3.state -eq 'downwind') 'vectors: the downwind until the base turn (13.5 NM)'
+$v3 = VecStep 'downwind' 13.5 6
 Check ($v3.state -eq 'base' -and [math]::Abs($v3.hdg_true - 180) -lt 1e-6) ('vectors: base south toward the course ({0} {1:0.0})' -f $v3.state, $v3.hdg_true)
-$v4 = VecStep 'base' 22 4.9
+Check ((VecStep 'base' 14 2.1).state -eq 'base') 'vectors: base until 2 NM from the course'
+$v4 = VecStep 'base' 14 1.9
 Check ($v4.state -eq 'intercept' -and [math]::Abs($v4.hdg_true - 240) -lt 1e-6) ('vectors: the intercept 30 degrees ({0} {1:0.0})' -f $v4.state, $v4.hdg_true)
-$v5 = VecStep 'downwind' 22 -6
+$v5 = VecStep 'downwind' 14 -6
 Check ($v5.state -eq 'base' -and [math]::Abs($v5.hdg_true - 0) -lt 1e-6) ('vectors: base north from the south ({0:0.0})' -f $v5.hdg_true)
-$v6 = VecStep 'base' 22 -4
+$v6 = VecStep 'base' 14 -1.9
 Check ($v6.state -eq 'intercept' -and [math]::Abs($v6.hdg_true - 300) -lt 1e-6) ('vectors: the intercept from the south 300 ({0:0.0})' -f $v6.hdg_true)
 $v7 = VecStep $null 30 1
 Check ($v7.state -eq 'intercept' -and [math]::Abs($v7.hdg_true - 240) -lt 1e-6) 'vectors: far out near the course, the intercept at once'
 $v8 = VecStep $null 30 12
 Check ($v8.state -eq 'base') 'vectors: far out to the side, base at once'
 Check ((VecStep 'intercept' 10 6).state -eq 'intercept' -and (VecStep 'base' 10 8).state -eq 'base') 'vectors: forward only'
-$joinAt = 21.7 - 5 / [math]::Tan(30 * [math]::PI / 180)
-Near $joinAt 13 0.05 'vectors: from the base turn the intercept joins about 13 NM out'
+# flown with the turns (2.5 degrees a second, 200 kt on the downwind, 175 kt
+# after it) from the first flight's GADDO (KLAX 24R, 263 true: 5.7 NM out,
+# 4.2 NM off): the LOC joined about 13 NM out (3 NM before the G/S from 3,000
+# ft at 9.9 NM), about 26 NM to the threshold (2026-11-08 with the join 13
+# and the intercept from 5 NM: 43 NM flown, the plan's last leg 15 NM)
+function Sim-Vectors([double]$A, [double]$C, [double]$Crs) {
+    $r = [math]::PI / 180; $hdg = ($Crs + 180) % 360; $st = $null; $path = 0.0; $far = $A
+    $ue = [math]::Sin($Crs * $r); $un = [math]::Cos($Crs * $r)
+    for ($t = 0; $t -lt 1800; $t++) {
+        $v = Get-AutoVectorStep $st $A $C $Crs; $st = $v.state
+        $dh = (($v.hdg_true - $hdg + 540) % 360) - 180; $hdg = ($hdg + [math]::Max(-2.5, [math]::Min(2.5, $dh)) + 360) % 360
+        $nm = $(if ($st -eq 'downwind') { 200 } else { 175 }) / 3600
+        $de = [math]::Sin($hdg * $r) * $nm; $dn = [math]::Cos($hdg * $r) * $nm
+        $A -= $de * $ue + $dn * $un; $C += $de * $un - $dn * $ue; $path += $nm; if ($A -gt $far) { $far = $A }
+        if ($st -eq 'intercept' -and [math]::Abs($C) -lt 0.5) { return [pscustomobject]@{ join = $A; far = $far; total = $path + $A } }
+    }
+    return $null
+}
+$sv = Sim-Vectors 5.7 4.2 263
+Check ($null -ne $sv) 'vectors: the simulated pattern joins'
+Near $sv.join 13.0 0.5 'vectors: from GADDO the LOC joined about 13 NM out'
+Near $sv.far 14.6 0.5 'vectors: the downwind out to about 14.6 NM'
+Near $sv.total 25.9 1.0 'vectors: about 26 NM from GADDO to the threshold'
+$sl = Sim-Vectors 5.7 -4.2 263
+Check ($null -ne $sl -and [math]::Abs($sl.total - $sv.total) -lt 0.2) 'vectors: the same from the other side'
 
 # ---------------------------------------------------------------- the CDU's pages
 # B744.fms.pages.deparr.lua's lines: lr(l, r) on 24 columns, the left
@@ -243,6 +268,13 @@ Check ($null -eq (Find-CduText $page 'ILS25L' 'R' -Prefix -Marked)) 'cdu: -Marke
 # the narrowed view: the approach and its transitions (TRANS)
 $narrow = [string[]]@('   EDDF ARRIVALS', '', (Lr 'DIXA2A' '<SEL>ILS25L'), '', (Lr 'ROLIS1A' 'DF426'), '', (Lr '' 'RAMOB'), '', '', '', '', '', '', '')
 Check ((Find-CduText $narrow 'DF426' 'R').key -eq 'R2' -and (Find-CduText $narrow 'RAMOB' 'R').key -eq 'R3') 'cdu: the transitions'' keys'
+# a marked word on one side (another approach uplinked): one word, not a
+# line's words (the first flight's check, 2026-11-08)
+$m = Find-CduMarked $marked 'R'
+Check ($null -ne $m -and $m.key -eq 'R2' -and $m.text -is [string] -and $m.text -ceq 'ILS25LY' -and $m.mark -ceq '<SEL>') 'cdu: the marked word on the right'
+Check ($null -eq (Find-CduMarked $page 'R') -and $null -eq (Find-CduMarked $page 'L')) 'cdu: no marked word on a page without marks'
+$leftOnly = [string[]]@('   EDDF ARRIVALS', '', (Lr 'DIXA2A<SEL>' 'ILS25LZ'), '', '', '', '', '', '', '', '', '', '', '')
+Check ($null -eq (Find-CduMarked $leftOnly 'R') -and (Find-CduMarked $leftOnly 'L').text -ceq 'DIXA2A') 'cdu: a left mark is not the right side''s'
 # LEGS's small lines (B744.fms.pages.legs.lua legs_small): the page number,
 # each leg's title above it
 $small = [string[]]@('                    3/7 ', (' 102' + (' ' * 20)), '', (' 095' + (' ' * 20)), '', (' THEN' + (' ' * 19)), '', '-- ROUTE DISCONTINUITY -', '', (' 088' + (' ' * 20)), '', '', '', '')

@@ -349,20 +349,21 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - 距離、OFP の係数。
     - 作った飛行（赤道を東へ）：離陸・接地・最接近・航路から外れたフィックス・区間・到着・Trip・FF 計器・時間加速・修正案。
     - レポートのファイル、飛行の終わりの判定。
-- フェーズ4の全自動の飛行（`auto_flight.ps1`。2026-11-08 利用者：「離陸の滑走路に機体を置いて、着陸まで完全自動に」。X-Plane ではまだ回していない）：
+- フェーズ4の全自動の飛行（`auto_flight.ps1`。2026-11-08 利用者：「離陸の滑走路に機体を置いて、着陸まで完全自動に」。2026-11-08 の KSEA-KLAX で、3 回目に離陸から停止まで飛んだ）：
   - `powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight.ps1 -SimbriefUser <名前> [-PilotId <番号>] [-Steps ofp|fmc] [-StartXPlane] [-DryRun]`
   - 計画：SimBrief の最新の OFP（カスタム機体で作ったもの）から作る。
     - ペイロードは OFP の ZFW から acf の空虚重量を引いた分。各ステーションの最大の比で分ける。離陸燃料は機体の積み込み順（`Get-FuelByTank`）。
     - 離陸のフラップは TLR の出発滑走路の値（10 か 20。無ければ 20）。ナビログの SID・STAR と、STAR の最後のフィックス。出発地の転移高度と、目的地の転移レベル。
   - 始め：X-Plane のフライトの初期化で出発の滑走路に置く（実際の天気、PC の時刻、エンジン運転中）。
-    - 読み込み済みの機体なら、読み直して置き直す（ランナーと同じ。X-Plane が読み込んだ直後は読み直さない：§4.6）。
+    - 読み込み済みの機体なら、読み直して置き直す（ランナーと同じ。X-Plane が読み込んだ直後は読み直さない：§4.6）。読み直しのコマンドの要求は、X-Plane が読み直している間に 30 秒で時間切れになる（KSEA の 3 回とも）。警告だけにして、`Log.txt` の新しい読み込みで決める（1 回 90 秒、3 回まで）。
     - 冷えた機体からのエンジン始動は、次の版で作る。
   - FMC：
     - IDENT。シムのオプション：T/D 前の一時停止を切る。Auto step climb は `-Steps fmc` のときだけ入れる。どちらも保存しない。
     - FMC DATALINK を ON。RTE REQUEST で、Pilot ID の最新の OFP を取る（notes/ATA-34-61-FMC.md §131）。LOAD。
-    - アップリンクに進入方式が無ければ、目的地の滑走路の ILS を選ぶ。遷移は STAR の最後のフィックス（一覧にあれば）。経路を有効にする前に選ぶ（地上で経路が有効だと、DEP ARR キーは DEPARTURES を出す：`B747_cdu_deparr_page`）。
+    - アップリンクに進入方式が無ければ（か、ほかの方式なら）、目的地の滑走路の ILS を選ぶ。遷移は STAR の最後のフィックス（一覧にあれば）。経路を有効にする前に選ぶ（地上で経路が有効だと、DEP ARR キーは DEPARTURES を出す：`B747_cdu_deparr_page`）。
     - ACTIVATE・EXEC。ROUTE DISCONTINUITY は、次の点を箱へ入れて EXEC で閉じる。
-    - PERF INIT：ZFW、RESERVES（OFP の予備と代替の燃料）、CRZ ALT、CI。TAKEOFF REF：フラップと V 速度。
+    - PERF INIT：ZFW、RESERVES（OFP の予備と代替の燃料）、CRZ ALT、CI。入った値をページで確かめる。TAKEOFF REF：フラップと V 速度。
+    - 文字は、CLR で空にしたスクラッチパッドに打ち、そこに出たのを見てから次のキーへ（出なければ 1 回打ち直す）。メッセージが出ている間は、打っても入らない（FMSPG p.39、p.41。`B747.68.cdu_model.lua`）。CLR は上のメッセージから、無ければ最後の 1 文字を消す（FCOM p.1213）。最初の飛行では、ルートのアップリンクの FLT NUMBER UPLINK（FCOM p.1433）とその下の NAV DATA OUT OF DATE（AIRAC 2610）が残り、PERF INIT の RESERVES・CRZ ALT・CI が入らなかった（ZFW は、空のスクラッチパッドの L3 でシムの値が入った）。
   - 離陸：s198 の手順に、FlyWithLua の補助（`tests/flight/fwl`）を使う。
     - 滑走は `B747_rudder_hold.lua` で方位を保つ。VR で `B747_rotate.lua`（FCTM の引き起こし）。浮いたら `B747_fd_follow.lua`。300 ft RA で CMD L。
     - フラップは FCOM のフラップ上げの手順（p.132 (NP.21.38)：速度テープの表示で次の位置へ）。各位置の操作速度は VREF 30 + 20・40・60・80（p.229 (PI.10.3)）。
@@ -375,20 +376,21 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - 速度介入（フラップ 1 の速さ）とスピードブレーキ。UP の速さの下でフラップ 1。on approach（か、誘導のベースかインターセプト）でフラップ 5 の速さにし、フラップ 1 の速さの下でフラップ 5。APP・CMD C・CMD R。
     - 誘導（レーダー・ベクター）：STAR が VECTORS の脚（FM 脚）で終わると、LNAV はその方位を飛び続ける（例：KLAX の IRNMN2 は GADDO のあと 071° のダウンウインド。FCOM p.1237、p.1249）。FMC の今の点が VECTORS になったら、管制の代わりに HDG SEL で最終進入コースへ導く（推定：大きさは目安）。
       - 滑走路の端と最終進入の向きは、X-Plane の CIFP の RWY の行（`Custom Data/CIFP/<空港>.dat`）の、その滑走路と反対の端から。
-      - ダウンウインド（コースと平行に外向き。コースから 4 NM 以内なら 45° 離れる）→ 外に (13 + 5 ÷ tan 30°) NM 出たらベース（コースへ直角）→ コースから 5 NM でインターセプト（コースへ 30°）。LOC は約 13 NM 以遠で乗り、G/S は MCP の標高 + 3,000 ft で下から捕まえる。
+      - ダウンウインド（コースと平行に外向き。コースから 4 NM 以内なら 45° 離れる）→ 外に (10 + 2 ÷ tan 30°) NM 出たらベース（コースへ直角）→ コースから 2 NM でインターセプト（コースへ 30°）。旋回のふくらみで、LOC は約 13 NM で乗り、G/S は MCP の標高 + 3,000 ft で約 9.9 NM から下から捕まえる。KLAX の GADDO（5.7 NM 外、コースから 4.2 NM）から滑走路まで約 26 NM（試験の計算）。
+      - 最初の飛行（2026-11-08）は (13 + 5 ÷ tan 30°) NM とコースから 5 NM だった。GADDO はコースから 4.2 NM で、21.7 NM 外ですぐインターセプトになり、ダウンウインドを 23 NM まで飛んだ。GADDO から接地まで 43 NM・14.5 分・2,208 kg（計画の最後の脚は 15 NM・6.2 分・545 kg）。
       - MCP の方位は磁方位（真方位 −（`psi` − `mag_psi`））。始めに MCP 高度より 300 ft 以上高ければ FLCH で降りる。LOC を捕まえたら終わり。
-    - LOC の後、G/S alive で脚・フラップ 20・オートブレーキ 2・スピードブレーキ ARM。G/S の捕捉でフラップ 30 と VREF 30 + 5。
+    - LOC の後、G/S alive（G/S の電波があり（`nav1_display_vertical`）、振れが −2 ドットより上。振れは下にいると負：`B747.34.xt.gpws.lua`）で脚・フラップ 20・オートブレーキ 2・スピードブレーキ ARM。G/S の捕捉でフラップ 30 と VREF 30 + 5。電波の届く所の外（KLAX 24R は 18 NM：`earth_nav.dat`）では振れが 0 で、最初の飛行は 22 NM 外で G/S alive と取り、3,000 ft で脚を出して 12 NM 余り飛んだ。
     - LAND 3（か 2）、FLARE、接地、逆推力、60 kt の下でパーキング・ブレーキ、止まったら A/P を外す。
   - 記録：`flight_log.ps1` を別のプロセスで回す（`runs/<日時>_autoflight/flight/`）。止まって 2 分で終わり、`report.md` を書く。
   - 止めるとき：XTLua のエラー、シムの時計が 60 秒止まったとき（一時停止は除く）、先へ進めない待ちの時間切れ、`-MaxHours`。空中で止めても、記録は着地まで続く。待ちの時間は X-Plane の時刻で数える（一時停止の間は数えない）。
   - 他の飛行（シナリオのランナー、ランリスト、`perf.ps1`、別の `auto_flight.ps1`）が動いていれば始めない（`-Force` で始める）。
   - 終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（地上にいるとき）。
   - 出力：`runs/<日時>_autoflight/`（`ofp.json`、`plan.json`、`events.txt`、`status.txt`、`flight/`）。`-DryRun` は計画を書くだけ。
-  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（116 項目）。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（124 項目）。
     - acf の数。作った OFP からの計画（滑走路、重量、ステーション、タンク、フラップ、SID・STAR、転移、ステップ、単位、誤りの検出）。
     - 初期化、操作速度、MCP を下げる距離、QNH、フィックスの通過。
-    - 誘導：CIFP の緯度経度、反対の端の名前、方位、作った滑走路の座標系、ダウンウインド・ベース・インターセプトの移り方と方位（左右とも）。この PC に CIFP があれば KLAX 24R（真 263.0°）。
-    - CDU の画面（語と印、キー、ROUTE DISCONTINUITY、ページ番号）。
+    - 誘導：CIFP の緯度経度、反対の端の名前、方位、作った滑走路の座標系、ダウンウインド・ベース・インターセプトの移り方と方位（左右とも）、旋回（毎秒 2.5°）込みで GADDO からの形（LOC は約 13 NM、滑走路まで約 26 NM）。この PC に CIFP があれば KLAX 24R（真 263.0°）。
+    - CDU の画面（語と印、片側の印の付いた語、キー、ROUTE DISCONTINUITY、ページ番号）。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。
 - 空中スタートの後は、FMC の初期化（F/D・A/T ARM・MCP の速さを今の速さへ巻き取り、ALT HOLD・CMD L：`B747.68.xt.fms.lua` の `activate_inflightAP`）を待ってから MCP を操作する。初期化の終わりは、開始の前に MCP 高度へ 49,000 を書いておき、初期化がそれを今の高度に変えて巻き取りが終わったこと（`altitude/target`・`speed/target` が −1、CMD L、サーボ）で見分ける。2 回目からの空中スタートで、前の点の A/P の状態を初期化の終わりと取り違えないため。MCP は開始の前に IAS に戻す（Mach の窓のまま開始すると、初期化が窓をノットの値へ巻き取る）。
