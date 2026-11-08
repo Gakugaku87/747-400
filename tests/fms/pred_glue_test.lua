@@ -663,6 +663,16 @@ end
 T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil end), "the approach's first point passed")
 frames(0.5)
 T.check(rt:get(ONAPP) == 1 and fms.ns.B747_fms_on_app(), "on approach")
+-- (2026-11-09) the point passed in the descent kept behind the airplane
+-- with its constraint, for the path's line from it (pred_model's behind)
+do
+    local pl = st.rte.passed[#st.rte.passed]
+    local sB = fms.ns.B747_fms_pred_input(35000)
+    T.check(pl.alt ~= nil, "the approach's first point has a constraint: " .. tostring(pl.alt))
+    T.check(sB.behind and sB.behind.x <= 0 and sB.behind.x > -5 and sB.behind.con and sB.behind.con.a ~= nil,
+        string.format("the predictions keep it behind: %s NM, %s", sB.behind and string.format("%.2f", sB.behind.x) or "none",
+        sB.behind and sB.behind.con and (sB.behind.con.kind .. " " .. tostring(sB.behind.con.a)) or "-"))
+end
 T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil and l.fix.kind == "RWY" end), "the runway (the E/D) passed")
 frames(0.5)
 T.check(fms.ns.B747_fms_end_des() and rt:get(ONAPP) == 0, "END OF DES; on approach over")

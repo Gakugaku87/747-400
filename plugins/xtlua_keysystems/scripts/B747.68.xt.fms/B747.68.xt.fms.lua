@@ -1413,6 +1413,23 @@ function B747_fms_pred_input(crz)
   local phase = "clb"
   local vph = B747_fms_vnav_phase and B747_fms_vnav_phase()
   if simDR_onGround ~= 1 and vph then phase = string.lower(vph) end
+  -- (2026-11-09) in the descent, the waypoint passed last with its
+  -- altitude constraint behind the airplane (its great circle's distance
+  -- back), for the descent path's line from it (B747.68.pred_model.lua's
+  -- behind): before, the leg flown became the idle path back from the
+  -- next constraint at each sequencing (IRNMN2: 229 to 469 ft higher, the
+  -- A/T's SPD at each waypoint in the perf session's KSEA-KLAX flight)
+  local behind = nil
+  local pl = r.passed[#r.passed]
+  if phase == "des" and pl and pl.fix and pl.alt and pl.proc ~= "SID" and pl.fix.kind ~= "RWY" and not missed_leg(pl) then
+    local con
+    if pl.akind == "A" then con = {kind = "A", a = pl.alt}
+    elseif pl.akind == "B" then con = {kind = "B", a = pl.alt}
+    elseif pl.akind == "AB" then con = {kind = "W", a = math.max(pl.alt, pl.alt2 or pl.alt), b = math.min(pl.alt, pl.alt2 or pl.alt)}
+    else con = {kind = "AT", a = pl.alt} end
+    local _, d = R.course(pl.fix.lat, pl.fix.lon, simDR_latitude, simDR_longitude)
+    behind = {x = -d, con = con}
+  end
   -- (2026-11-08, step 9i's review, finding 3) the climb's legs, the
   -- predictions' and VNAV's (vnav_geo_set): B747_vnav_model.clb_last, the
   -- rule of the climb constraints' clb_keep. The SID's; in the climb the
@@ -1471,7 +1488,7 @@ function B747_fms_pred_input(crz)
   return {P = B747_perf_db, t = perf, isa = isa, gw = B747_fms_gw_kg(), fuel = perf_fuel_t() * 1000,
     alt = math.max(0, simDR_pressureAlt1), cas = (simDR_onGround ~= 1 and simDR_ias_pilot > 100) and simDR_ias_pilot or nil,
     phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
-    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes}
+    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes, behind = behind}
 end
 -- the ND's altitude profile points (6-1/6-2 step 8d3; notes/
 -- ATA-34-61-FMC.md §50; FCOM p.1149): the predictions' T/C, the next S/C

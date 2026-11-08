@@ -380,4 +380,64 @@ do
         rd.dest.t / 60, rc.dest.t / 60))
 end
 
+-- (2026-11-09) a waypoint sequenced in the descent: its constraint kept
+-- behind the airplane (s.behind), the path the airplane is on the same
+-- line from it as before the sequencing (IRNMN2's windows; without it the
+-- path 229 to 469 ft higher there: the idle path back from the next one)
+do
+    local cons = {{kind = "W", a = 29000, b = 26000}, {kind = "W", a = 27000, b = 23000}, {kind = "W", a = 24000, b = 20000},
+        {kind = "W", a = 23000, b = 19000}, {kind = "W", a = 20000, b = 16000}, {kind = "AT", a = 12000}}
+    local gaps = {12.3, 7.3, 6.4, 9.1, 30}
+    local function seq_path(first, before, behind)
+        -- the airplane `before` NM before waypoint `first` (or past it with behind)
+        local legs = {{name = "PPOS", dist = 0}}
+        if before then legs[2] = {name = "W" .. first, dist = before, con = cons[first]} end
+        for k = first + 1, #cons do
+            legs[#legs + 1] = {name = "W" .. k, dist = gaps[k - 1] - ((k == first + 1 and not before) and 0.2 or 0), con = cons[k]}
+        end
+        local r = PM.predict{P = P, t = pw, gw = 230000, fuel = 10000, alt = 25000, phase = "des", crz = 37000,
+            clb = clb, des = des, crzspd = {mach = 0.84}, legs = legs, ed = #legs, clb_last = 0,
+            behind = behind and {x = -0.2, con = cons[first]} or nil}
+        return r
+    end
+    -- the path's altitude at the distance e to go to the E/D
+    local function h_at(r, e)
+        local dp = r.dp
+        for i = 2, #dp.x do
+            local e0, e1 = r.ed - dp.x[i - 1], r.ed - dp.x[i]
+            if e1 >= e then return dp.h[i - 1] + (dp.h[i] - dp.h[i - 1]) * (e - e0) / math.max(e1 - e0, 1e-9) end
+        end
+    end
+    for first = 1, 4 do
+        local rest = 0
+        for k = first, #gaps do rest = rest + gaps[k] end
+        local e = rest - 0.2     -- 0.2 NM past waypoint `first`
+        local hb = h_at(seq_path(first, 0.5, false), e)
+        local hk = h_at(seq_path(first, nil, true), e)
+        local hn = h_at(seq_path(first, nil, false), e)
+        T.near(hk, hb, 20, string.format("past W%d: the path %.0f ft with it kept behind, %.0f before (%.0f without)", first, hk, hb, hn))
+    end
+end
+
+-- (2026-11-09) two AT constraints at one altitude (KLAX's DAHJR and GADDO
+-- at 6,000 ft): the path level between them (before: DAHJR at 6,963 ft on
+-- the idle path back from GADDO); an AT OR ABOVE there not levelled
+do
+    local function lv(kind)
+        local legs = {{name = "PPOS", dist = 0}, {name = "CLIFY", dist = 10, con = {kind = "W", a = 8000, b = 7000}},
+            {name = "DAHJR", dist = 5, con = {kind = kind, a = 6000}}, {name = "GADDO", dist = 3, con = {kind = "AT", a = 6000}},
+            {name = "FAF", dist = 12, con = {kind = "AT", a = 2000}}, {name = "RW", dist = 6, con = {kind = "AT", a = 178}}}
+        local r = PM.predict{P = P, t = pw, gw = 230000, fuel = 10000, alt = 9000, phase = "des", crz = 37000,
+            clb = clb, des = des, crzspd = {mach = 0.84}, legs = legs, ed = #legs, clb_last = 0}
+        return r.pts[3].h, r.pts[2].h
+    end
+    local hAt, hClify = lv("AT")
+    T.near(hAt, 6000, 1, string.format("DAHJR AT 6,000 after it: at %.0f ft, level to GADDO", hAt))
+    T.check(hClify >= 7000 - 1 and hClify <= 8000 + 1, string.format("CLIFY within its window: %.0f ft", hClify))
+    local hB = lv("B")
+    T.near(hB, 6000, 1, string.format("an AT OR BELOW 6,000 there too: %.0f ft", hB))
+    local hA = lv("A")
+    T.check(hA > 6100, string.format("an AT OR ABOVE 6,000: the idle path above it (%.0f ft)", hA))
+end
+
 T.done()
