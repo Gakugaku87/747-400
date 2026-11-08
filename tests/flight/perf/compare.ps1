@@ -274,6 +274,7 @@ function Read-PerfOfp([string]$File) {
         $x = $fx[$i]
         $s += [double]$x.distance
         [void]$legs.Add([pscustomobject]@{ i = $i; ident = [string]$x.ident; stage = [string]$x.stage; alt = [double]$x.altitude_feet; s = $s
+            lat = [double]$x.pos_lat; lon = [double]$x.pos_long
             dist = [double]$x.distance; mach = [double]$x.mach_thousandths; tas = [double]$x.true_airspeed; gs = [double]$x.groundspeed
             wind = [double]$x.wind_component; isa = [double]$x.oat_isa_dev; t_leg = [double]$x.time_leg; t_tot = [double]$x.time_total
             f_leg = [double]$x.fuel_leg; f_used = [double]$x.fuel_totalused; f_onb = [double]$x.fuel_plan_onboard })
@@ -283,6 +284,7 @@ function Read-PerfOfp([string]$File) {
         climb = [string]$j.general.climb_profile; descent = [string]$j.general.descent_profile; cruise = [string]$j.general.cruise_profile
         steps = [string]$j.general.stepclimb_string; initial_ft = [double]$j.general.initial_altitude; air_nm = [double]$j.general.air_distance
         zfw = [double]$j.weights.est_zfw; tow = [double]$j.weights.est_tow; ldw = [double]$j.weights.est_ldw; trip = [double]$j.fuel.enroute_burn
+        takeoff_fuel = [double]$j.fuel.plan_takeoff; airframe = [string]$j.aircraft.name; reg = [string]$j.aircraft.reg
         time_s = [double]$j.times.est_time_enroute; generated = [string]$j.params.time_generated; legs = $legs.ToArray() }
 }
 
