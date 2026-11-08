@@ -1,4 +1,4 @@
-# PERF_SIMBRIEF.md フェーズ3：SimBrief との突き合わせ（20261108_183052_compare）
+# PERF_SIMBRIEF.md フェーズ3：SimBrief との突き合わせ（20261108_190200_compare）
 
 入力：巡航 `20261108_114312_cruise`、上昇と降下 `20261108_092734_climb_part`、上限高度 `20261108_110001_climb_part`、OFP `simbrief_ofp_20261108`（個人の情報を含むので、リポジトリの外）。OFP は SimBrief の標準の B744・P00・ZFW 手入力・CI 200・高度 AUTO。
 

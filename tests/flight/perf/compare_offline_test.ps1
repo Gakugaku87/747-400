@@ -227,7 +227,8 @@ Check ($lc2.service_ft -eq 42000) "light ceiling: its Service Ceiling 42,000 ft 
 # the input sheet: the rows, the Fuel Factor on its basis, the offset's form
 $wtsT = [pscustomobject]@{ oew_kg = 183523.44; mzfw_kg = 244939; mtow_kg = 394625; mlw_kg = 285763; fuel_capacity_kg = 173069.12 }
 $sh = Get-PerfAirframeSheet $wtsT 'run_c' 'run_x' -0.0128 'fmc_econ' -0.0205 $lc1 0 200 'CI 200'
-Check ($sh.Count -eq 14) "sheet: the header and 12 rows (got $($sh.Count))"
+Check ($sh.Count -eq 16) "sheet: the header and 14 rows (got $($sh.Count))"
+Check ($sh[14] -match '^\| Engine Type \| PW4056 \|' -and $sh[15] -match '^\| T/O Thrust \| 56740 \| LBF \|') 'sheet: the engine and its takeoff thrust (PW4056, 252.4 kN)'
 Check ($sh[3] -match '^\| Empty Weight \| 183523 \| KG \|') "sheet: the empty weight ($($sh[3]))"
 Check (@($sh | Where-Object { $_ -match '^\| Max Fuel Capacity \| 173069 \| KG \|' }).Count -eq 1) 'sheet: the fuel capacity'
 Check (@($sh | Where-Object { $_ -match '^\| Fuel Factor \| M01' }).Count -eq 1) 'sheet: the Fuel Factor at the FMC''s ECON, M01'

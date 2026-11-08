@@ -1,4 +1,4 @@
-# SimBrief 入力シート（PERF_SIMBRIEF.md。20261108_183052_compare）
+# SimBrief 入力シート（PERF_SIMBRIEF.md。20261108_190200_compare）
 
 カスタム機体は B744 をベースに作る。値は SimBrief の単位（KGS）。根拠の詳細は report.md。
 
@@ -16,3 +16,5 @@
 | Cruise Level Offset | 0 | ft（M/P表記） | 3 本の T/C と段階上昇の高さが、その重量の上限高度（FCOM の 1.30 g の高さ）に届いている。report.md |
 | Default Cost Index | 200 | – | ふだんの CI（2026-11-08 利用者：SimBrief も FMC も CI 200）。機体の FMC の CI 200 は SimBrief の CI 200 より速く、その分は Fuel Factor に入れた。report.md |
 | 計画時に選ぶ巡航プロファイル | CI 200 | – | 同上 |
+| Engine Type | PW4056 | – | 表示だけ（B744 の既定は RB211-524H。2026-11-08 利用者） |
+| T/O Thrust | 56740 | LBF | PW4056 の定格推力 252.4 kN（ICAO のエンジンの排出データ。B744 の既定は 60,600 lbf）。SimBrief の離陸の計算に使う（2026-11-08 利用者） |
