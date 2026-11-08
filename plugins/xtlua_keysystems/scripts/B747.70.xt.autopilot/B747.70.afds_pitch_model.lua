@@ -145,6 +145,15 @@ M.SPD_TAU_S = 15
 M.SPD_ACCEL = 1.5
 M.SPD_G = 0.1
 M.SPD_MARGIN = 5
+-- (2026-11-08) the target's own rate fed forward (kt a second, filtered
+-- over ACCEL_S): a Mach held in a climb or a descent moves its IAS target
+-- (M.84 climbing at 2,800 fpm about 0.33 kt a second down). Before, the
+-- closing in SPD_TAU_S lagged a moving target by its rate times 15 s: FLCH
+-- climbed at M.851-.854 for M.840 (the perf session's phase 2, 238 t at
+-- 2,600-3,100 fpm; FCOM p.646: the pitch holds the selected speed). A
+-- change of more than SPD_STEP_KT in a frame (a new speed selected, the
+-- protection's limit) is a step, no rate (estimate)
+M.SPD_STEP_KT = 0.5
 -- the speed laws' K_PATH times the IAS over SPD_K_KT, from SPD_K_MIN to all
 -- of it (150 kt: 0.15, 170 kt: 0.17, 250 kt up: 0.25; estimate)
 M.SPD_K_KT = 250
@@ -484,9 +493,19 @@ function M.update(s, inp, dt)
     local lim = math.deg(M.G_LIMIT * G / v)
     local rate
     if law == "SPD" then
-        -- the acceleration that closes the error in SPD_TAU_S, the flight
-        -- path of the difference
-        local want = clamp((target - inp.ias) / M.SPD_TAU_S, -M.SPD_ACCEL, M.SPD_ACCEL)
+        -- (2026-11-08) the target's own rate: its change since the frame
+        -- before, filtered as the speed's; none for a step (SPD_STEP_KT)
+        -- or at the law's start
+        local tr = 0
+        if s.law == "SPD" and s.target and dt > 0 and math.abs(target - s.target) <= M.SPD_STEP_KT then
+            s.tgt_rate = (s.tgt_rate or 0) + ((target - s.target) / dt - (s.tgt_rate or 0)) * k
+            tr = s.tgt_rate
+        else
+            s.tgt_rate = 0
+        end
+        -- the acceleration that closes the error in SPD_TAU_S on the
+        -- target's rate, the flight path of the difference
+        local want = clamp((target - inp.ias) / M.SPD_TAU_S + tr, -M.SPD_ACCEL, M.SPD_ACCEL)
         local lead = path(inp.vs + (s.vs_rate or 0) * M.LEAD_S, v) - path(inp.vs, v)
         local k = M.K_PATH * clamp(inp.ias / M.SPD_K_KT, M.SPD_K_MIN, 1)
         rate = k * (math.deg((s.ias_rate - want) * KT / G) - lead)
