@@ -100,7 +100,22 @@ for i, l in ipairs(legs) do
 end
 T.equal(s.ed, rwy, "the E/D: the approach's runway leg (" .. tostring(rwy) .. ")")
 T.near(s.legs[rwy].con.a, (legs[rwy].fix.elev or 0) + 50, 1e-6, "its altitude 50 ft above the threshold")
-T.equal(s.clb_last, sid, "the climb's legs the SID's (" .. sid .. ")")
+-- (2026-11-08, step 9i's review, finding 3) the climb's legs: the SID's,
+-- then in the climb the enroute legs (no procedure) on to the predictions'
+-- T/C, here (no predictions yet) within half the route, never past the
+-- arrival's first leg (B747_vnav_model.clb_last; before, the SID's only)
+local half, acc, want = 0, 0, 0
+for _, l in ipairs(s.legs) do half = half + l.dist end
+half = half / 2
+for i, l in ipairs(s.legs) do
+    acc = acc + l.dist
+    if l.proc == "SID" then want = i
+    elseif l.proc == nil and acc <= half + 0.01 then want = i
+    else break end
+end
+T.check(want >= sid, "the SID's legs among the climb's")
+T.equal(s.clb_last, want, "the climb's legs: the SID's and the enroute legs within half the route (" .. want .. ")")
+T.check(s.legs[want + 1] == nil or s.legs[want + 1].proc ~= "SID", "none of the SID's after them")
 local fixed = true
 for i, l in ipairs(legs) do
     local prev = legs[i - 1] and legs[i - 1].fix

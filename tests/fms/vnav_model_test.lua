@@ -686,4 +686,42 @@ do
         des_alt = 24000, des_kind = "B", des_e = 63.333})
     T.near(o2.alt, 19000, 1, "on the path (VNAV PTH): 19,000 ft too")
 end
+
+-- (2026-11-08, step 9i's review, finding 3) the climb's legs ahead
+-- (V.clb_last, the rule of V.clb_keep), the predictions' and VNAV's: the
+-- SID's; in the climb the enroute legs to the T/C (or before predictions
+-- half the way); never an arrival's or an approach's leg nor one after it;
+-- in the cruise and the descent the SID's only. Before, without a SID the
+-- legs before half the way in any phase (the descent's constraints there
+-- left out of its path)
+do
+    local L6 = {{proc = "SID"}, {proc = "SID"}, {}, {}, {proc = "STAR"}, {proc = "APPR"}}
+    local X6 = {5, 12, 40, 90, 120, 140}
+    T.equal(V.clb_last(L6, X6, "clb", 60, 70), 3, "the climb: the SID's and the enroute legs to the T/C at 60 NM")
+    T.equal(V.clb_last(L6, X6, "clb", 100, 70), 4, "the T/C at 100 NM: the next enroute leg too")
+    T.equal(V.clb_last(L6, X6, "clb", 200, 70), 4, "the T/C past the arrival's legs: none of them")
+    T.equal(V.clb_last(L6, X6, "clb", nil, 70), 3, "no predictions yet: the enroute legs within half the way (70 NM)")
+    T.equal(V.clb_last(L6, X6, "crz", 60, 70), 2, "the cruise: the SID's only")
+    T.equal(V.clb_last(L6, X6, "des", 60, 70), 2, "the descent: the SID's only")
+    local L4 = {{}, {}, {proc = "STAR"}, {}}
+    local X4 = {20, 60, 80, 100}
+    T.equal(V.clb_last(L4, X4, "des", nil, 50), 0,
+        "no SID, the descent: none (before: those within half the way, an arrival's constraint there not the descent's)")
+    T.equal(V.clb_last(L4, X4, "crz", 90, 50), 0, "no SID, the cruise: none")
+    T.equal(V.clb_last(L4, X4, "clb", 90, 50), 2, "no SID, the climb: the enroute legs to the T/C, none past the arrival's first leg")
+    T.equal(V.clb_last({}, {}, "clb", 10, 5), 0, "no legs: none")
+    -- the predictions with it: in the descent at 20,000 ft an AT 15,000
+    -- 20 NM ahead of an arrival is the path's (before, within half the way
+    -- the climb's: the path and the prediction there 20,000 ft)
+    local legsD = {{name = "D1", dist = 20, con = {kind = "AT", a = 15000}, proc = "STAR"},
+        {name = "D2", dist = 40, con = nil, proc = "STAR"},
+        {name = "RW", dist = 15, con = {kind = "AT", a = 500}, proc = "APPR"}}
+    local cl = V.clb_last(legsD, {20, 60, 75}, "des", nil, 37.5)
+    T.equal(cl, 0, "the arrival's legs in the descent: not the climb's")
+    local sD = {P = P, t = P.tables(0), isa = 0, gw = 250000, fuel = 30000, alt = 20000, cas = 290, phase = "des",
+        crz = 35000, clb = clb, des = des, crzspd = {mach = 0.85}, legs = legsD, ed = 3, clb_last = cl}
+    local rD = PM.predict(sD)
+    T.check(rD.pts[1] and math.abs(rD.pts[1].h - 15000) < 600,
+        string.format("the AT 15,000 20 NM ahead on the path: %s ft there", tostring(rD.pts[1] and math.floor(rD.pts[1].h))))
+end
 T.done()

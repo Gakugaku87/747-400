@@ -715,4 +715,34 @@ function M.clb_keep(proc, x, tc)
     return proc == nil and tc ~= nil and x ~= nil and x <= tc + 0.01
 end
 
+-- (2026-11-08, step 9i's review, finding 3) the climb's legs ahead, by the
+-- same rule as clb_keep: the last one's index in `legs` (each {proc}, the
+-- first ahead first; `lx[i]` its distance ahead, NM), 0 none. They are a
+-- prefix: the SID's legs; in the climb (`phase` "clb") the enroute legs (no
+-- procedure) on to the predictions' T/C or a short flight's T/D (`line`,
+-- NM ahead), or before one is known those within `half` (half the way to
+-- the end: an estimate, as before); never an arrival's or an approach's leg
+-- nor one after it (FCOM p.1258: their waypoints the descent's; FMSPG
+-- p.114 (3.3-5): the climb's constraints the procedure's or the crew's in
+-- the climb). In the cruise and the descent the SID's legs still ahead
+-- only. Before, without a SID, the legs before half the way in any phase:
+-- an arrival's or approach's constraint there was the climb's, out of the
+-- descent's path and its FMC altitude (in the descent at 20,000 ft an AT
+-- 15,000 20 NM ahead not in the path, the predictions there 20,000 ft)
+function M.clb_last(legs, lx, phase, line, half)
+    local last = 0
+    for i, l in ipairs(legs) do
+        if l.proc == "SID" then
+            last = i
+        elseif l.proc == nil then
+            local lim = line or half
+            if phase ~= "clb" or not lim or not lx[i] or lx[i] > lim + 0.01 then break end
+            last = i
+        else
+            break
+        end
+    end
+    return last
+end
+
 return M
