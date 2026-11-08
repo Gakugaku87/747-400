@@ -70,7 +70,10 @@
 #                                                typed on its keyboard (A-Z, 0-9,
 #                                                / . - and space; "=" first types text
 #                                                that reads as a key)
-# Every step may carry "note" (shown in the report) and "cite" (source page).
+# Every step may carry "note" (shown in the report) and "cite" (source page),
+# and "stop": true: the scenario ends when that step fails (the recorder
+# stopped; the steps the rest of the scenario needs, such as a route or a
+# mode the later waits and watches would only time out without).
 param(
     [Parameter(Mandatory = $true)][string]$Scenario,
     [string]$Acf = 'custom',
@@ -340,13 +343,19 @@ foreach ($opt in 'laminar/B747/options/auto_step_climb', 'laminar/B747/options/p
 $fov0 = Get-XPDataref 'sim/graphics/view/field_of_view_deg'
 
 $stopped = $false
+# (2026-11-09) a failed step with "stop": the scenario ends (s271's first
+# run: its DIRECT TO not taken, the scenario flew level for 50 minutes
+# through every later wait's timeout)
+$failStop = $false
+$recording = $false
 foreach ($step in $spec.steps) {
     if ($stopped) { break }
+    $before = $results.Count
     try {
         if (Test-XPStuck) { throw 'stuck' }
         switch ($step.do) {
-            'record_start' { Invoke-XPCommand 'FlyWithLua/B747_flighttest/start'; Add-Result $step 'info' 'recorder started' }
-            'record_stop'  { Invoke-XPCommand 'FlyWithLua/B747_flighttest/stop'; Start-Sleep -Seconds 2; Add-Result $step 'info' 'recorder stopped' }
+            'record_start' { Invoke-XPCommand 'FlyWithLua/B747_flighttest/start'; $recording = $true; Add-Result $step 'info' 'recorder started' }
+            'record_stop'  { Invoke-XPCommand 'FlyWithLua/B747_flighttest/stop'; $recording = $false; Start-Sleep -Seconds 2; Add-Result $step 'info' 'recorder stopped' }
             'mark'         { Invoke-XPCommand 'FlyWithLua/B747_flighttest/mark'; Add-Result $step 'info' 'mark' }
             'traffic' {
                 @($step.targets) -join "`n" | Out-File -Encoding ascii (Join-Path $recDir 'traffic.txt')
@@ -536,8 +545,18 @@ foreach ($step in $spec.steps) {
             Add-Result $step 'fail' "error: $($_.Exception.Message)"
         }
     }
+    if (-not $stopped -and $step.stop) {
+        for ($i = $before; $i -lt $results.Count; $i++) {
+            if ($results[$i].status -eq 'fail') { $failStop = $true }
+        }
+        if ($failStop) {
+            Add-Result @{ do = 'stop' } 'info' 'a failed step with "stop": the scenario ends here'
+            $stopped = $true
+        }
+    }
 }
-if (-not $stopped) { try { Set-XPDataref 'sim/graphics/view/field_of_view_deg' $fov0 } catch { } }
+if (-not $stopped -or $failStop) { try { Set-XPDataref 'sim/graphics/view/field_of_view_deg' $fov0 } catch { } }
+if ($failStop -and $recording) { try { Invoke-XPCommand 'FlyWithLua/B747_flighttest/stop'; Start-Sleep -Seconds 2 } catch { } }
 
 # collect the recorder output and the Log.txt lines of this run: only what
 # this run wrote (2026-11-03: a scenario without record_start got the
