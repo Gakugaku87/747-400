@@ -29,8 +29,16 @@
 # the measure-based trip fuel / SimBrief's - 1, a route; the Fuel Factor the
 # distance bands' weighted mean.
 #
+# The user's choices (2026-11-08, "1番で"): SimBrief and the FMC both at CI
+# 200, the Fuel Factor from the cruise at the FMC's ECON CI 200 Mach
+# (-FactorBasis fmc_econ; ofp: at the OFPs' own Machs), Default CI 200, the
+# cruise profile CI 200. The Service Ceiling from the light ceiling
+# (Get-PerfLightCeiling, the FCOM's criteria).
+#
 # Output: tests\flight\perf\runs\<yyyyMMdd_HHmmss>_compare\ (local only, as
-# the runs): report.md, simbrief_airframe.md, compare.json, legs_<route>.csv.
+# the runs): report.md, simbrief_airframe.md, compare.json, legs_<route>.csv;
+# report.md and simbrief_airframe.md also to tests\flight\perf\ (the spec's
+# deliverables, tracked; -NoPublish: not).
 param(
     [string]$CruiseRun,
     [string]$ClimbRun,
@@ -38,13 +46,18 @@ param(
     [string]$OfpDir,
     [string[]]$Routes = @('KSEA-KLAX', 'EDDF-OMDB', 'KLAX-EDDF'),
     [double[]]$BandShares = @(0.2, 0.2, 0.6),
+    [ValidateSet('fmc_econ', 'ofp')][string]$FactorBasis = 'fmc_econ',
+    [int]$DefaultCi = 200,
+    [string]$CruiseProfile = 'CI 200',
     [string]$CompareOut,
+    [switch]$NoPublish,
     [string]$LuaJit = 'C:\Users\gakug\tools\luajit\bin\luajit.exe'
 )
 $ErrorActionPreference = 'Stop'
 # (perf.ps1's param block runs here too: none of its names is used above)
 $cmpArgs = @{ CruiseRun = $CruiseRun; ClimbRun = $ClimbRun; CeilingRun = $CeilingRun; OfpDir = $OfpDir; Routes = $Routes
-    BandShares = $BandShares; CompareOut = $CompareOut; LuaJit = $LuaJit }
+    BandShares = $BandShares; FactorBasis = $FactorBasis; DefaultCi = $DefaultCi; CruiseProfile = $CruiseProfile; CompareOut = $CompareOut
+    NoPublish = [bool]$NoPublish; LuaJit = $LuaJit }
 . (Join-Path $PSScriptRoot 'perf.ps1')
 $inv = [Globalization.CultureInfo]::InvariantCulture
 
@@ -303,7 +316,7 @@ function Invoke-PerfAlongOfp($Ofp, $Model, $Climbs, $Descents, $Ceilings, $Mach 
     $clbTop = 35000.0
     $c1To = [math]::Min($hToc, $clbTop) - $ClimbTopMarginFt
     $seg1 = Get-PerfSegment $Climbs $hA $c1To $gwA
-    if ($seg1.extrapolated) { [void]$res.notes.Add(('climb: {0:0.0} t at {1:0} ft outside the climbs'' weights' -f ($gwA / 1000), $hA)) }
+    if ($seg1.extrapolated) { [void]$res.notes.Add(('上昇：{1:0} ft の {0:0.0} t は、上昇の記録の重量の外（いちばん近い記録の値）' -f ($gwA / 1000), $hA)) }
     $clb = [ordered]@{ t = $seg1.t; fuel = $seg1.fuel; dair = $seg1.dair }
     # (the profile's samples for the along-track sums: every 1,000 ft)
     $pts = New-Object System.Collections.ArrayList
@@ -315,7 +328,7 @@ function Invoke-PerfAlongOfp($Ofp, $Model, $Climbs, $Descents, $Ceilings, $Mach 
     if ($hToc -gt $c1To + $ClimbTopMarginFt + 1) {
         $gw35 = $gwA - $clb.fuel
         $seg2 = Get-PerfSegment $Ceilings $c1To $hToc $gw35
-        if ($seg2.extrapolated) { [void]$res.notes.Add(('climb above FL350: {0:0.0} t outside the ceilings'' weights' -f ($gw35 / 1000))) }
+        if ($seg2.extrapolated) { [void]$res.notes.Add(('FL350 より上の上昇：{0:0.0} t は、上限高度の記録の重量の外（いちばん近い記録の値）' -f ($gw35 / 1000))) }
         $hh = 1000 * [math]::Floor($c1To / 1000) + 1000
         while ($hh -le $hToc) {
             $sg = Get-PerfSegment $Ceilings $c1To $hh $gw35
@@ -324,7 +337,7 @@ function Invoke-PerfAlongOfp($Ofp, $Model, $Climbs, $Descents, $Ceilings, $Mach 
             $hh += 1000
         }
         $clb.t += $seg2.t; $clb.fuel += $seg2.fuel; $clb.dair += $seg2.dair
-        [void]$res.notes.Add(('climb {0:0}-{1:0} ft from the ceilings (M.85; estimate)' -f $c1To, $hToc))
+        [void]$res.notes.Add(('上昇の {0:0}〜{1:0} ft は、上限高度の試験の上昇から（M.85。推定）' -f $c1To, $hToc))
     }
     $clb.s = $clb.dair + $windClb * $clb.t / 3600
     $res.climb = $clb
@@ -389,7 +402,7 @@ function Invoke-PerfAlongOfp($Ofp, $Model, $Climbs, $Descents, $Ceilings, $Mach 
         if ($conv) { break }
     }
     $res.descent = $des
-    if ($des.ext_ft -gt 0) { [void]$res.notes.Add(('descent {0:0}-{1:0} ft by the 33,000-31,000 ft band (estimate)' -f $hTod, $desTop)) }
+    if ($des.ext_ft -gt 0) { [void]$res.notes.Add(('降下の {0:0}〜{1:0} ft は、33,000〜31,000 ft の区間の 1 ft あたりの値で（推定）' -f $hTod, $desTop)) }
     $res.steps = $stepList.ToArray(); $res.steps_fuel = $steps
     foreach ($q in $crzSamples) { [void]$samples.Add($q) }
     $crzFuel = $fuel - $clb.fuel - $steps
@@ -466,6 +479,52 @@ function Get-PerfLevelChecks($Ofp, $Along) {
 # SimBrief's Fuel Factor from an error (-0.0205: M02; P with 0)
 function Format-PerfFactor([double]$E) { $p = [int][math]::Round($E * 100, [MidpointRounding]::AwayFromZero); return ('{0}{1:00}' -f $(if ($p -lt 0) { 'M' } else { 'P' }), [math]::Abs($p)) }
 
+# The light ceiling (PERF_SIMBRIEF.md: the Service Ceiling from the lightest
+# test weight) by the kit's own Get-PerfCeiling (the FCOM's criteria: under
+# $CeilingRateFpm or the FCOM's 1.30 g altitude) on its raw CSV, from the
+# FLCH push to $CeilingTopFt. None found (a record of the 300 fpm days that
+# stopped while climbing): the highest altitude reached, under the FCOM's
+# 1.30 g altitude at the last weight. The Service Ceiling: that, down to
+# 1,000 ft.
+function Get-PerfLightCeiling([string]$File) {
+    $rec = Read-PerfRawRows $File
+    $iF = $rec.ix['fma']; $iM = $rec.ix['mcp_alt']; $iA = $rec.ix['press_alt_ft']; $iW = $rec.ix['weight']
+    $first = -1
+    for ($k = 0; $k -lt $rec.rows.Count; $k++) { if ($rec.rows[$k][$iF] -eq 8 -and [math]::Abs($rec.rows[$k][$iM] - $CeilingTopFt) -le 1) { $first = $k; break } }
+    if ($first -lt 1) { throw "no FLCH push to $CeilingTopFt ft in $File" }
+    $from = $first - 1
+    $c = Get-PerfCeiling $rec.rows $from $CeilingRateFpm $CeilingWinS $CeilingArmFpm $CeilingHoldS
+    $maxFt = 0.0; for ($k = $from; $k -lt $rec.rows.Count; $k++) { if ($rec.rows[$k][$iA] -gt $maxFt) { $maxFt = $rec.rows[$k][$iA] } }
+    $value = if ($c.found) { $c.ceiling_ft } else { [math]::Min($maxFt, $c.fcom_ft) }
+    return [pscustomobject]@{ file = $File; found = $c.found; limit = $c.limit; ceiling_ft = $c.ceiling_ft; max_ft = $maxFt; fcom_ft = $c.fcom_ft
+        last_rate_fpm = $c.last_rate_fpm; gw_kg = $rec.rows[$rec.rows.Count - 1][$iW]; value_ft = $value; service_ft = 1000 * [math]::Floor($value / 1000) }
+}
+
+# The input sheet (PERF_SIMBRIEF.md's form): the lines of simbrief_airframe.md
+function Get-PerfAirframeSheet($Weights, [string]$CruiseRunName, [string]$CeilingRunName, [double]$FactorErr, [string]$FactorBasis, [double]$OtherErr,
+        $Light, [int]$OffsetFt, [int]$DefaultCi, [string]$CruiseProfile) {
+    $basisText = if ($FactorBasis -eq 'fmc_econ') { 'FMC の CI 200 の ECON の Mach で巡航したときの' } else { 'OFP の Mach で巡航したときの' }
+    $otherText = if ($FactorBasis -eq 'fmc_econ') { 'OFP の Mach なら' } else { 'FMC の CI 200 の ECON の Mach なら' }
+    $l = New-Object System.Collections.ArrayList
+    [void]$l.Add('| SimBriefの欄 | 値 | 単位 | 根拠 |')
+    [void]$l.Add('| --- | --- | --- | --- |')
+    [void]$l.Add('| Base Type | B744 | – | 仕様（作成後は変えられない） |')
+    [void]$l.Add(('| Empty Weight | {0:0} | KG | acf の空虚重量（`{1}` の meta.json） |' -f $Weights.oew_kg, $CruiseRunName))
+    [void]$l.Add(('| Max Zero Fuel Weight | {0:0} | KG | FCOM p.78（L.10.2）、機番 109（2026-11-06 利用者） |' -f $Weights.mzfw_kg))
+    [void]$l.Add(('| Max Takeoff Weight | {0:0} | KG | FCOM p.78（L.10.2）、機番 109（2026-11-06 利用者） |' -f $Weights.mtow_kg))
+    [void]$l.Add(('| Max Landing Weight | {0:0} | KG | FCOM p.78（L.10.2）、機番 109（2026-11-06 利用者） |' -f $Weights.mlw_kg))
+    [void]$l.Add(('| Max Fuel Capacity | {0:0} | KG | acf のタンクの合計（`{1}` の meta.json） |' -f $Weights.fuel_capacity_kg, $CruiseRunName))
+    [void]$l.Add('| Passenger / Baggage Weight | 95 / 25 | KG | 機体の 1 人 120 kg（simconfig の std_pax_weight）を、乗客と手荷物に分けた（2026-11-06 利用者） |')
+    [void]$l.Add(('| Fuel Factor | {0}（{1:+0.0;-0.0} %） | P/M ％ | {2}、3 本の Trip Fuel の誤差を距離帯の割合で重みづけた値（2026-11-08 利用者）。{3} {4}（{5:+0.0;-0.0} %）。report.md |' -f
+        (Format-PerfFactor $FactorErr), [math]::Round($FactorErr * 100, 1), $basisText, $otherText, (Format-PerfFactor $OtherErr), [math]::Round($OtherErr * 100, 1)))
+    $how = if ($Light.found) { '記録では {0:#,0} ft（{1}）' -f $Light.ceiling_ft, $Light.limit } else { '記録では {0:#,0} ft でもまだ上昇中（FCOM の 1.30 g の高さ {1:#,0} ft の下）' -f $Light.max_ft, $Light.fcom_ft }
+    [void]$l.Add(('| Service Ceiling | {0:0} | ft | 軽い段の上限高度を 1,000 ft 単位で切り下げ。{1}。決め方は FCOM（1.30 g の高さと、上昇推力で 100 fpm を切る高さの低い方。2026-11-08 利用者）。`{2}` |' -f $Light.service_ft, $how, $CeilingRunName))
+    [void]$l.Add(('| Cruise Level Offset | {0} | ft（M/P表記） | 3 本の T/C と段階上昇の高さが、その重量の上限高度（FCOM の 1.30 g の高さ）に届いている。report.md |' -f $(if ($OffsetFt -eq 0) { '0' } else { 'M{0:0000}' -f $OffsetFt })))
+    [void]$l.Add(('| Default Cost Index | {0} | – | ふだんの CI（2026-11-08 利用者：SimBrief も FMC も CI 200）。機体の FMC の CI 200 は SimBrief の CI 200 より速く、その分は Fuel Factor に入れた。report.md |' -f $DefaultCi))
+    [void]$l.Add(('| 計画時に選ぶ巡航プロファイル | {0} | – | 同上 |' -f $CruiseProfile))
+    return ,[string[]]$l.ToArray()
+}
+
 # dot-sourced (tests/flight/perf/compare_offline_test.ps1): the functions only
 if ($MyInvocation.InvocationName -eq '.') { return }
 
@@ -532,24 +591,48 @@ foreach ($rt in $cmpArgs.Routes) {
 
 # ---- the values ----
 $shares = $cmpArgs.BandShares
-$wErr = 0.0; $wErrEcon = 0.0; $wSum = 0.0
+$wErr = 0.0; $wErrEcon = 0.0; $wSum = 0.0; $haveEcon = $true
 for ($i = 0; $i -lt $results.Count; $i++) {
     $wErr += $shares[$i] * $results[$i].along.err_trip; $wSum += $shares[$i]
-    if ($null -ne $results[$i].along_econ) { $wErrEcon += $shares[$i] * $results[$i].along_econ.err_trip }
+    if ($null -ne $results[$i].along_econ) { $wErrEcon += $shares[$i] * $results[$i].along_econ.err_trip } else { $haveEcon = $false }
 }
 $wErr /= $wSum; $wErrEcon /= $wSum
+$basis = $cmpArgs.FactorBasis
+if ($basis -eq 'fmc_econ' -and -not $haveEcon) { $basis = 'ofp'; Write-Warning 'no LuaJIT: the Fuel Factor at the OFPs'' own Machs' }
+$fErr = if ($basis -eq 'fmc_econ') { $wErrEcon } else { $wErr }
+$oErr = if ($basis -eq 'fmc_econ') { $wErr } else { $wErrEcon }
 $meta = Get-Content -Raw -Encoding UTF8 (Join-Path $cruiseDir 'meta.json') | ConvertFrom-Json
 $wts = $meta.weights
+$light = Get-PerfLightCeiling (Join-Path $ceilDir 'raw\cel_l15.csv')
+$off = 0
+foreach ($r in $results) { foreach ($lc in $r.levels) { if ($lc.what -eq 'T/C' -and $lc.ft -gt $lc.ceiling) { $off = [math]::Max($off, 500 * [math]::Ceiling(($lc.ft - $lc.ceiling) / 500)) } } }
+# the FMC's CI nearest each OFP's cruise Mach (time-weighted over its cruise legs)
+$ciList = @(0, 50, 80, 100, 120, 150, 200, 250, 300)
+foreach ($r in $results) {
+    $r | Add-Member -NotePropertyName ci_match -NotePropertyValue $null
+    if ($null -eq $r.econ) { continue }
+    $tw = 0.0; $mo = 0.0; foreach ($lg in $r.crz_legs) { $tw += $lg.t_leg; $mo += $lg.mach * $lg.t_leg }
+    $conds = @(foreach ($lg in $r.crz_legs) { [pscustomobject]@{ kg = $r.ofp.zfw + $lg.f_onb + $lg.f_leg / 2; ft = $lg.alt; headwind = -$lg.wind; isa = $lg.isa } })
+    $best = $null
+    foreach ($ci in $ciList) {
+        $e = Get-PerfFmcEcon $conds $ci
+        $me = 0.0; for ($i = 0; $i -lt $r.crz_legs.Count; $i++) { $me += $e[$i] * $r.crz_legs[$i].t_leg }
+        $d = [math]::Abs($me / $tw - $mo / $tw)
+        if ($null -eq $best -or $d -lt $best.d) { $best = [pscustomobject]@{ ci = $ci; mach = $me / $tw; d = $d } }
+    }
+    $r.ci_match = [pscustomobject]@{ ofp_mach = $mo / $tw; ci = $best.ci; fmc_mach = $best.mach }
+}
 
 $summary = [ordered]@{ created = (Get-Date).ToString('o'); cruise_run = $cruiseDir; climb_run = $climbDir; ceiling_run = $ceilDir; ofp_dir = $ofpDir
-    band_shares = $shares; fuel_factor = [ordered]@{ weighted_err = $wErr; integer = (Format-PerfFactor $wErr); one_decimal = [math]::Round($wErr * 100, 1)
-        weighted_err_fmc_econ = $wErrEcon; integer_fmc_econ = (Format-PerfFactor $wErrEcon); one_decimal_fmc_econ = [math]::Round($wErrEcon * 100, 1) }
+    band_shares = $shares; fuel_factor = [ordered]@{ basis = $basis; value = (Format-PerfFactor $fErr); err = $fErr; one_decimal = [math]::Round($fErr * 100, 1)
+        at_ofp_mach = [ordered]@{ err = $wErr; value = (Format-PerfFactor $wErr) }; at_fmc_econ = [ordered]@{ err = $wErrEcon; value = (Format-PerfFactor $wErrEcon) } }
+    service_ceiling = $light; cruise_level_offset_ft = $off; default_ci = $cmpArgs.DefaultCi; cruise_profile = $cmpArgs.CruiseProfile
     routes = @($results | ForEach-Object {
         $r = $_; $a = $r.along
         [ordered]@{ route = $a.route; a = $a.a; a_ft = $a.a_ft; b = $a.b; b_ft = $a.b_ft; toc_ft = $a.toc_ft; tod_ft = $a.tod_ft; gw_a = $a.gw_a; s_ab = $a.s_ab
             sb = $a.sb; aircraft = [ordered]@{ ab_fuel = $a.total.fuel; ab_t = $a.total.t; trip = $a.trip; climb = $a.climb; cruise = $a.cruise; descent = $a.descent
                 steps_fuel = $a.steps_fuel; spans = $a.spans }
-            err_ab = $a.err_ab; err_trip = $a.err_trip; steps = $a.steps; notes = $a.notes; levels = $r.levels
+            err_ab = $a.err_ab; err_trip = $a.err_trip; steps = $a.steps; notes = $a.notes; levels = $r.levels; ci_match = $r.ci_match
             econ = $(if ($null -ne $r.econ) { [ordered]@{ fmc_ci200_mach_min = ($r.econ | Measure-Object -Minimum).Minimum; fmc_ci200_mach_max = ($r.econ | Measure-Object -Maximum).Maximum
                     ofp_mach_min = ($r.crz_legs | Measure-Object mach -Minimum).Minimum; ofp_mach_max = ($r.crz_legs | Measure-Object mach -Maximum).Maximum
                     ab_fuel = $r.along_econ.total.fuel; ab_t = $r.along_econ.total.t; trip = $r.along_econ.trip; err_trip = $r.along_econ.err_trip } } else { $null }) }
@@ -559,22 +642,33 @@ Save-Json (Join-Path $out 'compare.json') $summary
 # ---- report.md ----
 $md = New-Object System.Collections.ArrayList
 function Add-Md([string]$S) { [void]$md.Add($S) }
-Add-Md "# PERF_SIMBRIEF.md phase 3: the comparison ($(Split-Path -Leaf $out))"
+function Format-PerfPhaseJa([string]$P) { switch ($P) { 'climb' { '上昇' } 'cruise' { '巡航' } 'descent' { '降下' } default { $P } } }
+Add-Md "# PERF_SIMBRIEF.md フェーズ3：SimBrief との突き合わせ（$(Split-Path -Leaf $out)）"
 Add-Md ''
-Add-Md ('Inputs: cruise `{0}`, climbs and descents `{1}`, ceilings `{2}`, OFPs `{3}` (kept local).' -f (Split-Path -Leaf $cruiseDir), (Split-Path -Leaf $climbDir), (Split-Path -Leaf $ceilDir), (Split-Path -Leaf $ofpDir))
+Add-Md ('入力：巡航 `{0}`、上昇と降下 `{1}`、上限高度 `{2}`、OFP `{3}`（個人の情報を含むので、リポジトリの外）。OFP は SimBrief の標準の B744・P00・ZFW 手入力・CI 200・高度 AUTO。' -f (Split-Path -Leaf $cruiseDir), (Split-Path -Leaf $climbDir), (Split-Path -Leaf $ceilDir), (Split-Path -Leaf $ofpDir))
 Add-Md ''
-Add-Md '## The cruise model'
+Add-Md '## 入力シートの値'
 Add-Md ''
-Add-Md 'The fuel flow is the fuel weight''s fall (kg/h, four engines). The corrected flow FFc = FF / (delta sqrt(theta)), theta from each point''s own air; x = W/delta (1000 t). A fit a target Mach gives the shape: c0 + c1 x + c2 x^2 + c3 (h - 35,000)/1000. The values come from the points:'
+$basisJa = if ($basis -eq 'fmc_econ') { 'FMC の CI 200 の ECON の Mach で巡航したとき' } else { 'OFP の Mach で巡航したとき' }
+$otherJa = if ($basis -eq 'fmc_econ') { 'OFP の Mach なら' } else { 'FMC の CI 200 の ECON の Mach なら' }
+Add-Md ('- Fuel Factor **{0}**（{1:+0.0;-0.0} %）：{2}の Trip Fuel の誤差を、距離帯の割合（短 {3:0} %・中 {4:0} %・長 {5:0} %）で重みづけた値。{6} {7}（{8:+0.0;-0.0} %）。' -f (Format-PerfFactor $fErr), [math]::Round($fErr * 100, 1), $basisJa,
+    (100 * $shares[0]), (100 * $shares[1]), (100 * $shares[2]), $otherJa, (Format-PerfFactor $oErr), [math]::Round($oErr * 100, 1))
+$lightJa = if ($light.found) { '（{0:#,0} ft、{1}）' -f $light.ceiling_ft, $light.limit } else { '（記録は {0:#,0} ft でもまだ上昇中。最後の 60 秒の率 {1:0} fpm、FCOM の 1.30 g の高さ {2:#,0} ft の下）' -f $light.max_ft, $light.last_rate_fpm, $light.fcom_ft }
+Add-Md ('- Service Ceiling **{0:#,0} ft**：軽い段の上限高度{1}を、1,000 ft 単位で切り下げた（FCOM の決め方：1.30 g の高さと、上昇推力で 100 fpm を切る高さの低い方）。' -f $light.service_ft, $lightJa)
+Add-Md ('- Cruise Level Offset **{0}**：下の「高度」の表。' -f $(if ($off -eq 0) { '0' } else { 'M{0:0000}' -f $off }))
+Add-Md ('- Default Cost Index **{0}**、巡航プロファイル **{1}**（2026-11-08 利用者：SimBrief も FMC も CI 200）。' -f $cmpArgs.DefaultCi, $cmpArgs.CruiseProfile)
+Add-Md '- 重量の欄は `simbrief_airframe.md`。'
 Add-Md ''
-Add-Md '- each level and weight class: its three Machs moved to the class''s mean weight by the shape, then piecewise linear in the actual Mach;'
-Add-Md '- between the classes, the ratio to the shape is linear in the weight (outside them, the end ratio is kept);'
-Add-Md '- between the levels, linear in altitude at the same W/delta;'
-Add-Md '- FF = FFc x delta x sqrt(theta), with theta from the OFP leg''s ISA deviation.'
+Add-Md '## 巡航の燃料流量の模型'
 Add-Md ''
-Add-Md 'The model returns the measured points. The shape alone fits them within the rms below.'
+Add-Md '燃料流量は燃料重量の減り（kg/h、4 発）。補正燃料流量 FFc ＝ FF ÷ (δ√θ)（θ は各点の気温から）、x ＝ W/δ（1000 t）。目標の Mach ごとに c0 ＋ c1 x ＋ c2 x² ＋ c3 (h − 35,000)/1000 を最小二乗で当て、形にした。値は測った点から取る。'
 Add-Md ''
-Add-Md '| target Mach | c0 | c1 | c2 | c3 | rms of the shape alone |'
+Add-Md '- 高さと重量の段ごとに、3 つの Mach を段の平均の重量へ形で移し、実際の Mach で区分的に線形。'
+Add-Md '- 段の間は、形との比を重量で線形（段の外は端の比のまま）。'
+Add-Md '- 高さの間は、同じ W/δ で高さに線形。'
+Add-Md '- FF ＝ FFc × δ × √θ（θ は OFP の区間の ISA 偏差から）。'
+Add-Md ''
+Add-Md '| 目標の Mach | c0 | c1 | c2 | c3 | 形だけの rms |'
 Add-Md '|---|---|---|---|---|---|'
 foreach ($mt in $model.machs) {
     $c = $model.shape[[string]$mt]
@@ -584,99 +678,107 @@ foreach ($mt in $model.machs) {
 }
 $maxDev = 0.0; foreach ($q in $model.points) { $e = [math]::Abs((Get-PerfCruiseFf $model $q.gw $q.h $q.mach (288.15 * $q.theta - (Get-IsaTempK $q.h))) / $q.ff - 1); if ($e -gt $maxDev) { $maxDev = $e } }
 Add-Md ''
-Add-Md ('Check: at the 33 points, the model is within {0:0.000} % of the measured flows.' -f (100 * $maxDev))
+Add-Md ('確かめ：模型は、測った {0} 点に {1:0.000} % 以内で戻る。補正燃料流量は W/δ の 1 本の線には乗らない（形だけでは上の rms）。' -f $model.points.Count, (100 * $maxDev))
 Add-Md ''
-Add-Md '## The routes'
+Add-Md '## ルートごと'
 Add-Md ''
-Add-Md 'Both sides use the OFP''s own fuel below 10,000 ft:'
+Add-Md '10,000 ft より下は、両方とも OFP の燃料にした（離陸から A まで、B から着陸まで）。A は上昇で最初に 10,000 ft 以上になる点、B は降下で最後に 10,000 ft 以上の点。'
 Add-Md ''
-Add-Md '- from takeoff to A (the first fix at or above 10,000 ft in the climb);'
-Add-Md '- from B (the last such fix in the descent) to landing.'
+Add-Md 'A〜B は、機体が OFP の経路・風・気温・高度・段階上昇・Mach の上を、自分の上昇と降下（フェーズ2。OFP のその区間の平均の風で）と巡航で飛ぶ。巡航は、A〜B の対地距離の残りを飛ぶ。'
 Add-Md ''
-Add-Md 'Between A and B, the aircraft flies the OFP''s route, winds, temperatures, levels, steps and Machs. Its climb and descent are its own (phase 2), in the OFP''s mean wind. Its cruise fills the rest of the ground distance.'
-Add-Md ''
-Add-Md '| route | A | B | A-B NM | OFP A-B kg | aircraft A-B kg | A-B error | OFP trip kg | aircraft trip kg | trip error |'
+Add-Md '| ルート | A | B | A〜B NM | OFP A〜B kg | 機体 A〜B kg | A〜B の誤差 | OFP Trip kg | 機体 Trip kg | Trip の誤差 |'
 Add-Md '|---|---|---|---|---|---|---|---|---|---|'
 foreach ($r in $results) {
     $a = $r.along
     Add-Md ('| {0} | {1} {2:0} ft | {3} {4:0} ft | {5:0} | {6:0} | {7:0} | {8:+0.00;-0.00} % | {9:0} | {10:0} | {11:+0.00;-0.00} % |' -f $a.route, $a.a, $a.a_ft, $a.b, $a.b_ft, $a.s_ab, $a.sb.fuel, $a.total.fuel, (100 * $a.err_ab), $a.sb.trip, $a.trip, (100 * $a.err_trip))
 }
 Add-Md ''
-Add-Md '### The phases on the OFP''s spans'
+Add-Md '### OFP の区間ごと'
 Add-Md ''
-Add-Md 'These are the aircraft''s fuel and time over the OFP''s own spans of the route: A to the OFP''s T/C, T/C to T/D, and T/D to B.'
+Add-Md 'OFP の A〜T/C、T/C〜T/D、T/D〜B の道のりの上での、機体の燃料と時間。機体の上昇や降下が OFP より短いところは、機体は巡航している。'
 Add-Md ''
-Add-Md '| route | phase | OFP kg | aircraft kg | error | OFP min | aircraft min |'
+Add-Md '| ルート | 区間 | OFP kg | 機体 kg | 誤差 | OFP 分 | 機体 分 |'
 Add-Md '|---|---|---|---|---|---|---|'
 foreach ($r in $results) {
     $a = $r.along
     foreach ($ph in 'climb', 'cruise', 'descent') {
         $fo = $a.sb["${ph}_fuel"]; $fa = $a.spans["${ph}_fuel"]
-        Add-Md ('| {0} | {1} | {2:0} | {3:0} | {4:+0.0;-0.0} % | {5:0.0} | {6:0.0} |' -f $a.route, $ph, $fo, $fa, (100 * ($fa / $fo - 1)), ($a.sb["${ph}_t"] / 60), ($a.spans["${ph}_t"] / 60))
+        Add-Md ('| {0} | {1} | {2:0} | {3:0} | {4:+0.0;-0.0} % | {5:0.0} | {6:0.0} |' -f $a.route, (Format-PerfPhaseJa $ph), $fo, $fa, (100 * ($fa / $fo - 1)), ($a.sb["${ph}_t"] / 60), ($a.spans["${ph}_t"] / 60))
     }
 }
 Add-Md ''
-Add-Md '### The aircraft''s own climb and descent'
+Add-Md '### 機体の上昇と降下'
 Add-Md ''
-Add-Md '| route | climb | climb min | climb kg | climb NM (ground) | OFP climb NM | descent | descent min | descent kg | descent NM (ground) | OFP descent NM | steps kg |'
+Add-Md '| ルート | 上昇 | 分 | kg | 対地 NM | OFP の上昇 NM | 降下 | 分 | kg | 対地 NM | OFP の降下 NM | 段階上昇 kg |'
 Add-Md '|---|---|---|---|---|---|---|---|---|---|---|---|'
 foreach ($r in $results) {
     $a = $r.along
-    Add-Md ('| {0} | {1:0}-{2:0} ft | {3:0.0} | {4:0} | {5:0.0} | {6:0.0} | {7:0}-{8:0} ft | {9:0.0} | {10:0} | {11:0.0} | {12:0.0} | {13:0} |' -f $a.route, $a.a_ft, $a.toc_ft, ($a.climb.t / 60), $a.climb.fuel, $a.climb.s, $a.s_toc_sb,
+    Add-Md ('| {0} | {1:0}〜{2:0} ft | {3:0.0} | {4:0} | {5:0.0} | {6:0.0} | {7:0}〜{8:0} ft | {9:0.0} | {10:0} | {11:0.0} | {12:0.0} | {13:0} |' -f $a.route, $a.a_ft, $a.toc_ft, ($a.climb.t / 60), $a.climb.fuel, $a.climb.s, $a.s_toc_sb,
         $a.tod_ft, $a.b_ft, ($a.descent.t / 60), $a.descent.fuel, $a.descent.s, ($a.s_ab - $a.s_tod_sb), $a.steps_fuel)
 }
 Add-Md ''
 foreach ($r in $results) {
-    foreach ($st in $r.along.steps) { Add-Md ('- {0}: the step at {1} from {2:0} to {3:0} ft, {4:0.0} t: the climb {5:0} s and {6:0} kg; {7:+0;-0} kg more than cruising.' -f $r.along.route, $st.at, $st.from, $st.to, ($st.gw / 1000), $st.climb_t, $st.climb_fuel, $st.extra) }
-    foreach ($n in $r.along.notes) { Add-Md ('- {0}: {1}' -f $r.along.route, $n) }
+    foreach ($st in $r.along.steps) { Add-Md ('- {0}：{1} からの段階上昇（{2:0}→{3:0} ft、{4:0.0} t）。上昇 {5:0} 秒・{6:0} kg で、巡航より {7:+0;-0} kg 多い（推定）。' -f $r.along.route, $st.at, $st.from, $st.to, ($st.gw / 1000), $st.climb_t, $st.climb_fuel, $st.extra) }
+    foreach ($n in $r.along.notes) { Add-Md ('- {0}：{1}' -f $r.along.route, $n) }
 }
 Add-Md ''
 Add-Md '## Fuel Factor'
 Add-Md ''
-Add-Md ('The trip errors are weighted by the distance bands: short {0:0} %, medium {1:0} %, long {2:0} %.' -f (100 * $shares[0]), (100 * $shares[1]), (100 * $shares[2]))
+Add-Md ('Trip Fuel の誤差を、距離帯の割合（短 {0:0} %・中 {1:0} %・長 {2:0} %）で重みづけた。' -f (100 * $shares[0]), (100 * $shares[1]), (100 * $shares[2]))
 Add-Md ''
-Add-Md ('- At the OFPs'' own Machs: {0:+0.00;-0.00} %, so **{1}** (one decimal: {2:+0.0;-0.0}).' -f (100 * $wErr), (Format-PerfFactor $wErr), [math]::Round($wErr * 100, 1))
-if ($results[0].along_econ) {
-    Add-Md ('- At the FMC''s ECON CI 200 Mach on each cruise leg (what the aircraft flies with CI 200 in the FMC): {0:+0.00;-0.00} %, so {1} (one decimal: {2:+0.0;-0.0}).' -f (100 * $wErrEcon), (Format-PerfFactor $wErrEcon), [math]::Round($wErrEcon * 100, 1))
+Add-Md ('- OFP の Mach で巡航したとき：{0:+0.00;-0.00} % → {1}（小数 1 桁 {2:+0.0;-0.0}）。' -f (100 * $wErr), (Format-PerfFactor $wErr), [math]::Round($wErr * 100, 1))
+if ($haveEcon) {
+    Add-Md ('- FMC の CI 200 の ECON の Mach（`B747.68.perf_db.lua` の `econ_cruise`）で巡航したとき：{0:+0.00;-0.00} % → {1}（小数 1 桁 {2:+0.0;-0.0}）。' -f (100 * $wErrEcon), (Format-PerfFactor $wErrEcon), [math]::Round($wErrEcon * 100, 1))
 }
+Add-Md ('- 入力シートは{0}（2026-11-08 利用者：SimBrief も FMC も CI 200）。' -f $(if ($basis -eq 'fmc_econ') { '後者' } else { '前者' }))
 Add-Md ''
-Add-Md '## Machs (Default CI)'
+Add-Md '## Mach（Default CI）'
 Add-Md ''
-Add-Md '| route | OFP cruise Mach | FMC ECON CI 200 Mach | aircraft A-B min at the OFP''s Mach | at the FMC''s | trip error at the FMC''s |'
-Add-Md '|---|---|---|---|---|---|'
+Add-Md '| ルート | OFP の巡航 Mach | FMC の CI 200 の ECON の Mach | 機体 A〜B 分（OFP の Mach） | 同（FMC の Mach） | Trip の誤差（FMC の Mach） | OFP の Mach に近い FMC の CI |'
+Add-Md '|---|---|---|---|---|---|---|'
 foreach ($r in $results) {
     if ($null -eq $r.econ) { continue }
     $mo = $r.crz_legs | Measure-Object mach -Minimum -Maximum
     $me = $r.econ | Measure-Object -Minimum -Maximum
-    Add-Md ('| {0} | {1:0.000}-{2:0.000} | {3:0.000}-{4:0.000} | {5:0.0} | {6:0.0} | {7:+0.00;-0.00} % |' -f $r.along.route, $mo.Minimum, $mo.Maximum, $me.Minimum, $me.Maximum, ($r.along.total.t / 60), ($r.along_econ.total.t / 60), (100 * $r.along_econ.err_trip))
+    Add-Md ('| {0} | {1:0.000}〜{2:0.000} | {3:0.000}〜{4:0.000} | {5:0.0} | {6:0.0} | {7:+0.00;-0.00} % | CI {8}（M{9:0.0000}、OFP は M{10:0.0000}） |' -f $r.along.route, $mo.Minimum, $mo.Maximum, $me.Minimum, $me.Maximum,
+        ($r.along.total.t / 60), ($r.along_econ.total.t / 60), (100 * $r.along_econ.err_trip), $r.ci_match.ci, $r.ci_match.fmc_mach, $r.ci_match.ofp_mach)
 }
 Add-Md ''
-Add-Md '## Levels (Cruise Level Offset)'
+Add-Md '## 高度（巡航高度オフセット）'
 Add-Md ''
-Add-Md '| route | where | level ft | weight t | ceiling ft (the FCOM''s 1.30 g) | margin ft |'
+Add-Md '| ルート | 場所 | 高度 ft | 重量 t | 上限高度 ft（FCOM の 1.30 g） | 余裕 ft |'
 Add-Md '|---|---|---|---|---|---|'
-foreach ($r in $results) { foreach ($lc in $r.levels) { Add-Md ('| {0} | {1} | {2:0} | {3:0.0} | {4:0} | {5:+0;-0} |' -f $r.along.route, $lc.what, $lc.ft, ($lc.gw / 1000), $lc.ceiling, ($lc.ceiling - $lc.ft)) } }
+foreach ($r in $results) {
+    foreach ($lc in $r.levels) {
+        $where = if ($lc.what -like 'step at *') { '{0} からの段階上昇' -f $lc.what.Substring(8) } else { $lc.what }
+        Add-Md ('| {0} | {1} | {2:0} | {3:0.0} | {4:0} | {5:+0;-0} |' -f $r.along.route, $where, $lc.ft, ($lc.gw / 1000), $lc.ceiling, ($lc.ceiling - $lc.ft))
+    }
+}
+Add-Md ''
+Add-Md '## 推定の部分'
+Add-Md ''
+Add-Md '- FL350 より上の上昇：上限高度の試験の上昇（FL310 から M.85。上昇のスケジュールは M.84）。'
+Add-Md '- FL350 より上の降下：降下の試験の 33,000〜31,000 ft の区間の、1 ft あたりの時間・燃料・距離。'
+Add-Md '- 段階上昇：上限高度の試験の上昇の燃料から、その時間の巡航の燃料を引いた分。'
+Add-Md '- 上昇と降下の対地距離：OFP のその区間の、時間で重みづけた平均の風。'
+Add-Md ''
+Add-Md '## 気づいたこと'
+Add-Md ''
+$clbErr = @($results | ForEach-Object { 100 * ($_.along.spans.climb_fuel / $_.along.sb.climb_fuel - 1) } | Measure-Object -Minimum -Maximum)
+Add-Md ('- 上昇：OFP の上昇の区間で、機体の燃料は {0:+0.0;-0.0}〜{1:+0.0;-0.0} %。1 つの係数では吸収しきれない（上昇の分は、上昇の割合が大きい短い路線ほど Trip に効く）。2026-11-08 の記録では、機体の上昇率は FCOM PI.10.38（p.264。290/.84・最大上昇推力）と、どちらも M.84 の FL350 で合っていた（306 t で 1,114 対 1,116 fpm）。FCOM には上昇の燃料の表が無いので、上昇の燃料流量がどちらに近いかは確かめられない。' -f $clbErr.Minimum, $clbErr.Maximum)
+Add-Md '- 降下：OFP の降下は、FCOM PI.11.5（p.271。.84/290/250 で FL370 から着陸まで 129 NM・23 分）に近い。機体の 84/340/250 のアイドルの降下は、それよりずっと急（上の「機体の上昇と降下」の表）。道のりをそろえて比べたので、燃料への響きは小さい。'
 [IO.File]::WriteAllLines((Join-Path $out 'report.md'), [string[]]$md, $utf8)
 
 # ---- simbrief_airframe.md (the input sheet) ----
-$off = 0
-foreach ($r in $results) { foreach ($lc in $r.levels) { if ($lc.what -eq 'T/C' -and $lc.ft -gt $lc.ceiling) { $off = [math]::Max($off, 500 * [math]::Ceiling(($lc.ft - $lc.ceiling) / 500)) } } }
-$sheet = New-Object System.Collections.ArrayList
-[void]$sheet.Add('| SimBriefの欄 | 値 | 単位 | 根拠 |')
-[void]$sheet.Add('| --- | --- | --- | --- |')
-[void]$sheet.Add('| Base Type | B744 | – | 仕様 |')
-[void]$sheet.Add(('| Empty Weight | {0:0} | KG | `{1}` の meta.json（acf の空虚重量） |' -f $wts.oew_kg, (Split-Path -Leaf $cruiseDir)))
-[void]$sheet.Add(('| Max Zero Fuel Weight | {0:0} | KG | FCOM p.78（L.10.2）、機番 109 |' -f $wts.mzfw_kg))
-[void]$sheet.Add(('| Max Takeoff Weight | {0:0} | KG | FCOM p.78（L.10.2）、機番 109 |' -f $wts.mtow_kg))
-[void]$sheet.Add(('| Max Landing Weight | {0:0} | KG | FCOM p.78（L.10.2）、機番 109 |' -f $wts.mlw_kg))
-[void]$sheet.Add(('| Max Fuel Capacity | {0:0} | KG | acf のタンクの合計（meta.json） |' -f $wts.fuel_capacity_kg))
-[void]$sheet.Add('| Passenger / Baggage Weight | 95 / 25 | KG | 機体の 1 人 120 kg（simconfig の std_pax_weight）を乗客と手荷物に分けた（2026-11-06 利用者） |')
-[void]$sheet.Add(('| Fuel Factor | {0}（{1:+0.0;-0.0} %） | P/M ％ | 3 本の Trip Fuel の誤差を距離帯の割合で重みづけ（OFP の Mach。report.md） |' -f (Format-PerfFactor $wErr), [math]::Round($wErr * 100, 1)))
-[void]$sheet.Add('| Service Ceiling | 43000 | ft | 軽い段の上限高度（FCOM の決め方）を 1,000 ft 単位で切り下げ（2026-11-08 の記録） |')
-[void]$sheet.Add(('| Cruise Level Offset | {0} | ft（M/P表記） | 3 本の初期巡航高度が、その重量の上限高度に届いている（report.md） |' -f $(if ($off -eq 0) { '0' } else { 'M{0:0000}' -f $off })))
-[void]$sheet.Add('| Default Cost Index | （利用者と決める） | – | report.md の Mach の表 |')
-[void]$sheet.Add('| 計画時に選ぶ巡航プロファイル | （利用者と決める） | – | report.md の Mach の表 |')
-[IO.File]::WriteAllLines((Join-Path $out 'simbrief_airframe.md'), [string[]]$sheet, $utf8)
+$sheet = Get-PerfAirframeSheet $wts (Split-Path -Leaf $cruiseDir) (Split-Path -Leaf $ceilDir) $fErr $basis $oErr $light $off $cmpArgs.DefaultCi $cmpArgs.CruiseProfile
+$sheetLines = @("# SimBrief 入力シート（PERF_SIMBRIEF.md。$(Split-Path -Leaf $out)）", '', 'カスタム機体は B744 をベースに作る。値は SimBrief の単位（KGS）。根拠の詳細は report.md。', '') + $sheet
+[IO.File]::WriteAllLines((Join-Path $out 'simbrief_airframe.md'), [string[]]$sheetLines, $utf8)
+if (-not $cmpArgs.NoPublish) {
+    Copy-Item (Join-Path $out 'report.md') (Join-Path $here 'report.md') -Force
+    Copy-Item (Join-Path $out 'simbrief_airframe.md') (Join-Path $here 'simbrief_airframe.md') -Force
+}
 "compare: $out"
-'Fuel Factor {0} ({1:+0.00;-0.00} %); at the FMC ECON: {2} ({3:+0.00;-0.00} %)' -f (Format-PerfFactor $wErr), (100 * $wErr), (Format-PerfFactor $wErrEcon), (100 * $wErrEcon)
+'Fuel Factor {0} ({1}, {2:+0.00;-0.00} %); at the OFPs'' Machs {3} ({4:+0.00;-0.00} %), at the FMC ECON {5} ({6:+0.00;-0.00} %)' -f (Format-PerfFactor $fErr), $basis, (100 * $fErr),
+    (Format-PerfFactor $wErr), (100 * $wErr), (Format-PerfFactor $wErrEcon), (100 * $wErrEcon)
+'Service Ceiling {0} ft; Cruise Level Offset {1}' -f $light.service_ft, $off
 foreach ($r in $results) { '{0}: A-B {1:+0.00;-0.00} %, trip {2:+0.00;-0.00} %' -f $r.along.route, (100 * $r.along.err_ab), (100 * $r.along.err_trip) }

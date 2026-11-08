@@ -310,7 +310,10 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 出力：`climb.csv`（1 標点 1 行、20 列。降下も `descent` として同じファイルに入る）、`ceiling.csv`（1 本 1 行、17 列。2026-11-08 に `limit` と `fcom_130g_ft` を足した）、`check.md` の上昇・降下・上限高度の表。ほかは `cruise` と同じ。
 - フェーズ3の突き合わせ（2026-11-08 に作った）：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\compare.ps1`（X-Plane なし。`-CruiseRun`・`-ClimbRun`・`-CeilingRun`・`-OfpDir` で記録を選ぶ。省くと 11-08 の記録）。
   - 比較用の OFP（SimBrief の標準の B744・P00）を、`runs/simbrief_ofp_<日付>/<ルート>.json` に置く。個人の情報を含むので、リポジトリには入れない（runs と同じく管理外）。
-  - フェーズ1の巡航・フェーズ2の上昇と降下・上限高度の記録と突き合わせ、`runs/<日時>_compare/` に `report.md`・`simbrief_airframe.md`（入力シート）・`compare.json`・`legs_<ルート>.csv` を書く。
+  - フェーズ1の巡航・フェーズ2の上昇と降下・上限高度の記録と突き合わせ、`runs/<日時>_compare/` に `report.md`・`simbrief_airframe.md`（入力シート）・`compare.json`・`legs_<ルート>.csv` を書く。`report.md`（日本語）と `simbrief_airframe.md` は、仕様の成果物として `tests/flight/perf/` にも写す（管理下。`-NoPublish` で写さない）。
+  - 利用者の決め（2026-11-08、「1番で」）を既定にした：SimBrief も FMC も CI 200。Fuel Factor は、FMC の CI 200 の ECON の Mach で巡航したときの値（`-FactorBasis fmc_econ`。`ofp` は OFP の Mach）。`-DefaultCi 200`、`-CruiseProfile 'CI 200'`。
+  - Service Ceiling は、軽い段の上限高度の記録にキットの `Get-PerfCeiling` を当てて出す（`Get-PerfLightCeiling`）。見つからなければ（300 fpm の頃の記録で、上昇中に止まったもの）、届いた最も高い所と、FCOM の 1.30 g の高さの低い方。それを 1,000 ft 単位で切り下げる。
+  - OFP の巡航の Mach に最も近い FMC の CI（0〜300 の中で）も、レポートに出す。
   - 比べる範囲：OFP の上昇で最初に 10,000 ft 以上になる点（A）から、降下で最後に 10,000 ft 以上の点（B）まで。A より前と B より後は、両方とも OFP の燃料にする（仕様の「0〜10,000 ft は比較から外してよい」）。
   - 機体の側は、A での OFP の重量から飛ぶ。
     - 上昇：フェーズ2の上昇を重量で補間する。FL350 より上は上限高度の上昇（M.85。推定）。
@@ -325,9 +328,10 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - Fuel Factor：Trip Fuel の誤差（機体 ÷ OFP − 1）を、記入欄の距離帯の割合で重みづける。FMC の CI 200 の ECON の Mach（`B747.68.perf_db.lua` の `econ_cruise` を LuaJIT で）で巡航したときの値も並べる。
   - 巡航高度オフセット：T/C と段階上昇の高さを、その重量の FCOM の 1.30 g の高さ（p.267）と比べる。
   - スクリプトは BOM 付きの UTF-8 にした（入力シートの日本語のため）。Windows PowerShell 5.1 は、BOM の無いファイルを cp932 で読む。
-  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\compare_offline_test.ps1`（72 項目）。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\compare_offline_test.ps1`（89 項目）。
     - 大気、補間と最小二乗、作った点での巡航の模型、作った上昇・降下・上限高度の記録、OFP の読み込み。
     - 作った OFP に沿った燃料：距離の釣り合い、追い風、段階上昇、FL350 より上の降下。
+    - 作った上限高度の記録からの Service Ceiling（FCOM の 1.30 g の高さで止まるもの、上昇中に止まったもの）、入力シートの行。
     - Fuel Factor の書き方、FMC の ECON の Mach。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。

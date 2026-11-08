@@ -194,11 +194,51 @@ $tStep = 2000 * (0.04 + 0.01 * ($gwBefore - 239360) / 59840)
 Near $st.climb_t $tStep 1e-6 'along: the step''s climb time from the ceilings'
 Near $st.extra ($tStep * 4.0 - (Get-PerfCruiseFf $model $gwBefore 35000 0.855 0) * $tStep / 3600) 1e-6 'along: the step''s fuel over the cruise''s'
 Near $alS.descent.t (25000 * 0.02 + 2000 * 0.02) 1e-6 'along: from FL370, the 33,000-31,000 ft band''s time a foot above FL350'
-Check (@($alS.notes | Where-Object { $_ -match 'band' }).Count -eq 1) 'along: the descent''s estimate noted'
+Check (@($alS.notes | Where-Object { $_ -match '33,000' }).Count -eq 1) 'along: the descent''s estimate noted (the 33,000-31,000 ft band)'
 # the levels: the FCOM's 1.30 g altitude at T/C and at the step
 $lc = Get-PerfLevelChecks $ofpS $alS
 Check ($lc.Count -eq 2 -and $lc[0].what -eq 'T/C' -and $lc[1].what -eq 'step at C1') 'levels: T/C and the step'
 Near $lc[0].ceiling (Get-PerfFcomBuffet130Ft ($gwA - $alS.climb.fuel)) 1e-9 'levels: the FCOM''s altitude at the T/C''s weight'
+
+# the light ceiling from a ceiling's raw CSV: level at FL310 (236 t, the
+# FCOM's 1.30 g altitude 43,160 ft there), then FLCH to 45,000 ft at 1,500 fpm
+function New-TestCeilingCsv([string]$Path, [int]$Rows) {
+    $lines = New-Object System.Collections.ArrayList
+    [void]$lines.Add($cols -join ',')
+    for ($k = 0; $k -lt $Rows; $k++) {
+        $alt = if ($k -ge 20) { 31000.0 + 25 * ($k - 20) } else { 31000.0 }
+        $vals = @((2000 + $k), $alt, (15000 - 3 * $k), 236000, 250, 250, 0.75, 0.75, 0.75, 0.75, 90, 90, 90, 90, 260, 0.85, 240, 20,
+            $(if ($k -ge 20) { 8 } else { 9 }), 3, $(if ($k -ge 19) { 45000 } else { 31000 }), 0, 1, 1)
+        [void]$lines.Add((@($vals | ForEach-Object { ([double]$_).ToString($inv) }) -join ','))
+    }
+    [IO.File]::WriteAllLines($Path, [string[]]$lines, $utf8)
+}
+New-TestCeilingCsv "$tmpBase.cel1.csv" 600
+$lc1 = Get-PerfLightCeiling "$tmpBase.cel1.csv"
+Check ($lc1.found -and $lc1.limit -eq 'buffet') "light ceiling: the FCOM's 1.30 g altitude met (got $($lc1.found), $($lc1.limit))"
+Near $lc1.ceiling_ft 43160 1 'light ceiling: 43,160 ft at 236 t'
+Check ($lc1.service_ft -eq 43000) "light ceiling: the Service Ceiling 43,000 ft (got $($lc1.service_ft))"
+New-TestCeilingCsv "$tmpBase.cel2.csv" 480
+$lc2 = Get-PerfLightCeiling "$tmpBase.cel2.csv"
+Check (-not $lc2.found) 'light ceiling: stopped while climbing, none found'
+Near $lc2.value_ft 42475 1 'light ceiling: then the highest reached (under the FCOM''s)'
+Check ($lc2.service_ft -eq 42000) "light ceiling: its Service Ceiling 42,000 ft (got $($lc2.service_ft))"
+
+# the input sheet: the rows, the Fuel Factor on its basis, the offset's form
+$wtsT = [pscustomobject]@{ oew_kg = 183523.44; mzfw_kg = 244939; mtow_kg = 394625; mlw_kg = 285763; fuel_capacity_kg = 173069.12 }
+$sh = Get-PerfAirframeSheet $wtsT 'run_c' 'run_x' -0.0128 'fmc_econ' -0.0205 $lc1 0 200 'CI 200'
+Check ($sh.Count -eq 14) "sheet: the header and 12 rows (got $($sh.Count))"
+Check ($sh[3] -match '^\| Empty Weight \| 183523 \| KG \|') "sheet: the empty weight ($($sh[3]))"
+Check (@($sh | Where-Object { $_ -match '^\| Max Fuel Capacity \| 173069 \| KG \|' }).Count -eq 1) 'sheet: the fuel capacity'
+Check (@($sh | Where-Object { $_ -match '^\| Fuel Factor \| M01' }).Count -eq 1) 'sheet: the Fuel Factor at the FMC''s ECON, M01'
+Check (@($sh | Where-Object { $_ -match '^\| Service Ceiling \| 43000 \|' }).Count -eq 1) 'sheet: the Service Ceiling'
+Check (@($sh | Where-Object { $_ -match '^\| Cruise Level Offset \| 0 \|' }).Count -eq 1) 'sheet: no offset, 0'
+Check (@($sh | Where-Object { $_ -match '^\| Default Cost Index \| 200 \|' }).Count -eq 1) 'sheet: the Default CI'
+Check ($sh[13] -match '\| CI 200 \|') "sheet: the cruise profile ($($sh[13]))"
+$sh2 = Get-PerfAirframeSheet $wtsT 'run_c' 'run_x' -0.0205 'ofp' -0.0128 $lc2 1000 200 'CI 200'
+Check (@($sh2 | Where-Object { $_ -match '^\| Fuel Factor \| M02' }).Count -eq 1) 'sheet: the Fuel Factor at the OFPs'' Machs, M02'
+Check (@($sh2 | Where-Object { $_ -match '^\| Cruise Level Offset \| M1000 \|' }).Count -eq 1) 'sheet: 1,000 ft down, M1000'
+Check (@($sh2 | Where-Object { $_ -match '^\| Service Ceiling \| 42000 \|' }).Count -eq 1) 'sheet: the Service Ceiling of a ceiling stopped while climbing'
 
 # the Fuel Factor's form
 Check ((Format-PerfFactor -0.0205) -eq 'M02') 'factor: -2.05 % is M02'
@@ -214,6 +254,6 @@ if (Test-Path $cmpArgs.LuaJit) {
     Near $e[0] 0.858 0.0015 'FMC ECON: M.858 at 307.8 t, FL350, CI 200'
 }
 
-Remove-Item "$tmpBase.points.csv", "$tmpBase.raw.csv", "$tmpBase.ofp.json" -ErrorAction SilentlyContinue
+Remove-Item "$tmpBase.points.csv", "$tmpBase.raw.csv", "$tmpBase.ofp.json", "$tmpBase.cel1.csv", "$tmpBase.cel2.csv" -ErrorAction SilentlyContinue
 if ($fails.Count -gt 0) { Write-Host ('compare offline: {0} of {1} checks failed' -f $fails.Count, $count); exit 1 }
 Write-Host ('compare offline: {0} checks passed' -f $count)
