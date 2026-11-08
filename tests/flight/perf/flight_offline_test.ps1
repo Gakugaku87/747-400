@@ -107,6 +107,16 @@ Near $c.phases.descent.flown 2400 2 'phases: the descent T/D to touchdown'
 Near ($c.phases.climb.plan + $c.phases.cruise.plan + $c.phases.descent.plan) 12120 1e-6 'phases: the plan''s add up to its trip'
 Near $c.wind_plan_kt 50 1e-9 'wind: the plan''s cruise wind'
 Near $c.wind_flown_kt ((278 - 250) * 1.943844) 1e-6 'wind: GS - TAS'
+# the arrival: D1 (9 E, 3,600 s) to the touchdown (10 E): the plan's last
+# leg 60 NM, 400 s, 12,120 - 3.03 x 3,600 kg; flown 1 degree, 400 s, 1,200 kg
+Check ($c.Contains('arrival') -and $c.arrival.fix -eq 'D1') 'arrival: from the last fix passed, D1'
+Near $c.arrival.plan_nm 60 1e-9 'arrival: the plan''s distance after D1'
+Near $c.arrival.flown_nm 60.04 0.05 'arrival: the track''s length D1 to the touchdown'
+Near $c.arrival.plan_t 400 1e-9 'arrival: the plan''s time'
+Near $c.arrival.flown_t 400 0.6 'arrival: the time flown'
+Near $c.arrival.plan_f (12120 - 3.03 * 3600) 1e-6 'arrival: the plan''s fuel'
+Near $c.arrival.flown_f 1200 2 'arrival: the fuel flown'
+Near $c.arrival.err_to_fix (10800 / 10908 - 1) 3e-4 'arrival: the trip''s error to D1'
 # with time acceleration
 Write-TestFlightCsv "$tmpBase.acc.csv" -Accel
 $ca = Get-FlightCompare $ofp (Read-FlightTrack @("$tmpBase.acc.csv")) 5.0
@@ -127,6 +137,11 @@ Check ($rep -match '\| OFF \| CRZ \| [^|]*20\.0') 'report: the fix not passed, i
 $cr2 = Invoke-FlightReport $runDir
 $rep2 = [IO.File]::ReadAllText((Join-Path $runDir 'report.md'), [Text.Encoding]::UTF8)
 Check ($rep2.Contains('+4.3 %') -and $rep2.Contains('P03')) 'report: past 2 %, the error and the proposed factor'
+# (this file ASCII: the report's Japanese from code points; "## arrival (D1",
+# "| distance NM | 60 | 60 |")
+$jaArr = -join [char[]](0x5230, 0x7740, 0xFF08); $jaDist = -join [char[]](0x8DDD, 0x96E2)
+Check ($rep2.Contains("## ${jaArr}D1 ") -and $rep2.Contains("| $jaDist NM | 60 | 60 |")) 'report: the arrival''s table'
+Check ($rep2 -match 'D1 [^\r\n]*-1\.0 %[^\r\n]*M02') 'report: past 2 %, the trip to the last fix (-1.0 %) and its factor (M02)'
 
 # the end of a flight: airborne for 60 rows, then still on the ground for 120
 $ixT = @{ on_ground = 0; gs_ms = 1 }

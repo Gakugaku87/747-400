@@ -161,6 +161,20 @@ function Get-FlightCompare($Ofp, $Tr, [double]$PassNm) {
     [void]$fixes.Add([ordered]@{ ident = $last.ident; stage = $last.stage; plan_alt = $last.alt; plan_t = $last.t_tot; plan_used = $last.f_used; plan_onb = $last.f_onb
         dist_nm = 0.0; passed = $true; t = $res.flight_s; used = $res.burn; onb = $fu[$kLd]; alt = $Tr.col['press_alt_ft'][$kLd] })
     $res.fixes = $fixes.ToArray()
+    # the arrival: from the last fix passed before the destination to the
+    # touchdown. The flight there is ATC's (radar vectors: the first flight
+    # of 2026-11-08 flew 14 minutes from GADDO, the plan's last leg 15 NM in
+    # 6), so the trip to that fix beside the whole trip's.
+    $iLast = -1
+    for ($i = $pass.Count - 1; $i -ge 0; $i--) { if ($pass[$i].passed) { $iLast = $i; break } }
+    if ($iLast -ge 0 -and $res.fixes[$iLast].plan_used -gt 0) {
+        $lf = $res.fixes[$iLast]; $kF = $pass[$iLast].k
+        $la = $Tr.col['lat']; $lo = $Tr.col['lon']
+        $nm = 0.0; for ($k = $kF + 1; $k -le $kLd; $k++) { $nm += Get-GcNm $la[$k - 1] $lo[$k - 1] $la[$k] $lo[$k] }
+        $planNm = 0.0; foreach ($lg in $legs) { if ($lg.i -gt $pass[$iLast].leg.i) { $planNm += $lg.dist } }
+        $res.arrival = [ordered]@{ fix = $lf.ident; plan_nm = $planNm; plan_t = $Ofp.time_s - $lf.plan_t; plan_f = $Ofp.trip - $lf.plan_used
+            flown_nm = $nm; flown_t = $res.flight_s - $lf.t; flown_f = $res.burn - $lf.used; err_to_fix = $lf.used / $lf.plan_used - 1 }
+    }
     # the phases at the plan's T/C and T/D
     $toc = @($res.fixes | Where-Object { $_.ident -eq 'TOC' })[0]; $tod = @($res.fixes | Where-Object { $_.ident -eq 'TOD' })[0]
     if ($null -eq $toc -or $null -eq $tod -or -not $toc.passed -or -not $tod.passed) {
@@ -238,6 +252,19 @@ function Write-FlightReport([string]$Path, [string]$RunName, $Ofp, $Tr, $C) {
         & $add ('| 合計 | {0:#,0} | {1:#,0} | {2:+#,0;-#,0} | {3:+0.0;-0.0} % | {4:0.0} | {5:0.0} |' -f $Ofp.trip, $C.burn, ($C.burn - $Ofp.trip), (100 * $C.trip_err), ($Ofp.time_s / 60), ($C.flight_s / 60))
         & $add ''
     }
+    if ($C.Contains('arrival')) {
+        $a = $C.arrival
+        & $add ('## 到着（{0} から接地まで）' -f $a.fix)
+        & $add ''
+        & $add '| | 計画 | 実際 | 差 |'
+        & $add '|---|---|---|---|'
+        & $add ('| 距離 NM | {0:0} | {1:0} | {2:+0;-0} |' -f $a.plan_nm, $a.flown_nm, ($a.flown_nm - $a.plan_nm))
+        & $add ('| 時間 分 | {0:0.0} | {1:0.0} | {2:+0.0;-0.0} |' -f ($a.plan_t / 60), ($a.flown_t / 60), (($a.flown_t - $a.plan_t) / 60))
+        & $add ('| 燃料 kg | {0:#,0} | {1:#,0} | {2:+#,0;-#,0} |' -f $a.plan_f, $a.flown_f, ($a.flown_f - $a.plan_f))
+        & $add ''
+        & $add ('{0} までの消費の差：{1:+0.0;-0.0} %。この先はレーダー誘導（管制）で変わり、計画の最後の脚は SimBrief の見込み。' -f $a.fix, (100 * $a.err_to_fix))
+        & $add ''
+    }
     & $add '## フィックスごと'
     & $add ''
     & $add ('最接近の距離が {0:0} NM を超えた所は「通らず」（近道やレーダー誘導）。時刻は離陸から。' -f $frArgs.PassNm)
@@ -263,6 +290,10 @@ function Write-FlightReport([string]$Path, [string]$RunName, $Ofp, $Tr, $C) {
         & $add ('- Trip Fuel の差 {0:+0.0;-0.0} % が ±2 % を超えた。' -f (100 * $C.trip_err))
         if ($null -ne $worst) { & $add ('- いちばん大きくずれた区間：{0}（{1:+#,0;-#,0} kg）。' -f (Format-PerfPhaseJa $worst.ph), $worst.d) }
         & $add ('- Fuel Factor の案：今の {0} から {1}（実際 ÷ 計画を掛けた値）。風・気温の予報との違いや、計画と違う重量でもずれるので、それを見てから決める。' -f $pr.current_text, $pr.proposed_text)
+        if ($C.Contains('arrival')) {
+            $pa = Get-FlightFactorProposal $Ofp $C.arrival.err_to_fix
+            & $add ('- {0} まで（到着の {1:+#,0;-#,0} kg を除く）の差は {2:+0.0;-0.0} %。こちらに合わせる Fuel Factor の案：{3}。' -f $C.arrival.fix, ($C.arrival.flown_f - $C.arrival.plan_f), (100 * $C.arrival.err_to_fix), $pa.proposed_text)
+        }
     }
     [IO.File]::WriteAllLines($Path, [string[]]$md, $utf8)
 }
@@ -284,4 +315,4 @@ function Invoke-FlightReport([string]$RunDir, [double]$PassNm = 5.0) {
 if ($MyInvocation.InvocationName -eq '.') { return }
 if (-not $frArgs.Run) { throw 'give -Run <runs\..._flight>' }
 $c = Invoke-FlightReport ((Resolve-Path $frArgs.Run).Path) $frArgs.PassNm
-if ($c.ok) { 'trip fuel {0:+0.00;-0.00} % ({1:0} of {2:0} kg); report.md written' -f (100 * $c.trip_err), $c.burn, $c.trip } else { 'not compared: ' + ($c.notes -join '; ') }
+if ($c.ok) { 'trip fuel {0:+0.00;-0.00} % ({1:0} of {2:0} kg); report.md written' -f (100 * $c.trip_err), $c.burn, ($c.burn / (1 + $c.trip_err)) } else { 'not compared: ' + ($c.notes -join '; ') }

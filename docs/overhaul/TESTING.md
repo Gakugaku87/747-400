@@ -344,9 +344,10 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - OFP のフィックスごとに、航跡の最接近点を探す（前に通ったフィックスの後から、最も近い所より 60 NM 離れるまで。前後の行の間は放物線で補間）。5 NM 以内なら通ったとし、その時刻（離陸から）・残燃料・消費を計画と並べる。到着地は接地。
     - 計画の T/C と T/D の位置で、上昇・巡航・降下に分ける。Trip Fuel（離陸〜接地の燃料重量の減り）を計画と比べ、±2 % を超えたら、いちばんずれた区間と Fuel Factor の案（今の係数 × 実際 ÷ 計画）を出す。
     - 巡航の風（計画と、GS − TAS）、重量（計画と実際の ZFW・TOW）、FF 計器の積分も並べる。
-  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\flight_offline_test.ps1`（47 項目）。
+    - 到着：目的地の前に最後に通ったフィックスから接地までの、距離（航跡の長さ）・時間・燃料を計画（OFP の最後の脚）と並べ、そのフィックスまでの消費の差も出す。その先はレーダー誘導（管制）で変わり、計画の最後の脚は SimBrief の見込みのため（2026-11-08 の KSEA-KLAX：GADDO から計画 15 NM・6.2 分・545 kg、実際 43 NM・14.5 分・2,208 kg）。±2 % を超えたら、そのフィックスまでの差による Fuel Factor の案も出す。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\flight_offline_test.ps1`（57 項目）。
     - 距離、OFP の係数。
-    - 作った飛行（赤道を東へ）：離陸・接地・最接近・航路から外れたフィックス・区間・Trip・FF 計器・時間加速・修正案。
+    - 作った飛行（赤道を東へ）：離陸・接地・最接近・航路から外れたフィックス・区間・到着・Trip・FF 計器・時間加速・修正案。
     - レポートのファイル、飛行の終わりの判定。
 - フェーズ4の全自動の飛行（`auto_flight.ps1`。2026-11-08 利用者：「離陸の滑走路に機体を置いて、着陸まで完全自動に」。X-Plane ではまだ回していない）：
   - `powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight.ps1 -SimbriefUser <名前> [-PilotId <番号>] [-Steps ofp|fmc] [-StartXPlane] [-DryRun]`
