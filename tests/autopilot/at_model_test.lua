@@ -530,4 +530,34 @@ local want1 = 1500 + A.EVS_K * 240 * 240 * (-0.5 / 300)
 T.near(v1, want1, 20, string.format("climbing 1,500 fpm, the IAS falling 0.5 kt/s: %.0f fpm (%.0f)", v1, want1))
 T.near(A.target_vs(s29, 1500, 240, 0.78, true, 1 / 30), v1, 1e-6, "to the Mach: that frame the rate kept (no jump)")
 
+-- (2026-11-07) FLCH's climb entry: the thrust to the V/S on the energy's
+-- rate at the target speed while the speed is at or over it, from none of
+-- it 5 kt under (the acceleration is the speed law's); descents on the V/S
+-- alone (notes/ATA-34-61-FMC.md §152). Before, the V/S alone: s108's
+-- levers went on to 122 kN while the V/S lagged the pitch-up, +12 kt
+local s30 = A.new()
+A.update(s30, inp{pitch = "FLCH"})
+local want30 = 5000 / 125 * 60
+A.servo(s30, sv{mcp_alt = 15000, vs = 1000, evs = 2000, ias = 250, target = 250})
+T.near(s30.cmd - 0.5, A.K_VS * (want30 - 2000), 1e-9, "FLCH up at the target speed, 1,000 fpm of energy over the V/S: the energy's rate (before: the V/S, more thrust)")
+c0 = s30.cmd
+A.servo(s30, sv{mcp_alt = 15000, vs = 1000, evs = 2000, ias = 240, target = 250, lever = c0})
+T.near(s30.cmd - c0, A.K_VS * (want30 - 1000), 1e-9, "10 kt slow: the V/S alone (the acceleration is wanted)")
+c0 = s30.cmd
+A.servo(s30, sv{mcp_alt = 15000, vs = 1000, evs = 2000, ias = 247.5, target = 250, lever = c0})
+T.near(s30.cmd - c0, A.K_VS * (want30 - 1500), 1e-9, "2.5 kt slow: half of the energy's share")
+c0 = s30.cmd
+A.servo(s30, sv{mcp_alt = 15000, vs = 2000, evs = 3000, ias = 255, target = 250, lever = c0})
+T.near(s30.cmd, c0, 1e-9, "5 kt fast, the energy's rate over the wanted: no more thrust (the V/S alone would ask for more)")
+c0 = s30.cmd
+A.servo(s30, sv{mcp_alt = 15000, vs = 2600, evs = 2000, ias = 250, target = 250, lever = c0})
+T.near(s30.cmd - c0, A.K_VS * (want30 - 2000), 1e-9, "slowing while the V/S is over the wanted: the energy's rate under it, more thrust (not less: ATA34_2 p.646)")
+c0 = s30.cmd
+A.servo(s30, sv{mcp_alt = 15000, vs = 1000, ias = 250, target = 250, lever = c0})
+T.near(s30.cmd - c0, A.K_VS * (want30 - 1000), 1e-9, "no energy rate given: the V/S")
+local s30b = A.new()
+A.update(s30b, inp{pitch = "FLCH"})
+A.servo(s30b, sv{alt = 15000, mcp_alt = 9000, vs = -500, evs = -1500, ias = 280, target = 280})
+T.near(s30b.cmd - 0.5, A.K_VS * (-6000 / 125 * 60 + 500), 1e-9, "a FLCH descent: the V/S alone (the energy's rate would retard slower)")
+
 T.done()

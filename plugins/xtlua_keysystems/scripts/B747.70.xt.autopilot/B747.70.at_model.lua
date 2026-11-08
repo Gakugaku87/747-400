@@ -90,6 +90,21 @@ M.K_EPR, M.K_N1 = 0.33, 0.003
 -- minimum speed's undershoot)
 M.FLCH_S, M.GA_VS = 125, 2000
 M.LIMIT_MARGIN = 5
+-- (2026-11-07) FLCH's climb: the V/S the thrust is to make is the energy's
+-- rate at the target speed (evs, as VNAV's THR and G/A: the inertial V/S
+-- and the energy the speed gains, which the elevator turns into climb)
+-- while the speed is at or over its target, from none of it FLCH_EVS_KT
+-- under the target (there the acceleration is the speed law's own, to the
+-- speed: the thrust to the limit as before); descents on the V/S alone (to
+-- the aft stop and HOLD, p.670). On the inertial V/S alone the levers went
+-- on while the V/S lagged the pitch-up at the speed law's 0.1 g: at 270 t
+-- and 10,000 ft a 5,000 ft FLCH climb from 250 kt set 122 kN an engine
+-- for a 2,350 fpm rate, the speed went to 262 kt and the V/S to 4,150 fpm
+-- (s108, 2026-11-07); a model of that run (tests/autopilot/
+-- flch_entry_test.lua) stops the thrust under 100 kN and the speed within
+-- 10 kt, the V/S settling on the rate. The sources give the V/S (ATA34_2
+-- p.646, p.670), not its measure: an estimate (notes/ATA-34-61-FMC.md §152)
+M.FLCH_EVS_KT = 5
 -- (the FMC's step 9d2) VNAV's THR (the early descent, the driftdown): the
 -- levers to the FMC's V/S on the energy's rate at the target speed (the V/S
 -- the speed would give held at its target, in the target's IAS or Mach: the
@@ -390,7 +405,17 @@ function M.servo(s, inp)
         end
         local want = s.ga and M.GA_VS or (vnav and (inp.vnav_vs or 0)) or s.flch_vs
         local vs = (vnav and inp.ivs) or inp.vs
-        local ev = ((vnav or s.ga) and inp.evs) or vs
+        local ev
+        if vnav or s.ga then
+            ev = inp.evs or vs
+        elseif want > 0 and inp.evs and inp.target then
+            -- FLCH's climb (2026-11-07): the energy's rate while the speed
+            -- is at or over its target, the V/S under it
+            local w = clamp((inp.ias - inp.target) / M.FLCH_EVS_KT + 1, 0, 1)
+            ev = vs + w * (inp.evs - vs)
+        else
+            ev = vs
+        end
         rate = (vnav and M.K_VS_VNAV or s.ga and M.K_VS_GA or M.K_VS) * (want - ev)
         if want > 0 and rate < 0 and not s.ga then rate = 0 end
         rate = math.min(rate, cap)
