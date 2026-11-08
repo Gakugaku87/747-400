@@ -590,6 +590,37 @@ function Set-PerfMcpIas([double]$Kias) {
     throw ('the MCP is not on {0} kt in IAS' -f $kt)
 }
 
+# The MCP back on $Mach once a FLCH climb is under way (phase 2's ceilings).
+# FLCH's push sinks a moment (some -400 fpm: the AFDS's speed law), and with
+# the A/P target over 310 kt (M.85 at FL310 is 318 kt) the aircraft's
+# auto-switch puts the MCP in IAS (B747.70.xt.autopilot.lua 2532-2543), then
+# back in Mach once climbing past M.84 (2520-2531) with the window at the
+# Mach then (the fix session's note, 2026-11-08). Waits up to 60 s for the
+# climb (over 300 fpm, in Mach); then the window to $Mach (Mach x 100) if in
+# Mach and off it, else Set-PerfMcpMach. Back: what it found and did (set:
+# none, window, mcp_mach, or failed and why).
+function Set-PerfMcpMachClimbing([double]$Mach) {
+    $r = [ordered]@{ climbing_after_s = $null; is_mach = $null; target = $null; set = 'none'; tries = 0; on_target = $false }
+    $r.climbing_after_s = Wait-XP { (Get-Num 'sim/cockpit2/gauges/indicators/vvi_fpm_pilot') -gt 300 -and
+        (Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -eq 1 } 60 500
+    Start-Sleep -Milliseconds 800   # the window follows 0.25 s on (1963-1972)
+    $r.is_mach = Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach'
+    $r.target = Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach'
+    $hit = { (Get-Int 'sim/cockpit2/autopilot/airspeed_is_mach') -eq 1 -and
+        [math]::Abs((Get-Num 'sim/cockpit2/autopilot/airspeed_dial_kts_mach') - $Mach) -lt 0.0005 }
+    if (& $hit) { $r.on_target = $true; return $r }
+    if ($r.is_mach -eq 1) {
+        Set-XPDataref 'laminar/B747/autopilot/ias_dial_value' ([int][math]::Round($Mach * 100))
+        if ($null -ne (Wait-XP $hit 5 250)) {
+            Start-Sleep -Seconds 2
+            if (& $hit) { $r.set = 'window'; $r.on_target = $true; return $r }
+        }
+    }
+    $r.set = 'mcp_mach'
+    try { $r.tries = Set-PerfMcpMach $Mach; $r.on_target = $true } catch { $r.set = 'failed: ' + $_.Exception.Message }
+    return $r
+}
+
 # The A/P and A/T on a level at $Ft and Mach $Mach: after the FMC's in-flight
 # start (F/D, A/T ARM, the MCP speed wound to the airspeed, ALT HOLD and CMD L:
 # B747.68.xt.fms.lua activate_inflightAP), the MCP in Mach (Set-PerfMcpMach:
@@ -1908,6 +1939,13 @@ function Invoke-PerfCeiling($T, $Acf, [double[]]$StationKg) {
         Add-Check $res 'level_at_start' $lv.ok $(if ($lv.ok) { '{0} s of sim time after the setup' -f $lv.after_s } else { $lv.detail }) `
             '50 ft, M.005, 300 fpm for 30 s (in 4 min)'
         $from = Start-PerfFlch $res $CeilingTopFt
+        # the MCP on M.85 again once climbing (the auto-switch's IAS and back:
+        # Set-PerfMcpMachClimbing)
+        $mcc = Set-PerfMcpMachClimbing $CeilingMach
+        $res.mcp_climbing = $mcc
+        Add-Check $res 'mcp_mach_climbing' ($mcc.on_target -and $null -ne $mcc.climbing_after_s) ('climbing {0} s after the push; the MCP then {1} {2}; set {3}' -f
+            $(if ($null -ne $mcc.climbing_after_s) { F $mcc.climbing_after_s '0.0' } else { '-' }), $(if ($mcc.is_mach -eq 1) { 'Mach' } else { 'IAS' }),
+            (F $mcc.target '0.000'), $mcc.set) ('M{0} in the climb (over 300 fpm in 60 s)' -f $CeilingMach)
         $sw = [Diagnostics.Stopwatch]::StartNew()
         while ($true) {
             Start-Sleep -Seconds 2

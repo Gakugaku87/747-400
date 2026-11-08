@@ -610,5 +610,38 @@ foreach ($fn in $flightFns) {
 try { throw 'a test error' } catch { $flightErr = Format-PerfError $_ }
 Check ($flightErr -match '^a test error \(perf_offline_test\.ps1 line \d+\)$') "a flight's error with its line ($flightErr)"
 
+# the ceilings' MCP on M.85 once climbing (Set-PerfMcpMachClimbing) on a
+# stand-in aircraft: the V/S, the IAS/MACH mode and the A/P target, the
+# window's writes taken as Mach x 100 in Mach. (These stand-ins replace the
+# kit's dataref and wait helpers from here on: keep this block last.)
+$script:mock = @{ vs = 1500.0; is_mach = 1; target = 0.852; writes = 0; mach_calls = 0 }
+function Get-Num([string]$Name) {
+    switch ($Name) {
+        'sim/cockpit2/gauges/indicators/vvi_fpm_pilot' { return [double]$script:mock.vs }
+        'sim/cockpit2/autopilot/airspeed_dial_kts_mach' { return [double]$script:mock.target }
+        default { throw "stand-in Get-Num: $Name" }
+    }
+}
+function Get-Int([string]$Name) {
+    if ($Name -eq 'sim/cockpit2/autopilot/airspeed_is_mach') { return [int]$script:mock.is_mach }
+    throw "stand-in Get-Int: $Name"
+}
+function Set-XPDataref([string]$Name, $Value) {
+    if ($Name -ne 'laminar/B747/autopilot/ias_dial_value') { throw "stand-in Set-XPDataref: $Name" }
+    $script:mock.writes++
+    if ($script:mock.is_mach -eq 1) { $script:mock.target = [double]$Value / 100 }
+}
+function Wait-XP([scriptblock]$Condition, [double]$TimeoutSec = 60, [int]$IntervalMs = 250) { if (& $Condition) { return 0.5 }; return $null }
+function Start-Sleep { }
+function Set-PerfMcpMach([double]$Mach) { $script:mock.mach_calls++; $script:mock.is_mach = 1; $script:mock.target = $Mach; return 1 }
+$mcA = Set-PerfMcpMachClimbing 0.85
+Check ($mcA.on_target -and $mcA.set -eq 'window' -and [math]::Abs($script:mock.target - 0.85) -lt 1e-9 -and $script:mock.writes -eq 1 -and $mcA.climbing_after_s -eq 0.5) "ceiling MCP: in Mach on M.852 when climbing, the window to 85 ($($mcA.set), M$($script:mock.target))"
+$script:mock.writes = 0
+$mcB = Set-PerfMcpMachClimbing 0.85
+Check ($mcB.on_target -and $mcB.set -eq 'none' -and $script:mock.writes -eq 0) "ceiling MCP: on M.85 already, left so ($($mcB.set))"
+$script:mock.is_mach = 0; $script:mock.target = 318.0
+$mcC = Set-PerfMcpMachClimbing 0.85
+Check ($null -eq $mcC.climbing_after_s -and $mcC.set -eq 'mcp_mach' -and $mcC.on_target -and $script:mock.mach_calls -eq 1 -and $script:mock.writes -eq 0) "ceiling MCP: still in IAS (no climb in Mach in 60 s): Set-PerfMcpMach ($($mcC.set))"
+
 if ($fails.Count -gt 0) { throw ("{0} of {1} checks failed" -f $fails.Count, $count) }
 Write-Host ("perf offline: {0} checks passed" -f $count)
