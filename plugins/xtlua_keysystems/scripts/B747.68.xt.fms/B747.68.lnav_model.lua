@@ -66,6 +66,16 @@ M.K_HDG = 2.5
 -- the turns started this many seconds early for the roll into them
 -- (estimate: about 3 degrees a second to 25 degrees)
 M.ROLL_LEAD = 4
+-- (2026-11-09) a fly-by turn's arc left before its end by the time the
+-- roll out of its bank takes at ROLL_RATE degrees a second, halved (the
+-- AFDS's command rate: B747.70.afds_roll_model.lua's ROLL_RATE, an
+-- estimate): about 4 s from 25 degrees. Before, the arc's bank was kept to
+-- its end and the airplane rolled out past the leg's course: 5 to 12
+-- degrees of bank back the other way after each turn and up to 0.14 nm
+-- inside the leg (the perf session's KSEA-KLAX flight, BURGL: 6.4 degrees
+-- of heading past). Estimate: the sources give the turn's path (ATA34_2
+-- p.615, p.626), not the guidance's lead
+M.ROLL_RATE = 3
 
 local function clamp(v, lo, hi) return v < lo and lo or (v > hi and hi or v) end
 local function wrap180(a) return (a + 180) % 360 - 180 end
@@ -561,12 +571,14 @@ function M.update(s, path, air, armed, engaged)
         end
     end
     -- the fly-by turn flown to its end (past the bisector it belongs to
-    -- the leg out); not without LNAV, nor 2 nm off it
+    -- the leg out), left the roll out's lead before it (ROLL_RATE); not
+    -- without LNAV, nor 2 nm off it
     local u = s.turn
     if u and u.past and s.seq == 0 then
         local _, at = P.track(u.t2, u.c2, p)
         local cx = circle(P, u.center, u.r, u.dir, p)
-        if at >= 0 or not engaged or math.abs(cx) > 2 then s.turn, u = nil, nil end
+        local lead = air.gs * KT * math.abs(arc_bank(air.gs, u.r, u.dir)) / (2 * M.ROLL_RATE) / 1852
+        if at >= -lead or not engaged or math.abs(cx) > 2 then s.turn, u = nil, nil end
     end
     -- the guidance
     local ref_xt, ref_dtk, ff = xt, dtk, hff

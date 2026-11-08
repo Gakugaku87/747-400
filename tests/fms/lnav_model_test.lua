@@ -58,6 +58,27 @@ T.check(math.abs(s2.xtk) < 0.05 and s2.mode == "path", "on C's leg after it: " .
 local _, _, _, maxxt3 = flyby(40, 270)
 T.check(maxxt3 < 0.6, "with 40 kt from the west: within 0.6 nm: " .. maxxt3)
 
+-- (2026-11-09) the roll out of a fly-by turn begun before the arc's end
+-- (ROLL_RATE): a 17 degree turn at 490 kt (the perf session's KSEA-KLAX
+-- flight, BURGL) and a 60 degree one at 300 kt onto the leg out without
+-- banking back the other way (before: 11 and 15 degrees back, 0.11 nm
+-- inside the leg)
+for _, c in ipairs({{17, 490}, {60, 300}}) do
+    local Bf = {ident = "BF", lat = 35.5, lon = 140.0}
+    local Cf = P.point(Bf, 157 - c[1], 30)
+    local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, 337, 20))
+    local sf = L.new(P)
+    local p0 = P.point(Bf, 337, 15)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = 157, tas = c[2]})
+    local onC, back, inside = false, 0, 0
+    fly(stf, sf, af, 240, {each = function(t, s)
+        if stf.rte.legs[1].fix == Cf then onC = true end
+        if onC then back, inside = math.max(back, af.bank), math.min(inside, s.xtk) end
+    end})
+    T.check(onC and back < 2, string.format("a %d degree turn at %d kt: no bank back the other way: %.1f", c[1], c[2], back))
+    T.check(inside > -0.05, string.format("and within 0.05 nm inside the leg out: %.3f", inside))
+end
+
 -- a fly-over fix: over it, then back onto the leg
 st = route({{via = "DIRECT", fix = B, flyover = true}, {via = "DIRECT", fix = C}}, A)
 s = L.new(P)

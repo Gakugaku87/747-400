@@ -149,13 +149,23 @@ local function descent_path(s, kg, cons, xed, hed, gps)
         steps = steps + 1
         -- the next anchor going back: a constraint the idle path would miss
         while ci >= 1 and cons[ci].x >= x do ci = ci - 1 end
-        local anchor = nil
+        local anchor, level = nil, nil
         if ci >= 1 then
             -- where the idle path from here reaches the constraint's x: a
-            -- straight line to the constraint when it must keep to it
+            -- straight line to the constraint when it must keep to it;
+            -- (2026-11-09) one that keeps it at this altitude (an AT, an AT
+            -- OR BELOW, a window's top here: not an AT OR ABOVE) level back
+            -- to it. Before, no anchor at the same altitude: KLAX's DAHJR
+            -- AT 6,000 crossed at 6,963 ft on the idle path back from
+            -- GADDO AT 6,000 (offline; FCOM p.1258: the path keeps the
+            -- constraints)
             local c = cons[ci]
             local a = con_alt(c.c, h + (x - c.x) * 300)
-            if a and a > h then anchor = {x = c.x, h = a} end
+            if a and a > h + 1 then
+                anchor = {x = c.x, h = a}
+            elseif a and a > h - 1 and c.c.kind ~= "A" and x - c.x > 1e-6 then
+                level = {x = c.x}
+            end
         end
         local tgt, m, machMode = M.schedule(P, s.des, h)
         -- the wind and temperature here (step 8e3: the field's), else the
@@ -219,6 +229,18 @@ local function descent_path(s, kg, cons, xed, hed, gps)
             ff = ff + ne * P.idle_ff(t, h, mm, isa) * dt / 3600
             if cas >= tgt - 0.5 then decel[#decel + 1] = {x = x, h = h} end
             kind = "decel"
+        elseif level then
+            -- (2026-11-09) level back to the constraint at this altitude:
+            -- the drag's thrust (the A/T's SPD: FCOM p.1258)
+            cas = tgt
+            local dist = (x - level.x) * NM           -- m over the ground
+            local dt = dist / gs
+            local f = math.max(P.idle_ff(t, h, m, isa), P.thrust_ff(t, drag(kg, h, m) / ne, h, m, isa))
+            kind = "spd"
+            x = level.x
+            tt = tt + dt
+            ff = ff + ne * f * dt / 3600
+            ci = ci - 1
         else
             cas = tgt
             local dh = 250
@@ -323,6 +345,9 @@ end
 --               altitude under way (VNAV's, the airplane above it): "des"
 --               at 1,250 fpm, or "dd" the engine-out driftdown (DD_VS at
 --               least, CON at most), at the cruise speed
+--   behind      (2026-11-09) nil, or the waypoint passed last in the
+--               descent: {x (NM, 0 or less: behind the airplane), con} (its
+--               constraint kept in the descent path)
 -- returns {pts = per leg {x, h, t, fuel, cas, mach, machMode (the speed
 --   there: the climb's before the T/C, the descent's after the T/D, else
 --   the cruise's)}, tc = x or nil, td = x or nil,
@@ -381,6 +406,15 @@ function M.predict(s)
     local function des_cons(xfrom)
         local cons = {}
         if not xed then return cons end
+        -- (2026-11-09) the waypoint passed last and its constraint behind
+        -- the airplane (s.behind: the glue's, in the descent), so the path
+        -- it is on stays the line from it (FCOM p.1258: point to point from
+        -- the first constraint; the path fixed to the ground). Before, the
+        -- leg flown became the idle path back from the next constraint at
+        -- each sequencing, 229 to 469 ft higher on IRNMN2 (the perf
+        -- session's KSEA-KLAX flight: the A/T's SPD at each waypoint)
+        local b = s.behind
+        if b and b.con and b.x and b.x <= 0 then cons[1] = {x = b.x, c = b.con} end
         for i, l in ipairs(legs) do
             if l.con and i > clbLast and lx[i] > xfrom and lx[i] < xed - 0.01 then cons[#cons + 1] = {x = lx[i], c = l.con} end
         end
