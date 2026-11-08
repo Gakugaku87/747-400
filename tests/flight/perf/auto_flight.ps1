@@ -135,6 +135,9 @@ function Get-AutoPlan($Json, $Acf) {
         $sf = @($procs | Where-Object { [string]$_.via_airway -eq $star -and [string]$_.ident -ne [string]$Json.destination.icao_code })
         if ($sf.Count -gt 0) { $starEnd = [string]$sf[$sf.Count - 1].ident }
     }
+    # (the OFP's own names first: an older AIRAC's navlog may not mark the SID's fixes)
+    if ([string]$Json.general.sid_ident) { $sid = [string]$Json.general.sid_ident }
+    if ([string]$Json.general.star_ident) { $star = [string]$Json.general.star_ident }
     $ta = [double]$Json.origin.trans_alt; if (-not ($ta -gt 0)) { $ta = 18000 }
     $tl = [double]$Json.destination.trans_level; if (-not ($tl -gt 0)) { $tl = 18000 }
     $appFt = 100 * [math]::Ceiling(($destElev + 3000) / 100)
@@ -186,6 +189,98 @@ function Get-AutoQnhInHg($Pa) {
 function Test-AutoPassed($State, [double]$Nm) {
     if ($null -eq $State.min -or $Nm -lt $State.min) { $State.min = $Nm }
     return ($Nm -lt 2) -or ($State.min -lt 40 -and $Nm -gt $State.min + 0.5)
+}
+
+# ---------------------------------------------------------------- vectors to final
+# A STAR that ends in a VECTORS leg (an FM leg: KLAX's IRNMN2 after GADDO,
+# 071 for the downwind of 24R) leaves LNAV on that heading for good: ATC
+# vectors the airplane to the final approach course (FCOM p.1237, p.1249).
+# The kit does the controller's part with HDG SEL (ours, no source: the
+# pattern's sizes are estimates): a downwind parallel to the final course at
+# least 4 NM to its side, the base leg toward the course far enough out, the
+# intercept 30 degrees to the course so that the LOC is joined about 13 NM out
+# (the G/S met from below at the MCP's 3,000 ft above the field, 9.4 NM).
+
+# a CIFP latitude or longitude (N33570757, W118240702: degrees, minutes,
+# seconds and hundredths) in degrees
+function ConvertFrom-CifpAngle([string]$S) {
+    if ($S -notmatch '^([NSEW])(\d{2,3})(\d{2})(\d{2})(\d{2})$') { return $null }
+    $v = [double]$Matches[2] + [double]$Matches[3] / 60 + ([double]$Matches[4] + [double]$Matches[5] / 100) / 3600
+    if ($Matches[1] -eq 'S' -or $Matches[1] -eq 'W') { $v = -$v }
+    return $v
+}
+# the other end's name (24R: 06L; 09: 27; 36C: 18C)
+function Get-AutoOppositeRunway([string]$Rwy) {
+    if ($Rwy -notmatch '^(\d{1,2})([LRC]?)$') { return $null }
+    $n = ([int]$Matches[1] + 17) % 36 + 1
+    $s = switch ($Matches[2]) { 'L' { 'R' } 'R' { 'L' } default { $Matches[2] } }
+    return ('{0:D2}{1}' -f $n, $s)
+}
+# the initial great-circle bearing (true, degrees) from point 1 to point 2
+function Get-AutoBearing([double]$Lat1, [double]$Lon1, [double]$Lat2, [double]$Lon2) {
+    $r = [math]::PI / 180
+    $y = [math]::Sin(($Lon2 - $Lon1) * $r) * [math]::Cos($Lat2 * $r)
+    $x = [math]::Cos($Lat1 * $r) * [math]::Sin($Lat2 * $r) - [math]::Sin($Lat1 * $r) * [math]::Cos($Lat2 * $r) * [math]::Cos(($Lon2 - $Lon1) * $r)
+    return ([math]::Atan2($y, $x) / $r + 360) % 360
+}
+# the runway from an airport's CIFP lines (RWY:RW24R,...;N33570757,W118240702,...):
+# its threshold and the final approach course (true: the threshold toward the
+# other end's); $null without both ends
+function Get-AutoRunway([string[]]$Lines, [string]$Rwy) {
+    $ends = @{}
+    foreach ($l in $Lines) {
+        if ($l -match '^RWY:RW(\w+),[^;]*;([NS]\d{8}),([EW]\d{9})') {
+            $ends[$Matches[1]] = @((ConvertFrom-CifpAngle $Matches[2]), (ConvertFrom-CifpAngle $Matches[3]))
+        }
+    }
+    $o = Get-AutoOppositeRunway $Rwy
+    if (-not $ends.ContainsKey($Rwy) -or -not $o -or -not $ends.ContainsKey($o)) { return $null }
+    $t = $ends[$Rwy]; $e = $ends[$o]
+    return [pscustomobject]@{ rwy = $Rwy; lat = $t[0]; lon = $t[1]; course_true = (Get-AutoBearing $t[0] $t[1] $e[0] $e[1]); other = $o
+        length_nm = (Get-GcNm $t[0] $t[1] $e[0] $e[1]) }
+}
+# a place in the runway's frame (NM, flat near the threshold): a out along
+# the extended centerline on the approach side, c to the right of the inbound
+# course (negative: left)
+function Get-AutoRwyFrame($Rw, [double]$Lat, [double]$Lon) {
+    $r = [math]::PI / 180
+    $east = ($Lon - $Rw.lon) * 60 * [math]::Cos($Rw.lat * $r); $north = ($Lat - $Rw.lat) * 60
+    $C = $Rw.course_true * $r
+    return [pscustomobject]@{ a = -($east * [math]::Sin($C) + $north * [math]::Cos($C)); c = $east * [math]::Cos($C) - $north * [math]::Sin($C) }
+}
+# the vectors' next state and true heading: start or downwind (outbound,
+# parallel to the course, 45 degrees away while within $Space NM of it) until
+# $A reaches the base turn ($Join + the intercept's run from $Ci NM), base
+# (square toward the course) until within $Ci NM, then the intercept (the
+# course 30 degrees toward it); forward only
+function Get-AutoVectorStep([string]$State, [double]$A, [double]$C, [double]$CourseTrue, [double]$Join = 13, [double]$Ci = 5, [double]$Space = 4) {
+    $r = [math]::PI / 180
+    $side = if ($C -ge 0) { 1.0 } else { -1.0 }
+    $baseAt = $Join + $Ci / [math]::Tan(30 * $r)
+    $s = if ($State) { $State } else { 'start' }
+    if ($s -eq 'start' -or $s -eq 'downwind') {
+        $s = 'downwind'
+        if ($A -ge $baseAt) { $s = if ([math]::Abs($C) -le $Ci) { 'intercept' } else { 'base' } }
+    }
+    if ($s -eq 'base' -and [math]::Abs($C) -le $Ci) { $s = 'intercept' }
+    # the inbound unit (east, north), the right normal, the outbound
+    $ue = [math]::Sin($CourseTrue * $r); $un = [math]::Cos($CourseTrue * $r)
+    $ne = $un; $nn = -$ue
+    switch ($s) {
+        'downwind' { $de = -$ue; $dn = -$un; if ([math]::Abs($C) -lt $Space) { $de += $side * $ne; $dn += $side * $nn } }
+        'base' { $de = -$side * $ne; $dn = -$side * $nn }
+        default { $de = $ue * [math]::Cos(30 * $r) - $side * $ne * [math]::Sin(30 * $r); $dn = $un * [math]::Cos(30 * $r) - $side * $nn * [math]::Sin(30 * $r) }
+    }
+    return [pscustomobject]@{ state = $s; hdg_true = ([math]::Atan2($de, $dn) / $r + 360) % 360 }
+}
+# the destination runway from X-Plane's CIFP (Custom Data, else the default
+# data); $null when not found
+function Get-AutoRunwayFromCifp([string]$Icao, [string]$Rwy) {
+    foreach ($d in (Join-Path $script:XPRoot 'Custom Data\CIFP'), (Join-Path $script:XPRoot 'Resources\default data\CIFP')) {
+        $f = Join-Path $d "$Icao.dat"
+        if (Test-Path $f) { return (Get-AutoRunway ([string[]][IO.File]::ReadAllLines($f)) $Rwy) }
+    }
+    return $null
 }
 
 # ---------------------------------------------------------------- the CDU's pages
@@ -632,6 +727,42 @@ function Set-AutoQnh([string]$Where) {
     Note info ('altimeters QNH {0:0.00} in Hg ({1})' -f $q, $Where)
 }
 
+# the vectors (above): from the FMC's active waypoint VECTORS on, the MCP
+# heading (magnetic: X-Plane's true less magnetic heading) and HDG SEL, FLCH
+# down to the MCP altitude when above it; done once the LOC is captured.
+# $script:afVec.state: $null (not yet), downwind, base, intercept, done
+$script:afVec = @{ state = $null; hdg = $null; pushed = -1e9 }
+$script:afRunway = $null
+function Step-AutoVectors($Plan) {
+    $v = $script:afVec
+    if ($v.state -eq 'done' -or $null -eq $script:afRunway) { return }
+    $roll = [int](Get-N 'laminar/B747/autopilot/FMA/active_roll_mode')
+    if ($roll -eq 3 -or $roll -eq 4) {
+        if ($v.state) { Note info ('vectors: the LOC captured ({0})' -f $v.state) }
+        $v.state = 'done'; return
+    }
+    if (-not $v.state) {
+        $wp = Get-S 'laminar/B747/nd/current_waypoint'
+        if ($wp -notlike 'VECTOR*') { return }
+        $v.state = 'start'
+        Note-Status 'approach' ('the route''s VECTORS leg: vectors to the final of {0} by HDG SEL' -f $Plan.dest_rwy)
+        if ((Get-N 'sim/cockpit2/gauges/indicators/altitude_ft_pilot') -gt $Plan.app_mcp_ft + 300) {
+            Set-Mcp 'alt' $Plan.app_mcp_ft
+            Push-Auto 'laminar/B747/autopilot/button_switch/flch_mode'
+            Note info ('FLCH down to {0} ft' -f $Plan.app_mcp_ft)
+        }
+    }
+    $f = Get-AutoRwyFrame $script:afRunway (Get-N 'sim/flightmodel/position/latitude') (Get-N 'sim/flightmodel/position/longitude')
+    $was = $v.state
+    $st = Get-AutoVectorStep $v.state $f.a $f.c $script:afRunway.course_true
+    $v.state = $st.state
+    $var = (Get-N 'sim/flightmodel/position/psi') - (Get-N 'sim/flightmodel/position/mag_psi')
+    $mag = [int][math]::Round((($st.hdg_true - $var) % 360 + 360) % 360) % 360
+    if ($mag -ne $v.hdg) { Set-N 'laminar/B747/autopilot/heading/degrees' $mag; $v.hdg = $mag }
+    if ($roll -ne 6 -and $wall.Elapsed.TotalSeconds - $v.pushed -gt 5) { Push-Auto 'laminar/B747/autopilot/button_switch/heading_select'; $v.pushed = $wall.Elapsed.TotalSeconds }
+    if ($v.state -ne $was) { Note info ('vectors: {0}, heading {1:000} (magnetic), {2:0.0} NM out, {3:0.0} NM {4} of the course' -f $v.state, $mag, $f.a, [math]::Abs($f.c), $(if ($f.c -ge 0) { 'right' } else { 'left' })) }
+}
+
 function Invoke-AutoTakeoff($Plan) {
     Note-Status 'takeoff' 'flaps, the MCP, trim, F/D, A/T ARM, LNAV and VNAV'
     Set-AutoQnh 'departure'
@@ -741,41 +872,65 @@ function Watch-AutoCruise($Plan) {
             $lastLog.Restart()
         }
         if ($ph -eq 3 -and $ed -gt 0 -and $ed -lt 28) { break }
+        # a VECTORS leg before 28 NM to E/D: the approach from here
+        if ($ph -eq 3) { Step-AutoVectors $Plan; if ($script:afVec.state) { break } }
     }
     if (-not $qnh) { Set-AutoQnh 'destination' }
 }
 
 # from 28 NM to E/D (s198's 4th run on: about 9,000 ft, notes/LINE_FLIGHTS.md
-# 3) the approach on the FCOM's maneuver speeds (flaps out at or below the
-# speed of the flaps before), the autoland and the stop
+# 3) or a VECTORS leg the approach on the FCOM's maneuver speeds (flaps out
+# at or below the speed of the flaps before), each second: the vectors when
+# the route has them; flaps 1 below the UP speed; flaps 5 and APP once on
+# approach (or on the vectors' base or intercept); at G/S alive gear, flaps
+# 20, autobrake, speedbrake ARM; at the G/S's capture flaps 30; then the
+# autoland and the stop
 function Invoke-AutoApproach($Plan) {
-    $v = Get-N 'laminar/B747/fms/vref30'
-    $sp = Get-AutoSpeeds $v
-    Note-Status 'approach' ('VREF 30 {0:0}: speed intervention {1:0} kt, speedbrake FLT DETENT' -f $v, $sp.f1)
+    $vref = Get-N 'laminar/B747/fms/vref30'
+    $sp = Get-AutoSpeeds $vref
+    Note-Status 'approach' ('VREF 30 {0:0}: speed intervention {1:0} kt, speedbrake FLT DETENT' -f $vref, $sp.f1)
     Push-Auto 'laminar/B747/button_switch/press_airspeed'
     Set-Mcp 'spd' $sp.f1
     [void](Set-AutoSwitch 'laminar/B747/flt_ctrls/speedbrake_lever' 0.53 'sim/flight_controls/speed_brakes_down_one' 'sim/flight_controls/speed_brakes_up_one')
-    [void](Wait-AutoDref 'laminar/B747/gauges/indicators/airspeed_kts_pilot' '<' $sp.up 300 ('below the flaps UP speed {0:0} kt' -f $sp.up))
-    Set-Flaps 1
-    [void](Set-AutoSwitch 'laminar/B747/flt_ctrls/speedbrake_lever' 0 'sim/flight_controls/speed_brakes_down_one' 'sim/flight_controls/speed_brakes_up_one')
-    [void](Wait-AutoDref 'laminar/B747/fms/vnav/on_app' '==' 1 1500 'on approach')
-    Set-Mcp 'spd' $sp.f5
-    [void](Wait-AutoDref 'laminar/B747/gauges/indicators/airspeed_kts_pilot' '<' ($sp.f1 + 5) 240 ('below the flaps 1 speed {0:0} kt' -f $sp.f1))
-    Set-Flaps 5
-    Push-Auto 'laminar/B747/autopilot/approach'
-    Push-Auto 'laminar/B747/autopilot/button_switch/cmd_C'
-    Push-Auto 'laminar/B747/autopilot/button_switch/cmd_R'
-    Note info ('APP armed (roll {0}, pitch {1}); NAV1 {2}' -f (Get-N 'laminar/B747/autopilot/FMA/armed_roll_mode'), (Get-N 'laminar/B747/autopilot/FMA/armed_pitch_mode'),
-        (Get-N 'sim/cockpit2/radios/actuators/nav1_frequency_hz'))
-    [void](Wait-AutoDref 'laminar/B747/autopilot/FMA/active_roll_mode' '==' 3 900 'LOC captured' -Must)
-    [void](Wait-AutoDref 'sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot' '>' -2.0 900 'G/S alive')
-    Set-Flaps 20
-    Set-Mcp 'spd' $sp.f20
-    Send-Cmd 'sim/flight_controls/landing_gear_down'
-    Set-N 'laminar/B747/gear/autobrakes/sel_dial_pos' 4
-    Send-Cmd 'sim/flight_controls/speed_brakes_down_one'
-    Note-Status 'approach' ('gear down, flaps 20, {0:0} kt, autobrake 2, speedbrake ARM' -f $sp.f20)
-    [void](Wait-AutoDref 'laminar/B747/autopilot/FMA/active_pitch_mode' '==' 2 600 'G/S captured' -Must)
+    $f1 = $false; $f5spd = $false; $f5 = $false; $app = $false; $f20 = $false
+    $t0 = Get-N 'sim/time/total_running_time_sec'
+    while ($true) {
+        Start-Sleep -Seconds 1
+        Assert-AutoAlive
+        if ((Get-N 'sim/time/total_running_time_sec') - $t0 -gt 2400) { throw 'the approach took over 40 min' }
+        try {
+            $ias = [double](Get-XPDataref 'laminar/B747/gauges/indicators/airspeed_kts_pilot'); $roll = [int](Get-XPDataref 'laminar/B747/autopilot/FMA/active_roll_mode')
+            $pitch = [int](Get-XPDataref 'laminar/B747/autopilot/FMA/active_pitch_mode'); $onApp = [int](Get-XPDataref 'laminar/B747/fms/vnav/on_app')
+            $vdef = [double](Get-XPDataref 'sim/cockpit2/radios/indicators/nav1_vdef_dots_pilot')
+            if ([int](Get-XPDataref 'sim/flightmodel/failures/onground_any') -eq 1) { throw 'on the ground before the G/S' }
+        } catch { if ($_.Exception.Message -like 'on the ground*') { throw }; continue }
+        Step-AutoVectors $Plan
+        if (-not $f1 -and $ias -lt $sp.up) {
+            Set-Flaps 1; $f1 = $true
+            [void](Set-AutoSwitch 'laminar/B747/flt_ctrls/speedbrake_lever' 0 'sim/flight_controls/speed_brakes_down_one' 'sim/flight_controls/speed_brakes_up_one')
+        }
+        $near = $onApp -eq 1 -or @('base', 'intercept', 'done') -contains $script:afVec.state -or $roll -eq 3
+        if ($f1 -and -not $f5spd -and $near) { Set-Mcp 'spd' $sp.f5; $f5spd = $true; Note info ('on approach: {0:0} kt' -f $sp.f5) }
+        if ($f5spd -and -not $f5 -and $ias -lt $sp.f1 + 5) { Set-Flaps 5; $f5 = $true }
+        if ($f5 -and -not $app) {
+            Push-Auto 'laminar/B747/autopilot/approach'
+            Push-Auto 'laminar/B747/autopilot/button_switch/cmd_C'
+            Push-Auto 'laminar/B747/autopilot/button_switch/cmd_R'
+            $app = $true
+            Note info ('APP armed (roll {0}, pitch {1}); NAV1 {2}' -f (Get-N 'laminar/B747/autopilot/FMA/armed_roll_mode'), (Get-N 'laminar/B747/autopilot/FMA/armed_pitch_mode'),
+                (Get-N 'sim/cockpit2/radios/actuators/nav1_frequency_hz'))
+        }
+        if ($app -and -not $f20 -and $roll -eq 3 -and $vdef -gt -2.0) {
+            Set-Flaps 20
+            Set-Mcp 'spd' $sp.f20
+            Send-Cmd 'sim/flight_controls/landing_gear_down'
+            Set-N 'laminar/B747/gear/autobrakes/sel_dial_pos' 4
+            Send-Cmd 'sim/flight_controls/speed_brakes_down_one'
+            $f20 = $true
+            Note-Status 'approach' ('LOC, G/S alive: gear down, flaps 20, {0:0} kt, autobrake 2, speedbrake ARM' -f $sp.f20)
+        }
+        if ($f20 -and $pitch -eq 2) { Note info 'G/S captured'; break }
+    }
     Set-Flaps 30
     Set-Mcp 'spd' $sp.app
     Set-Mcp 'alt' $Plan.app_mcp_ft
@@ -813,7 +968,10 @@ elseif ($afArgs.SimbriefUser) {
 $json = [IO.File]::ReadAllText($ofpPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
 $plan = Get-AutoPlan $json (Get-AutoAcf $acfFile)
 $init = Get-AutoInit $plan $true
-Save-Json (Join-Path $script:autoOut 'plan.json') ([ordered]@{ args = $afArgs; plan = $plan; init = $init })
+$script:afRunway = Get-AutoRunwayFromCifp $plan.dest $plan.dest_rwy
+if ($script:afRunway) { Note info ('{0} {1}: the threshold {2:0.0000} {3:0.0000}, the final course {4:0.0} true (to {5}), for vectors' -f $plan.dest, $plan.dest_rwy, $script:afRunway.lat, $script:afRunway.lon, $script:afRunway.course_true, $script:afRunway.other) }
+else { Note warn ('{0} {1} not in X-Plane''s CIFP: no vectors to final' -f $plan.dest, $plan.dest_rwy) }
+Save-Json (Join-Path $script:autoOut 'plan.json') ([ordered]@{ args = $afArgs; plan = $plan; init = $init; runway = $script:afRunway })
 Note-Status 'plan' ('{0} {1} to {2} {3}: ZFW {4:0.0} t, fuel {5:0.0} t, FL{6:000}, CI {7}, flaps {8}, SID {9}, STAR {10} (to {11}), {12}, steps {13}' -f $plan.origin, $plan.origin_rwy,
     $plan.dest, $plan.dest_rwy, ($plan.zfw_kg / 1000), ($plan.takeoff_fuel_kg / 1000), ($plan.crz_ft / 100), $plan.ci, $plan.takeoff_flaps, $plan.sid, $plan.star, $plan.star_end,
     $plan.approach, $(if ($plan.steps.Count -gt 0) { ($plan.steps | ForEach-Object { '{0} FL{1:000}' -f $_.fix, ($_.ft / 100) }) -join ', ' } else { 'none' }))
