@@ -294,7 +294,13 @@ if ($Reload) {
     $loads = Get-XPAircraftLoads
     $reloaded = $false
     for ($try = 1; $try -le 3 -and -not $reloaded; $try++) {
-        Invoke-XPCommand 'sim/operation/reload_aircraft_no_art'
+        # (2026-11-09) the command's request may time out (30 s) while X-Plane
+        # reloads: the load is seen in Log.txt all the same. Before, the
+        # timeout ended the scenario with no result (the v7 list's 353 t LRC
+        # check twice; the perf session's auto flight three times)
+        try { Invoke-XPCommand 'sim/operation/reload_aircraft_no_art' } catch {
+            Add-Result @{ do = 'reload' } 'info' "the reload command's request: $($_.Exception.Message) (the load looked for in Log.txt)"
+        }
         $reloaded = $null -ne (Wait-XP { (Get-XPAircraftLoads) -gt $loads } 60 1000)
     }
     if (-not $reloaded) { throw 'the aircraft did not reload' }

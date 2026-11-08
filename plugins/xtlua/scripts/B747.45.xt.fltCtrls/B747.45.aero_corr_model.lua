@@ -119,9 +119,53 @@ M.CD_PER_FUSE_CD = 0.0664
 -- the FCOM's own, left where it is; offline the ceilings at ISA+10 come
 -- out 475 ft above the FCOM's at 240 t, 328 ft at 280 t, within 170 ft
 -- from 300 t: v5 +69 to -533 ft)
+--
+-- (v7, 2026-11-08 night) The perf kit's cruise with v6 (runs/20261108_114312)
+-- burned 1.6-1.7 % less than the FCOM's LRC at 306 t FL330, 353 t FL310 and
+-- 238 t FL390 (CL 0.41-0.43) and -0.2 to -0.4 % at CL 0.45-0.49. Set
+-- against the FCOM EPR's thrust the two light-lift cells were short of
+-- drag (-1.2 and -2.4 %), 353 t FL310 short of fuel per thrust (-1.45 %).
+-- Two things the offline fits of v4-v6 had wrong about X-Plane itself, from
+-- the five cruise runs (158 points, the same acf): its fuel per thrust in
+-- the cruise is not the perf kit's law in thrust (0.516 + 0.00035 a kN
+-- over 40) but a curve in N1 with its least near N1 84.6 % (0.5175 lb/lbf/h,
+-- +0.000376 (N1 - 84)^2 - 0.00043 (N1 - 84) + 0.089 (M - 0.86); rms 0.3 %
+-- against the law's 1.0 %): the law overstated it by 0.4-0.8 % at the
+-- heavy cells below FL370 (N1 85-88) and understated it by 1.6-1.9 % light
+-- and low (N1 79-80); and its own drag at 237 t FL390 sits 0.0002-0.0003
+-- under the polar + XP_SLOPE line (every run; elsewhere within the runs'
+-- 0.0002 scatter: left, 推定 that it is noise). With the measured curve the
+-- FCOM's fuel asks about 0.6 % more thrust at the CL 0.41-0.43 cells than
+-- the law said, and the cells' EPR agrees (B747.42.sfc_corr_model.lua's
+-- thrust factor is refitted on the same curve and carries most of it). So
+-- C_S 0.0207 -> 0.0230: the exponential wall a little wider, the FCOM's
+-- part at CL 0.41-0.43 and M.853-.860 up by 0.00005-0.0001 (+0.2..+0.4 % of
+-- drag), at CL 0.48 unchanged, above it a little less (CL 0.53 at M.86:
+-- 0.00276 -> 0.00251, -0.7 % of drag, the thrust-limited ceilings of
+-- PI.11.1 at ISA+10 about 120-170 ft higher offline, 240 t +475 -> +595 ft
+-- over the FCOM's, 400 t -8 -> +163; 0.0260 would have fitted the cells
+-- better but put them 250 ft higher still, and the perf run already has
+-- them 650-1,090 ft over the FCOM's); C_A, C_KC, C_M0 and cd_low as they
+-- were. Along a weight's
+-- line the Mach shape gets a little gentler: the fuel a mile 0.01 M under
+-- the LRC -0.85 %, over it +2.19 % on the mean (v6 -1.05 and +2.57 with the
+-- measured curve; the FCTM's -0.93 and +2.0; the perf run's shape above the
+-- LRC was 0.14 % steeper than the FCTM's parabola on the mean, rms 0.37 %).
+-- Offline with the measured N1 curve as X-Plane's fuel per thrust (the
+-- figures of v7 here and in the two tests): the 32 cells' fuel flow rms
+-- 0.97 -> 0.70 % (the CL 0.41-0.43 cells -1.0 -> 0.0 % on the mean, CL
+-- 0.475+ +0.5 -> +0.1 %), the EPR rms 0.011 -> 0.009 (max +0.027 ->
+-- -0.020); at the six measured cells the expected fuel flow -0.7, +0.6,
+-- -0.2, -0.5, +0.2 and -0.5 % (238 t FL390 carries its X-Plane drag
+-- shortfall). On the old perf kit's law instead (v4-v6's fitting tool,
+-- once, for the record) the same 32 cells read rms 0.49 -> 0.61 %: that
+-- tool's X-Plane burns 0.4-0.8 % too much per thrust at the heavy cells
+-- below FL370, so it has v6 closer and v7 farther than the airplane does. Estimates
+-- (推定): C_S free with the other three held; the N1 curve outside M.85-.87
+-- and N1 79-89
 M.XP_SLOPE = 0.17
 M.XP_M0 = {{237, 0.8373}, {305, 0.8342}, {353, 0.8289}}
-M.C_A, M.C_M0, M.C_KC, M.C_S, M.C_CL_MAX = 0.00105, 0.860, 0.25, 0.0207, 0.65
+M.C_A, M.C_M0, M.C_KC, M.C_S, M.C_CL_MAX = 0.00105, 0.860, 0.25, 0.0230, 0.65
 M.M_TOP = 0.870
 M.AREA = 541.2
 
