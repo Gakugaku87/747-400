@@ -41,15 +41,25 @@ local function net_cd(t, ft, m)
     local c = cl_of(t, m, ft)
     return 0.0171 + 0.055 * c * c + A.XP_SLOPE * math.max(m - xp_onset(t), 0) - A.cd_mach(m, t * 1000, c)
 end
--- (v4, notes/AERO.md §3.19; v6, 2026-11-08) the FCOM PI.11.2 (p.268) cells
--- with the LRC from M.85: their fuel flow an engine at the LRC from that
--- drag, at X-Plane's fuel per thrust for the thrust (the perf kit's: 0.516
--- lb/lbf/h to 40 kN, 0.00035 more a kN above), the FL370+ SFC correction
--- and, from v6, the SFC's thrust factor (B747.42.sfc_corr_model.lua: the
--- fuel the cells burn over their EPR's thrust, 0.00082 a kN of corrected
--- thrust from 200 kN), within 1.4 % each (the fit: 1.3 % the largest, 400 t
--- FL270 at M.852, 0.5 % rms; v4: 1.0 and 0.5 %)
+-- (v4, notes/AERO.md §3.19; v6, 2026-11-08; v7, 2026-11-08 night) the FCOM
+-- PI.11.2 (p.268) cells with the LRC from M.85: their fuel flow an engine at
+-- the LRC from that drag, at X-Plane's fuel per thrust for the thrust, the
+-- FL370+ SFC correction and, from v6, the SFC's thrust factor
+-- (B747.42.sfc_corr_model.lua). X-Plane's fuel per thrust from v7 as the
+-- perf kit's five cruise runs measured it (158 points, M.85-.87, N1 79-89;
+-- rms 0.3 %): a curve in N1, and X-Plane's N1 from the corrected thrust,
+-- the Mach and sqrt(theta) (rms 0.2 %); to v6 the perf kit's law in the
+-- thrust (0.516 lb/lbf/h to 40 kN, 0.00035 more a kN above; rms 1.0 %,
+-- 0.4-0.8 % too much at the heavy cells below FL370). Within 2.0 % each
+-- (the fit: -1.9 % the largest, 400 t FL270 at M.852, 0.7 % rms; v6 on the
+-- same curve -2.7 and 1.0 %; v6 on the law 1.3 and 0.5 %)
 local SC = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.sfc_corr_model.lua")
+local function theta_isa(ft) return (ft <= 36089 and (288.15 - 0.0019812 * ft) or 216.65) / 288.15 end
+local function xp_sfc(thrust, ft, m)                 -- lb/lbf/h at a thrust an engine (N)
+    local fd = thrust / 1000 / (p_isa(ft) / 101325)
+    local n1 = (96.120 + 0.14637 * (fd - 200) - 0.0000636 * (fd - 200) ^ 2 - 1.540 * (m - 0.86)) * math.sqrt(theta_isa(ft))
+    return 0.51749 - 0.0004279 * (n1 - 84) + 0.00037642 * (n1 - 84) ^ 2 + 0.0888 * (m - 0.86)
+end
 local CELLS = {     -- t, FL, LRC Mach, FF/ENG kg/h
     {400, 29, .862, 3466}, {400, 31, .861, 3513}, {380, 29, .858, 3274}, {380, 31, .861, 3284},
     {380, 33, .860, 3375}, {360, 29, .850, 3092}, {360, 31, .861, 3092}, {360, 33, .861, 3124},
@@ -64,9 +74,8 @@ local function ff_of(t, fl, m)
     local ft = fl * 1000
     local qs = q_of(m, ft) * A.AREA
     local thrust = net_cd(t, ft, m) * qs / 4                      -- N an engine
-    local sfc = 0.516 + 0.00035 * math.max(thrust / 1000 - 40, 0)  -- lb/lbf/h
     local fd = thrust / 1000 / (p_isa(ft) / 101325)               -- kN of corrected thrust
-    return SC.total(ft, fd, m) * sfc / 9.80665 * thrust           -- kg/h
+    return SC.total(ft, fd, m) * xp_sfc(thrust, ft, m) / 9.80665 * thrust   -- kg/h
 end
 -- the fuel a mile at a weight and level (the fuel flow over the Mach: from
 -- v6 the fuel per thrust rises with the thrust, so the drag alone no longer
@@ -86,16 +95,17 @@ for _, c in ipairs(CELLS) do
     if upm < 0.015 and not flat then flat = string.format("%d t FL%d %+.1f %%", c[1], c[2] * 10, upm * 100) end
     if (upm > 0.04 or dn < -0.025) and not steep then steep = string.format("%d t FL%d %+.1f %%", c[1], c[2] * 10, upm * 100) end
 end
-T.check(math.abs(worst[1]) < 0.014, string.format("the FCOM's fuel flow at the LRC: the largest %+.1f %% (%s)", worst[1] * 100, worst[2]))
-T.check(math.sqrt(sse / #CELLS) < 0.006, string.format("and %.2f %% rms over the %d cells", math.sqrt(sse / #CELLS) * 100, #CELLS))
+T.check(math.abs(worst[1]) < 0.020, string.format("the FCOM's fuel flow at the LRC: the largest %+.1f %% (%s)", worst[1] * 100, worst[2]))
+T.check(math.sqrt(sse / #CELLS) < 0.0075, string.format("and %.2f %% rms over the %d cells", math.sqrt(sse / #CELLS) * 100, #CELLS))
 -- the fuel a mile around the LRC (FCTM p.129, 4.7: the LRC 1 % less fuel
 -- mileage than the best, on the fast side; p.132, 4.10: 0.01 M above the schedule 2 %
 -- more fuel: -0.93 and +2.0 % at 0.01 M under and over): on the mean within
 -- 0.3 % under and 0.6 % over (v5: +2.4 %, the lift of 0.5 and more steeper;
--- v6: -0.84 and +2.28 %, the fuel per thrust's rise with the thrust in it),
--- each 0.01 M over between +1.5 and +4 % (v3: -0.2 to +0.8 %, the
--- best inside M.85-.87 at heavy, high levels; v4: +0.5 % at CL 0.41; v6:
--- +1.9 to +3.1 %)
+-- v6: -0.84 and +2.28 % on the law, -1.05 and +2.57 on the measured curve;
+-- v7: -0.85 and +2.19, the wall a little wider), each 0.01 M over between
+-- +1.5 and +4 % (v3: -0.2 to +0.8 %, the best inside M.85-.87 at heavy,
+-- high levels; v4: +0.5 % at CL 0.41; v6: +1.9 to +3.1 %; v7: +1.8 to
+-- +2.9 %)
 T.near(sdn / nup, -0.0093, 0.003, string.format("0.01 M under the LRC: %+.2f %% fuel a mile on the mean", sdn / nup * 100))
 T.check(sup / nup > 0.017 and sup / nup < 0.026, string.format("0.01 M over the LRC: %+.2f %% fuel a mile on the mean", sup / nup * 100))
 T.check(flat == nil, "0.01 M over the LRC never flat (+1.5 % or more)" .. (flat and (": " .. flat) or ""))

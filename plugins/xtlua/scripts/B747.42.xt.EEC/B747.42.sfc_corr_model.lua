@@ -75,8 +75,26 @@ end
 -- above), the fade with the Mach (the takeoff's fuel is right without it,
 -- the cruise's needs it; between them no figure), that it is the same at
 -- every altitude (its product with ALT's factor), that the 3-engine
--- cells' excess is the same effect
-M.THRUST = {f0 = 200, k = 0.00082, cap = 80}   -- kN of F/delta
+-- cells' excess is the same effect.
+-- (v7, 2026-11-08 night) The line refitted on X-Plane's fuel per thrust as
+-- the five perf cruise runs measured it (158 points, M.85-.87): a curve in
+-- N1 (0.5175 lb/lbf/h at N1 84.6, +0.000376 (N1 - 84)^2 - 0.00043 (N1 - 84),
+-- +0.089 a Mach; rms 0.3 %), not the perf kit's law in thrust (rms 1.0 %),
+-- which overstated it by 0.4-0.8 % at the heavy cells below FL370 (N1
+-- 85-88): the cells there need 0.5-2.5 % more factor than v6 gave, those
+-- from FL390 up 0.1-1.5 % less (B747.45.aero_corr_model.lua's v7). The
+-- line now starts at 175 kN and rises 0.0005 a kN: +1.25 % at 200 kN (v6
+-- none), +2.25 % at 220, +3.25 % at 240 (v6 +3.3), +4.25 % at 260 (v6
+-- +4.9), +5.25 % at the cap, 280 kN (v6 +6.6; the climb at .84 from FL280,
+-- F/delta 249-266, burns 0.3-0.8 % less than with v6; the 3-engine cells
+-- of PI.13.4 on the perf kit's law, with 4 % of windmilling and trim drag:
+-- rms 4.1 -> 4.0 % under the FCOM, the worst cell -5.0 -> -5.3 % (300 t
+-- FL330): estimate, see B747.45.aero_corr_model.lua). In the v6 cruise run 353 t FL310
+-- (F/delta 199) burned 1.45 % less per thrust than the FCOM's cell at the
+-- FCOM's EPR, 306 t FL330 (184) 0.4 % less: the start before 200 kN is
+-- theirs. Estimates (推定) as before; the N1 curve outside M.85-.87 and
+-- N1 79-89
+M.THRUST = {f0 = 175, k = 0.0005, cap = 105}   -- kN of F/delta
 M.THRUST_MACH = {0.70, 0.80}
 
 -- the factor for an engine's corrected thrust F/delta (kN: its net thrust
