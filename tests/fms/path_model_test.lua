@@ -110,6 +110,29 @@ T.check(M.turn(vi, cf, 200) == nil, "no fly-by from a heading leg")
 path = M.build({{disc = true}, {pt = "CF", fix = ZZV, crs = 90, dist = 8}}, nil, env)
 T.near(dist(path[2].a, ZZV), 8, 1e-6, "a CF with no leg before: 8 nm back along its course")
 
+-- (2026-11-09) a procedure's course by its recommended navaid's variation:
+-- a localizer's from its true and magnetic courses (KLAX's IOSS: 251
+-- magnetic, 262.97 true), a VOR's station declination; the nearest VOR's
+-- (here -7) without one, and for a heading. Before: the ILS24R's final CF
+-- legs 3 degrees off the localizer by the LAX VORTAC's 15 east
+local IOSS = {kind = "LOC", ident = "IOSS", lat = 35.0, lon = 140.5, crs_true = 262.97, crs_mag = 251}
+local KOB = M.point(IOSS, 82.97, 8.3)
+local MER = M.point(IOSS, 82.97, 16.2)
+path = M.build({{pt = "IF", fix = MER}, {pt = "CF", fix = KOB, crs = 251, navaid = IOSS}}, MER, env)
+T.near(path[2].crs, 262.97, 1e-9, "a CF on a localizer: its true course, 262.97")
+T.check(dist(path[2].a, MER) < 0.02, "the line from the fix before on the localizer (0.41 nm before): " .. dist(path[2].a, MER))
+path = M.build({{pt = "IF", fix = MER}, {pt = "CF", fix = KOB, crs = 251}}, MER, env)
+T.near(path[2].crs, 244, 1e-9, "without a navaid: the variation there (-7)")
+path = M.build({{pt = "IF", fix = MER}, {pt = "CF", fix = KOB, crs = 251,
+    navaid = {kind = "VOR", ident = "ZZW", lat = 35.0, lon = 140.4, var = 12}}}, MER, env)
+T.near(path[2].crs, 263, 1e-9, "a VOR's: its declination (12 east)")
+path = M.build({{pt = "IF", fix = MER}, {pt = "CF", fix = KOB, crs = 251,
+    navaid = {kind = "LOC", ident = "IOLD", lat = 35.0, lon = 140.5, crs_true = 262.97, crs_mag = 0}}}, MER, env)
+T.near(path[2].crs, 244, 1e-9, "a localizer in the older data (true only): the variation there")
+path = M.build({{pt = "IF", fix = MER}, {pt = "VI", crs = 251, navaid = IOSS},
+    {pt = "CF", fix = KOB, crs = 251, navaid = IOSS}}, MER, env)
+T.near(path[2].hdg, 244, 1e-9, "a heading: the variation there, not the navaid's")
+
 -- the other conditional legs (FCOM p.1249): to a radial, to a DME
 -- distance, to vectors; from a fix for a distance
 local S = {lat = 35.0, lon = 140.0}
