@@ -90,6 +90,30 @@ M.K_EPR, M.K_N1 = 0.33, 0.003
 -- minimum speed's undershoot)
 M.FLCH_S, M.GA_VS = 125, 2000
 M.LIMIT_MARGIN = 5
+-- (2026-11-10) the clean airplane in the air's gusts (estimates: the
+-- sources give no filter; notes/ATA-34-61-FMC.md §162). SPD's speed law
+-- flies the speed complemented by the inertial acceleration: the TAS
+-- through GUST_TAU s with the acceleration along the air path (the IRU's
+-- flight path acceleration, ATA34_2 p.280) added at once, back in IAS by
+-- the IAS/TAS ratio, and that speed's rate. In still air that is the IAS
+-- itself (the airplane's acceleration is the airspeed's); a change of the
+-- air, a gust or a shear, comes in over GUST_TAU. FCOM p.214 (SP.16.14):
+-- the levers busier with the wind's, the temperature's and the pressure's
+-- changes; FCTM p.301: the A/T more aggressive near VMO/MMO, so back to
+-- the IAS within GUST_FADE_KT of the maximum speed's limit (v_max less
+-- LIMIT_MARGIN) and of the minimum maneuvering speed. Flaps extended the
+-- IAS as before (FCTM p.43: the approach's gust protection). A Sperry
+-- cruise Mach hold (US4641268, 1983) keeps the short gusts off the
+-- throttles by an isolation filter: the same aim. On the KSEA-KLAX
+-- record's gusts (2026-11-09, FL390, X-Plane's real weather, 1.3 kt) a
+-- model of the airplane had the levers travel 0.33 of their range a
+-- minute and the speed 0.9 kt over its target on the IAS (X-Plane: +0.7
+-- kt); complemented over 20 s 0.05 and +0.1 kt, the speed's spread the
+-- same (0.7 kt), a +5 kt target the same, a 10 kt shear over 30 s 4 kt
+-- slow (2.5 before). The IAS/TAS ratio over GUST_RATIO_S: in the record
+-- the ratio's quick changes went against the gusts' (the IAS a little
+-- behind the TAS), which would bring a share of each gust back in
+M.GUST_TAU, M.GUST_FADE_KT, M.GUST_RATIO_S = 20, 10, 2
 -- (2026-11-07) FLCH's climb: the V/S the thrust is to make is the energy's
 -- rate at the target speed (evs, as VNAV's THR and G/A: the inertial V/S
 -- and the energy the speed gains, which the elevator turns into climb)
@@ -144,6 +168,7 @@ function M.new()
         ga = false,         -- G/A's THR (the first push) on
         retard = false,     -- the flare retard's IDLE
         servo = false, cmd = 0,  -- the servo excited, its lever command
+        gust_v = nil, gust_i = 0, gust_a = 0, gust_r = 0,  -- servo: the complemented TAS, its IAS and rate, IAS/TAS
         pitch = nil, arm = nil}
 end
 
@@ -320,15 +345,54 @@ end
 
 -- the speed law's lever rate to a speed: the error and the acceleration,
 -- less when reducing near the target
-local function speed_rate(inp, tgt)
-    local e = tgt - inp.ias
-    local r = M.K_SPD * e - M.K_ACC * inp.accel
+local function speed_rate(ias, accel, tgt)
+    local e = tgt - ias
+    local r = M.K_SPD * e - M.K_ACC * accel
     if r < 0 then
         local b = M.SPD_DOWN_KT
         local x = clamp((-e - b[1]) / (b[2] - b[1]), 0, 1)
         r = r * (M.SPD_DOWN + (1 - M.SPD_DOWN) * x)
     end
     return r
+end
+
+-- (2026-11-10) the inertial acceleration along the air path (kt/s of TAS)
+-- for gust_speed: the acceleration (m/s/s) on the velocity less the wind
+-- (m/s), any one frame of axes (the glue's X-Plane OpenGL ones); 0 under 1
+-- m/s of air. On the ground speed's rate alone a turn in a wind reads the
+-- wind's swing (some 1 kt/s at 15 degrees of bank in 90 kt)
+function M.path_accel(ax, ay, az, vx, vy, vz, wx, wy, wz)
+    local x, y, z = vx - wx, vy - wy, vz - wz
+    local v = math.sqrt(x * x + y * y + z * z)
+    if v < 1 then return 0 end
+    return (ax * x + ay * y + az * z) / v * 3600 / 1852
+end
+
+-- (2026-11-10) SPD's speed and its rate in the air's gusts (GUST_TAU):
+-- with the flaps up, inp.tas (kt) and inp.accel_in (the inertial
+-- acceleration along the air path, kt/s of TAS) the TAS complemented by
+-- that acceleration, in IAS by the IAS/TAS ratio, its rate through the
+-- glue's half second; within GUST_FADE_KT of the speed limits back to the
+-- IAS. Each frame (it runs on in every mode); else the IAS and inp.accel
+local function gust_speed(s, inp)
+    if not (inp.flaps_up and inp.accel_in and inp.tas and inp.tas > 50 and inp.ias > 30 and inp.dt > 0) then
+        s.gust_v = nil
+        return inp.ias, inp.accel
+    end
+    if not s.gust_v then
+        s.gust_v, s.gust_i, s.gust_a, s.gust_r = inp.tas, inp.ias, inp.accel, inp.ias / inp.tas
+        return inp.ias, inp.accel
+    end
+    -- the acceleration's step, then the TAS's share of what is left
+    s.gust_v = s.gust_v + inp.accel_in * inp.dt
+    s.gust_v = s.gust_v + (inp.tas - s.gust_v) * math.min(1, inp.dt / M.GUST_TAU)
+    s.gust_r = s.gust_r + (inp.ias / inp.tas - s.gust_r) * math.min(1, inp.dt / M.GUST_RATIO_S)
+    local ias = s.gust_v * s.gust_r
+    s.gust_a = s.gust_a + ((ias - s.gust_i) / inp.dt - s.gust_a) * math.min(1, inp.dt / 0.5)
+    s.gust_i = ias
+    local w = clamp(math.min(inp.v_max - M.LIMIT_MARGIN - inp.ias, inp.ias - (inp.v_min or 0))
+        / M.GUST_FADE_KT, 0, 1)
+    return inp.ias + w * (ias - inp.ias), inp.accel + w * (s.gust_a - inp.accel)
 end
 
 -- the servo (step 9f2; ATA34_2 p.646-648): each frame after update, the
@@ -342,8 +406,11 @@ end
 -- change in the target's IAS or Mach; ivs without); thrust and
 -- thrust_ref (EPR or % N1, n1 true for N1), thrust_max (the EEC's
 -- full-forward rating: the most the levers give, nil not known; the FMC's
--- step 9h4b); lever (the levers' mean)
+-- step 9h4b); lever (the levers' mean); tas (kt) and accel_in (the inertial
+-- acceleration along the air path, kt/s of TAS) for SPD in the gusts
+-- (GUST_TAU; none: the IAS)
 function M.servo(s, inp)
+    local gias, gacc = gust_speed(s, inp)
     local mode = s.engaged and s.mode or nil
     if mode ~= M.THR then s.reach_t = 0 end
     if mode == nil or mode == M.HOLD then
@@ -380,7 +447,7 @@ function M.servo(s, inp)
         rate = -(s.retard and M.FLARE_RATE or M.SERVO_RATE)
     elseif mode == M.THR_REF then
         -- the reference thrust, the limit speed (ATA34_2 p.672)
-        rate = math.min(limit, speed_rate(inp, vmax))
+        rate = math.min(limit, speed_rate(inp.ias, inp.accel, vmax))
     elseif mode == M.SPD then
         -- the floor the minimum maneuvering speed, with the margin only
         -- with the flaps extended (FCOM p.675), as the pitch laws'
@@ -388,7 +455,7 @@ function M.servo(s, inp)
         -- A/T held M.858 for the MCP's M.85 at 307 t and FL370
         -- (PERF_SIMBRIEF phase 1)
         local tgt = clamp(inp.target, inp.v_min + (inp.flaps_up and 0 or M.LIMIT_MARGIN), vmax)
-        rate = math.min(speed_rate(inp, tgt), cap)
+        rate = math.min(speed_rate(gias, gacc, tgt), cap)
     else
         -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
         -- VNAV's the FMC's (step 9d2a: the early descent; 9h4b: the driftdown);

@@ -560,4 +560,107 @@ A.update(s30b, inp{pitch = "FLCH"})
 A.servo(s30b, sv{alt = 15000, mcp_alt = 9000, vs = -500, evs = -1500, ias = 280, target = 280})
 T.near(s30b.cmd - 0.5, A.K_VS * (-6000 / 125 * 60 + 500), 1e-9, "a FLCH descent: the V/S alone (the energy's rate would retard slower)")
 
+-- (2026-11-10) SPD in the air's gusts (GUST_TAU; notes/ATA-34-61-FMC.md
+-- §162): the speed complemented by the inertial acceleration along the air
+-- path with the flaps up. path_accel: that acceleration in kt/s of TAS
+local KT_MS = 3600 / 1852
+T.near(A.path_accel(1, 0, 0, 250, 0, 0, 0, 0, 0), KT_MS, 1e-9, "path_accel: 1 m/s/s along the path in still air, in kt/s")
+T.near(A.path_accel(0, 0, 2.6, 250, 0, 46, 0, 0, 46), 0, 1e-9,
+    "a 15-degree turn across a 90 kt wind: none along the air path")
+T.check(2.6 * 46 / math.sqrt(250 ^ 2 + 46 ^ 2) * KT_MS > 0.9,
+    "  (the ground speed's rate would read 0.9 kt/s)")
+T.near(A.path_accel(0.5, 0, 0, 240, 10, 0, 0, 0, 0), 0.5 * 240 / math.sqrt(240 ^ 2 + 100) * KT_MS, 1e-9,
+    "climbing: the acceleration's share along the climbing path")
+T.equal(A.path_accel(1, 1, 1, 0.5, 0, 0, 0, 0, 0), 0, "under 1 m/s of air: none")
+-- two servos on one flight in SPD: g with the TAS and the inertial
+-- acceleration, i without (the IAS law); the IAS/TAS ratio 0.55, the
+-- glue's IAS rate over half a second
+local function gust_pair(o)
+    local p = {g = A.new(), i = A.new(), accel = 0, last = nil, flaps_up = o.flaps_up ~= false,
+        v_max = o.v_max or 365, lag = o.lag}
+    for _, x in ipairs({p.g, p.i}) do A.update(x, inp{pitch = "ALT", spd = true, flaps_up = p.flaps_up}) end
+    return p
+end
+local function gust_step(p, tas, accel_in, dt)
+    -- o.lag: the IAS that many seconds behind the TAS (first order)
+    p.tl = p.lag and p.tl and p.tl + (tas - p.tl) * math.min(1, dt / p.lag) or tas
+    local ias = p.tl * 0.55
+    if p.last then p.accel = p.accel + ((ias - p.last) / dt - p.accel) * math.min(1, dt / 0.5) end
+    p.last = ias
+    for _, k in ipairs({"g", "i"}) do
+        local x = p[k]
+        local v = sv{dt = dt, ias = ias, accel = p.accel, target = 270, v_max = p.v_max, v_min = 200,
+            flaps_up = p.flaps_up, thrust = 1.4, thrust_ref = 1.6, lever = x.servo and x.cmd or 0.45}
+        if k == "g" then v.tas, v.accel_in = tas, accel_in end
+        A.servo(x, v)
+    end
+end
+local DTG = 0.05
+local TAS0 = 270 / 0.55
+-- still air: the airplane accelerating 0.5 kt/s for 10 s, the inertial
+-- acceleration the TAS's: the same levers as the IAS law
+local pa = gust_pair{}
+for n = 1, 200 do gust_step(pa, TAS0 + 0.5 * n * DTG, 0.5, DTG) end
+T.near(pa.g.cmd, pa.i.cmd, 1e-6, string.format("still air, accelerating: the IAS law's levers (%.5f, %.5f)", pa.g.cmd, pa.i.cmd))
+T.check(pa.i.cmd < 0.45 - 0.02, "  (the levers came back 0.02 or more)")
+-- a gust: the air 2 kt faster over a second, 4 s on, back over a second;
+-- the airplane unmoved
+local pb = gust_pair{}
+local d_g, d_i = 0, 0
+for n = 1, 400 do
+    local t = n * DTG
+    local gst = 2 * math.max(0, math.min(1, t - 2, 7 - t))
+    gust_step(pb, TAS0 + gst, 0, DTG)
+    d_g, d_i = math.max(d_g, math.abs(pb.g.cmd - 0.45)), math.max(d_i, math.abs(pb.i.cmd - 0.45))
+end
+T.check(d_i > 0.015, string.format("a 2 kt gust of 5 s: the IAS law moves the levers %.3f", d_i))
+T.check(d_g < 0.25 * d_i, string.format("  complemented %.4f (under a quarter of it: the gust comes in over GUST_TAU)", d_g))
+-- the same with the IAS 0.3 s behind the TAS (the record's ratio went
+-- against the gusts): the ratio over GUST_RATIO_S keeps it out
+local pl = gust_pair{lag = 0.3}
+local l_g, l_i = 0, 0
+for n = 1, 400 do
+    local t = n * DTG
+    gust_step(pl, TAS0 + 2 * math.max(0, math.min(1, t - 2, 7 - t)), 0, DTG)
+    l_g, l_i = math.max(l_g, math.abs(pl.g.cmd - 0.45)), math.max(l_i, math.abs(pl.i.cmd - 0.45))
+end
+T.check(l_g < 0.25 * l_i, string.format("  the IAS 0.3 s behind the TAS: complemented %.4f, on the IAS %.4f", l_g, l_i))
+-- flaps extended: the IAS law (FCTM p.43)
+local pc = gust_pair{flaps_up = false}
+for n = 1, 400 do
+    local t = n * DTG
+    gust_step(pc, TAS0 + 2 * math.max(0, math.min(1, t - 2, 7 - t)), 0, DTG)
+end
+T.near(pc.g.cmd, pc.i.cmd, 1e-12, "flaps extended: the IAS law in the gust")
+-- near the maximum speed's limit (FCTM p.301): the IAS law within
+-- LIMIT_MARGIN + GUST_FADE_KT of v_max
+local pd = gust_pair{v_max = 270 + A.LIMIT_MARGIN}
+for n = 1, 400 do
+    local t = n * DTG
+    gust_step(pd, TAS0 + 2 * math.max(0, math.min(1, t - 2, 7 - t)), 0, DTG)
+end
+T.near(pd.g.cmd, pd.i.cmd, 1e-4, "at the maximum speed's limit: the IAS law in the gust")
+-- a shear: the air 10 kt slower from 1 s on, held: the complemented IAS
+-- within 5 % of the IAS after 3 GUST_TAU
+local pe = gust_pair{}
+for n = 1, math.floor((3 * A.GUST_TAU + 1) / DTG) do gust_step(pe, TAS0 - (n * DTG > 1 and 10 or 0), 0, DTG) end
+T.near(pe.g.gust_i, pe.last, 0.05 * 5.5 + 0.01,
+    string.format("a 10 kt shear: in after 3 GUST_TAU (%.2f for the IAS's %.2f)", pe.g.gust_i, pe.last))
+-- without the inertial acceleration: the IAS law
+local pf = gust_pair{}
+for n = 1, 100 do
+    local x, y = pf.g, pf.i
+    local v = sv{dt = DTG, ias = 270 + n * 0.01, accel = 0.2, target = 270, v_max = 365, v_min = 200}
+    A.servo(x, v)
+    A.servo(y, v)
+end
+T.near(pf.g.cmd, pf.i.cmd, 1e-12, "no TAS or inertial acceleration given: the IAS law")
+-- the complement runs on outside SPD (HOLD), ready when SPD comes
+local sg = A.new()
+A.update(sg, inp{pitch = "FLCH"})
+A.servo(sg, sv{mcp_alt = 5000, vs = 0, lever = 0})
+T.equal(A.fma(sg), A.HOLD, "FLCH's HOLD (the setup)")
+for _ = 1, 2 do A.servo(sg, sv{dt = DTG, lever = 0, flaps_up = true, tas = 455, accel_in = 0.2}) end
+T.near(sg.gust_v, 455 + 0.2 * DTG * (1 - DTG / A.GUST_TAU), 1e-9, "the complement runs in HOLD too")
+
 T.done()
