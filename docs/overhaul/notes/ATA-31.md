@@ -798,3 +798,11 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 推定：記号と線の円の 290 px（画面の半分の高さ約 301 px の内。図は経路を画面の端まで描く）、数字と文字の位置と大きさ、CRT の N↑ の位置（株のまま）。
 - 試験：`nd_model_test` 146（円と CRT、CTR、MAP）、`display_module_test` 255（PW の円、CRT の GE、LCD の GE）、`nd_orientation_test` 10（CRT の PLN は航跡が上）。`nd_airports_test`・`nd_line_view_test`・`wxr_module_test` は `centred` を立てるように。
 - X-Plane（カスタム acf、2026-11-05）：新しい `s254_nd_plan_circles` 16/16（PW、成田で RJAA→RJBB を XAC・SPENS・BOKJO。機長の PLN 80 NM：上の中央に緑の N↑、円の数字 80 と 40、W・E・S、XAC を中央に経路と RJAA の機体の記号が北が上（写真）。F/O の 160 NM も（写真）。LEGS の STEP 2 回で BOKJO が中央（写真）。CTR を入れても同じ、MAP に戻すと前のとおり（写真））。新しい `s255_nd_plan_crt` 10/10（Qantas VH-OEJ の GE、CRT：TRK 337 MAG の枠、目盛は航跡が上、機首方位の指針、経路は XAC から北が上、右に N↑（写真））。1 回目は CRT の目盛が北が上だった（`nd_up` が PLN を北にしていた）のと、S が下の 80 に触れていたのを直した。Lua の誤りなし。
+
+## 47. 地上の VREF（2026-11-09：本家の古いコードの監査）
+
+- 前の状態：`B747.60.xt.fltInst02.lua` が、電波高度 5 ft 未満で毎フレーム、CDU で選んだ着陸のフラップ（`airspeed/VrefFlap`）を 0 にしていた（本家）。地上では PFD の REF のバグが出ず（出発前に APPROACH REF を入れても）、接地で消えた。
+- 資料：FCOM p.973：VREF は選んでいる間出る。FMC は着陸の 30 秒後の flight complete で自分で消す（`B747.68.xt.fms.lua`）。
+- 作ったこと：その 3 行を消した。
+- 試験：`speedtape_module_test`（2 件）。直す前のコードでは 2 件が落ちる。
+- X-Plane（カスタム acf、2026-11-09）：`s275` の (4)：地上（電波高度 5 ft 未満）で、CDU で選んだ着陸のフラップ（`VrefFlap` 2）が残る。PFD の写真は地上の 30 kt の所で、REF のバグ（VREF）はテープの外だった（目視は利用者に）。
