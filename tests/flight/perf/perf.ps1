@@ -516,8 +516,18 @@ function Start-PerfAirStart($Init) {
 # runner does the same, run_scenario.ps1, 2026-11-08). The step climb acts
 # only in VNAV (B747.68.simopts_model.lua M.step), which the kit does not
 # fly, so the runs of 11-06 to 11-08 (the user's step climb on) were not
-# touched by it.
+# touched by it. The options as the run first found them are put back at
+# its end (2026-11-09): left zeroed in memory, the FMS bridge's next save
+# (its menu, an option's command, a Pilot ID) would write them over the
+# user's file (the fuel session's note).
+$script:perfOptsWas = $null
 function Set-PerfSimOptionsOff {
+    if ($null -eq $script:perfOptsWas) {
+        $script:perfOptsWas = [ordered]@{}
+        foreach ($k in 'auto_step_climb', 'pause_at_td', 'auto_fuel_mgmt') {
+            try { $script:perfOptsWas[$k] = [int](Get-XPDataref ('laminar/B747/options/' + $k)) } catch { }
+        }
+    }
     foreach ($opt in 'laminar/B747/options/auto_step_climb', 'laminar/B747/options/pause_at_td') {
         try {
             if ([int](Get-XPDataref $opt) -ne 0) {
@@ -2493,6 +2503,12 @@ try {
             $meta.payload_at_end_kg = Get-Num 'sim/flightmodel/weight/m_fixed'
             Note info ('the payload back to {0} kg, as the run found it (now {1} kg)' -f (F $payloadAtStart '0.0'), (F $meta.payload_at_end_kg '0.0'))
         } catch { Note warn ('the payload not put back to {0} kg: {1}' -f (F $payloadAtStart '0.0'), $_.Exception.Message) }
+    }
+    if ($null -ne $script:perfOptsWas -and $script:perfOptsWas.Count -gt 0) {
+        foreach ($k in @($script:perfOptsWas.Keys)) {
+            try { Set-XPDataref ('laminar/B747/options/' + $k) $script:perfOptsWas[$k] } catch { Note warn ('the option {0} not put back: {1}' -f $k, $_.Exception.Message) }
+        }
+        Note info ('the sim options back as the run found them: {0}' -f ((@($script:perfOptsWas.Keys) | ForEach-Object { '{0} {1}' -f $_, $script:perfOptsWas[$_] }) -join ', '))
     }
 }
 

@@ -272,7 +272,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 仕様の `python -m perf ...` は、キットの PowerShell に置き換えた（この PC は Python を呼ばない：CLAUDE.md）。
   - `-Only`（2026-11-07）：その suite の高度（`cruise`、例 `crz_l15_fl390`）・試験（`climb`、例 `cel_l15`）・点（`check`）のうち、挙げたものだけを suite の順に回す。コンマで区切る（`-File` では `a,b` が 1 つの文字列で渡る）。suite に無い名前なら、X-Plane に触れる前に止まる。出力のフォルダーは `_part` で終わり、名前は `meta.json` の `only` と `check.md` に残る。機体の修正の後の測り直し用（最初は、FL370 から上の燃費の補正の後の、15 t・FL390 の 3 点）。
 - 点の総重量は MTOW の百分率。MTOW は FCOM の機番 109 の 394,625 kg（FCOM p.78、L.10.2。利用者 2026-11-06）で、acf の最大重量（850,000 lb ＝ 385,554 kg）ではない。MZFW 244,939 kg・MLW 285,763 kg も同じ表の値（機体に定義が無い。利用者 2026-11-06）。`meta.json` の `weights` に記録し、点の ZFW が MZFW を超えれば警告する。
-- 機体のネイティブのプラグインの便利機能（Plugins > 747-400 の自動ステップ上昇と、T/D の前の一時停止）は、読み込みのたびに利用者の設定（`Output/preferences/B747-400_options.prf`）から入る。キットは空中スタートのたびに 2 つとも 0 にする（`Set-PerfSimOptionsOff`。書いても保存されない。2026-11-08、ランナーの `run_scenario.ps1` と同じ）。自動ステップ上昇は VNAV でしか動かず（`B747.68.simopts_model.lua` の `M.step`）、キットは VNAV で飛ばないので、11-06〜11-08 の計測（利用者の設定で ON）には効いていない。
+- 機体のネイティブのプラグインの便利機能（Plugins > 747-400 の自動ステップ上昇と、T/D の前の一時停止）は、読み込みのたびに利用者の設定（`Output/preferences/B747-400_options.prf`）から入る。キットは空中スタートのたびに 2 つとも 0 にする（`Set-PerfSimOptionsOff`。書いても保存されない。2026-11-08、ランナーの `run_scenario.ps1` と同じ）。走らせ終わりに、最初に見た値（燃料の自動管理も）へ戻す（2026-11-09 から。0 のままメモリに残すと、FMS ブリッジの次の保存（メニュー、オプションのコマンド、Pilot ID）で、利用者の設定ファイルに 0 が書かれる。燃料の自動管理のセッションの指摘）。自動ステップ上昇は VNAV でしか動かず（`B747.68.simopts_model.lua` の `M.step`）、キットは VNAV で飛ばないので、11-06〜11-08 の計測（利用者の設定で ON）には効いていない。
 - `check`（フェーズ0）：銚子沖の海上（35.40N 141.30E、真方位 090）で、ペイロード 40 t、MTOW の 78 %・FL350 と 90 %・FL310（どちらも M.85）の 2 回の空中スタート。それぞれ、エンジンの燃焼、ペイロードとタンクごとの燃料の読み戻し、エンジン型式（PW4056）、A/P の ALT と A/T の SPD（MCP は Mach）、30 ft・M.003・100 fpm の内に 60 秒（6 分以内）、続く 180 秒の燃料重量の減り方と FF 計器の和の比較（差 2 % 以内）、記録の始めから終わりまでペイロード・ZFW（総重量 − 燃料）・燃料の飛びの監視。
 - `cruise`（フェーズ1、プラン A。`-Suite cruise`）：同じ場所と大気で、重量 × 高度ごとに 1 回の空中スタートをし、Mach を .85 → .86 → .87 とその場で変える（`Get-PerfLevels`：11 の高度で 33 点）。
   - 重量は 3 段：軽い段 238.5 t（OEW＋ペイロード 40 t＋予備燃料 15 t、MTOW の 60 %）、MTOW の 78 %、90 %。
@@ -358,9 +358,12 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - 読み込み済みの機体なら、読み直して置き直す（ランナーと同じ。X-Plane が読み込んだ直後は読み直さない：§4.6）。読み直しのコマンドの要求は、X-Plane が読み直している間に 30 秒で時間切れになる（KSEA の 3 回とも）。警告だけにして、`Log.txt` の新しい読み込みで決める（1 回 90 秒、3 回まで）。
     - 冷えた機体からのエンジン始動は、次の版で作る。
   - FMC：
-    - IDENT。シムのオプション：T/D 前の一時停止を切る。Auto step climb は `-Steps fmc` のときだけ入れる。どちらも保存しない。
+    - IDENT。FMC DATALINK を ON。Pilot ID（`-PilotId` のとき入れる）。
+    - そのあとでシムのオプション：T/D 前の一時停止を切る。Auto step climb は `-Steps fmc` のときだけ入れる。どちらも保存しない。
       - Auto fuel management（燃料の自動管理のセッションのオプション、2026-11-09。既定は OFF）も、`laminar/B747/options/auto_fuel_mgmt` を 0 にして切る（保存しない。燃料の操作は道具がする：下の「燃料」）。オプションが入る前はその dataref が無いので、何もしない。`perf.ps1` の計測も同じく切る。
-    - FMC DATALINK を ON。RTE REQUEST で、Pilot ID の最新の OFP を取る（notes/ATA-34-61-FMC.md §131）。LOAD。
+      - Pilot ID を入れると、FMS ブリッジがメモリの中の全オプションを保存する（燃料の自動管理のセッション、2026-11-09）。そのため、オプションは Pilot ID の後で切る（2026-11-09 から。前は先に切っていて、`-PilotId` で ID を変えると 0 が利用者の設定ファイルに書かれた）。
+      - 飛行の終わりに、読み込みで入った値（利用者の値）へ戻す。0 のまま残すと、次にメニューやオプションのコマンドで保存したとき、利用者の設定が 0 で上書きされる。
+    - RTE REQUEST で、Pilot ID の最新の OFP を取る（notes/ATA-34-61-FMC.md §131）。LOAD。
     - アップリンクに進入方式が無ければ（か、ほかの方式なら）、目的地の滑走路の ILS を選ぶ。遷移は STAR の最後のフィックス（一覧にあれば）。経路を有効にする前に選ぶ（地上で経路が有効だと、DEP ARR キーは DEPARTURES を出す：`B747_cdu_deparr_page`）。
     - ACTIVATE・EXEC。ROUTE DISCONTINUITY は、次の点を箱へ入れて EXEC で閉じる。
     - PERF INIT：ZFW、RESERVES（OFP の予備と代替の燃料）、CRZ ALT、CI。入った値をページで確かめる。TAKEOFF REF：フラップと V 速度。
@@ -393,7 +396,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 記録：`flight_log.ps1` を別のプロセスで回す（`runs/<日時>_autoflight/flight/`）。止まって 2 分で終わり、`report.md` を書く。
   - 止めるとき：XTLua のエラー、シムの時計が 60 秒止まったとき（一時停止は除く）、先へ進めない待ちの時間切れ、`-MaxHours`。空中で止めても、記録は着地まで続く。待ちの時間は X-Plane の時刻で数える（一時停止の間は数えない）。
   - 他の飛行（シナリオのランナー、ランリスト、`perf.ps1`、別の `auto_flight.ps1`）が動いていれば始めない（`-Force` で始める）。
-  - 終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（地上にいるとき）。
+  - 終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（地上にいるとき）。シムのオプションも、読み込みで入った値へ戻す（上の FMC）。
   - 出力：`runs/<日時>_autoflight/`（`ofp.json`、`plan.json`、`events.txt`、`status.txt`、`flight/`）。`-DryRun` は計画を書くだけ。
   - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（153 項目）。
     - acf の数。作った OFP からの計画（滑走路、重量、ステーション、タンク、フラップ、SID・STAR、転移、ステップ、単位、誤りの検出）。
