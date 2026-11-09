@@ -87,13 +87,36 @@ T.equal(o.phase, "DES", "past the T/D with the MCP below: the descent")
 T.check(not o.td_hold, "no td_hold in the descent")
 T.check(o.mode == "PTH" and o.at == V.AT_IDLE, "VNAV PTH with IDLE (path/idle: ATA34_2 p.616)")
 local g = (35000 - 3000) / 100
--- (2026-11-09) at its top the T/D's corner rounded (PATH_BLEND_S 30 s, 4 NM
--- at 480 kt; PATH_LEAD_S 6 s, 0.8 NM): the mean 320 ft/NM x 4 / 8 = 160 ft
--- under the corner, the slope 0.8 NM ahead 2.8 NM of the line's over 4 NM
--- (224 ft/NM: 1,792 fpm) and K_PATH for the 160 ft above it. Before, the
--- corner's 35,000 ft and the line's 2,560 fpm at once
-T.near(o.path_alt, 35000 - 160, 1, "on the path at its top, rounded: 160 ft under the corner")
-T.near(o.vs, -224 * 480 / 60 - V.K_PATH * 160, 1, string.format("the vertical speed from the rounded path ahead: %.0f fpm", o.vs))
+-- (2026-11-09) at its top the T/D's corner rounded over the time the line's
+-- 2,560 fpm takes at TD_ACC_FPMS (0.035 g: 37.9 s, 5.05 NM at 480 kt;
+-- PATH_LEAD_S 6 s, 0.8 NM): the mean 320 ft/NM x 5.05 / 8 = 202 ft under
+-- the corner, the slope 0.8 NM ahead (5.05 / 2 + 0.8) NM of the line's over
+-- 5.05 NM and K_PATH for the 202 ft above it. Before, the corner's 35,000
+-- ft and the line's 2,560 fpm at once
+local ltd = 480 * math.min(math.max(g * 480 / 60 / V.TD_ACC_FPMS, V.PATH_BLEND_S), V.TD_BLEND_MAX_S) / 3600
+T.near(ltd, 5.05, 0.01, string.format("the T/D's rounding over %.2f NM", ltd))
+T.near(o.path_alt, 35000 - g * ltd / 8, 1, string.format("on the path at its top, rounded: %.0f ft under the corner", g * ltd / 8))
+T.near(o.vs, -g * (ltd / 2 + 0.8) / ltd * 480 / 60 - V.K_PATH * g * ltd / 8, 1,
+    string.format("the vertical speed from the rounded path ahead: %.0f fpm", o.vs))
+-- (2026-11-09) the descent begun where that rounding begins: ltd / 2 and the
+-- lead (3.33 NM) before the corner, there being no level deceleration; with
+-- one longer than that, at its start as before
+local s2t = V.new()
+V.update(s2t, inp{alt = 35000, mcp_alt = 10000, d_ed = 120, gs = 480})
+o = V.update(s2t, inp{alt = 35000, mcp_alt = 10000, d_ed = 113.5, gs = 480})
+T.equal(o.phase, "CRZ", "3.5 NM before the corner: the cruise still")
+o = V.update(s2t, inp{alt = 35000, mcp_alt = 10000, d_ed = 113.2, gs = 480})
+T.equal(o.phase, "DES", "3.2 NM before it: the descent (the rounding begins 3.33 NM before)")
+T.near(o.path_dev, 0, 1e-6, "at CRZ ALT on the rounded path")
+T.check(o.vs < 0 and o.vs > -300, string.format("the vertical speed's gentle start: %.0f fpm", o.vs))
+local pathTD = {e = path.e, h = path.h, k = path.k, td_decel = 5}
+local s2d = V.new()
+V.update(s2d, inp{alt = 35000, mcp_alt = 10000, d_ed = 120, gs = 480, path = pathTD})
+o = V.update(s2d, inp{alt = 35000, mcp_alt = 10000, d_ed = 115.2, gs = 480, path = pathTD})
+T.equal(o.phase, "CRZ", "a level deceleration of 5 NM: 115.2 NM, the cruise still")
+o = V.update(s2d, inp{alt = 35000, mcp_alt = 10000, d_ed = 114.9, gs = 480, path = pathTD})
+T.equal(o.phase, "DES", "at its start (115 NM): the descent, level first (FCOM p.1264)")
+T.near(o.vs, 0, 1e-6, "level there (the rounding's start still ahead)")
 -- 5 NM down the line, away from its breaks, the path's own
 o = V.update(V.new(), inp{alt = 3000 + g * 95 + 100, mcp_alt = 10000, d_ed = 105, gs = 480})
 T.equal(o.phase, "DES", "5 NM down the line: the descent")
