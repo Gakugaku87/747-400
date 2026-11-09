@@ -12,7 +12,16 @@
 -- transition's and restriction's speeds about DECEL_VS down before their
 -- altitudes (FCOM p.1264's descent deceleration phase: step LF1), and at
 -- the T/D level from the cruise speed to the descent's (p.1264's level
--- deceleration phase: step LF1). T/C, T/D, S/C and each waypoint's
+-- deceleration phase: step LF1). (FMC-08) The waypoints' speed
+-- constraints (FCOM p.1332: at or below; p.1329, p.1393: the slower of the
+-- constraint's and the performance speed): the climb's until passing their
+-- waypoints (FMSPG p.3.3-17), not under VREF + 100 (FCOM p.1326); the
+-- descent's at and after them (FMSPG p.3.5-3: the descent's speed line
+-- above all waypoint speed constraints), with the deceleration to each
+-- ending at its waypoint (FCOM p.1258: the path based on the airspeed
+-- constraints too) on the constraints' line, else about DECEL_VS down.
+-- Estimates there: the floor's reading, the descent's on to the E/D, the
+-- deceleration's DECEL_VS without a line. T/C, T/D, S/C and each waypoint's
 -- altitude, time and fuel. Estimates: the level accelerations, the
 -- decelerations at idle, no wind but each phase's headwind, the descent's
 -- weight the predicted one at the T/D.
@@ -79,6 +88,30 @@ local function crz_mach(P, c, ft, kg)
 end
 M.crz_mach = crz_mach
 
+-- (FMC-08, 2026-11-09) the descent's waypoint speed constraints in force
+-- on the way to x (NM): the lowest of the one passed (sp.base) and those
+-- of the waypoints before x, with incl x's own too (each at or below its
+-- speed at its waypoint and after it: FCOM p.1332; FMSPG p.3.5-3); sp =
+-- {base = CAS or nil, {x, spd}...} or nil, nil without one
+local function spd_in_force(sp, x, incl)
+    if not sp then return nil end
+    local lim = sp.base
+    for _, c in ipairs(sp) do
+        if (c.x < x - 1e-6 or (incl and c.x <= x + 1e-6)) and (not lim or c.spd < lim) then lim = c.spd end
+    end
+    return lim
+end
+-- the nearest waypoint speed constraint before x (its x, NM), nil without
+-- one
+local function spd_back(sp, x)
+    if not sp then return nil end
+    local best = nil
+    for _, c in ipairs(sp) do
+        if c.x < x - 1e-6 and (not best or c.x > best) then best = c.x end
+    end
+    return best
+end
+
 -- the constraint's altitude a path at h keeps to it: an AT's, a window's
 -- nearer bound, an AT OR ABOVE's when below it, an AT OR BELOW's when above
 local function con_alt(c, h)
@@ -115,8 +148,12 @@ end
 -- such a leg the line over the ground at its angle back from the leg's end
 -- (FCOM p.1262, p.1405), level back to the start from where a lower
 -- constraint there is met (the level flight until the path: p.1262); no
--- deceleration on it
-local function descent_path(s, kg, cons, xed, hed, gps)
+-- deceleration on it.
+-- (FMC-08, 2026-11-09) sp: the descent's waypoint speed constraints
+-- (spd_in_force), each in force at and after its waypoint, the
+-- deceleration to it ending there (the steps going back end at its
+-- waypoint); s: each point's CAS
+local function descent_path(s, kg, cons, xed, hed, gps, sp)
     local P, t, isa0 = s.P, s.t, s.isa or 0
     local drag, ne = perf_eo(s)
     local hw0 = (s.wind and s.wind.des) or 0
@@ -129,13 +166,24 @@ local function descent_path(s, kg, cons, xed, hed, gps)
     local kind = "idle"
     local decel = {}
     local x, h, tt, ff = xed, hed, 0, 0
-    local cas = M.schedule(P, s.des, h)
+    -- the target at h for the way back from x: the schedule's within the
+    -- waypoint speed constraints in force on the way to x (incl: x's own
+    -- too, the E/D's)
+    local function des_tgt(hq, xq, incl)
+        local tgt, m, mm = M.schedule(P, s.des, hq)
+        local lim = spd_in_force(sp, xq, incl)
+        if lim and lim < tgt then return lim, P.cas_to_mach(lim, hq), false end
+        return tgt, m, mm
+    end
+    local cas = des_tgt(h, x, true)
+    local ss = {cas}
     local decelCas = 0
     local ci = #cons    -- the constraints in route order; going back from the last
     local CEIL = 45100
     local function push()
         xs[#xs + 1] = x; hs[#hs + 1] = h; ts[#ts + 1] = tt; fs[#fs + 1] = ff; ks[#ks + 1] = kind
         cs[#cs + 1] = kind == "decel" and decelCas or 0
+        ss[#ss + 1] = cas
     end
     -- the glide path angle's leg x is on (its end included), or nil
     local function gp_at()
@@ -167,7 +215,7 @@ local function descent_path(s, kg, cons, xed, hed, gps)
                 level = {x = c.x}
             end
         end
-        local tgt, m, machMode = M.schedule(P, s.des, h)
+        local tgt, m, machMode = des_tgt(h, x)
         -- the wind and temperature here (step 8e3: the field's), else the
         -- descent's headwind and the ISA deviation now
         local isa, hw = isa0, hw0
@@ -211,36 +259,74 @@ local function descent_path(s, kg, cons, xed, hed, gps)
             -- (back in time) a deceleration to cas, DECEL_VS down at idle
             -- (step LF1: FCOM p.1264): the model's drag (less the idle
             -- thrust) slows it less the descent's share; level when that
-            -- leaves too little (estimate)
+            -- leaves too little (estimate). (FMC-08, 2026-11-09's review)
+            -- Along a constraint's line (anchor: FCOM p.1258, straight point
+            -- to point after the first constraint) or level at a
+            -- constraint's altitude (level), the step ending at its point;
+            -- on a line too steep to slow at idle the speed kept on it.
+            -- Before, DECEL_VS whatever the constraints: an AT inside a
+            -- deceleration was passed off its altitude (the review's AT 6,000
+            -- at 6,607 ft, AT 7,000 at 6,609 ft)
             if kind ~= "decel" then decelCas = cas end
             local mm = P.cas_to_mach(cas, h)
             local a = drag(kg, h, mm) / kg
             local dt = 5
             local v0 = P.tas(mm, h, isa) * KT          -- m/s
             local vs = M.DECEL_VS
+            local xl = nil
+            if level then
+                vs, xl = 0, level.x
+            elseif anchor then
+                xl = anchor.x
+                vs = (anchor.h - h) / math.max((x - xl) * NM / gs, 1) * 60
+            end
             local ae = a - G * (vs * FT / 60) / math.max(v0, 1)
-            if ae < 0.1 then ae, vs = a, 0 end
+            if not xl and ae < 0.1 then ae, vs = a, 0 end
+            if ae < 0 then ae = 0 end
+            local dx = gs * dt / NM
+            if xl and x - dx < xl then
+                dt = (x - xl) * NM / gs
+                dx = x - xl
+            end
             local dv = ae * dt / KT                    -- kt TAS
             local tas = P.tas(mm, h, isa) + dv
-            cas = math.min(tgt, P.mach_to_cas(tas / P.tas(1, h, isa), h))
-            x = x - gs * dt / NM
+            x = x - dx
             h = h + vs * dt / 60
             tt = tt + dt
             ff = ff + ne * P.idle_ff(t, h, mm, isa) * dt / 3600
+            if xl and x <= xl + 1e-9 then
+                x = xl
+                if anchor then h = anchor.h end
+                ci = ci - 1
+            end
+            -- (2026-11-09) the CAS of that true airspeed at the step's
+            -- altitude, after the step (going back up, a lower CAS). Before,
+            -- at the altitude before it: on a line down the true airspeed's
+            -- fall at a constant CAS was taken as the drag's, about 0.08
+            -- m/s2 more deceleration at 1,650 fpm (s273's second run: SYMON's
+            -- 280 to 250 kt planned in 15.4 NM, which the model's drag takes
+            -- to 266 kt; X-Plane 263.6 kt, MUPTT 287 for 289). Not lower
+            -- than the CAS after it: where the line is too steep for the CAS
+            -- to fall at idle, the CAS kept on it (as before; an estimate)
+            cas = math.min(tgt, math.max(cas, P.mach_to_cas(tas / P.tas(1, h, isa), h)))
             if cas >= tgt - 0.5 then decel[#decel + 1] = {x = x, h = h} end
             kind = "decel"
         elseif level then
             -- (2026-11-09) level back to the constraint at this altitude:
-            -- the drag's thrust (the A/T's SPD: FCOM p.1258)
+            -- the drag's thrust (the A/T's SPD: FCOM p.1258); (FMC-08) to a
+            -- waypoint speed constraint before it first
             cas = tgt
-            local dist = (x - level.x) * NM           -- m over the ground
+            local xe = level.x
+            local xsp = spd_back(sp, x)
+            if xsp and xsp > xe + 1e-6 then xe = xsp end
+            local dist = (x - xe) * NM                -- m over the ground
             local dt = dist / gs
             local f = math.max(P.idle_ff(t, h, m, isa), P.thrust_ff(t, drag(kg, h, m) / ne, h, m, isa))
             kind = "spd"
-            x = level.x
+            x = xe
             tt = tt + dt
             ff = ff + ne * f * dt / 3600
-            ci = ci - 1
+            if xe == level.x then ci = ci - 1 end
         else
             cas = tgt
             local dh = 250
@@ -259,6 +345,14 @@ local function descent_path(s, kg, cons, xed, hed, gps)
             end
             sinG = math.max(sinG, 1e-4)
             local dxa = dh * FT / sinG                -- m along the air path
+            local dx = dxa * gs / v / NM
+            -- (FMC-08) the step ending at a waypoint speed constraint going
+            -- back (its deceleration ends there; an anchor there its own end)
+            local xsp = spd_back(sp, x)
+            if xsp and x - dx < xsp - 1e-6 and not (anchor and math.abs(anchor.x - xsp) < 1e-6) then
+                local f = math.max((x - xsp) / dx, 0)
+                dh, dxa, dx = dh * f, dxa * f, x - xsp
+            end
             local dt = dxa / v
             -- the thrust above idle a shallower path needs
             local need = drag(kg, h, m) - kg * G * sinG * energy(P, h, cas, m, machMode, isa)
@@ -266,7 +360,7 @@ local function descent_path(s, kg, cons, xed, hed, gps)
             if need > 0 then f = math.max(f, P.thrust_ff(t, need / ne, h, m, isa)) end
             kind = (anchor and need > 0) and "spd" or "idle"
             h = h + dh
-            x = x - dxa * gs / v / NM
+            x = x - dx
             tt = tt + dt
             ff = ff + ne * f * dt / 3600
             if anchor and h >= anchor.h - 1 then
@@ -277,7 +371,7 @@ local function descent_path(s, kg, cons, xed, hed, gps)
         end
         push()
     end
-    return {x = xs, h = hs, t = ts, f = fs, k = ks, c = cs, decel = decel}
+    return {x = xs, h = hs, t = ts, f = fs, k = ks, c = cs, s = ss, decel = decel}
 end
 
 -- on the descent path (index i up, arrays going back from the E/D), the x
@@ -310,6 +404,20 @@ local function path_at_x(dp, x)
     return dp.h[#xs], dp.t[#xs], dp.f[#xs]
 end
 
+-- (FMC-08, 2026-11-09) on the descent path, the planned CAS at x; nil
+-- after the E/D or without the path's speeds
+local function path_cas_at(dp, x)
+    local xs = dp and dp.s and dp.x
+    if not xs or x > xs[1] + 1e-6 then return nil end
+    for i = 2, #xs do
+        if xs[i] <= x then
+            local f = (x - xs[i - 1]) / math.min(xs[i] - xs[i - 1], -1e-9)
+            return dp.s[i - 1] + (dp.s[i] - dp.s[i - 1]) * f
+        end
+    end
+    return nil
+end
+
 -- the predictions. s:
 --   P, t        the performance database and the engine type's tables
 --   isa         the ISA deviation (degrees C)
@@ -325,7 +433,8 @@ end
 --   legs        the waypoints ahead {name, dist (NM from the one before, the
 --               first from the present position), con = {kind "AT", "A",
 --               "B" or "W", a, b (the window's lower)} or nil, gp (step
---               9e4: the leg's glide path angle, degrees down) or nil}
+--               9e4: the leg's glide path angle, degrees down) or nil, spd
+--               (FMC-08: the waypoint's speed constraint, CAS kt) or nil}
 --   ed          the E/D's index in legs (nil: none, the cruise to the end)
 --   clb_last    the last leg whose constraint the climb keeps to (nil:
 --               those before half the distance to the E/D or the end)
@@ -348,6 +457,10 @@ end
 --   behind      (2026-11-09) nil, or the waypoint passed last in the
 --               descent: {x (NM, 0 or less: behind the airplane), con} (its
 --               constraint kept in the descent path)
+--   spd_behind  (FMC-08) nil, or the lowest speed constraint (CAS kt) of
+--               the waypoints passed in the descent: in force on to the E/D
+--   clb_floor   (FMC-08) nil, or the least a climb's waypoint speed
+--               constraint is flown at (VREF + 100: FCOM p.1326)
 -- returns {pts = per leg {x, h, t, fuel, cas, mach, machMode (the speed
 --   there: the climb's before the T/C, the descent's after the T/D, else
 --   the cruise's)}, tc = x or nil, td = x or nil,
@@ -420,6 +533,31 @@ function M.predict(s)
         end
         return cons
     end
+    -- (FMC-08) the descent's waypoint speed constraints (spd_in_force):
+    -- the one passed in the descent (s.spd_behind, the glue's), those after
+    -- the climb's legs and the T/C (or now) to the E/D (its own too)
+    local function des_spds(xfrom)
+        local sp = {base = s.spd_behind}
+        if not xed then return sp end
+        for i, l in ipairs(legs) do
+            if l.spd and i > clbLast and lx[i] > xfrom and lx[i] <= xed + 0.01 then sp[#sp + 1] = {x = lx[i], spd = l.spd} end
+        end
+        return sp
+    end
+    local spNow = nil
+    -- (FMC-08) the climb's waypoint speed constraint in force at xq: the
+    -- lowest of the climb's legs' not passed there (until passing each:
+    -- FMSPG p.3.3-17), not under s.clb_floor (VREF + 100: FCOM p.1326),
+    -- nil without one
+    local function clb_spd_at(xq)
+        local lim = nil
+        for i = 1, math.min(clbLast, #legs) do
+            local l = legs[i]
+            if l.spd and lx[i] > xq - 1e-6 and (not lim or l.spd < lim) then lim = l.spd end
+        end
+        if lim and s.clb_floor then lim = math.max(lim, s.clb_floor) end
+        return lim
+    end
     -- (step 9e4) the descent's legs with a glide path angle (from the
     -- waypoint before), to the E/D
     local function des_gps(xfrom)
@@ -469,7 +607,8 @@ function M.predict(s)
     -- the descent path (once, at the weight reaching it: two passes)
     local function build_dp(wkg, xfrom)
         if not xed then return nil end
-        return descent_path(s, wkg, des_cons(xfrom), xed, hed, des_gps(xfrom))
+        spNow = des_spds(xfrom)
+        return descent_path(s, wkg, des_cons(xfrom), xed, hed, des_gps(xfrom), spNow)
     end
     local estKg = s.gw * 0.85
     local guard = 0
@@ -484,6 +623,9 @@ function M.predict(s)
                 if x >= xtd then return "des" end
             end
             local tgt, m, machMode = M.schedule(P, s.clb, h)
+            -- (FMC-08) within the climb's waypoint speed constraint here
+            local lim = clb_spd_at(x)
+            if lim and lim < tgt then tgt, m, machMode = lim, P.cas_to_mach(lim, h), false end
             local mm = machMode and m or P.cas_to_mach(cas, h)
             local isa, hw = isa, wind.clb or 0
             if s.field then isa, hw = s.field.isa(x, h), s.field.wind(x, h, "clb") end
@@ -520,6 +662,15 @@ function M.predict(s)
         local m = crz_mach(P, s.crzspd or {mach = 0.84}, hc, kg)
         local cas0 = P.mach_to_cas(m, hc)
         local cas1 = M.schedule(P, s.des, hc)
+        -- (FMC-08) a waypoint speed constraint in force at the path's top;
+        -- (2026-11-09's review) the path's planned CAS there too, where a
+        -- deceleration to a constraint just after the T/D reaches back up
+        -- to the cruise altitude (before, the schedule's: the airplane at
+        -- the path 17 kt over its plan, the target the constraint's)
+        local lim = spd_in_force(spNow, xref, false)
+        if lim and lim < cas1 then cas1 = lim end
+        local pc = path_cas_at(dp, xref)
+        if pc and pc < cas1 then cas1 = pc end
         if cas0 <= cas1 + 0.5 then return 0, 0, 0 end
         -- the wind and temperature at the path's top (step 8e3: the
         -- field's), else the cruise's headwind and the ISA deviation now
@@ -765,19 +916,33 @@ function M.predict(s)
     end
     R.ed_t = xed and tt or nil
     R.ed_i = xed and s.ed or nil
-    -- each waypoint's speed by where it is
+    -- each waypoint's speed by where it is; (FMC-08) within the waypoint
+    -- speed constraints in force there (the climb's until passing, the
+    -- descent's at and after: a waypoint's own there too)
     local inClb = (s.phase or "clb") == "clb"
     for _, p in ipairs(R.pts) do
         local cas, mach, mm
+        local lim = nil
         if inClb and ((tc and p.x < tc - 0.01) or (not tc and td and p.x < td - 0.01)) then
             cas, mach, mm = M.schedule(P, s.clb, p.h)
+            lim = clb_spd_at(p.x)
         elseif td and p.x > td + 0.01 or (startDes and xed and p.x <= xed) then
             cas, mach, mm = M.schedule(P, s.des, p.h)
+            -- (to the E/D: not the missed approach's)
+            if xed and p.x <= xed + 1e-6 then
+                lim = spd_in_force(spNow, p.x, true)
+                -- (2026-11-09) inside a deceleration the path's planned
+                -- CAS there, where slower (a waypoint on the way to a
+                -- constraint's speed, the transition's)
+                local ps = path_cas_at(dp, p.x)
+                if ps and ps < math.min(lim or cas, cas) - 0.5 then lim = ps end
+            end
         else
             mach = crz_mach(P, s.crzspd, p.h, s.gw - (fuel0 - p.fuel))
             cas, mm = P.mach_to_cas(mach, p.h), not s.crzspd.cas
             if s.crzspd.cas then cas = s.crzspd.cas end
         end
+        if lim and lim < cas then cas, mach, mm = lim, P.cas_to_mach(lim, p.h), false end
         p.cas, p.mach, p.machMode = cas, mach, mm
     end
     R.dest = {x = xEnd, t = tt, fuel = fuel0 - burnt}

@@ -410,6 +410,47 @@ do
     T.check(not out.syn.suction[1], "synoptic: engine 1 shut down (spar valve closed): no suction feed shown")
 end
 do
+    -- (2026-11-09) the crossfeed manifold's flow from the displayed valve
+    -- positions and pump status (FCOM p.1447): a pump with pressure that
+    -- reaches it. Before, the override/jettison and CWT pumps' switches only:
+    -- SP.12's balancing (mains 2 and 3 off, all crossfeeds open, mains 1 and
+    -- 4 feeding the four engines: the user's EDDF-OMDB flight) showed none
+    local q = {ctr = 0, m1 = 13500, m2 = 9900, m3 = 9900, m4 = 13500, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    engines_running(inp)
+    local out = run(s, inp, 6)
+    T.check(not out.syn.mfld, "manifold: every pump off: no flow")
+    pumps_on(inp, {"m1_fwd", "m1_aft", "m4_fwd", "m4_aft"})
+    out = run(s, inp, 6)
+    T.check(out.syn.mfld, "manifold: mains 1 and 4 on, crossfeeds open: flow")
+    T.check(from(out, 2) == "m1" or from(out, 2) == "m4" or from(out, 2) == "shared", "(engine 2 fed through it: " .. tostring(from(out, 2)) .. ")")
+    inp.xfeed[1], inp.xfeed[4] = false, false
+    out = run(s, inp, 6)
+    T.check(not out.syn.mfld, "manifold: crossfeeds 1 and 4 closed, mains 2 and 3 off: no flow (the pumps on do not reach it)")
+    -- tank to engine (crossfeeds 2 and 3 open, every main pump on): mains 2
+    -- and 3 reach it through their open crossfeeds (the reading: estimate)
+    pumps_on(inp, MAINS)
+    out = run(s, inp, 6)
+    T.check(out.syn.mfld, "manifold: tank to engine, crossfeeds 2 and 3 open: flow")
+    inp.xfeed[2], inp.xfeed[3] = false, false
+    out = run(s, inp, 6)
+    T.check(not out.syn.mfld, "manifold: every crossfeed closed, no override nor CWT pump: no flow")
+    -- a pump without pressure (its bus lost) does not count
+    inp.xfeed[2] = true
+    inp.util[2], inp.ac[2] = false, false
+    out = run(s, inp, 6)
+    T.check(pump_syn(out, "m2_fwd") == F.SYN_LOW and not out.syn.mfld, "manifold: main 2's pumps without pressure through crossfeed 2: no flow")
+end
+do
+    -- the CWT pumps with fuel reach it whatever the crossfeeds
+    local q = {ctr = 20000, m1 = 12000, m2 = 30000, m3 = 30000, m4 = 12000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    for n = 1, 4 do inp.xfeed[n] = false end
+    pumps_on(inp, {"ctr_l", "ctr_r"})
+    local out = run(s, inp, 6)
+    T.check(pump_syn(out, "ctr_l") == F.SYN_ON and out.syn.mfld, "manifold: CWT pumps on with fuel, crossfeeds closed: flow")
+end
+do
     -- main tanks: amber below 900 kg (2,000 lb on 570), and both tanks of an
     -- imbalanced pair (1,360 kg for 1-4, 2,720 kg for 2-3: ATA26_28 p.421)
     local q = {ctr = 0, m1 = 9000, m2 = 20000, m3 = 20000, m4 = 9000, r2 = 0, r3 = 0, stab = 0}

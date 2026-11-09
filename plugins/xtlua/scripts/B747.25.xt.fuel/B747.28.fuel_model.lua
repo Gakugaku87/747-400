@@ -145,7 +145,7 @@ function M.new()
     s.out = {qty = s.qty, valve = s.valve, cmd = s.cmd, pump = {}, low = {}, feed = {{}, {}, {}, {}},
         suction = {false, false, false, false}, has_fuel = {false, false, false, false},
         cas = {}, light = {}, flow = {}, total = 0,
-        syn = {pump = {}, main = {false, false, false, false}, suction = {false, false, false, false}},
+        syn = {pump = {}, main = {false, false, false, false}, suction = {false, false, false, false}, mfld = false},
         ftr_state = 0}
     return s
 end
@@ -529,6 +529,24 @@ function M.update(s, inp, dt)
     end
     -- the engine and its tank's flow amber in suction feed (spar valve open)
     for n = 1, 4 do syn.suction[n] = out.suction[n] and s.valve["s" .. n] > 0.5 end
+    -- (2026-11-09) the crossfeed manifold's flow (FCOM p.1447: the flow
+    -- shown from the displayed valve positions and pump status): a pump
+    -- with pressure that reaches it, an override/jettison or CWT pump
+    -- (jettison's flow too), or a main tank's pump through its crossfeed
+    -- valve shown open (commanded open and there: as its symbol). The
+    -- reading is an estimate (ATA26_28 p.422: the segments appropriate to
+    -- the configuration). Before, the upstream code's switches of the
+    -- override/jettison and CWT pumps only: mains 1 and 4 feeding all four
+    -- engines through open crossfeeds (SP.12's balancing) showed none
+    local mf = false
+    for i, p in ipairs(M.PUMPS) do
+        local v = syn.pump[i]
+        if v == M.SYN_ON or v == M.SYN_JETT_FLOW then
+            if p.kind == "oj" or p.kind == "ctr" then mf = true end
+            if p.kind == "main" and s.cmd["x" .. p.n] and s.valve["x" .. p.n] >= 0.99 then mf = true end
+        end
+    end
+    syn.mfld = mf
     -- the fuel to remain on the primary EICAS: 0 magenta; once the jettison
     -- has completed 1 white, flashing (2 dark) for its first 5 s
     out.ftr_state = 0

@@ -338,7 +338,20 @@ T.equal(rt:get(VN .. "phase"), 1, "on the ground: the climb")
 T.equal(rt:get(VN .. "mode"), 1, "VNAV SPD")
 T.equal(rt:get(VN .. "at"), 5, "THR REF")
 T.equal(rt:get(VN .. "alt"), 41000, "the FMC altitude: CRZ ALT FL410")
-T.near(rt:get(VN .. "cas"), 250, 0.5, "250 kt below SPD TRANS's 10,000 ft")
+-- (FMC-08) the SID's 230 kt at ZZV ahead (ZULU1 from 34L's CF), not under
+-- VREF 30 + 100 (FCOM p.1326; VREF 30 the speed tape's in X-Plane): 120,
+-- the constraint's 230 (FCOM p.1329: the slower); 140, 240; 150, the
+-- transition's 250 (SPD TRANS the greater of VREF + 100 and 250: p.1255)
+local VF30 = "laminar/B747/airspeed/Vf30"
+rt:set(VF30, 120)
+frames(0.5)
+T.near(rt:get(VN .. "cas"), 230, 0.5, "(FMC-08) VREF 30 120: the SID's 230 kt at ZZV")
+rt:set(VF30, 140)
+frames(0.5)
+T.near(rt:get(VN .. "cas"), 240, 0.5, "VREF 30 140: not under VREF + 100, 240")
+rt:set(VF30, 150)
+frames(0.5)
+T.near(rt:get(VN .. "cas"), 250, 0.5, "VREF 30 150: 250 kt below SPD TRANS's 10,000 ft")
 T.equal(rt:get(VN .. "perf"), 1, "(step 9c) the VNAV switch's data in: GW, COST INDEX 100, CRZ ALT (FCOM p.1433)")
 -- (step 9c) the takeoff's target (FCOM p.1255): V2 160 entered on TAKEOFF
 -- REF, on the ground stopped: V2 + 10
@@ -648,6 +661,70 @@ T.check(small(10):find("^ ECON SPD"), "PROGRESS 5L: ECON SPD again: " .. small(1
 -- (the VNAV key in flight: the active DES page: ATA34_2 p.552)
 key("func_key/des")
 T.check(line(1):find("ACT ECON DES"), "the DES page: ACT ECON DES again: " .. line(1))
+-- (FMC-08) a waypoint's speed constraint passed in the descent, in force on
+-- (FCOM p.1393: the lesser of the constraint's and the performance speed;
+-- FMSPG p.3.5-3): the arrival's first point given 250 kt (the synthetic
+-- CIFP has none) and passed: VNAV's target 250, the DES page's ACT 250KT
+-- DES (FCOM p.1391), the predictions' spd_behind; one passed before the
+-- descent not (the descent's only)
+do
+    local iS = nil
+    for i, l in ipairs(st.rte.legs) do
+        if l.fix and l.proc == "STAR" then iS = i break end
+    end
+    T.check(iS ~= nil, "(FMC-08) the arrival's first point ahead")
+    local sidSpd = nil
+    for _, l in ipairs(st.rte.passed) do if l.spd then sidSpd = l end end
+    T.check(sidSpd ~= nil and sidSpd.proc == "SID" and sidSpd.spd == 230,
+        "the SID's ZZV (230 kt) passed in the climb: " .. tostring(sidSpd and sidSpd.fix and sidSpd.fix.ident))
+    T.equal(fms.ns.B747_fms_des_spd(), nil, "not in force in the descent: no descent speed constraint passed yet")
+    st.rte.legs[iS].spd = 250
+    RM.sequence(st, iS)
+    frames(0.5)
+    T.equal(fms.ns.B747_fms_des_spd(), 250, "its 250 passed in the descent: in force")
+    T.near(rt:get(VN .. "cas"), 250, 0.5, "VNAV's target 250 (ECON DES's faster)")
+    key("func_key/des")
+    T.check(line(1):find("ACT 250KT DES"), "the DES page: ACT 250KT DES (FCOM p.1391): " .. line(1))
+    -- (2026-11-09) in that segment 2L SEL SPD with its speed (FCOM p.1392;
+    -- ATA34_2 p.564: the segment's speed moves to 2L); 3L SPD TRANS shown
+    -- above its altitude, blank below; 4L SPD RESTR dashes below its
+    -- altitude, its speed then in 2L where the lower
+    local ALTDR = "sim/cockpit2/gauges/indicators/altitude_ft_pilot"
+    local alt0 = rt:get(ALTDR)
+    T.check(line(5):find("^250 "), "the DES page's 2L: the constraint's 250: " .. line(5))
+    T.check(small(4):find("SEL SPD"), "its label SEL SPD: " .. small(4))
+    T.check(line(7):find("^240/10000"), "3L SPD TRANS above 10,000 ft (" .. math.floor(alt0) .. "): " .. line(7))
+    rt:set(ALTDR, 9000)
+    frames(0.2)
+    key("func_key/des")
+    T.check(line(7):find("^%s*$"), "below 10,000 ft: 3L blank: [" .. line(7) .. "]")
+    T.check(small(6):find("SPD TRANS"), "(its label kept: " .. small(6) .. ")")
+    T.check(line(5):find("^240 ") and line(1):find("ACT 240KT DES"),
+        "2L and the title the transition's 240 (under the constraint's 250): " .. line(5) .. "|" .. line(1))
+    fms.ns.fmsModules.data.desrestspd, fms.ns.fmsModules.data.desrestalt = "220", "9500"
+    frames(0.5)
+    key("func_key/des")
+    T.check(line(9):find("^%-%-%-/%-%-%-%-%-"), "below SPD RESTR 220/9500: 4L dashes: " .. line(9))
+    T.check(line(5):find("^220 ") and small(4):find("SEL SPD"), "2L the restriction's 220 (the lower): " .. line(5))
+    T.check(line(1):find("ACT 220KT DES"), "the title ACT 220KT DES: " .. line(1))
+    fms.ns.fmsModules.data.desrestspd, fms.ns.fmsModules.data.desrestalt = "---", "-----"
+    rt:set(ALTDR, alt0)
+    frames(0.5)
+    key("func_key/des")
+    T.check(line(7):find("^240/10000") and line(9):find("^%-%-%-/%-%-%-%-%-") and line(5):find("^250 "),
+        "back above: 3L shown, 4L dashes (none entered), 2L 250: " .. line(5) .. "|" .. line(7) .. "|" .. line(9))
+    local sS = fms.ns.B747_fms_pred_input(35000)
+    T.equal(sS.spd_behind, 250, "the predictions' spd_behind 250")
+    local rS = fms.ns.B747_pred_model.predict(sS)
+    local hi, n = 0, 0
+    for _, p in pairs(rS.pts) do
+        if rS.ed and p.x <= rS.ed + 1e-6 then
+            n = n + 1
+            if p.cas > hi then hi = p.cas end
+        end
+    end
+    T.check(n > 0 and hi <= 250.5, string.format("the %d waypoints ahead to the E/D at most %.0f kt", n, hi))
+end
 -- (step 9e2) on approach (FCOM p.1261): the approach's first point passed
 -- in the air (laminar/B747/fms/vnav/on_app); END OF DES (p.1391): the E/D
 -- (the runway leg, 50 ft above its threshold) passed: the DES page's title

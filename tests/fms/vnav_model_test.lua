@@ -96,6 +96,15 @@ T.near(o.vs, -g * 400 / 60 - V.K_PATH * 200, 1, "above it: steeper by K_PATH a f
 o = V.update(s2, inp{alt = ph - 500, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.near(o.vs, -g * 400 / 60 + V.K_PATH * 500, 1, "500 ft below the path: shallower, to meet it")
 T.equal(o.at, V.AT_SPD, "and the A/T on speed")
+-- (2026-11-09) the A/T's SPD from 200 ft under the path until back within
+-- 50 ft (estimates; before, none: IDLE and SPD three times in 1 s at 200
+-- ft under it, s273's first run)
+for _, c in ipairs({{150, V.AT_SPD, "150 ft below, from 500: SPD still"}, {190, V.AT_SPD, "190: SPD (before, IDLE)"},
+    {40, V.AT_IDLE, "40 ft below: back within 50, IDLE"}, {150, V.AT_IDLE, "150 below again: IDLE (not 200 under since)"},
+    {210, V.AT_SPD, "210 below: SPD"}, {190, V.AT_SPD, "190: SPD still"}, {40, V.AT_IDLE, "40: IDLE"}}) do
+    o = V.update(s2, inp{alt = ph - c[1], mcp_alt = 10000, d_ed = 60, gs = 400})
+    T.equal(o.at, c[2], c[3])
+end
 o = V.update(s2, inp{alt = ph - 2500, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.equal(o.vs, 0, "2,500 ft below: level until the path comes down (never up)")
 o = V.update(s2, inp{alt = ph + 2000, mcp_alt = 10000, d_ed = 60, gs = 400})
@@ -723,5 +732,135 @@ do
     local rD = PM.predict(sD)
     T.check(rD.pts[1] and math.abs(rD.pts[1].h - 15000) < 600,
         string.format("the AT 15,000 20 NM ahead on the path: %s ft there", tostring(rD.pts[1] and math.floor(rD.pts[1].h))))
+end
+
+-- (FMC-08, 2026-11-09) the waypoints' speed constraints (FCOM p.1332: at
+-- or below; p.1329, p.1393: the slower of the constraint's and the
+-- performance speed). The climb's ahead (clb_spd), not under VREF + 100
+-- (FCOM p.1326): the target and the title's XXXKT (FMSPG p.3.3-3)
+do
+    local sC = V.new()
+    o = V.update(sC, inp{alt = 5000, clb_spd = 230, vref = 120})
+    T.near(o.cas, 230, 1e-6, "(FMC-08) the climb with 230 kt at a waypoint ahead, VREF 120: 230 (FCOM p.1329)")
+    T.equal(o.spd_kt, 230, "the title's 230KT")
+    o = V.update(sC, inp{alt = 5000, clb_spd = 230, vref = 150})
+    T.near(o.cas, 250, 1e-6, "VREF 150: not under VREF + 100 (250), the transition's 250")
+    T.equal(o.spd_kt, nil, "(the constraint not setting it: no title of it)")
+    o = V.update(sC, inp{alt = 20000, clb_spd = 280, vref = 150})
+    T.near(o.cas, 280, 1e-6, "FL200 with 280 ahead: 280 (ECON's 340 the faster)")
+    T.check(not o.mach_mode, "(a CAS)")
+    o = V.update(sC, inp{alt = 20000, clb_spd = 280, vref = 150, spd_int = {cas = 300}})
+    T.near(o.cas, 300, 1e-6, "speed intervention: the MCP's 300")
+    T.equal(o.spd_kt, nil, "(no title of the constraint)")
+    o = V.update(sC, inp{alt = 5000, clb_spd = 230, vref = 120, flaps_placard = 220})
+    T.check(math.abs(o.cas - 215) < 1e-6 and o.title == "LIM SPD" and o.spd_kt == nil,
+        "the flap placard less 5 under it: 215, LIM SPD (not the constraint's title)")
+    o = V.update(sC, inp{alt = 5000, des_spd = 200, vref = 120})
+    T.near(o.cas, 250, 1e-6, "the descent's passed constraint not the climb's")
+end
+
+-- the descent's passed (des_spd: at and after the waypoint, FMSPG p.3.5-3)
+-- on the path at 19,000 ft (ECON's 290): 250 and its title; below the first
+-- speed constraint now (FCOM p.1259-1260): the A/T's SPD 11 kt slow (10
+-- under it; 15 above: IDLE without it), DRAG REQUIRED over the target plus
+-- 10, the path held to the target plus 15 (the transition's plus 5 below
+-- its altitude only), past it 200 ft above the speed reversion at the
+-- target (the constraint's: an estimate, FCOM names the transition's for
+-- the first speed constraint at it)
+do
+    local p60 = 3000 + gr * (60 - 10)
+    local function des_inp(t)
+        local b = {alt = p60, mcp_alt = 3000, d_ed = 60, gs = 450}
+        for k, v in pairs(t) do b[k] = v end
+        return inp(b)
+    end
+    local sD = V.new()
+    V.update(sD, inp{alt = 35000, mcp_alt = 3000, d_ed = 110, gs = 450})
+    o = V.update(sD, des_inp{ias = 250, des_spd = 250})
+    T.check(o.phase == "DES" and o.mode == "PTH" and math.abs(o.cas - 250) < 1e-6 and not o.mach_mode,
+        string.format("(FMC-08) the descent, 250 kt passed: the target %.1f (ECON's 290 the faster)", o.cas))
+    T.equal(o.spd_kt, 250, "the DES page's 250KT (FCOM p.1391)")
+    T.equal(o.at, V.AT_IDLE, "on the idle path at it: IDLE")
+    o = V.update(sD, des_inp{ias = 239, des_spd = 250})
+    T.equal(o.at, V.AT_SPD, "11 kt slow: the A/T's SPD (10 kt below the first speed constraint)")
+    o = V.update(sD, des_inp{ias = 248, des_spd = 250})
+    T.equal(o.at, V.AT_IDLE, "back within 5 kt: IDLE")
+    local sD2 = V.new()
+    V.update(sD2, inp{alt = 35000, mcp_alt = 3000, d_ed = 110, gs = 450})
+    o = V.update(sD2, des_inp{ias = 279})
+    T.equal(o.at, V.AT_IDLE, "(without it 11 kt slow of 290: IDLE, 15 kt above the first speed constraint)")
+    o = V.update(sD, des_inp{ias = 261, des_spd = 250})
+    T.equal(o.msg, "DRAG", "261, over the target plus 10: DRAG REQUIRED")
+    T.check(o.mode == "PTH" and math.abs(o.vs - (-gr * 450 / 60)) < 1, "the path held at 261 (to 265)")
+    o = V.update(sD2, des_inp{ias = 300})
+    T.equal(o.msg, nil, "(without it 300 kt: no message, VMO/MMO less 16 above)")
+    o = V.update(sD, des_inp{alt = p60 + 200, ias = 268, des_spd = 250})
+    T.check(o.mode == "SPD" and math.abs(o.cas - 250) < 1e-6 and o.msg == "DRAG",
+        string.format("268, over 265, 200 ft above: the speed reversion at %.0f (the constraint's), DRAG REQUIRED", o.cas))
+    -- (2026-11-09's review) below the transition's altitude with 210 passed:
+    -- the reversion at 210, not the transition's 240 (before, 240: over
+    -- the constraint)
+    local p30 = 3000 + gr * (30 - 10)
+    local sG = V.new()
+    V.update(sG, inp{alt = 35000, mcp_alt = 1000, d_ed = 110, gs = 480})
+    o = V.update(sG, inp{alt = p30 + 300, mcp_alt = 1000, d_ed = 30, gs = 300, ias = 240, des_spd = 210})
+    T.check(o.mode == "SPD" and math.abs(o.cas - 210) < 1e-6,
+        string.format("9,700 ft, 210 passed, 300 ft above at 240: the reversion at %.0f (210, not 240)", o.cas))
+    -- SPD TRANS deleted with 250 passed: below the first speed constraint
+    -- all the same (DRAG REQUIRED at the target plus 10; before the A/T's
+    -- 10 kt alone)
+    local sH = V.new()
+    V.update(sH, inp{alt = 35000, mcp_alt = 3000, d_ed = 110, gs = 450, des = {cas = 290, mach = 0.84}})
+    o = V.update(sH, des_inp{ias = 261, des_spd = 250, des = {cas = 290, mach = 0.84}})
+    T.check(math.abs(o.cas - 250) < 1e-6 and o.msg == "DRAG",
+        string.format("SPD TRANS deleted, 250 passed, 261 kt: DRAG REQUIRED (the target %.0f plus 10)", o.cas))
+    -- the path's deceleration to a waypoint's speed constraint (the
+    -- predictions': a "decel" segment with its target): its speed the
+    -- target and the title's (FCOM p.1392: SEL SPD transitioning into a
+    -- waypoint speed constraint's segment)
+    local pathD = {e = {0, 40, 47, 147}, h = {1500, 25000, 25125, 35000}, k = {"idle", "idle", "decel", "idle"},
+        c = {0, 0, 280, 0}}
+    local sE = V.new()
+    V.update(sE, inp{alt = 35000, mcp_alt = 3000, d_ed = 150, gs = 450, path = pathD})
+    o = V.update(sE, inp{alt = 25060, mcp_alt = 3000, d_ed = 44, gs = 450, ias = 288, path = pathD})
+    T.check(o.phase == "DES" and math.abs(o.cas - 280) < 1e-6 and o.spd_kt == 280,
+        string.format("on the deceleration to a waypoint's 280: the target %.0f, the title's %s", o.cas, tostring(o.spd_kt)))
+    -- not under the minimum maneuvering speed plus 5 (before, a
+    -- deceleration's speed under it too): a waypoint's 210 clean with the
+    -- minimum 225: 230, LIM SPD
+    local pathL = {e = {0, 20, 24, 124}, h = {1500, 7500, 7900, 35000}, k = {"idle", "idle", "decel", "idle"},
+        c = {0, 0, 210, 0}}
+    local sF = V.new()
+    V.update(sF, inp{alt = 35000, mcp_alt = 3000, d_ed = 130, gs = 450, path = pathL})
+    o = V.update(sF, inp{alt = 7700, mcp_alt = 3000, d_ed = 22, gs = 260, ias = 240, path = pathL, vmin = 225})
+    T.check(math.abs(o.cas - 230) < 1e-6 and o.title == "LIM SPD" and o.spd_kt == nil,
+        string.format("a deceleration to 210 with the minimum maneuvering 225: the target %.0f, %s", o.cas, tostring(o.title)))
+    o = V.update(sF, inp{alt = 7700, mcp_alt = 3000, d_ed = 22, gs = 260, ias = 240, path = pathL, vmin = 190})
+    T.check(math.abs(o.cas - 210) < 1e-6 and o.title == nil and o.spd_kt == 210,
+        string.format("the minimum 190 (flaps 5): 210, its title's (%.0f)", o.cas))
+    -- (2026-11-09, s273) on a deceleration past a waypoint's constraint
+    -- (below the first speed constraint) the limits around the path's
+    -- planned speed there: 280 passed, the deceleration toward 250 planned
+    -- 278 here, the airplane at 282: on the path, no message, no
+    -- reversion (before, the target 250 plus 15 = 265: the path given up,
+    -- 813 ft above it and VNAV SPD)
+    local pathS = {e = {0, 20, 35, 135}, h = {1500, 13000, 17500, 37000}, k = {"idle", "idle", "decel", "spd"},
+        c = {0, 0, 250, 0}, s = {250, 250, 280, 280}}
+    local sS = V.new()
+    V.update(sS, inp{alt = 37000, mcp_alt = 3000, d_ed = 140, gs = 400, path = pathS})
+    local hS = 13000 + (17500 - 13000) * (33 - 20) / 15
+    o = V.update(sS, inp{alt = hS, mcp_alt = 3000, d_ed = 33, gs = 360, ias = 282, path = pathS, des_spd = 280})
+    T.check(o.mode == "PTH" and math.abs(o.cas - 250) < 1e-6 and o.msg == nil and math.abs(o.path_dev) < 1,
+        string.format("(s273) the deceleration toward 250 planned 276 here, 282 kt: on the path, the target %.0f, no message (%s)", o.cas, tostring(o.msg)))
+    T.near(o.vs, -(17500 - 13000) / 15 * 360 / 60, 1, "the path's own vertical speed (not given up)")
+    -- a speed reversion past a waypoint's constraint not over a lower one
+    -- passed after it (before, 250 kept past BAYST's 240)
+    local p60r = 3000 + gr * (60 - 10)
+    local sR = V.new()
+    V.update(sR, inp{alt = 35000, mcp_alt = 3000, d_ed = 110, gs = 450})
+    o = V.update(sR, inp{alt = p60r + 200, mcp_alt = 3000, d_ed = 60, gs = 450, ias = 268, des_spd = 250})
+    T.check(o.mode == "SPD" and math.abs(o.cas - 250) < 1e-6, "the reversion at 250")
+    o = V.update(sR, inp{alt = p60r + 200, mcp_alt = 3000, d_ed = 60, gs = 450, ias = 255, des_spd = 240})
+    T.check(o.mode == "SPD" and math.abs(o.cas - 240) < 1e-6, string.format("240 passed in it: the reversion at %.0f", o.cas))
 end
 T.done()

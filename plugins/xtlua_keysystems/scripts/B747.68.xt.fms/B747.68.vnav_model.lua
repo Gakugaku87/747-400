@@ -18,7 +18,9 @@
 --   descent (FCOM p.1268-1269: step 9h4c); VNAV SPD with IDLE in the
 --   descent in speed intervention (FCOM p.643: step 9d3);
 --   the target speed: the climb's, the cruise's or the descent's schedule
---   (B747.68.pred_model.lua's), the crew's MCP speed in speed intervention,
+--   (B747.68.pred_model.lua's; FMC-08: the climb's and the descent's
+--   within the waypoints' speed constraints, CLB_SPD_VREF_ADD), the
+--   crew's MCP speed in speed intervention,
 --   within the flap placard less 5 kt and the minimum maneuvering speed
 --   plus 5 kt (FCOM p.663, p.1255: the FMC's margin); after takeoff V2 +
 --   10 to V2 + 25 until the acceleration height (FCOM p.1255; step 9c);
@@ -85,6 +87,11 @@ M.SLOW_KT, M.SLOW_KT_LOW, M.SLOW_BACK_KT = 15, 10, 5
 -- (estimate: FCOM p.665 holds the altitude, RESET MCP ALT, while the MCP
 -- altitude stays at the cruise altitude)
 M.MCP_BELOW = 200
+-- (step 9b) below the descent path the A/T on speed from PATH_BELOW under
+-- it (levelling to meet it), (2026-11-09) until back within PATH_BELOW_BACK
+-- (estimates: before, none: s273's first run, the A/T between IDLE and SPD
+-- three times in 1 s at 200 ft under the path)
+M.PATH_BELOW, M.PATH_BELOW_BACK = 200, 50
 -- (step 9d2a) the early descent's vertical speed (FCOM p.1393, FMSPG
 -- p.3.5-5: about 1,250 fpm), the cruise descent's the same (FCOM p.1268's
 -- condition 3, p.1269: step 9h4c); the early descent's path met once the airplane was
@@ -108,6 +115,15 @@ M.REV_SLOW_ADD = 5
 -- (6-1/6-2 step 11c2b) CHECK ALT TGT: "between" the MCP and FMC altitudes
 -- with both this far away (estimate)
 M.CHECK_BAND_FT = 100
+-- (FMC-08, 2026-11-09) the waypoints' speed constraints (FCOM p.1332: at
+-- or below the speed; p.1329, p.1393: the slower of the constraint's and
+-- the performance speed): the climb's waypoints ahead until passing each
+-- (inp.clb_spd: FMSPG p.3.3-17), not under VREF + CLB_SPD_VREF_ADD (FCOM
+-- p.1326: they take priority provided they are greater than VREF + 100;
+-- the floor is how that is read here: an estimate); the descent's passed
+-- (inp.des_spd: at and after the waypoint, FMSPG p.3.5-3; on to the E/D:
+-- an estimate), the deceleration to it the path's (B747.68.pred_model.lua)
+M.CLB_SPD_VREF_ADD = 100
 
 function M.new()
     return {phase = "CLB", out = {},
@@ -137,14 +153,15 @@ end
 -- approach (ATA34_2 p.472)
 function M.missed(s)
     s.phase, s.early, s.early_below, s.crz_chg = "CLB", false, false, nil
-    s.drag, s.rev, s.rev_cas, s.slow = false, nil, nil, false
+    s.drag, s.rev, s.rev_cas, s.slow, s.below = false, nil, nil, false, false
 end
 
 -- the descent path at e NM to go to the E/D: its altitude, gradient (ft a
--- NM), the segment's kind ("idle", "spd" or "decel") and (step LF1) a
--- deceleration's target CAS; nil without a path.
--- path = {e = {...}, h = {...}, k = {...}, c = {...}} with e rising from
--- the E/D's 0
+-- NM), the segment's kind ("idle", "spd" or "decel"), (step LF1) a
+-- deceleration's target CAS and (FMC-08) the path's planned CAS there
+-- (nil without path.s); nil without a path.
+-- path = {e = {...}, h = {...}, k = {...}, c = {...}, s = {...}} with e
+-- rising from the E/D's 0
 function M.path_at(path, e)
     if not path or not path.e or #path.e < 2 then return nil end
     local es, hs = path.e, path.h
@@ -157,9 +174,12 @@ function M.path_at(path, e)
         if es[mid] <= e then lo = mid else hi = mid end
     end
     local de = es[hi] - es[lo]
+    local f = de > 1e-9 and (e - es[lo]) / de or 0
     local g = de > 1e-9 and (hs[hi] - hs[lo]) / de or 0
     local c = path.c and path.c[hi]
-    return hs[lo] + g * (e - es[lo]), g, path.k[hi] or "idle", (c and c > 0) and c or nil
+    local ss = path.s
+    local planned = (ss and ss[lo] and ss[hi]) and ss[lo] + (ss[hi] - ss[lo]) * f or nil
+    return hs[lo] + g * (e - es[lo]), g, path.k[hi] or "idle", (c and c > 0) and c or nil, planned
 end
 
 -- the takeoff (FCOM p.1255): from the ground (with V2 selected) the
@@ -252,12 +272,24 @@ function M.turn_dist(tr, d_geo, gs, now, on_leg)
     return d_geo + tr.off * k, true
 end
 
+-- (FMC-08) the waypoint speed constraint in force in the phase (see
+-- CLB_SPD_VREF_ADD), nil without one
+local function wpt_spd(inp, phase)
+    if phase == "DES" then return inp.des_spd end
+    if phase ~= "CLB" or not inp.clb_spd then return nil end
+    if inp.vref and inp.vref > 0 then return math.max(inp.clb_spd, inp.vref + M.CLB_SPD_VREF_ADD) end
+    return inp.clb_spd
+end
+
 -- the target speed: the schedule's (or the MCP's in speed intervention,
 -- the takeoff's), within the margins; and whether a margin limits it
 -- (step 9h3b: the title's LIM SPD). The cruise's by its function at crz_ft
--- (step 9h4b: the driftdown's at CRZ ALT), else here
+-- (step 9h4b: the driftdown's at CRZ ALT), else here. (FMC-08) The
+-- climb's and descent's within the waypoint speed constraint in force
+-- (wpt_spd), the fifth return its speed where it sets the target
 local function target_speed(P, sched, crz, inp, phase, to_cas, crz_ft)
     local cas, mach, mm
+    local wkt = nil
     if not inp.spd_int and to_cas and phase == "CLB" then
         -- (step 9h3b) within the flap placard less 5 (the engine-out
         -- takeoff's VREF + 100: FCOM p.1266)
@@ -283,6 +315,8 @@ local function target_speed(P, sched, crz, inp, phase, to_cas, crz_ft)
         end
     else
         cas, mach, mm = sched(P, phase == "DES" and inp.des or inp.clb, inp.alt)
+        local w = wpt_spd(inp, phase)
+        if w and w < cas then cas, mach, mm, wkt = w, P.cas_to_mach(w, inp.alt), false, w end
     end
     local lim, limited = nil, false
     if inp.flaps_placard then lim = inp.flaps_placard - M.PLACARD_MARGIN end
@@ -291,14 +325,17 @@ local function target_speed(P, sched, crz, inp, phase, to_cas, crz_ft)
         cas, limited = inp.vmin + M.VMIN_MARGIN, true
         mach, mm = P.cas_to_mach(cas, inp.alt), false
     end
-    return cas, mach, mm, limited
+    return cas, mach, mm, limited, (not limited) and wkt or nil
 end
 
 -- (step 9e1) the descent's speed limits on the path at the target cas:
 -- lo the minimum maneuvering speed, hi the most, drag DRAG REQUIRED's;
--- above the first speed constraint (the speed transition's altitude here)
--- or below it (below)
-local function speed_limits(P, inp, cas, below)
+-- above the first speed constraint or below it (below); the transition's
+-- speed plus 5 the most below its altitude (below_tr: FCOM p.1260).
+-- (FMC-08) The first speed constraint the transition's altitude or a
+-- descent waypoint's speed constraint passed (before, the transition's
+-- alone: a waypoint's speed was none)
+local function speed_limits(P, inp, cas, below, below_tr)
     if not cas then return nil, nil, nil end
     local lo = (inp.vmin and inp.vmin > 0) and inp.vmin or nil
     -- (step 9e2) on approach with the flaps out: the path held up to the
@@ -312,7 +349,7 @@ local function speed_limits(P, inp, cas, below)
     end
     local hi = cas + M.MAX_LOW_KT
     local tc = inp.des and inp.des.trans_cas
-    if tc then hi = math.min(hi, tc + M.TRANS_ADD_KT) end
+    if tc and below_tr then hi = math.min(hi, tc + M.TRANS_ADD_KT) end
     if inp.flaps_placard then hi = math.min(hi, inp.flaps_placard - M.PLACARD_MARGIN) end
     return lo, hi, cas + M.DRAG_LOW_KT
 end
@@ -325,7 +362,13 @@ end
 -- (step 9e2) the fast side's the target's (FCOM p.1262 names none: estimate).
 -- SPD TRANS deleted (FCOM p.1392: ECON or the selected speed then), no
 -- transition: above's speeds at every altitude (2026-11-05 review 4:
--- before, 240 kt below 10,000 ft still)
+-- before, 240 kt below 10,000 ft still). (FMC-08) Past a descent
+-- waypoint's speed constraint: below the transition's altitude the
+-- transition's not over the target (the constraint's when lower:
+-- 2026-11-09's review, 240 for 210 before), elsewhere the target, not
+-- under the minimum maneuvering speed either way (estimates: FCOM
+-- p.1259-1260 names the transition's, for the first speed constraint at
+-- the transition's altitude)
 local function reversion(s, P, inp, kind, tr, target)
     if s.rev then return end
     local tc = inp.des and inp.des.trans_cas
@@ -334,6 +377,8 @@ local function reversion(s, P, inp, kind, tr, target)
     local cas
     if kind == "fast" and inp.on_app then
         cas = target
+    elseif inp.des_spd ~= nil then
+        cas = math.max(below and math.min(tc, target) or target, vmin)
     elseif kind == "fast" then
         if below then
             cas = tc
@@ -402,6 +447,10 @@ end
 --                the E/D (NM), or nil (see des_target)
 --   path         the descent path ({e, h, k}: see path_at) or nil;
 --                d_ed the distance to go to the E/D (NM) or nil
+--   clb_spd      (FMC-08) the lowest speed constraint (CAS kt) of the
+--                climb's waypoints ahead, nil without one; des_spd the
+--                lowest of the waypoints passed in the descent, nil
+--                without one (see CLB_SPD_VREF_ADD)
 -- out: valid, phase ("CLB", "CRZ", "DES"), crz_chg (the cruise climb's
 --   "CLB" or descent's "DES", else nil), mode ("SPD", "PTH"), cas, mach,
 --   mach_mode, alt (the FMC altitude), vs (PTH's vertical speed, nil level,
@@ -411,14 +460,17 @@ end
 --   "THRUST" for THRUST REQUIRED, else nil: step 9e1), end_des (END OF DES:
 --   step 9e2), title ("LIM SPD", "VREF + 100" or nil: step 9h3b), dd (the
 --   driftdown: step 9h4b), check_alt (CHECK ALT TGT: step 11c2b), td_hold
---   (step 9i: past the T/D, the cruise kept by the MCP altitude)
+--   (step 9i: past the T/D, the cruise kept by the MCP altitude), spd_kt
+--   (FMC-08: the target's CAS where a waypoint's speed constraint or the
+--   descent's deceleration into a speed segment sets it, for the titles'
+--   XXXKT; nil else)
 function M.update(s, inp)
     local out = s.out
     local P = inp.P
-    local path_h, g, kind, decelCas = nil, nil, nil, nil
+    local path_h, g, kind, decelCas, plannedCas = nil, nil, nil, nil, nil
     local etd = nil
     if inp.path and inp.d_ed then
-        path_h, g, kind, decelCas = M.path_at(inp.path, inp.d_ed)
+        path_h, g, kind, decelCas, plannedCas = M.path_at(inp.path, inp.d_ed)
         -- (step 9d2a) the T/D where the path reaches CRZ ALT (its top
         -- without), the path level at CRZ ALT before it: the predictions'
         -- goes on up to the ceiling (s144's early descent kept 13,000 ft
@@ -504,16 +556,29 @@ function M.update(s, inp)
     -- target (FCOM p.1265's note; FMSPG p.3.3-3), else the VREF + 100 climb's
     if ph ~= "CLB" then s.to = nil end
     local to_cas, to_title = takeoff_speed(s, inp)
-    local limited
-    out.cas, out.mach, out.mach_mode, limited = target_speed(P, inp.sched, inp.crz, inp, spd_ph, to_cas,
+    local limited, wkt
+    out.cas, out.mach, out.mach_mode, limited, wkt = target_speed(P, inp.sched, inp.crz, inp, spd_ph, to_cas,
         s.dd and inp.crz_alt or nil)
     -- (step LF1) on a deceleration of the path before a speed limit's
     -- altitude, its speed the target (FCOM p.1264: "Before the speed
     -- restriction altitude, FMC commands the target descent airspeed";
-    -- before, the target changed only below it: s198)
+    -- before, the target changed only below it: s198); (FMC-08) the same
+    -- before a waypoint's speed constraint; not under the minimum
+    -- maneuvering speed plus 5 (LIM SPD; before, the deceleration's speed
+    -- under it too: a waypoint's 210 kt clean at 235 t, 230 the least)
     if ph == "DES" and kind == "decel" and decelCas and not inp.spd_int and out.cas and decelCas < out.cas then
-        out.cas, out.mach, out.mach_mode = decelCas, P.cas_to_mach(decelCas, inp.alt), false
+        local c = decelCas
+        local vm = (inp.vmin and inp.vmin > 0) and inp.vmin + M.VMIN_MARGIN or nil
+        if vm and c < vm then c, limited = vm, true end
+        if c < out.cas then
+            out.cas, out.mach, out.mach_mode = c, P.cas_to_mach(c, inp.alt), false
+            wkt = (not limited) and c or nil
+        end
     end
+    -- (FMC-08) the titles' fixed speed (FCOM p.1391-1392, FMSPG p.3.3-3:
+    -- XXXKT for a waypoint's speed constraint, and for the descent's
+    -- deceleration into a speed segment)
+    out.spd_kt = (wkt and not limited and not inp.spd_int) and wkt or nil
     out.title = limited and "LIM SPD" or ((spd_ph == "CLB" and not inp.spd_int) and to_title or nil)
     -- (step 9e3) the cruise after a missed approach (FCOM p.1262): the most
     -- restrictive of the speed transition (the descent's, the destination
@@ -537,7 +602,7 @@ function M.update(s, inp)
     out.end_des = (ph == "DES" and inp.end_des) and true or nil
     -- (step 9e1) DRAG REQUIRED and the speed reversion only in the descent
     -- on its path (not the early descent's, nor in speed intervention)
-    if ph ~= "DES" or s.early or int or out.end_des then s.drag, s.rev = false, nil end
+    if ph ~= "DES" or s.early or int or out.end_des then s.drag, s.rev, s.below = false, nil, false end
     if ph == "CLB" then
         out.mode = "SPD"
         out.alt = inp.clb_alt or inp.crz_alt
@@ -586,9 +651,21 @@ function M.update(s, inp)
         out.at = M.AT_IDLE
         local tr = inp.des and inp.des.trans_alt or 10000
         local ias = inp.ias
-        -- below the transition only with one (SPD TRANS deleted: none)
-        local below = inp.des ~= nil and inp.des.trans_cas ~= nil and inp.alt < tr
-        local lo, hi, drag = speed_limits(P, inp, out.cas, below)
+        -- below the transition only with one (SPD TRANS deleted: none);
+        -- (FMC-08) below the first speed constraint also past a descent
+        -- waypoint's (FCOM p.1259-1260), with SPD TRANS deleted too
+        local trans = inp.des ~= nil and inp.des.trans_cas ~= nil
+        local belowTr = trans and inp.alt < tr
+        local below = belowTr or inp.des_spd ~= nil
+        -- (FMC-08) on a deceleration the limits around the path's planned
+        -- speed there, not under the target (an estimate: the sources give
+        -- the limits around the target; 2026-11-09, s273: from 280
+        -- toward SYMON's 250 past MUPTT, the target plus 15 at once 15 kt
+        -- under the airplane; the path given up, 813 ft above it and the
+        -- speed reversion)
+        local band = out.cas
+        if kind == "decel" and plannedCas and band and plannedCas > band then band = plannedCas end
+        local lo, hi, drag = speed_limits(P, inp, band, below, belowTr)
         if path_h then
             out.path_alt = path_h
             out.path_dev = inp.alt - path_h
@@ -608,12 +685,18 @@ function M.update(s, inp)
             end
             out.vs = vs
             -- a line too shallow for idle, or below the path (levelling to
-            -- meet it): the A/T on speed
-            if kind == "spd" or dev < -M.MCP_BELOW then out.at = M.AT_SPD end
+            -- meet it): the A/T on speed, (2026-11-09) from PATH_BELOW
+            -- under it until back within PATH_BELOW_BACK
+            if dev < -M.PATH_BELOW then s.below = true elseif dev >= -M.PATH_BELOW_BACK then s.below = false end
+            if kind == "spd" or s.below then out.at = M.AT_SPD end
+        else
+            s.below = false
         end
-        -- too slow: the A/T on speed until near the target again
+        -- too slow: the A/T on speed until near the target again ((FMC-08)
+        -- the low limit below the first speed constraint: the transition's
+        -- altitude or a descent waypoint's speed constraint passed)
         if ias and out.cas then
-            local slow = inp.alt < tr and M.SLOW_KT_LOW or M.SLOW_KT
+            local slow = (inp.alt < tr or inp.des_spd ~= nil) and M.SLOW_KT_LOW or M.SLOW_KT
             if ias < out.cas - slow then
                 s.slow = true
             elseif ias >= out.cas - M.SLOW_BACK_KT then
@@ -635,6 +718,13 @@ function M.update(s, inp)
             if out.path_dev and ((s.rev == "fast" and out.path_dev <= 0) or (s.rev == "slow" and out.path_dev >= 0)) then
                 s.rev = nil
             else
+                -- (FMC-08) past a waypoint's speed constraint not over the
+                -- target since (a lower constraint passed, the deceleration
+                -- to one), not under the minimum maneuvering speed
+                -- (2026-11-09, s273: 250 kept past BAYST's 240)
+                if inp.des_spd and out.cas and out.cas < s.rev_cas then
+                    s.rev_cas = math.max(out.cas, (inp.vmin and inp.vmin > 0) and inp.vmin or 0)
+                end
                 out.mode, out.at, out.vs = "SPD", M.AT_IDLE, nil
                 out.cas, out.mach, out.mach_mode = s.rev_cas, P.cas_to_mach(s.rev_cas, inp.alt), false
                 out.msg = s.rev == "fast" and "DRAG" or "THRUST"
