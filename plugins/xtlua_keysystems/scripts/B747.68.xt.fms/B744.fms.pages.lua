@@ -2318,19 +2318,18 @@ function fmsFunctions.setdata(fmsO,value)
 		--print("FMC IRS = "..fmsO["scratchpad"] * 60)
 	end
    elseif value=="autoFuelMgmt" then
-	if string.len(fmsO["scratchpad"])>0 and not (fmsO["scratchpad"] == "YES" or fmsO["scratchpad"] == "NO") then 
+	-- (2026-11-09) the sim's option "Auto fuel management" (Plugins >
+	-- 747-400; B744.fms.pages.maintsimconfig.lua): YES or NO sets it, the
+	-- key alone turns it over, through the FMS bridge's command (which keeps
+	-- it); before, the livery's simconfig.dat auto_fuel_mgmt
+	local sp = fmsO["scratchpad"]
+	if string.len(sp)>0 and not (sp == "YES" or sp == "NO") then
       fmsO["notify"]="INVALID ENTRY"
-	elseif string.len(fmsO["scratchpad"]) > 0 then
-		simConfigData["data"].SIM.auto_fuel_mgmt = fmsO.scratchpad
-		pushSimConfig(simConfigData["data"]["values"])
-    else
-		if simConfigData["data"].SIM.auto_fuel_mgmt == "NO" then
-			fmsO["scratchpad"] = "YES"
-		else
-			fmsO["scratchpad"] = "NO"
+	else
+		if string.len(sp) == 0 or (sp == "YES") ~= B747_fms_auto_fuel_on() then
+			B747CMD_opt_auto_fuel_toggle:once()
 		end
-		simConfigData["data"].SIM.auto_fuel_mgmt = fmsO.scratchpad
-		pushSimConfig(simConfigData["data"]["values"])
+		fmsO["scratchpad"] = ""
 	end
    elseif value=="baroIndicator" then
 	if string.len(fmsO["scratchpad"])>0 and not (fmsO["scratchpad"] == "IN" or fmsO["scratchpad"] == "HPA") then

@@ -254,7 +254,7 @@ GAP ID 接頭辞：`FUEL`。2026-10-23 調査。コード・acf は変更して�
 - 時間：0.1 s タイマーで `sim/time/total_running_time_sec` の差を使う（2124-2130）。一時停止・時間加速での挙動を確かめる。弁は 3–5 s で動かし、不一致の判定は時間遅れ付きにする（ATA26_28 p.346、p.464）。
 - 簡略化してよいもの：P42 給油パネルと給油配分（FMC の地上サービスで代用）、抜き取り、CMCS 地上試験、VTO、密度計、FSMC/FJCC の二重系、ATA26_28 の機体の MLW ジェティソン、カード単位の BITE。
 - 簡略化してはいけないもの：吸引供給（ポンプ停止でフレームアウトさせない）、クロスフィード・マニフォールド（SP.12 の均衡手順が成り立つこと）、圧力順位による CWT→O/J→主の順序、xfeed 2・3 の論理、予備移送、tank-to-engine とその EICAS、ジェティソンの FTR 終了・均衡・主 1・4 移送、HST 移送（109 型）、FCOM の EICAS 閾値。
-- `SIM.auto_fuel_mgmt == "YES"` のときの `tank_helper`（2687-2771、3697）は乗員操作を自動化する補助で実機に無い。残すなら既定 NO のまま補助機能として扱う。
+- `SIM.auto_fuel_mgmt == "YES"` のときの `tank_helper`（2687-2771、3697）は乗員操作を自動化する補助で実機に無い。残すなら既定 NO のまま補助機能として扱う。→ 2026-11-09 に外し、シムのオプション Auto fuel management に置き換えた（§13）。
 
 ## 7. 現状実装との比較（GAP 候補）
 
@@ -371,3 +371,43 @@ GAP ID 接頭辞：`FUEL`。2026-10-23 調査。コード・acf は変更して�
   - 釣り合わせの形（CTR・OVRD 2/3・主 2/3 のポンプを OFF、クロスフィードは開）で、クロスフィード・マニフォールドの流れが 1（前は 0）、エンジン 2 はマニフォールドから、エンジン 1 は主 1 から。
   - synoptic の写真（`shot_87_fuel_synoptic_balancing.png`）で、マニフォールドは緑、エンジン 2・3 への線も緑。主 1・4 からクロスフィード弁 1・4 を通る線は白のまま（弁の記号の緑は作らない：上の「まだ」）。
   - 投棄とほかの場面は前のまま合格。XTLua のエラーは無い。
+
+## 13. シムのオプション Auto fuel management（2026-11-09）
+
+- 利用者の依頼（2026-11-09）：「燃料タンクのマネジメントを自動化するオプションもPluginに追加できる？」。実機に無いシムの便利機能として作る（notes/ATA-34-61-FMC.md §126 と同じ扱い：Plugins → 747-400 のメニュー、Windows だけ）。
+  - きっかけ：性能計測の EDDF-OMDB の自動飛行で、FUEL TANK/ENG の処置がされなかった。主 2・3 の O/J ポンプが、開いたクロスフィードから 4 発に送り続け、1 時間で主 2・3 が主 1・4 より 3.6 t ずつ少なくなり、FUEL IMBALANCE が出た（6fee1a9c の記録）。
+- 資料で洗い出した乗員の燃料の操作：
+  - 飛行中：Climb and Cruise Procedure（FCOM NP.21.39–42 p.133–136）。After Takeoff Checklist（フラップを上げ終わってから：p.132）の後に始める（p.133）。
+    - FUEL LOW CTR L・R（上昇（ピッチ 5° 以上）で約 3,200 kg、巡航で約 1,300 kg）：CTR L・R を OFF。
+    - FUEL OVD CTR L・R（巡航で 1,800 kg 以上）：CTR L・R を ON。
+    - （109）FUEL PMP STB L・R（500 kg 以上）：STAB L・R を ON。FUEL PRES STB L・R で 900 kg 以下：STAB L・R を OFF。約 5 分たっても燃料が残っていれば、もう一度 ON にしてよく、最初の FUEL PRES STB で OFF（p.135）。
+    - FUEL TANK/ENG（主 2 ≤ 主 1 か、主 3 ≤ 主 4）：OVRD 2・3 の FWD・AFT を OFF、X FEED 1・4 を OFF（p.134、p.136。FCOM p.1467。ATA26_28 p.555 の運用の流れも同じ：「EICAS MESSAGE DISPLAYED TO CLOSE #1 AND #4 CROSSFEED VALVES」、O/J は「SELECTED OFF (PROCEDURE)」）。
+  - 地上：preflight で全 X FEED ON・全ポンプ OFF（p.106）、始動前に MAIN ON・CWT 7,700 kg 以上で CTR ON・FUEL TANK/ENG なら OVRD 2・3 と X FEED 1・4 OFF（p.119–120）、駐機後にポンプ OFF（p.152）。
+  - 補足・非常：燃料の均衡（SP.12.1 p.199：漏れを先に考える。FCTM p.295：限界に近くないときの均衡は乗員の誤りを増やし、燃費もあまり良くならない）、ジェティソン（p.1468–1470）、FUEL XFER MAIN 1 & 4、各メッセージの NNC（この FCOM には NNC が無い：REFERENCE_INDEX.md）。
+- オプションがすること：上の飛行中の操作だけ。
+  - 条件：オプションが ON、空中（PSEU の空中）、フラップレバーが UP（After Takeoff Checklist の後の手順なので）、ジェティソン選択器が OFF。
+  - きっかけは燃料のモデルのメッセージ（`out.cas`：FCOM p.1474–1478 の条件そのもの。上昇・巡航のピッチと量もそこにある）。メッセージが 5 秒続いたら、スイッチを 1 秒に 1 つ、そのスイッチ自身のコマンド（`laminar/B747/button_switch/fuel_*`）で押す。3D のスイッチが動き、音も鳴る。
+  - 押す順：CTR は L・R、STAB は L・R、tank to engine は OVRD 2 FWD・3 FWD・2 AFT・3 AFT・X FEED 1・4（p.134 の書いた順）。
+- しないこと：地上の操作、燃料の均衡、ジェティソン、FUEL XFER MAIN 1 & 4、非常時の処置（FUEL PRESS ENG、FUEL PRESS CTR、FUEL STAB XFR、900 kg を超えて出た FUEL PRES STB など）。
+- 乗員を優先する決まり：
+  - オプションが ON の飛行中に、操縦士（やほかの道具）が動かしたスイッチは、着陸するまで触らない。SP.12 の均衡や非常時の処置と取り合わないため。オプションを切ると、この覚えは消える。
+  - STAB を FUEL PRES STB で OFF にした後は、FUEL PMP STB では ON にしない（5 分後の 1 回だけ）。ポンプが 1 台故障して燃料が 500 kg 以上残ると、ON と OFF を繰り返してしまうため。
+- 推定（資料に無い）：メッセージを待つ 5 秒（乗員の反応。FUEL PRESS CTR は FUEL LOW CTR の 60 秒後に出る）、1 秒に 1 スイッチ、効かない押しを 3 秒後に押し直す、5 分後の再試行は 1 回、「燃料が残っている」は 50 kg（synoptic の 0.1 t）、フラップレバー UP は `laminar/B747/cablecontrols/flap_ratio` が 0.05 未満（1 の位置が 1/6）。
+- 前のコードの `tank_helper`（upstream。CDU の MAINT → SIM CONFIG の FUEL MGMT、livery の `B747-400_simconfig.dat` の `auto_fuel_mgmt`）は外した。
+  - 主 2 ≤ 主 1 と主 3 ≤ 主 4 の両方が揃ったとき（FCOM は「か」）に、OVRD 2・3 と X FEED 1・4 だけを切った。条件が外れると、地上でも ON に戻した。新しいオプションと同時に動くと、スイッチを取り合う。
+  - CDU の FUEL MGMT の行は、新しいオプションの表示と切り替えにした（3L：キーだけで反転、YES・NO で設定、ほかは INVALID ENTRY）。ブリッジのコマンド `laminar/B747/options/auto_fuel_mgmt_toggle` で切り替えるので、保存される。livery の `auto_fuel_mgmt` は読まない（全部の livery で NO だった）。
+- 設定：Plugins → 747-400 の「Auto fuel management」（`plugins/b747_fms_bridge`、既定は OFF）。`Output/preferences/B747-400_options.prf` の `auto_fuel_mgmt` に保存する。
+  - dataref `laminar/B747/options/auto_fuel_mgmt`（int。書いても保存しない：試験のため）、コマンド `laminar/B747/options/auto_fuel_mgmt_toggle`（保存する）。
+  - 燃料のモジュールは毎フレーム読む（XTLua が別のプラグインの dataref を読むと、1 フレーム遅れる）。
+- コード：`B747.28.fuel_auto_model.lua`（純粋）、`B747.25.xt.fuel.lua` の `fuel_auto_step`（毎フレーム、燃料のモデルの後。一時停止中は X-Plane の時間が進まないので何もしない）。
+- 試験：新しい `tests/fuel/fuel_auto_model_test.lua`（47 件）、`tests/fuel/fuel_auto_module_test.lua`（29 件：燃料と manipulators のモジュールで、コマンドを X-Plane のように渡す。巡航で STAB の ON・OFF、CTR の OFF、tank to engine、操縦士の X FEED 1、オプション OFF）、`tests/fms/simconfig_fuel_mgmt_test.lua`（16 件：CDU の行）。`tests/static/xt_bindings_created_test.lua` は、ネイティブのプラグインのコマンドを認める。
+- 飛行試験の実行役（`run_scenario.ps1`）は、ほかの 2 つのオプションと同じく、シナリオの前に 0 にする（保存しない）。使うシナリオ（`s274_fuel_auto_mgmt`）は自分の手順で ON にする。性能計測の道具も、飛行の間は 0 にする（b016a952）。
+- X-Plane（カスタム acf、2026-11-09 夜、`tests/flight/runs/20261109_201840_s274_fuel_auto_mgmt_747-400_custom`）：s274 は 38/38 で合格。XTLua のエラーなし。
+  - オプションが OFF の 20 秒は、FUEL PMP STB が出ていても何もしない。ON にすると、5.4 秒後に STAB L、その 1.1 秒後に R が ON。
+  - STAB が空になると（約 300 秒）、FUEL PRES STB の 5.4 秒後に L・R が OFF。
+  - CWT 約 1,290 kg の FUEL LOW CTR で、CTR L・R が OFF。O/J 2 FWD が引き継ぎ、FUEL PRESS CTR は出ない。
+  - FUEL TANK/ENG で、OVRD 2 FWD から X FEED 4 までの 6 つが 1 秒ごとに OFF（約 5 秒）。メッセージは消え、エンジン 1・4 は主 1・4 から。
+  - 操縦士が X FEED 1 を ON にすると、20 秒たっても ON のまま（FUEL TANK/ENG は出たまま）。
+  - CDU の SIM CONFIG の 3L は、オプションの dataref に合わせて NO・YES と出る。
+  - 頭上パネルの写真（`overhead` の向き）は電源のパネルを写していて、燃料のパネルは写っていない。スイッチの位置は dataref で確かめた。
+- 注意（前からの性質）：ブリッジの保存（メニュー、切り替えのコマンド、Pilot ID）は、メモリの中の全オプションを書く。実行役が（保存せずに）0 にしている試験の間に保存が走ると、利用者の auto_step_climb なども 0 で保存される。試験のシナリオでは、CDU の 3L やコマンドでなく dataref で切り替える。

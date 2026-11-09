@@ -54,12 +54,19 @@
  *                                          GR WT and ZFW and TAKEOFF's CG
  *                                          from the sim when their key is
  *                                          pushed with an empty scratchpad
+ *   laminar/B747/options/auto_fuel_mgmt   (int) 1 (2026-11-09 the user): the
+ *                                          Climb and Cruise Procedure's fuel
+ *                                          switches set at the fuel messages
+ *                                          (the fuel module, XTLua:
+ *                                          B747.28.fuel_auto_model.lua; the
+ *                                          CDU's SIM CONFIG FUEL MGMT too)
  *
  * Plugins > 747-400 > Weight and balance... shows the sim's weights and
  * CGs (wb_window.c).
  *
  * the menu's and the commands' choices kept (.../auto_step_climb_toggle,
- * .../pause_at_td_toggle), a dataref's write (a test's) not.
+ * .../pause_at_td_toggle, .../auto_fuel_mgmt_toggle), a dataref's write (a
+ * test's) not.
  *
  * SimBrief's latest OFP by the Pilot ID (2026-11-02 the user; notes/
  * ATA-34-61-FMC.md §131): when the FMC writes a new request number, the OFP
@@ -359,15 +366,16 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
 
 /* the sim's options: their file's names, the menu's items; on or off before
    the file has them (2026-11-05: the CDU's weights and CG from the sim on,
-   the user's asking) */
-#define NOPTS 3
-static const char *opt_key[NOPTS] = {"auto_step_climb", "pause_at_td", "cdu_sim_values"};
+   the user's asking; 2026-11-09: the automatic fuel management off) */
+#define NOPTS 4
+static const char *opt_key[NOPTS] = {"auto_step_climb", "pause_at_td", "cdu_sim_values", "auto_fuel_mgmt"};
 static const char *opt_label[NOPTS] = {"Auto step climb", "Pause 2 min before T/D",
-    "CDU: GR WT, ZFW and CG from the sim"};
+    "CDU: GR WT, ZFW and CG from the sim", "Auto fuel management"};
 static const char *opt_desc[NOPTS] = {"Toggle the automatic step climb",
     "Toggle the pause two minutes before the top of descent",
-    "Toggle the CDU's GR WT, ZFW and takeoff CG entered from the sim with an empty scratchpad"};
-static int opts[NOPTS] = {0, 0, 1};
+    "Toggle the CDU's GR WT, ZFW and takeoff CG entered from the sim with an empty scratchpad",
+    "Toggle the automatic fuel management (the climb and cruise fuel switches at the fuel messages)"};
+static int opts[NOPTS] = {0, 0, 1, 0};
 static XPLMDataRef opt_ref[NOPTS];
 static XPLMCommandRef opt_cmd[NOPTS];
 static XPLMMenuID menu = NULL;

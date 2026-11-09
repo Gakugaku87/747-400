@@ -6,6 +6,12 @@
 
 ## いまどこか
 
+- **燃料の自動管理のオプション（2026-11-09 午後〜夜）**：利用者の依頼「燃料タンクのマネジメントを自動化するオプションもPluginに追加できる？」で、Plugins → 747-400 に「Auto fuel management」を足した（既定 OFF。notes/ATA-28.md §13）。
+  - 空中でフラップレバーが UP のとき、Climb and Cruise Procedure の燃料の操作（FCOM p.133–136）を、スイッチのコマンドで代わりにする。FUEL LOW CTR で CTR OFF、FUEL OVD CTR で CTR ON、FUEL PMP STB で STAB ON、FUEL PRES STB（900 kg 以下）で STAB OFF、FUEL TANK/ENG で OVRD 2・3 と X FEED 1・4 OFF。メッセージの 5 秒後に、1 秒に 1 スイッチ。
+  - 飛行中に操縦士が動かしたスイッチは、着陸まで触らない。地上の操作・均衡・ジェティソン・非常時の処置はしない。
+  - upstream の `tank_helper`（CDU の SIM CONFIG の FUEL MGMT）を外した。CDU の行は、このオプションの表示と切り替えにした。
+  - 試験 238 本（構文 569 本）。X-Plane の s274 は 38/38。
+  - 残り：ブリッジの保存は、試験で 0 にしたオプションも書く（前からの性質。notes/ATA-28.md §13 の注意）。
 - **機体の修正（2026-11-09）**：STAR などの点の速度制限（FMC-08、利用者の「直す」）を入れた（notes/ATA-34-61-FMC.md §156）。降下ではその点から先で効き、予測の経路が各点の手前で減速する（点と点の直線の上：FCOM p.1258）。上昇はその点を過ぎるまで（VREF+100 より下にしない：推定）。DES・CLB の見出しは XXXKT（FCOM p.1391）、DES のページの区間の 2L・3L・4L（FCOM p.1392、ATA34_2 p.564）、CLB の SPD TRANS は移行高度より上で出さない（p.1328）。X-Plane の 2 回目（s273 29/30：SYMON 263.6 kt）で、予測の減速の段が新しい CAS を段の前の高度で換算していた誤り（LF1 から。機体とモデルの抵抗は合っていた）を見つけて直した。3 回目は s273 35/36：点の速さ（MUPTT 265、SYMON 252、BAYST 244、CLIFY 199、DAHJR 210 kt）、見出し、2L・3L は合格。落ちた 1 件は MUPTT の手前の経路からの偏差（−386 ft、確かめは ±200）：SYMON への減速が FL294 のアイドルの経路から約 500 fpm で始まり、VNAV PTH に経路の折れ目への先回りが無い（同じ形は前から s202 の 10,000 ft の減速にもある：−158 ft）。s206・s140・s202 は合格。経路の 200 ft 下で A/T を SPD にする規則（推定）に戻りの幅を付けた：50 ft の内に戻るまで SPD（推定、§157。前は境目で IDLE と SPD が 1 秒に 3 回入れ替わった）。燃料の synoptic のクロスフィード・マニフォールドの流れと燃料温度の表示も直した（EDDF-OMDB の飛行で利用者が見た 2 件と、監査で見つかった同じ形の 2 件：notes/ATA-28.md §12。s222 は 81/81）。残り：経路の折れ目への先回り、条件の脚の上昇の速度制限、ホールドの速さ、FLARE の浮き。
 - **機体の修正（2026-11-09 未明 2〜5 時）**：性能計測の KSEA-KLAX の飛行で利用者が見た 3 件（降下の A/T の入れ替わり、旋回の逆バンク、ND の線のずれ）を直した（下の「気づいたこと」の 1 つ目、notes/ATA-34-61-FMC.md §153〜§155）。X-Plane で s271・s272（新）、s91・s140・s206 が合格。性能計測は、v7 の後の巡航の quick から続ける。残り：経路の 200 ft 下で SPD にする規則（推定）、FLARE の浮き。
 - **最新（2026-11-09 夕方）**：フェーズ4の 2 本目 EDDF-OMDB を、`auto_flight.ps1` で全自動で飛んだ（`tests/flight/perf/runs/20261109_125035_autoflight`、12:51〜18:27）。
@@ -895,6 +901,7 @@ PLAN.md §3 に書いた。要点：
 - LEGS の計画ステップクライム「XXXS」（2026-11-05、`B747.68.route_model.lua` の `set_step`・`B744.fms.pages.legs.lua`・`B744.fms.pages.vnav.lua` の `B747_fms_crz_step`、notes/ATA-34-61-FMC.md §146）：入れられるのは経路の途中の地点（手順とホールドの地点を除く）で CRZ ALT より上、45,100 ft 以下。高度の制限と置き換え合う。速度つきは INVALID ENTRY。CRZ のページの NOW は地点の 1 NM 手前から、その地点が順送りされた後は次の地点まで（どれも資料に条件が無い）。
 - 上昇の高度制限の目標（2026-11-05、`B747.68.vnav_model.lua` の `clb_target`、notes/ATA-34-61-FMC.md §147）：地点の手前なら、機体の 300 ft 下まで（`CLB_HOLD_FT`：捕捉の行き過ぎの幅）目標のまま。それより離れたら通過したものとして次へ（資料に幅が無い）。
 - ND の PLAN の絵（2026-11-05、`B747.60.nd_model.lua`・`xtlua_nd`・`nd_line.c`・カスタム acf、notes/ATA-31.md §46）：記号と経路の線を切る中央の PLAN の円 290 px（画面の半分の高さの内。図は画面の端まで描く）、円の数字と W・E・S・N↑ の位置と大きさ、CRT の N↑ の位置（株のまま）。
+- 燃料の自動管理のオプション（2026-11-09、シムの機能。`B747.28.fuel_auto_model.lua`、notes/ATA-28.md §13）：メッセージを待つ 5 秒、1 秒に 1 スイッチ、効かない押しを 3 秒後に押し直す、STAB の 5 分後の再試行は 1 回、「燃料が残っている」の 50 kg、フラップレバー UP の 0.05。飛行中に操縦士が動かしたスイッチを着陸まで触らない決まりと、STAB を OFF にした後は FUEL PMP STB で ON にしない決まりも自分で決めた。
 
 ## 電源（1-1）の GAP の状態
 
@@ -2227,3 +2234,7 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
   - 試験 235 本（aero_corr_model_test 56 件、sfc_corr_model_test 44 件）、構文 565 本。
   - X-Plane（カスタム acf、`tests/flight/runs/run_list_20261109_002419.txt` と `run_list_20261109_014401.txt`）：237 t・FL390、240 t・FL330、340 t・FL350、240 t・FL410 の LRC の確かめ、Max Climb の上昇、s07、s10 は合格。353 t・FL330 は回し直しで合格。LRC の Mach の燃料流量は FCOM の 237 t・FL390 −0.4 %（v6 −1.3 %）、240 t・FL410 −1.0 %（−1.7 %）、353 t・FL330 +0.3 %（−0.1 %）、340 t・FL350 −2.6 %（−2.4 %：残り）。上昇率は同じ、30,000 ft の上昇の燃料流量 −0.4 %。性能計測の巡航の 3 か所（オフラインで −0.5〜−0.7 % の見込み）は PERF が測り直す。
   - 353 t・FL330 の 1・2 回目は結果が出なかった：機体の読み直しのコマンドの要求が 30 秒で時間切れになり、`run_scenario.ps1` が止まった（PERF の自動飛行でも 3 回）。時間切れを記録だけにして、読み直しは前のとおり Log.txt で見るように直した（別のコミット）。同じ時に、作業用の写しの tar が止まらずに C: を埋め、ディスクを取り合っていた（止めて 11 GB 空けた）。
+- 2026-11-09 午後〜夜：シムのオプション Auto fuel management（notes/ATA-28.md §13）。b747_fms_bridge の 4 つ目のオプション、燃料のモジュールの `fuel_auto_step`（純粋な `B747.28.fuel_auto_model.lua`）、CDU の SIM CONFIG の FUEL MGMT をこのオプションに、`tank_helper` を外した。
+  - 試験：新しい fuel_auto_model_test（47 件）、fuel_auto_module_test（29 件）、simconfig_fuel_mgmt_test（16 件）。static の xt_bindings_created は、ネイティブのプラグインのコマンドを認める。全体 238 本、構文 569 本。
+  - X-Plane（カスタム acf、`tests/flight/runs/20261109_201840_s274_fuel_auto_mgmt_747-400_custom`）：s274 は 38/38。XTLua のエラーなし。CDU の SIM CONFIG の 3L も、オプションに合わせて NO・YES と出る。
+  - ほかのセッションと分けて進めた：ワークツリー `D:\747-wt-fuelauto` で作り、機体の修正のセッションの燃料のコミット（be2ff8ec、ATA-28 §12）の上に載せ直してから、X-Plane を止めて本体に入れた。

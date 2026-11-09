@@ -914,91 +914,6 @@ function B747_fuel_std_synoptic()
 
 end
 
--- :: ****************************************************************************************
--- :: B744 Tank Manager for Sparky 744 and Default 747-400
--- :: by Garen Evans (@giwiganz) garen.evans@gmail.com
--- :: https://discord.com/channels/713625220568842260/713625220568842263/844535310745731112
--- :: 
--- :: Automaticallly toggles override and crossfeed tanks.
--- :: Exclusively for B744 ICAO
--- ::
--- :: Version 1.0 - February 12, 2021 (initial release)
--- :: Version 1.0.1 - February 23, 2024 (mSparks converted and incorporated to XTLua)
--- ::
--- :: 
--- :: ****************************************************************************************
-B747CMD_fuel_overd_pump_fwd_2       = find_command("laminar/B747/button_switch/fuel_overd_pump_fwd_2")
-B747CMD_fuel_overd_pump_fwd_3       = find_command("laminar/B747/button_switch/fuel_overd_pump_fwd_3")
-B747CMD_fuel_overd_pump_aft_2       = find_command("laminar/B747/button_switch/fuel_overd_pump_aft_2")
-B747CMD_fuel_overd_pump_aft_3       = find_command("laminar/B747/button_switch/fuel_overd_pump_aft_3")
-B747CMD_fuel_xfeed_vlv_1            = find_command("laminar/B747/button_switch/fuel_xfeed_vlv_1")
-B747CMD_fuel_xfeed_vlv_4            = find_command("laminar/B747/button_switch/fuel_xfeed_vlv_4")
-
-function ToggleCrossFeedsOverrides()
-    B747CMD_fuel_overd_pump_fwd_2:once()
-    B747CMD_fuel_overd_pump_fwd_3:once()
-    B747CMD_fuel_overd_pump_aft_2:once()
-    B747CMD_fuel_overd_pump_aft_3:once()
-    B747CMD_fuel_xfeed_vlv_1:once()
-    B747CMD_fuel_xfeed_vlv_4:once()
-end
-local lastFuelHelper=0
-function tank_helper()
-    --if simDR_all_wheels_on_ground == 1 then return end
-    local diff=simDR_time_now-lastFuelHelper
-    if diff<1 then return end
-    lastFuelHelper=simDR_time_now
-    local needsTankEng=false
-
-    if ((simDR_fuel_tank_weight_kg[2] <= simDR_fuel_tank_weight_kg[1]) and (simDR_fuel_tank_weight_kg[3] <= simDR_fuel_tank_weight_kg[4]))
-        then
-        needsTankEng=true
-    end
-
-    --if needsTankEng and fuel_tankToEngine==1 then return end
-    --if not needsTankEng and fuel_tankToEngine==0 then return end
-    
-    if needsTankEng then
-        if B747DR_button_switch_position[64] > 0.95 then B747CMD_fuel_overd_pump_fwd_2:once() return end
-        if B747DR_button_switch_position[65] > 0.95 then B747CMD_fuel_overd_pump_fwd_3:once() return end
-        if B747DR_button_switch_position[66] > 0.95 then B747CMD_fuel_overd_pump_aft_2:once() return end
-        if B747DR_button_switch_position[67] > 0.95 then B747CMD_fuel_overd_pump_aft_3:once() return end  
-        if B747DR_button_switch_position[48] > 0.95 then B747CMD_fuel_xfeed_vlv_1:once() return end
-        if B747DR_button_switch_position[51] > 0.95 then B747CMD_fuel_xfeed_vlv_4:once() return end
-    else
-        if B747DR_button_switch_position[64] < 0.05 then B747CMD_fuel_overd_pump_fwd_2:once() return end
-        if B747DR_button_switch_position[65] < 0.05 then B747CMD_fuel_overd_pump_fwd_3:once() return end
-        if B747DR_button_switch_position[66] < 0.05 then B747CMD_fuel_overd_pump_aft_2:once() return end
-        if B747DR_button_switch_position[67] < 0.05 then B747CMD_fuel_overd_pump_aft_3:once() return end
-        if B747DR_button_switch_position[48] < 0.05 then B747CMD_fuel_xfeed_vlv_1:once() return end
-        if B747DR_button_switch_position[51] < 0.05 then B747CMD_fuel_xfeed_vlv_4:once() return end
-        
-    end
-    --[[fob = simDR_fuel_tank_weight_kg[0] + simDR_fuel_tank_weight_kg[1] + simDR_fuel_tank_weight_kg[2] + simDR_fuel_tank_weight_kg[3] + simDR_fuel_tank_weight_kg[4] + simDR_fuel_tank_weight_kg[5] + simDR_fuel_tank_weight_kg[6] + simDR_fuel_tank_weight_kg[7]
-    fob = math.floor(fob * 2.2046)
-
-    -- if have fuel and all crossfeeds are off, then turn em om
-    if(fob > 120000) then
-        if(B747DR_gen_xfeed_vlv1_status==3 and B747DR_gen_xfeed_vlv2_status==3 and B747DR_gen_xfeed_vlv3_status==3 and B747DR_gen_xfeed_vlv4_status==3) then
-            if(B747.fuel.main2_tank.ovrd_jett_pump_fwd.on==0 
-            and B747.fuel.main2_tank.ovrd_jett_pump_aft.on==0 
-            and B747.fuel.main3_tank.ovrd_jett_pump_fwd.on==0 
-            and B747.fuel.main3_tank.ovrd_jett_pump_aft.on==0) then
-                ToggleCrossFeedsOverrides()
-            end
-        end
-    else
-        if(B747DR_gen_xfeed_vlv1_status~=3 and B747DR_gen_xfeed_vlv2_status~=3 and B747DR_gen_xfeed_vlv3_status~=3 and B747DR_gen_xfeed_vlv4_status~=3) then
-            if(B747.fuel.main2_tank.ovrd_jett_pump_fwd.on~=0 
-            and B747.fuel.main2_tank.ovrd_jett_pump_aft.on~=0 
-            and B747.fuel.main3_tank.ovrd_jett_pump_fwd.on~=0 
-            and B747.fuel.main3_tank.ovrd_jett_pump_aft.on~=0) then
-                ToggleCrossFeedsOverrides()
-            end
-        end
-    end]]--
-
-end
 
 
 
@@ -1348,8 +1263,57 @@ local function initial_load()
     B747DR_refuel = total - loaded
 end
 
+-- (2026-11-09, the user) the sim's option "Auto fuel management" (Plugins >
+-- 747-400, the FMS bridge's laminar/B747/options/auto_fuel_mgmt, kept in
+-- its options' file): the Climb and Cruise Procedure's fuel switches set
+-- at the fuel messages (FCOM p.133-136) by B747.28.fuel_auto_model.lua,
+-- through the switches' own commands (laminar/B747/button_switch/fuel_*:
+-- the 3D switches move and click as the pilot's). It replaces the previous
+-- code's tank helper (the CDU's SIM CONFIG FUEL MGMT, the livery's
+-- simconfig.dat auto_fuel_mgmt): that one swapped the override pumps 2 and 3
+-- and crossfeed 1 and 4 only, at main 2 <= main 1 and main 3 <= main 4
+-- (FCOM: or), and turned them back on otherwise, on the ground too. The
+-- CDU's line now shows and turns over this option.
+dofile("B747.28.fuel_auto_model.lua")
+local FA = B747_fuel_auto_model
+B747DR_opt_auto_fuel = find_dataref("laminar/B747/options/auto_fuel_mgmt")
+-- the switches (laminar/B747/button_switch/position) and their commands
+local AUTO_SWITCH = {ctr_l = 52, ctr_r = 53, stab_l = 54, stab_r = 55, oj2_fwd = 64, oj3_fwd = 65,
+    oj2_aft = 66, oj3_aft = 67, x1 = 48, x4 = 51}
+local AUTO_CMD = {
+    ctr_l = find_command("laminar/B747/button_switch/fuel_ctr_wing_tnk_pump_L"),
+    ctr_r = find_command("laminar/B747/button_switch/fuel_ctr_wing_tnk_pump_R"),
+    stab_l = find_command("laminar/B747/button_switch/fuel_stab_tnk_pump_L"),
+    stab_r = find_command("laminar/B747/button_switch/fuel_stab_tnk_pump_R"),
+    oj2_fwd = find_command("laminar/B747/button_switch/fuel_overd_pump_fwd_2"),
+    oj3_fwd = find_command("laminar/B747/button_switch/fuel_overd_pump_fwd_3"),
+    oj2_aft = find_command("laminar/B747/button_switch/fuel_overd_pump_aft_2"),
+    oj3_aft = find_command("laminar/B747/button_switch/fuel_overd_pump_aft_3"),
+    x1 = find_command("laminar/B747/button_switch/fuel_xfeed_vlv_1"),
+    x4 = find_command("laminar/B747/button_switch/fuel_xfeed_vlv_4"),
+}
+local fuel_auto = FA.new()
+local fuel_auto_inp = {sw = {}}
+local fuel_auto_on = false          -- the option, read every frame (another plugin's dataref: a frame late)
+
+-- after the model's frame: the switch the option pushes now, if any
+local function fuel_auto_step(out, dt)
+    local inp, fin = fuel_auto_inp, fuel_inputs
+    inp.on = fuel_auto_on
+    inp.air = not fin.on_ground
+    inp.flaps_up = fin.flap_lever < FA.FLAPS_UP_MAX
+    inp.jett = fin.jett_sel > 0
+    inp.cas = out.cas
+    inp.stab_kg = fuel_state.qty.stab
+    inp.dt = dt
+    for id, i in pairs(AUTO_SWITCH) do inp.sw[id] = B747DR_button_switch_position[i] > 0.5 end
+    local id = FA.update(fuel_auto, inp)
+    if id then AUTO_CMD[id]:once() end
+end
+
 -- a new flight: the model starts again from X-Plane's quantities
 function B747_fuel_system_start()
+    fuel_auto = FA.new()
     fuel_state = F.new()
     fuel_settle_left = SETTLE_S
     fuel_settle_t = nil
@@ -1374,6 +1338,7 @@ function B747_fuel_system()
     local dt = fuel_frame_dt()
     fuel_age = fuel_age + dt
     read_inputs(inp)
+    fuel_auto_on = B747DR_opt_auto_fuel == 1
     if simDR_inReplay == 1 then
         sync_tanks(true)
         return
@@ -1402,6 +1367,7 @@ function B747_fuel_system()
     count_fuel_used(inp, dt)
     write_tanks()
     write_outputs(out, false)
+    fuel_auto_step(out, dt)
 end
 
 --Marauder28
@@ -1802,8 +1768,7 @@ function after_physics()
     end
     B747_fuel_wb_request()
     if hasSimConfig()==false then return end
-    --auto tank to engine
-    if simConfigData["data"].SIM.auto_fuel_mgmt =="YES" then tank_helper() end
+    -- (the tank helper of SIM.auto_fuel_mgmt: the option's fuel_auto_step now)
     --Display Fuel Units
     B747_calculate_fuel_display_units()
 end
