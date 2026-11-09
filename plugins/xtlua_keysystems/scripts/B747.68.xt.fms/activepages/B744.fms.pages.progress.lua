@@ -404,7 +404,9 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     local todText="----z/----NM"
     if B747BR_tod>0 and B747BR_totalDistance>B747BR_tod then
       local dist=B747BR_totalDistance-B747BR_tod
-      if B747BR_toc>=0 and dist > B747BR_toc and B747DR_ap_flightPhase<2 then
+      -- (2026-11-09's audit) T/C by the FMC's phase, as with the
+      -- predictions (before, the AP's old flightPhase, 13 writers)
+      if B747BR_toc>=0 and dist > B747BR_toc and (B747_fms_vnav_page()) < 2 then
         dist=B747BR_toc
       end
       local hours = 0
@@ -472,7 +474,9 @@ fmsPages["PROGRESS"].getSmallPage=function(self,pgNo,fmsID)
     if not toText then
       toText="T/D"
       local dist=B747BR_totalDistance-B747BR_tod
-      if B747BR_toc>=0 and dist > B747BR_toc and B747DR_ap_flightPhase<2 then
+      -- (2026-11-09's audit) T/C by the FMC's phase, as with the
+      -- predictions (before, the AP's old flightPhase, 13 writers)
+      if B747BR_toc>=0 and dist > B747BR_toc and (B747_fms_vnav_page()) < 2 then
         toText="T/C"
       end
     end
