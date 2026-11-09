@@ -112,6 +112,9 @@ frames(rt, 6)
 for n = 0, 3 do T.equal(rt:get(HAS_FUEL, n), 1, "running: engine " .. (n + 1) .. " has fuel") end
 T.equal(rt:get("laminar/B747/fuel/spar_vlv2_pos"), 1, "running: spar valve 2 open")
 T.equal(rt:get("laminar/B747/fuel/engine1_status"), 2, "running: engine 1 fed through the manifold (synoptic)")
+-- (2026-11-09) the manifold's flow from the model (fuel_model_test has its
+-- cases: mains through open crossfeeds too)
+T.equal(rt:get("laminar/B747/fuel/gen_XFmfld_status"), 1, "running: the crossfeed manifold's flow on the synoptic")
 local ctr0, used0, all0 = rt:get(FUEL, 0), rt:get("laminar/B747/fuel/totaliser", 0), rt:get("laminar/B747/fuel/totaliser", 4)
 frames(rt, 60)
 T.near(ctr0 - rt:get(FUEL, 0), 4 * 0.6 * 60, 2, "running: the CWT gives 2.4 kg/s")
@@ -151,6 +154,20 @@ T.equal(rt:get("laminar/B747/fuel/spar_vlv2_pos"), 0, "fire switch 2: spar valve
 T.equal(rt:get(HAS_FUEL, 1), 0, "fire switch 2: no fuel to engine 2")
 T.equal(rt:get("laminar/B747/fuel/engine2_status"), 0, "fire switch 2: no flow to engine 2 on the synoptic")
 
+-- (2026-11-09's audit) a NOZZLE switch ON with the selector OFF (no
+-- jettison): its valve opens (FCOM p.1441) but the jettison synoptic's
+-- pumps and manifold stay without flow (before, from the motors and the
+-- nozzle valve: the CTR pumps' and the whole manifold's flow shown)
+rt:set(SWITCH, 46, 1)
+frames(rt, 6)
+T.equal(rt:get("laminar/B747/fuel/jett_vlv_status"), 1, "NOZZLE L ON, selector OFF: its valve open")
+T.equal(rt:get(SYN_PUMP, 12), 2, "... CTR L green (feeding the engines)")
+T.equal(rt:get("laminar/B747/fuel/jett/OJctrL_status"), 0, "... no jettison: CTR L without the jettison's flow")
+T.equal(rt:get("laminar/B747/fuel/jett/mfldL2_status"), 0, "... the jettison manifold without flow")
+T.equal(rt:get("laminar/B747/fuel/jett/mXmfld_status"), 0, "... its cross manifold without flow")
+rt:set(SWITCH, 46, 0)
+frames(rt, 6)
+
 -- jettison: selector A, both nozzles ON (FCOM p.1468)
 rt:set("laminar/B747/fuel/fuel_jettison/sel_dial_pos", 1)
 rt:set(SWITCH, 46, 1)
@@ -164,6 +181,8 @@ T.equal(rt:get(ADVISORY, 235), 1, "jettison: >JETT NOZ ON")
 T.equal(rt:get("laminar/B747/fuel/center_tank/jett_vlv_L_pos"), 1, "jettison: CWT jettison valve open")
 T.equal(rt:get("laminar/B747/fuel/light/nozzle_valve", 0), 0, "nozzle L open: VALVE light off")
 T.equal(rt:get(SYN_PUMP, 12), 5, "jettison: CTR L magenta with flow on the synoptic")
+T.equal(rt:get("laminar/B747/fuel/jett/OJctrL_status"), 1, "jettison: CTR L in the jettison's flow (the jettison synoptic)")
+T.equal(rt:get("laminar/B747/fuel/jett/mXmfld_status"), 1, "jettison: its cross manifold with flow")
 T.equal(rt:get("laminar/B747/fuel/fuel_to_remain/state"), 0, "jettison: fuel to remain magenta")
 
 -- the APU: fuel valve open, main 2 AFT runs on the ground service bus (FCOM p.1465)
@@ -313,6 +332,34 @@ do
     step(75, 4 / 30)        -- 4 x time acceleration: 10 s of X-Plane's time
     T.near(used() - u0, 40, 0.5, "4 x: FUEL USED over X-Plane's 10 s (before: 10 kg)")
     T.near(c0 - ctr(), 40, 1, "4 x: the CWT down by the same")
+end
+
+-- (2026-11-09's audit) the override/jettison pumps' flow bars with
+-- pressure: main 2 under its standpipe, OVRD 2 run without pressure:
+-- amber on the synoptic and no flow bar (before, from the motor: the flow
+-- bar over the amber pump); main 3 above it: its flow bar
+do
+    local rtO = aircraft({0, 11000, 2500, 25000, 11000, 0, 0, 0})
+    for _, x in ipairs(MAIN_SWITCHES) do rtO:set(SWITCH, x, 1) end
+    frames(rtO, 3)
+    local s8, s10 = rtO:get(SYN_PUMP, 8), rtO:get(SYN_PUMP, 10)
+    T.equal(s8, 3, "main 2 at 2,500 kg: OVRD 2 FWD amber (run, pressure low): " .. tostring(s8))
+    T.equal(rtO:get("laminar/B747/fuel/oj_pump2_status"), 0, "... no OVRD 2 flow bar")
+    T.check(s10 == 2 and rtO:get("laminar/B747/fuel/oj_pump3_status") == 1,
+        "main 3 at 25 t: OVRD 3 FWD green and its flow bar: " .. tostring(s10) .. "/" .. tostring(rtO:get("laminar/B747/fuel/oj_pump3_status")))
+end
+
+-- (2026-11-09) the fuel temperature's display (FCOM p.1445: degrees
+-- Celsius): whole degrees in the dataref, the panel's sign from it: a value
+-- rounding to 0 without one (before, -0.35 showed "-0c": the user's
+-- EDDF-OMDB flight); FUEL TEMP LOW's -37 from the kept value
+do
+    for _, c in ipairs({{-0.35, 0}, {-0.6, -1}, {12.4, 12}, {-37.2, -37}}) do
+        local rtT = aircraft({20000, 11000, 25000, 25000, 11000, 3000, 3000, 0})
+        rtT:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", c[1])
+        frames(rtT, 2)
+        T.equal(rtT:get("laminar/B747/fuel/temperature"), c[2], string.format("fuel temperature %.2f C shown as %d", c[1], c[2]))
+    end
 end
 
 T.done()

@@ -629,9 +629,17 @@ end
 
 ----- FUEL TEMPERATURE ------------------------------------------------------------------
 local B747_fuel_temp_init_flag = 0
+-- (2026-11-09) the temperature (degrees C) kept here, the dataref the
+-- display's whole degrees (FCOM p.1445, p.1453: degrees Celsius, amber at
+-- -37 and below): the panel takes the sign from the dataref, -0.35 showed
+-- "-0c" (the user's EDDF-OMDB flight). A value rounding to 0 without a
+-- sign is an estimate (the sources show no zero)
+local fuel_temp_c = 0
+local function fuel_temp_display(c) return math.floor(c + 0.5) end
 
 function B747_init_fuel_temp()
-    B747DR_fuel_temperature = simDR_TAT
+    fuel_temp_c = simDR_TAT
+    B747DR_fuel_temperature = fuel_temp_display(fuel_temp_c)
     B747_fuel_temp_init_flag = 1
 end
 
@@ -642,7 +650,8 @@ function B747_fuel_temp()
             run_after_time(B747_init_fuel_temp, 1.0)
         end
     else
-        B747DR_fuel_temperature = B747_set_anim_value(B747DR_fuel_temperature, simDR_TAT, -47.0, 99.0, 0.0001)
+        fuel_temp_c = B747_set_anim_value(fuel_temp_c, simDR_TAT, -47.0, 99.0, 0.0001)
+        B747DR_fuel_temperature = fuel_temp_display(fuel_temp_c)
     end
 
 end
@@ -725,59 +734,10 @@ end
 
 ----- SYNOPTIC - FUEL JETTISON ----------------------------------------------------------
 function B747_fuel_jett_synoptic()
-
-    -- CENTER OJ
-    
-    if B747.fuel.center_tank.ovrd_jett_pump_L.on == 1
-        and B747DR_gen_jett_valve_status == 1
-    then
-        B747DR_gen_jett_OJctrL_status = 1
-    else
-        B747DR_gen_jett_OJctrL_status = 0
-    end
-
-    
-    if B747.fuel.center_tank.ovrd_jett_pump_R.on == 1
-        and B747DR_gen_jett_valve_status == 1
-    then
-        B747DR_gen_jett_OJctrR_status = 1
-    else
-        B747DR_gen_jett_OJctrR_status = 0
-    end
-
-    -- MAIN2 OJ
-    
-    if (B747.fuel.main2_tank.ovrd_jett_pump_fwd.on == 1 or B747.fuel.main2_tank.ovrd_jett_pump_aft.on == 1)
-        and B747DR_gen_jett_valve_status == 1
-    then
-        B747DR_gen_jett_OJmain2_status = 1
-    else
-        B747DR_gen_jett_OJmain2_status = 0
-    end
-
-     -- MAIN3 OJ
-    
-    if (B747.fuel.main3_tank.ovrd_jett_pump_fwd.on == 1 or B747.fuel.main3_tank.ovrd_jett_pump_aft.on == 1)
-        and B747DR_gen_jett_valve_status == 1
-    then
-        B747DR_gen_jett_OJmain3_status = 1
-    else
-        B747DR_gen_jett_OJmain3_status = 0
-    end
-
-    -- STABILIZER
-    
-    if (B747.fuel.stab_tank.xfr_jett_pump_L.on == 1 or B747.fuel.stab_tank.xfr_jett_pump_R.on == 1)
-        and B747DR_gen_jett_valve_status == 1
-    then
-        B747DR_gen_jett_OJstab_status = 1
-    else
-        B747DR_gen_jett_OJstab_status = 0
-    end
-
-
-
-
+    -- CENTER OJ, MAIN2 OJ, MAIN3 OJ, STABILIZER: the model's jettison flow
+    -- (2026-11-09's audit, write_outputs). Before, here the pumps' motors
+    -- and the nozzle valves: the manifold flowing with a NOZZLE switch ON
+    -- and no jettison
     -- MANIFOLD 1 LEFT
     
     if B747DR_gen_jett_OJctrL_status == 1
@@ -864,32 +824,9 @@ end
 ----- SYNOPTIC - FUEL STANDARD -----------------------------------------------------------
 function B747_fuel_std_synoptic()
 
-    -- CROSSFEED MANIFOLD
-    B747DR_gen_fuel_XFmfld_status = B747_ternary(
-        B747.fuel.main2_tank.ovrd_jett_pump_fwd.on == 1 or
-        B747.fuel.main2_tank.ovrd_jett_pump_aft.on == 1 or
-        B747.fuel.center_tank.ovrd_jett_pump_L.on == 1 or
-        B747.fuel.center_tank.ovrd_jett_pump_R.on == 1 or
-        B747.fuel.main3_tank.ovrd_jett_pump_fwd.on == 1 or
-        B747.fuel.main3_tank.ovrd_jett_pump_aft.on == 1
-        , 1, 0)
-
-
-    -- OJ PUMP(S) 2
-    
-    if B747.fuel.main2_tank.ovrd_jett_pump_fwd.on == 1 or B747.fuel.main2_tank.ovrd_jett_pump_aft.on == 1 then
-        B747DR_gen_fuel_OJpump2_status = 1
-    else
-      B747DR_gen_fuel_OJpump2_status = 0
-    end
-
-    -- OJ PUMP(S) 3
-    
-    if B747.fuel.main3_tank.ovrd_jett_pump_fwd.on == 1 or B747.fuel.main3_tank.ovrd_jett_pump_aft.on == 1 then
-        B747DR_gen_fuel_OJpump3_status = 1
-    else
-      B747DR_gen_fuel_OJpump3_status = 0
-    end
+    -- CROSSFEED MANIFOLD and OJ PUMP(S) 2 and 3: the model's (2026-11-09,
+    -- write_outputs). Before, here from the override/jettison and CWT
+    -- pumps' switches and motors only
 
 
 
@@ -1078,6 +1015,16 @@ end
 -- totaliser and the EICAS messages (docs/overhaul/notes/ATA-28.md).
 dofile("B747.28.fuel_model.lua")
 local F = B747_fuel_model
+-- (2026-11-09's audit) the synoptic's pump symbols by pump id: with
+-- pressure (green, or magenta with the jettison's flow), in the jettison's
+-- flow (magenta with flow)
+local SYN_I = {}
+for i, p in ipairs(F.PUMPS) do SYN_I[p.id] = i end
+local function syn_press(syn, id)
+    local v = syn.pump[SYN_I[id]]
+    return v == F.SYN_ON or v == F.SYN_JETT_FLOW
+end
+local function syn_jflow(syn, id) return syn.pump[SYN_I[id]] == F.SYN_JETT_FLOW end
 
 simDR_engine_running            = find_dataref("sim/flightmodel/engine/ENGN_running")
 simDR_pitch                     = find_dataref("sim/flightmodel/position/theta")
@@ -1273,7 +1220,7 @@ local function read_inputs(inp)
     inp.flap_lever = simDR_flap_deploy_ratio
     inp.pitch = simDR_pitch
     inp.apu_fuel = simDR_apu_starter_switch >= 1          -- the APU model starts or runs X-Plane's APU
-    inp.temp = B747DR_fuel_temperature
+    inp.temp = fuel_temp_c                     -- (2026-11-09) the kept value, not the display's
     -- the stabilizer tank: airplane 109, the passenger airplane (FCOM p.1453, p.1456)
     inp.has_stab = simDR_tank_ratio[7] > 0 and B747DR_is_freighter == 0
     -- (2026-11-04) the failures
@@ -1350,6 +1297,23 @@ local function write_outputs(out, settling)
         B747DR_fuel_syn_suction[n - 1] = flag(syn.suction[n])
     end
     B747DR_fuel_ftr_state = out.ftr_state
+    -- (2026-11-09) the crossfeed manifold's flow from the model (FCOM
+    -- p.1447: the displayed valve positions and pump status)
+    B747DR_gen_fuel_XFmfld_status = flag(syn.mfld)
+    -- (2026-11-09's audit) from the model's pump symbols too: the override/
+    -- jettison pumps' flow bars (2, 3) with pressure, the jettison
+    -- synoptic's pumps (CTR, OVRD 2 and 3, STAB) in the jettison's flow; the
+    -- jettison manifold's segments from them (B747_fuel_jett_synoptic).
+    -- Before, from the motors (and the nozzle valves): a flow bar over an
+    -- amber pump (main 2 under its standpipe), the jettison manifold
+    -- flowing with a NOZZLE switch ON and no jettison
+    B747DR_gen_fuel_OJpump2_status = flag(syn_press(syn, "oj2_fwd") or syn_press(syn, "oj2_aft"))
+    B747DR_gen_fuel_OJpump3_status = flag(syn_press(syn, "oj3_fwd") or syn_press(syn, "oj3_aft"))
+    B747DR_gen_jett_OJctrL_status = flag(syn_jflow(syn, "ctr_l"))
+    B747DR_gen_jett_OJctrR_status = flag(syn_jflow(syn, "ctr_r"))
+    B747DR_gen_jett_OJmain2_status = flag(syn_jflow(syn, "oj2_fwd") or syn_jflow(syn, "oj2_aft"))
+    B747DR_gen_jett_OJmain3_status = flag(syn_jflow(syn, "oj3_fwd") or syn_jflow(syn, "oj3_aft"))
+    B747DR_gen_jett_OJstab_status = flag(syn_jflow(syn, "stab_l") or syn_jflow(syn, "stab_r"))
     local c = out.cas
     for key, i in pairs(CAUTION) do B747DR_CAS_caution_status[i] = flag(c[key] and not settling) end
     for key, i in pairs(ADVISORY) do B747DR_CAS_advisory_status[i] = flag(c[key] and not settling) end
