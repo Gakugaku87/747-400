@@ -139,6 +139,8 @@ B747DR_elec_breaker_dcir        = deferred_dataref("laminar/B747/electrical/brea
 B747DR_elec_breaker_xpc         = deferred_dataref("laminar/B747/electrical/breaker/xpc", "array[2]")
 B747DR_elec_breaker_apb         = deferred_dataref("laminar/B747/electrical/breaker/apb", "array[2]")
 B747DR_elec_breaker_ssb         = deferred_dataref("laminar/B747/electrical/breaker/ssb", "number")
+-- (2026-11-09) the generator field relays open (the maintenance panel's FIELD OFF lights, FCOM p.788)
+B747DR_elec_gen_field_open      = deferred_dataref("laminar/B747/electrical/gen_field_open", "array[4]")
 -- IDG drive connected 1/0, BCU air mode, load shedding in progress
 B747DR_elec_idg_connected       = deferred_dataref("laminar/B747/electrical/idg_connected", "array[4]")
 B747DR_elec_air_mode            = deferred_dataref("laminar/B747/electrical/air_mode", "number")

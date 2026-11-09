@@ -911,7 +911,7 @@ PLAN.md §3 に書いた。要点：
 | ELEC-02 バス単位の公開 | dataref は済。使う側の乗り換えは 1-1 の次の段 |
 | ELEC-03 電源切替 | 済（LH24 p.123 の表と FCOM p.796-797） |
 | ELEC-04 GCB/BTB の自動制御 | 一部。許可ラッチと on line の回転は済。故障の保護トリップ（発電機の故障の GCR トリップと BTB の auto reclose、load bus の故障の BTB のラッチ）は 2026-11-04 に済（notes/ATA-24.md §11）。3.5 秒の break power transfer・last source on は残り |
-| ELEC-05 SSB | 一部。自動の開閉は済。手動の SSB スイッチと OPEN 灯は無し（3D に無い） |
+| ELEC-05 SSB | 一部。自動の開閉は済。OPEN 灯は 2026-11-09 から点く（頭上パネルの 3D にある：notes/ATA-24.md §14）。手動の SSB スイッチは無し（3D に無い） |
 | ELEC-06 standby | 済 |
 | ELEC-07 表示器と CDU の電源 | 一部。CDU は済。upper EICAS（main standby）は fltInst02 の乗り換えで |
 | ELEC-08 ELEC GEN OFF | 済（advisory、GCB 開で） |
@@ -925,7 +925,7 @@ PLAN.md §3 に書いた。要点：
 | ELEC-16 バッテリーの表示 | 済（カスタム acf）。APU バッテリーと BAT DISCH、STAT の V-DC・A-DC（モデルの値。APU BATT の A-DC は前は APU 発電機の電流だった）、CHG/DIS（2026-10-23 夕方。背景の固定の "DIS" を消した画像に替え、白の CHG・DIS を電流の向きで出す。0 A のときは空白）。純正 acf の STAT は X-Plane の値のまま |
 | ELEC-17 外部電源の available | 済（2026-11-04、notes/ATA-24.md §12：CDU の GROUND SERVICES の L2 で XP12 でも地上電源。X-Plane が呼べる場所では X-Plane 自身の電源車、呼べない場所では電源車なしで 28 V。輪止めを先に。アドオン不要） |
 | ELEC-21 Avionics.lua の puOn | 済（2026-11-04、gpuOn に直した。出力の Ext_Power_Av・Eng_Gen_on はどこも使っていない） |
-| ELEC-22 GEN FIELD MAN RESET・SSB スイッチ | 未（3D に操作部が無い） |
+| ELEC-22 GEN FIELD MAN RESET・SSB スイッチ | 未（3D に操作部が無い）。FIELD OFF 灯は 2026-11-09 から GCR の状態で点く（notes/ATA-24.md §14） |
 | ELEC-24 electrical/oil | 対応不要（電源のモジュールが作るようになった。どこも使っていない） |
 | ELEC-18 autoland の母線の分離 | 済（2026-10-30、notes/ATA-24.md §10・ATA-22.md §38。構成 A〜E、200 ft の上下の戻し方、ISLN と ELEC BUS ISLN の抑止、カスタム acf の ELEC synoptic の抑止の文言、BUS ISOLATED と LAND 3・NO LAND 3。TRU の故障と分離の時間は無い） |
 | ELEC synoptic の ISLN・GALLEY | 済（カスタム acf）。ISLN は BTB 開で（前はスイッチ位置）。UTILITY と GALLEY（109）は 2026-10-23 夕方に画像を分け、それぞれの母線の通電で緑・琥珀（前は 1 枚の画像で utility bus の色）。GALLEY には FCOM の図のように母線までの自分の線を描いた。freighter（570）の galley 無しは電源モデルにまだ無い |

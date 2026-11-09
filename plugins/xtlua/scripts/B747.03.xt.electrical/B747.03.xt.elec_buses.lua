@@ -39,6 +39,7 @@ B747DR_elec_breaker_dcir        = find_dataref("laminar/B747/electrical/breaker/
 B747DR_elec_breaker_xpc         = find_dataref("laminar/B747/electrical/breaker/xpc")
 B747DR_elec_breaker_apb         = find_dataref("laminar/B747/electrical/breaker/apb")
 B747DR_elec_breaker_ssb         = find_dataref("laminar/B747/electrical/breaker/ssb")
+B747DR_elec_gen_field_open      = find_dataref("laminar/B747/electrical/gen_field_open")
 B747DR_elec_idg_connected       = find_dataref("laminar/B747/electrical/idg_connected")
 B747DR_elec_air_mode            = find_dataref("laminar/B747/electrical/air_mode")
 B747DR_elec_load_shed           = find_dataref("laminar/B747/electrical/load_shed")
@@ -175,6 +176,10 @@ local function write_buses(out)
     B747DR_elec_bus_gnd_hdlg = flag(out.ghb)
     B747DR_elec_bus_gnd_hdlg_dc = flag(out.gh_dc)
     B747DR_elec_breaker_ssb = flag(out.ssb)
+    -- (2026-11-09's audit) the generator fields open (GCR open: GEN CONT
+    -- OFF, the drive disconnected, a trip), the maintenance panel's FIELD OFF
+    -- lights (FCOM p.788; the lighting module)
+    for n = 1, 4 do B747DR_elec_gen_field_open[n - 1] = flag(not out.gcr[n]) end
     B747DR_elec_air_mode = flag(out.air_mode)
     B747DR_elec_load_shed = flag(out.load_shed)
     B747DR_elec_bus_isolated = flag(out.bus_isolated)

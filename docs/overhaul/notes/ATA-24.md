@@ -551,3 +551,15 @@
   - BATTERY はスイッチだけを動かし、ミニマムに触らない（ミニマムの始めの値は表示のモジュールが決める）。
 - 試験：`battery_switch_test`（新、5 件）、`generator_commands_test`（新、6 件）。直す前のコードでは 5 件と 4 件が落ちる。
 - X-Plane（カスタム acf、2026-11-09）：`s275_upstream_remnants_ground` は 21/21。(1) 地上で両席の RA のミニマム（200・210）が、BATTERY を押した後も残る。(2) X-Plane の発電機のコマンドで GEN CONT 1 が OFF に動き、ELEC GEN OFF 1 が出て、ON のコマンドで戻る（前はスイッチが動かなかった）。
+
+## 14. 整備パネルの FIELD OFF・SSB OPEN と、CDU の画面の明かり（2026-11-09：本家の古いコードの監査）
+
+- 前の状態：
+  - 整備パネル（頭上の電気の整備用）の FIELD OFF 1〜4 と SSB OPEN は、`B747.90.xt.lighting.lua` が常に 0 を書いていて、点かなかった。灯は 3D の頭上パネルにある（`objects/747_cockpit/Cockpit_OH1.obj` が `laminar/B747/annunciator/brightness_ratio[88]`〜`[94]` を使う）。PROGRESS の ELEC-05・22 と DIFFERENCES の「OPEN 灯・FIELD OFF 灯が無い（3D に無い）」は誤りだった（3D に無いのは手動の SSB スイッチと GEN FIELD MAN RESET）。
+  - CDU の画面の明かり（X-Plane の計器の明るさの 12：左と中央、13：右）は、機長の表示の母線（`capt_display_power`：APU standby bus）と副操縦士の表示の母線で決めていた。左の CDU の電源は主 standby bus（FCOM p.804）なので、電池だけで APU を始動する 65 秒（APU のインバーターが止まる：LH24 p.158〜159）は、左の CDU に電源があっても画面のガラスが暗かった。右は同じ母線で違いは無い。
+- 資料：FCOM p.788（6.10.10）：FIELD OFF は発電機の界磁が開いたとき（GEN CONT の OFF、駆動の切り離し、保護のトリップ）、SSB OPEN は split system breaker が開いたとき。FCOM p.800、p.804：CDU の母線。
+- 作ったこと：
+  - 電気のモデル（`B747.03.elec_model.lua`）が GCR（界磁の継電器）の状態を出し、つなぎ（`B747.03.xt.elec_buses.lua`）が新しい dataref `laminar/B747/electrical/gen_field_open[4]` に書く（1 が開）。照明は FIELD OFF をそれから、SSB OPEN を `breaker/ssb`（1 が閉）から点ける。APU の発電機の界磁はモデルに無いので消えたまま（前と同じ）。
+  - CDU の画面の明かりは、その CDU の電源（`display_has_power`：[8] 左、[7] 右）で決める。
+- 試験：`elec_module_test`（4 件）、`lighting_module_test`（FIELD OFF・SSB OPEN の 4 件、CDU の 3 件）。直す前のコードでは電気の 4 件が落ち、照明は新しい dataref が無くて止まる。
+- X-Plane（カスタム acf、2026-11-09）：`s275` の (2)(3)：GEN CONT 1 の OFF で `gen_field_open[0]` が 1、FIELD OFF 1（annunciator 88）が 0.8 で点き、ON で消える。SSB は閉で、SSB OPEN（94）は消灯。頭上の写真には整備パネルが写らなかった（灯の目視は利用者に）。CDU の画面の明かりは、X-Plane では電池だけの APU の始動の 65 秒を作りにくいので、試験の土台での確かめだけ。

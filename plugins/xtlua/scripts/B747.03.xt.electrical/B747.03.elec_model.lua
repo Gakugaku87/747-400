@@ -323,6 +323,9 @@ function M.update(s, inp, dt)
     -- (LH24 p.66, p.102).
     local fail = inp.fail
     local good = {}
+    -- (2026-11-09's audit) the generator field relays (GCR) for the
+    -- maintenance panel's FIELD OFF lights (FCOM p.788: generator field open)
+    out.gcr = {}
     for n = 1, 4 do
         -- (2026-11-04) a generator power fault trips the GCR too (LH24
         -- p.106: voltage, frequency, differential, open phase); so does a
@@ -332,6 +335,7 @@ function M.update(s, inp, dt)
         local trip = inp.fire_handle[n] or fail.gen[n] or fail.bus[n]
         if trip then s.gcr_trip[n] = true elseif not inp.gen_cont[n] then s.gcr_trip[n] = false end
         local gcr = inp.gen_cont[n] and s.idg_connected[n] and not s.gcr_trip[n]
+        out.gcr[n] = gcr and true or false
         good[n] = gcr and speed[n]
     end
     local apu_ready = inp.apu_gen_ok and inp.apu_n1 > M.APU_READY_N1 and inp.on_ground   -- ground only, FCOM p.895

@@ -368,4 +368,38 @@ rt:set("laminar/B747/electrical/bus/any_ac", 1)
 rt:set("sim/graphics/scenery/percent_lights_on", 0)
 rt:frame(1 / 30)
 T.equal(rt:get(CABIN, 25), 0, "day: the cabin lights off")
+
+-- (2026-11-09's audit) the maintenance panel's FIELD OFF and SSB OPEN lights
+-- from the electrical model (FCOM p.788): annunciators 88-91 and 94. Before,
+-- all dark whatever the system
+rt:set("laminar/B747/electrical/bus/dc", 0, 1)
+rt:set("laminar/B747/electrical/gen_field_open", 1, 1)
+rt:set("laminar/B747/electrical/breaker/ssb", 1)
+rt:frame(1 / 30)
+T.near(rt:get(ANNUN, 89), 0.8, 0.01, "generator 2's field open: FIELD OFF 2 (annunciator 89)")
+T.near(rt:get(ANNUN, 88), 0, 0.01, "generator 1's field closed: FIELD OFF 1 dark")
+T.near(rt:get(ANNUN, 94), 0, 0.01, "SSB closed: SSB OPEN dark")
+rt:set("laminar/B747/electrical/breaker/ssb", 0)
+rt:frame(1 / 30)
+T.near(rt:get(ANNUN, 94), 0.8, 0.01, "SSB open: SSB OPEN (annunciator 94)")
+
+-- (2026-11-09's audit) the CDUs' screens by the CDUs' own power
+-- (display_has_power 6: [8] the left CDU, [7] the right): FMS C/L (12) with
+-- the left's, FMS R (13) with the right's. Before, by the captain's and
+-- F/O's displays' buses (the APU standby bus for the left's glass)
+local SCREEN, KNOB = "sim/cockpit2/switches/instrument_brightness_ratio", "laminar/B747/switches/instrument_brightness_ratio"
+local POWER = "laminar/B747/electrical/display_has_power"
+rt:set("sim/flightmodel2/lights/generic_lights_brightness_ratio", 63, 1)   -- X-Plane's from the generic light 63
+rt:set(KNOB, 12, 1)
+rt:set(KNOB, 13, 1)
+rt:set(POWER, 8, 6)
+rt:set(POWER, 7, 6)
+rt:set("laminar/B747/electrical/capt_display_power", 6)          -- the captain's displays' bus lost
+for _ = 1, 150 do rt:frame(1 / 30) end
+T.check(rt:get(SCREEN, 12) > 0.8, string.format("left CDU powered: FMS C/L lit (%.2f) though the captain's displays' bus is off", rt:get(SCREEN, 12)))
+rt:set(POWER, 8, 0)
+rt:set("laminar/B747/electrical/capt_display_power", 0)
+for _ = 1, 150 do rt:frame(1 / 30) end
+T.check(rt:get(SCREEN, 12) < 0.05, string.format("left CDU unpowered: FMS C/L dark (%.2f)", rt:get(SCREEN, 12)))
+T.check(rt:get(SCREEN, 13) > 0.8, string.format("right CDU powered: FMS R lit (%.2f)", rt:get(SCREEN, 13)))
 T.done()

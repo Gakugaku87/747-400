@@ -44,7 +44,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 残っている違い：
 - 3.5 秒の break power transfer、last source on が無い（ELEC-04）。故障は 2026-11-04 から dataref（`laminar/B747/electrical/fail/*`：発電機・AC の load bus・IDG・TRU・充電器・SSB）で入れられ、保護トリップ（GCR、BTB の auto reclose とラッチ）、ELEC GEN OFF・ELEC AC BUS・ELEC DRIVE・>ELEC SSB OPEN、STATUS の ELEC DRIVE・BAT CHARGER・ELEC TR UNIT が出る（notes/ATA-24.md §11）。Plugins → 747-400 → Failures... の故障の窓から入れられる（notes/FAILURES.md）。load bus の故障で GCB も開くこと、BAT CHARGER の遅れ 10 秒は推定。
-- 手動の SSB スイッチ・OPEN 灯、GEN FIELD MAN RESET・FIELD OFF 灯が無い（3D にも操作子が無い。ELEC-05・22）。
+- 手動の SSB スイッチと GEN FIELD MAN RESET が無い（3D にも操作子が無い。ELEC-05・22）。整備パネルの FIELD OFF と SSB OPEN の灯は、2026-11-09 から GCR と SSB の状態で点く（3D の頭上パネルにある。前は常に消灯で、ここにも「灯が無い」と書いていた：notes/ATA-24.md §14、FCOM p.788）。CDU の画面の明かりは、その CDU の電源で決める（前は表示の母線で、電池だけで APU を始動する 65 秒は左の CDU の画面が暗かった。FCOM p.800、p.804）。
 - 客室側の ground service switch が無い（ELEC-13）。
 - autoland のバス分離：TRU の故障が無いので、構成を選ぶのは発電機だけ。分離は瞬時（実機は 4 秒以内）。4 秒で分離しなければ NO LAND 3 の、4 秒は推定。
 - 故障で出る status のうち ELEC IDG VALVE は無い（ELEC-23。つなぐ故障が無い）。

@@ -101,14 +101,20 @@ frames(1)
 T.equal(get("laminar/B747/electrical/breaker/gcb", 2), 0, "fire switch 3 out: GCB 3 open")
 T.equal(get(ADVISORY, 102), 1, "fire switch 3 out: ELEC GEN OFF 3")
 T.equal(get("laminar/B747/electrical/breaker/gcb", 1), 1, "fire switch 3 out: GCB 2 closed")
+-- (2026-11-09's audit) the generator field open with the GCR: the
+-- maintenance panel's FIELD OFF light (FCOM p.788; the lighting module)
+T.equal(get("laminar/B747/electrical/gen_field_open", 2), 1, "fire switch 3 out: generator 3's field open (FIELD OFF 3)")
+T.equal(get("laminar/B747/electrical/gen_field_open", 1), 0, "generator 2's field closed")
 rt:set("laminar/B747/fire/engine03/ext_switch/pos_arm", 0)
 frames(1)
 T.equal(get("laminar/B747/electrical/breaker/gcb", 2), 0, "fire switch 3 in: the GCR stays tripped (a latching relay)")
+T.equal(get("laminar/B747/electrical/gen_field_open", 2), 1, "fire switch 3 in: field 3 still open")
 rt:set(SW, 24, 0)              -- GEN CONT 3 OFF and ON closes the GCR again
 frames(1)
 rt:set(SW, 24, 1)
 frames(1)
 T.equal(get("laminar/B747/electrical/breaker/gcb", 2), 1, "GEN CONT 3 OFF and ON: GCB 3 closed again (LH24 p.108)")
+T.equal(get("laminar/B747/electrical/gen_field_open", 2), 0, "and its field closed again")
 
 -- autoland isolation (ELEC-18): the FCCs' request in (the AFDS glue), the
 -- breakers of configuration A, BUS ISOLATED back and the synoptic inhibit
