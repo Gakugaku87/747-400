@@ -331,8 +331,8 @@ Add-Result @{ do = 'aircraft' } 'info' $loaded
 # write does not save them). 2026-11-08: the user's "Auto step climb", on
 # since 11-06, put the MCP at the step altitude and pushed the altitude
 # selector in s264's cruise. A scenario that needs one turns it on in its
-# steps (s204, s205, s252).
-foreach ($opt in 'laminar/B747/options/auto_step_climb', 'laminar/B747/options/pause_at_td') {
+# steps (s204, s205, s252; the automatic fuel management, 2026-11-09: s274).
+foreach ($opt in 'laminar/B747/options/auto_step_climb', 'laminar/B747/options/pause_at_td', 'laminar/B747/options/auto_fuel_mgmt') {
     try {
         if ([int](Get-XPDataref $opt) -ne 0) {
             Set-XPDataref $opt 0

@@ -47,6 +47,25 @@ local KNOWN_CMDS = {
     ["laminar/B747/autopilot/heading_up"] = true,
     ["laminar/B747/networking/nettest"] = true,
 }
+-- (2026-11-09) and the commands the aircraft's native plugin creates
+-- (plugins/b747_fms_bridge, Windows): its XPLMCreateCommand names and the
+-- sim options' toggles (laminar/B747/options/<opt_key>_toggle,
+-- b747_fms_bridge.c), which the CDU's SIM CONFIG finds (FUEL MGMT)
+local native_cmds = {}
+for _, f in ipairs({"b747_fms_bridge.c", "failures_window.c", "wb_window.c", "gh_window.c"}) do
+    local h = io.open("plugins/b747_fms_bridge/src/" .. f, "rb")
+    if h then
+        local text = h:read("*a")
+        h:close()
+        for name in text:gmatch('XPLMCreateCommand%s*%(%s*"([^"]+)"') do native_cmds[name] = true end
+        local keys = text:match("opt_key%[NOPTS%]%s*=%s*(%b{})")
+        if keys then
+            for k in keys:gmatch('"([^"]+)"') do native_cmds["laminar/B747/options/" .. k .. "_toggle"] = true end
+        end
+    end
+end
+T.check(native_cmds["laminar/B747/options/auto_step_climb_toggle"] and native_cmds["laminar/B747/failures/window_toggle"],
+    "the native plugin's commands found")
 local init_cmds = {}
 for _, path in ipairs(files) do
     if src.is_init(path) then
@@ -64,7 +83,7 @@ for _, path in ipairs(files) do
                 or kind == "replace_command" or kind == "wrap_command"
             if checked and name:sub(-1) ~= "/" then
                 cmd_bound = cmd_bound + 1
-                if not init_cmds[name] and not KNOWN_CMDS[name] then
+                if not init_cmds[name] and not native_cmds[name] and not KNOWN_CMDS[name] then
                     cmd_missing[#cmd_missing + 1] = name .. "  (" .. path .. ")"
                 end
             end

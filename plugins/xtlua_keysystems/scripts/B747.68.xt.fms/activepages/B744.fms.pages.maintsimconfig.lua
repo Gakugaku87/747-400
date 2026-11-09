@@ -1,4 +1,15 @@
 fmsPages["MAINTSIMCONFIG"]=createPage("MAINTSIMCONFIG")
+-- (2026-11-09) FUEL MGMT: the sim's option "Auto fuel management" (Plugins >
+-- 747-400, the FMS bridge's; the fuel module does it), shown here and
+-- turned over by L3 (B744.fms.pages.lua's autoFuelMgmt) through the
+-- bridge's command, which keeps it; before, the livery's simconfig.dat
+-- auto_fuel_mgmt for the previous code's tank helper. Read on each page
+-- draw (an XTLua read of another plugin's dataref gives its previous read)
+B747DR_opt_auto_fuel = find_dataref("laminar/B747/options/auto_fuel_mgmt")
+B747CMD_opt_auto_fuel_toggle = find_command("laminar/B747/options/auto_fuel_mgmt_toggle")
+function B747_fms_auto_fuel_on()
+	return B747DR_opt_auto_fuel == 1
+end
 fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
 	if pgNo == 1 then
 		fmsFunctionsDefs["MAINTSIMCONFIG"]["L1"]={"setdata","weightUnits"}
@@ -16,7 +27,7 @@ fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
 		local display_weight_units = string.format("%-3s", simConfigData["data"].SIM.weight_display_units)
 		local irs_align_time = string.format("%-2d", simConfigData["data"].SIM.irs_align_time / 60)  --Mins
 		local std_pax_weight = string.format("%5.1f", simConfigData["data"].SIM.std_pax_weight * weight_factor)
-		local fuel_mgmt = string.format("%-3s", simConfigData["data"].SIM.auto_fuel_mgmt)
+		local fuel_mgmt = B747_fms_auto_fuel_on() and "YES" or "NO "
 		local capt_inbd_display = string.format("%5s", simConfigData["data"].SIM.capt_inbd)
 		local capt_lwr_display = string.format("%9s", simConfigData["data"].SIM.capt_lwr)
 		local fo_inbd_display = string.format("%5s", simConfigData["data"].SIM.fo_inbd)
@@ -225,7 +236,7 @@ fmsPages["MAINTSIMCONFIG"].getSmallPage=function(self,pgNo,fmsID)
 			display_weight_units = "/KGS"
 		end
 
-		if simConfigData["data"].SIM.auto_fuel_mgmt == "NO" then
+		if not B747_fms_auto_fuel_on() then
 			fuel_mgmt = "/YES"
 		else
 			fuel_mgmt = "/NO "
