@@ -216,6 +216,32 @@ end
 function fmsFunctions.vnavdir(fmsO, value)
   B747_fms_vnav_select(value)
 end
+-- (FMC-08, 2026-11-09) the descent's selected speed segment (FCOM p.1391-
+-- 1392; ATA34_2 p.564): the speed a waypoint's constraint or the
+-- deceleration into a segment sets (B747_fms_vnav_spd_kt), else the
+-- restriction's or the transition's below its altitude, the lower, under
+-- the page's own speed own; and whether the airplane is below the
+-- restriction's and the transition's altitudes. Nil kt outside one
+local function des_segment(own)
+  local kt = B747_fms_vnav_spd_kt()
+  local rs, ra = tonumber(fmsModules["data"]["desrestspd"]), tonumber(fmsModules["data"]["desrestalt"])
+  local ts, ta = tonumber(fmsModules["data"]["destranspd"]), tonumber(fmsModules["data"]["desspdtransalt"])
+  local belowR = (rs and ra and simDR_pressureAlt1 < ra) and true or false
+  local belowT = (ts and ta and simDR_pressureAlt1 < ta) and true or false
+  if not kt then
+    if belowR then kt = rs end
+    if belowT and (not kt or ts < kt) then kt = ts end
+    if kt and own and kt >= own then kt = nil end
+  end
+  return kt, belowR, belowT
+end
+-- (2026-11-09) the climb's speed transition above its altitude (FCOM
+-- p.1328: not displayed above transition; FMSPG p.3.3-4: blanked upon
+-- climbing through it)
+local function clb_trans_above()
+  local ta = tonumber(fmsModules["data"]["spdtransalt"])
+  return ta ~= nil and simDR_pressureAlt1 > ta
+end
 -- the CRZ page's labels that change: AT, AVAIL AT or TO T/D; EPR or N1
 local crzAtLabel, crzThrLabel = "AT", "N1"
 function fmsFunctions.vnavspd(fmsO, value)
@@ -293,6 +319,11 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       elseif active and transSpd and transAlt and simDR_pressureAlt1 < transAlt then
         title = string.format("%dKT", transSpd)
       end
+      -- (FMC-08) a climb waypoint's speed constraint setting the target
+      -- (FMSPG p.3.3-3: XXXKT for a fixed speed; p.3.3-2: ACT 250KT CLB, or
+      -- any speed restriction's)
+      local wkt = active and B747_fms_vnav_spd_kt()
+      if wkt then title = string.format("%dKT", math.floor(wkt + 0.5)) end
       -- (step 9h3b) the engine-out takeoff's VREF + 100 (FCOM p.1265);
       -- LIM SPD while the flap placard or the minimum speed limits the
       -- target, over MCP SPD (FCOM p.1265's note; FMSPG p.3.3-3, p.3.4-19)
@@ -350,7 +381,10 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       lr(spdText, (string.gsub(error_line, "%s+$", ""))),
                                         --**** LO  ** LONG
       "                        ",
-      fmsModules["data"]["transpd"].."/"..fmsModules["data"]["spdtransalt"].."          "..fmsModules["data"]["transalt"],
+      -- (2026-11-09) SPD TRANS not displayed above its altitude (FCOM
+      -- p.1328; FMSPG p.3.3-4), TRANS ALT kept. Before, at every altitude
+      lr(clb_trans_above() and "" or (fmsModules["data"]["transpd"].."/"..fmsModules["data"]["spdtransalt"]),
+        fmsModules["data"]["transalt"]),
       "                        ",
       lr(fmsModules["data"]["clbrestspd"].."/"..fmsModules["data"]["clbrestalt"], VxSpeed),
       "------------------------",
@@ -580,19 +614,46 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local mode = vnav_text("desspdmode")
       -- (step 9e2) END OF DES past the E/D (FCOM p.1391)
       local desActive = (vnav_active(3))
-      local desTitle = (desActive and B747_fms_end_des()) and "END OF DES"
-        or int_title(desActive, spd_title(mode, tonumber(fmsModules["data"]["desspd"]), tonumber(fmsModules["data"]["desspdmach"]))) .. " DES"
+      local own = tonumber(fmsModules["data"]["desspd"])
+      local dspd = spd_title(mode, own, tonumber(fmsModules["data"]["desspdmach"]))
+      -- (FMC-08) the active descent's fixed speeds (FCOM p.1391: XXXKT for a
+      -- speed transition, a speed restriction and waypoint speed
+      -- constraints): the target's where a waypoint's constraint or the
+      -- deceleration into a speed segment sets it (the deceleration's: an
+      -- estimate from p.1392's SEL SPD transitioning into a selected speed
+      -- segment), else the restriction's
+      -- or the transition's below their altitudes, the lower, under the
+      -- page's own speed; LIM SPD (p.1391) over MCP SPD as on the CLB page.
+      -- Before, ECON (or the selected speed's) at every altitude.
+      -- (2026-11-09) In that segment 2L SEL SPD with its speed, 3L SPD TRANS
+      -- blank below its altitude, 4L SPD RESTR dashes below its (FCOM
+      -- p.1392; ATA34_2 p.564: the segment's speed moves to 2L, the line
+      -- blank or dashes; FMSPG p.3.5-3 the same for 3L and 4L, its 2L the
+      -- speed above them all: the FCOM's taken). Before, 2L the page's own
+      -- speed, 3L and 4L kept
+      local kt, belowR, belowT = nil, false, false
+      if desActive then
+        kt, belowR, belowT = des_segment(own)
+        if kt then dspd = string.format("%dKT", math.floor(kt + 0.5)) end
+      end
+      local spd2 = ".".. fmsModules["data"]["desspdmach"].."/"..fmsModules["data"]["desspd"]
+      if kt then spd2 = string.format("%3d", math.floor(kt + 0.5)) end
+      local tr3 = belowT and "" or (fmsModules["data"]["destranspd"].."/"..fmsModules["data"]["desspdtransalt"])
+      local rs4 = belowR and "---/-----" or (fmsModules["data"]["desrestspd"].."/"..fmsModules["data"]["desrestalt"])
+      dspd = int_title(desActive, dspd)
+      if desActive and B747_fms_vnav_title() == "LIM SPD" then dspd = "LIM SPD" end
+      local desTitle = (desActive and B747_fms_end_des()) and "END OF DES" or dspd .. " DES"
       return{
         vnav_title(desTitle, desActive, B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
       "                        ",
       --"  **** *****    ***/****",
       lr(edText, atText),
       "                        ",
-      ".".. fmsModules["data"]["desspdmach"].."/"..fmsModules["data"]["desspd"].."                ",
+      string.format("%-24s", spd2),
       "                        ",
-      fmsModules["data"]["destranspd"].."/"..fmsModules["data"]["desspdtransalt"].."               ",
+      string.format("%-24s", tr3),
       "                        ",
-      fmsModules["data"]["desrestspd"].."/"..fmsModules["data"]["desrestalt"].."   "..fmsModules["data"]["fpa"].." "..fmsModules["data"]["vb"].." "..fmsModules["data"]["vs"],
+      rs4.."   "..fmsModules["data"]["fpa"].." "..fmsModules["data"]["vb"].." "..fmsModules["data"]["vs"],
       "------------------------",
       lr(mode=="S" and "<ECON" or "", "FORECAST>"),
       "                        ",
@@ -681,12 +742,16 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       "                        ",
       "                        "
       }
-    elseif pgNo==3 then 
+    elseif pgNo==3 then
+      -- (2026-11-09) SEL SPD in the active descent's selected speed segment
+      -- (FCOM p.1392; ATA34_2 p.564: as the large page's 2L)
+      local dLbl = spd_label("desspdmode")
+      if vnav_active(3) and des_segment(tonumber(fmsModules["data"]["desspd"])) then dLbl = " SEL SPD " end
       return{
       "                    3/3 ",
       lr(edShown and " E/D AT" or "", nxWpt and ("AT " .. nxWpt) or ""),
       "                        ",
-      spd_label("desspdmode") .. "               ",
+      dLbl .. "               ",
       "                        ",
       " SPD TRANS              ",
       "                        ",

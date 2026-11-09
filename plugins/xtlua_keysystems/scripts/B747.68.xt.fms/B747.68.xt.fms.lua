@@ -1401,8 +1401,11 @@ function B747_fms_pred_input(crz)
     -- (p0, p1: the great circle's ends, for the ND's profile points; step
     -- 9e4: the leg's glide path angle down, the CIFP's: FCOM p.1262; step
     -- 9i: its procedure, for VNAV's climb constraints: vnav_geo_set)
+    -- (FMC-08) the waypoint's speed constraint (CAS: the procedure's or the
+    -- crew's; none on a missed approach's leg)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
-      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step, proc = l.proc}
+      gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step, proc = l.proc,
+      spd = (l.spd and not missed_leg(l)) and l.spd or nil}
     if con and not rwy and not (missed and l.proc == "APPR") then lastCon = i end
   end
   -- (step LF2; notes/ATA-34-61-FMC.md §127) each leg the longer (a turn
@@ -1485,10 +1488,15 @@ function B747_fms_pred_input(crz)
     measured = {dir = B747_fms_wind_true(), kt = simDR_wind_speed, isa = isa, h = simDR_pressureAlt1, phase = phase},
     orig_elev = r.origin and r.origin.elev or 0, dest_elev = r.dest and r.dest.elev or 0, crz = crz,
     des = fc and fc.slots or nil}
+  -- (FMC-08) the descent's speed constraint passed (B747_fms_des_spd), the
+  -- climb's floor VREF 30 + 100 (FCOM p.1326)
+  local vref = B747DR_airspeed_Vf30
+  local floor = (vref and vref > 0 and vref < 900) and vref + B747_vnav_model.CLB_SPD_VREF_ADD or nil
   return {P = B747_perf_db, t = perf, isa = isa, gw = B747_fms_gw_kg(), fuel = perf_fuel_t() * 1000,
     alt = math.max(0, simDR_pressureAlt1), cas = (simDR_onGround ~= 1 and simDR_ias_pilot > 100) and simDR_ias_pilot or nil,
     phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
-    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes, behind = behind}
+    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes, behind = behind,
+    spd_behind = (phase == "des" or phase == "crz") and B747_fms_des_spd() or nil, clb_floor = floor}
 end
 -- the ND's altitude profile points (6-1/6-2 step 8d3; notes/
 -- ATA-34-61-FMC.md §50; FCOM p.1149): the predictions' T/C, the next S/C
@@ -1838,6 +1846,12 @@ function vnav_geo_set(s, r)
   -- for its FMC altitude (B747_vnav_model.des_target)
   local line = vnavState.crz_chg ~= "CLB" and (r.tc or r.td) or nil
   g.des_k, g.des_p = {}, {}
+  -- (FMC-08) the climb's legs' speed constraints with their waypoints
+  g.clb_spd = {}
+  for i = 1, math.min(clbLast, #s.legs) do
+    local l = s.legs[i]
+    if l.spd and l.p1 then g.clb_spd[#g.clb_spd + 1] = {spd = l.spd, p = l.p1} end
+  end
   for i, l in ipairs(s.legs) do
     local c = l.con
     if c and (not s.ed or i < s.ed) then
@@ -1856,7 +1870,9 @@ function vnav_geo_set(s, r)
     local dp = r.dp
     -- (step LF1) the decelerations' targets (c) and the T/D's level
     -- deceleration (td_decel NM)
-    g.path = {e = {}, h = dp.h, k = dp.k, c = dp.c, td_decel = r.td_decel or 0}
+    -- (FMC-08) and the planned CAS at each point (s), for VNAV's speed
+    -- limits on a deceleration
+    g.path = {e = {}, h = dp.h, k = dp.k, c = dp.c, s = dp.s, td_decel = r.td_decel or 0}
     for i = 1, #dp.x do g.path.e[i] = r.ed - dp.x[i] end
     g.hed = dp.h[1]
     -- (step 9e2) the E/D's point, for END OF DES
@@ -1918,6 +1934,10 @@ end
 -- placard or the minimum speed limits it, VREF + 100 in the engine-out
 -- takeoff's climb (FCOM p.1265), nil else
 function B747_fms_vnav_title() return vnavState.out.title end
+-- (FMC-08) the target's fixed CAS where a waypoint's speed constraint or the
+-- descent's deceleration into a speed segment sets it (the titles' XXXKT:
+-- FCOM p.1391-1392; FMSPG p.3.3-3), nil else
+function B747_fms_vnav_spd_kt() return vnavState.out.spd_kt end
 -- (6-1/6-2 step 11a) PROGRESS 2's VTK ERROR: the VNAV path's deviation
 -- (ft, above +) while the descent is active, else nil (FCOM p.1381)
 function B747_fms_vtk()
@@ -1941,6 +1961,45 @@ local function point_passed(p)
     if l.fix == p and not missed_leg(l) then return true end
   end
   return false
+end
+-- (FMC-08, 2026-11-09) the descent's waypoint speed constraints passed: the
+-- lowest speed (CAS kt) of the waypoints sequenced while VNAV is in the
+-- cruise or the descent, in force on to the E/D (FCOM p.1332: at or below
+-- its speed; FMSPG p.3.5-3: the descent's speed line above all waypoint
+-- speed constraints, the constraint's or the performance speed whichever
+-- is less: at and after the waypoint), for VNAV's target and the
+-- predictions (B747.68.pred_model.lua's spd_behind: those after the
+-- climb's legs, a STAR's waypoint before the T/D too); not a SID's nor a
+-- missed approach's, none after the approach's runway; gone in the climb
+-- (a missed approach's) and on the ground. Each passed leg looked at
+-- once, as it is passed: one passed in the climb (the SID's, the climb's
+-- enroute legs) is not the descent's (the cruise's and the descent's
+-- only, on to the E/D: an estimate). Nil without one. (One local table:
+-- the main chunk is 2 locals short of LuaJIT's 200 at the company
+-- uplink's block, 2026-11-09)
+local desSpdS = {spd = nil, rwy = false, seen = setmetatable({}, {__mode = "k"})}
+function B747_fms_des_spd() return desSpdS.spd end
+function desSpdS.update()
+  local S, st = desSpdS, B747_fmc_route
+  local ph = vnavState.phase
+  local inDes = st.active and simDR_onGround ~= 1 and (ph == "DES" or ph == "CRZ")
+  if not inDes then S.spd, S.rwy = nil, false end
+  local p = st.rte and st.rte.passed
+  if not (p and #p > 0) or S.seen[p[#p]] then return end
+  -- the legs passed since the last look, in the order passed
+  local first = #p
+  while first > 1 and not S.seen[p[first - 1]] do first = first - 1 end
+  for k = first, #p do
+    local l = p[k]
+    S.seen[l] = true
+    if inDes and not S.rwy then
+      if l.fix and l.fix.kind == "RWY" and l.proc ~= "SID" and not missed_leg(l) then
+        S.rwy = true
+      elseif l.spd and l.proc ~= "SID" and not missed_leg(l) and (not S.spd or l.spd < S.spd) then
+        S.spd = l.spd
+      end
+    end
+  end
 end
 local function on_approach()
   local st = B747_fmc_route
@@ -2252,7 +2311,18 @@ local function update_vnav()
   inp.engaged = B747DR_ap_vnav_state == 2
   inp.clb_alt, inp.des_alt, inp.path, inp.d_ed = nil, nil, nil, nil
   inp.des_kind, inp.des_e = nil, nil
+  -- (FMC-08) the waypoints' speed constraints in force: the descent's
+  -- passed (desSpdS), the climb's ahead (below)
+  desSpdS.update()
+  inp.des_spd, inp.clb_spd = desSpdS.spd, nil
   if g then
+    -- (FMC-08) the lowest of the climb's waypoints' speed constraints not
+    -- passed (each until passing it: FMSPG p.3.3-17)
+    if g.clb_spd then
+      for _, e in ipairs(g.clb_spd) do
+        if (not inp.clb_spd or e.spd < inp.clb_spd) and not point_passed(e.p) then inp.clb_spd = e.spd end
+      end
+    end
     -- the climb's next AT, AT OR BELOW or block constraint: (2026-11-05)
     -- kept through a level-off's overshoot while its waypoint is ahead
     -- (B747_vnav_model.clb_target; before, 100 ft over it went on to the

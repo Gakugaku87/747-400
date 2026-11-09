@@ -108,13 +108,40 @@ do
         local fpm = (dp.h[hi] - dp.h[lo - 1]) / (dp.t[hi] - dp.t[lo - 1]) * 60
         T.near(fpm, 500, 1, string.format("about 500 fpm down: %.0f fpm over %.1f NM", fpm, dp.x[lo - 1] - dp.x[hi]))
         T.check(dp.h[hi] > 10200 and dp.h[hi] < 11500, string.format("from %.0f ft", dp.h[hi]))
+        -- (2026-11-09) as the model's drag slows it at idle down the path,
+        -- the CAS at each step's altitude: from its second point (the
+        -- first is the step that reached 290 kt, capped) with the path's
+        -- CAS there, 250 kt at its end within 1 kt. Before, the CAS at the
+        -- altitude before each step: about 5 % more deceleration than the
+        -- drag gives (+1.7 kt here)
+        local G, FT, KT, NM = 9.80665, 0.3048, 0.514444, 1852
+        local kg = 350000 - 100000 + r.pts[5].fuel
+        local c = dp.s[hi - 1]
+        for i = hi - 1, lo, -1 do
+            local n = 20
+            for k = 0, n - 1 do
+                local h1 = dp.h[i] + (dp.h[i - 1] - dp.h[i]) * k / n
+                local h2 = dp.h[i] + (dp.h[i - 1] - dp.h[i]) * (k + 1) / n
+                local dx = (dp.x[i - 1] - dp.x[i]) / n * NM
+                local mm = P.cas_to_mach(c, h1)
+                local v = P.tas(mm, h1) * KT
+                local a = P.drag(pw, kg, h1, mm) / kg
+                local v2 = v + (-a - G * (h2 - h1) * FT / math.max(dx, 1e-6)) * dx / v
+                c = P.mach_to_cas(v2 / KT / P.tas(1, h2), h2)
+            end
+        end
+        T.near(c, 250, 1, string.format("the model's drag slows it to %.1f kt at 10,000 ft (from %.1f kt)", c, dp.s[hi - 1]))
     end
 end
 T.check(r.td_decel < 1.5, string.format("M.85 at FL350 to the descent's M.84: a short level deceleration (%.1f NM)", r.td_decel))
 -- each waypoint's speed: the climb's, the cruise's Mach, the descent's
 T.check(r.pts[1].cas == 340 and not r.pts[1].machMode, "C1 in the climb: 340 kt")
 T.check(r.pts[3].machMode and r.pts[3].mach == 0.85, "MID in the cruise: M.85")
-T.check(r.pts[5].cas == 290 and not r.pts[5].machMode, "D2 in the descent at 10,000 ft: 290 kt")
+-- (2026-11-09) D2 (AT 10,000) where the deceleration to the transition's
+-- 250 kt ends: the path's speed there (before, the schedule's 290 above
+-- the transition's altitude)
+T.near(r.pts[5].cas, 250, 0.5, string.format("D2 in the descent at 10,000 ft: %.1f kt, the deceleration's end", r.pts[5].cas))
+T.check(not r.pts[5].machMode, "D2: a CAS")
 T.check(r.pts[6].cas == 250, "the runway below 10,000 ft: 250 kt")
 
 -- (step LF1) the T/D's level deceleration (FCOM p.1264): cruising at M.80
@@ -125,8 +152,16 @@ do
     local rl = PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 25000, phase = "crz", crz = 25000, clb = clb, des = des,
         crzspd = {mach = 0.80}, legs = legsL, ed = 2}
     local dp = rl.dp
+    -- where the path crosses FL250, between its points (2026-11-09: the
+    -- first point at or above it was up to a step's 0.9 NM off)
     local top
-    for i = 1, #dp.x do if dp.h[i] >= 25000 - 1 then top = dp.x[i] break end end
+    for i = 2, #dp.x do
+        if dp.h[i] >= 25000 - 1 then
+            local f = (25000 - dp.h[i - 1]) / math.max(dp.h[i] - dp.h[i - 1], 1e-9)
+            top = dp.x[i - 1] + (dp.x[i] - dp.x[i - 1]) * math.min(math.max(f, 0), 1)
+            break
+        end
+    end
     T.check(rl.td_decel and rl.td_decel > 3 and rl.td_decel < 10, string.format("a level deceleration of %.1f NM", rl.td_decel or -1))
     T.check(top and math.abs(rl.td - (top - rl.td_decel)) < 0.05,
         string.format("the T/D at its start: %.1f NM, the path leaving FL250 at %.1f", rl.td or -1, top or -1))
@@ -438,6 +473,243 @@ do
     T.near(hB, 6000, 1, string.format("an AT OR BELOW 6,000 there too: %.0f ft", hB))
     local hA = lv("A")
     T.check(hA > 6100, string.format("an AT OR ABOVE 6,000: the idle path above it (%.0f ft)", hA))
+end
+
+-- (FMC-08, 2026-11-09) the waypoints' speed constraints (FCOM p.1332: at
+-- or below; p.1393: the slower of the constraint's and the performance
+-- speed). The descent's at and after their waypoints (FMSPG p.3.5-3), as
+-- on KLAX's IRNMN2 (MUPTT 280, SYMON 250, BAYST 240, CLIFY 210): the path's
+-- deceleration to each about 500 fpm down ending at its waypoint (FCOM
+-- p.1258, p.1264), the ND's deceleration points, each waypoint's predicted
+-- speed (LEGS: the constraint's after it), none for the transition's
+-- 240 kt at 10,000 ft (BAYST's 240 before it); the descent longer
+do
+    local des2 = {cas = 290, mach = 0.84, trans_cas = 240, trans_alt = 10000}
+    local function star(withSpd, behind)
+        local function sp(v) return withSpd and v or nil end
+        local legs = {{name = "CRZ", dist = 250},
+            {name = "B", dist = 60, con = {kind = "W", a = 27000, b = 23000}, spd = sp(280)},
+            {name = "B2", dist = 20, con = {kind = "W", a = 24000, b = 20000}},
+            {name = "C", dist = 50, con = {kind = "W", a = 13000, b = 12000}, spd = sp(250)},
+            {name = "D", dist = 15, con = {kind = "A", a = 9000}, spd = sp(240)},
+            {name = "D2", dist = 8, con = {kind = "W", a = 9000, b = 8000}},
+            {name = "E", dist = 12, con = {kind = "AT", a = 6000}, spd = sp(210)},
+            {name = "E2", dist = 6, con = {kind = "AT", a = 6000}},
+            {name = "RW", dist = 18, con = {kind = "AT", a = 150}}}
+        return PM.predict{P = P, t = pw, gw = 250000, fuel = 40000, alt = 37000, phase = "crz", crz = 37000,
+            clb = clb, des = des2, crzspd = {mach = 0.85}, legs = legs, ed = #legs, spd_behind = behind}
+    end
+    local r0, r = star(false), star(true)
+    -- the path's CAS and altitude at x (its points going back from the E/D)
+    local function at(rr, x)
+        local dp = rr.dp
+        for i = 2, #dp.x do
+            if dp.x[i] <= x + 1e-9 then
+                local f = (x - dp.x[i]) / math.max(dp.x[i - 1] - dp.x[i], 1e-9)
+                return dp.s[i] + (dp.s[i - 1] - dp.s[i]) * f, dp.h[i] + (dp.h[i - 1] - dp.h[i]) * f
+            end
+        end
+    end
+    -- the decelerations: {from x, to x, target}
+    local function decels(rr)
+        local dp, out, from = rr.dp, {}, nil
+        for i = 2, #dp.x do
+            if dp.k[i] == "decel" and not from then from = i - 1 end
+            if dp.k[i] ~= "decel" and from then
+                out[#out + 1] = {x0 = dp.x[i - 1], x1 = dp.x[from], h0 = dp.h[i - 1], h1 = dp.h[from], c = dp.c[i - 1]}
+                from = nil
+            end
+        end
+        return out
+    end
+    -- (2026-11-09, s273's second run) a deceleration as the model's drag
+    -- slows it at idle along the path from its start, the CAS at each
+    -- step's altitude (down a line the true airspeed's fall at a constant
+    -- CAS is not the drag's): the CAS at its end at kg
+    local G, FT, KT, NM = 9.80665, 0.3048, 0.514444, 1852
+    local function fwd(rr, d, kg)
+        local cas = at(rr, d.x0)
+        local x = d.x0
+        while x < d.x1 - 1e-9 do
+            local dx = math.min(0.05, d.x1 - x)
+            local _, h1 = at(rr, x)
+            local _, h2 = at(rr, x + dx)
+            local mm = P.cas_to_mach(cas, h1)
+            local v = P.tas(mm, h1) * KT
+            local a = P.drag(pw, kg, h1, mm) / kg
+            local v2 = v + (-a - G * (h2 - h1) * FT / (dx * NM)) * dx * NM / v
+            cas = P.mach_to_cas(v2 / KT / P.tas(1, h2), h2)
+            x = x + dx
+        end
+        return cas
+    end
+    for _, w in ipairs({{2, 280}, {4, 250}, {5, 240}, {7, 210}}) do
+        local p = r.pts[w[1]]
+        local cas = at(r, p.x)
+        T.near(cas, w[2], 0.5, string.format("the path at its waypoint (%.0f NM, %.0f ft): %.1f kt (%d)", p.x, p.h, cas, w[2]))
+        T.near(p.cas, w[2], 0.5, string.format("its predicted speed %.0f", p.cas))
+        local d = nil
+        for _, e in ipairs(decels(r)) do if math.abs(e.x1 - p.x) < 0.05 then d = e end end
+        T.check(d ~= nil and d.c == w[2] and d.x1 - d.x0 > 0.5 and d.x1 - d.x0 < 15,
+            string.format("a deceleration to %d ending there: from %.1f NM before, %.0f ft above", w[2],
+            d and d.x1 - d.x0 or -1, d and d.h0 - d.h1 or -1))
+        if d then
+            local cf = fwd(r, d, 250000 - 40000 + r.pts[2].fuel)
+            T.near(cf, w[2], 1.5, string.format("the model's drag slows it to %.1f kt there (from %.1f kt)", cf, at(r, d.x0)))
+        end
+        local nd = false
+        for _, x in ipairs(r.decel) do if d and math.abs(x - d.x0) < 0.05 then nd = true end end
+        T.check(nd, "its start an ND deceleration point")
+    end
+    T.equal(#r.decel, 4, "four deceleration points (none for the transition's 240 kt: BAYST's before it)")
+    T.check(#r0.decel == 1, "without the constraints the transition's one")
+    T.near(r.pts[3].cas, 280, 0.5, "B2 after B: 280 kt (B's in force)")
+    T.near(r.pts[6].cas, 240, 0.5, "D2 after D: 240 kt")
+    T.near(r.pts[9].cas, 210, 0.5, "the runway (the E/D) after E: 210 kt")
+    T.near(r0.pts[3].cas, 290, 0.5, "(without: 290 kt at B2)")
+    local cB = at(r, r.pts[2].x - 2.5)
+    T.check(cB > 289.5, string.format("2.5 NM before B the schedule's 290 (%.1f kt)", cB))
+    T.check(r.pts[9].t > r0.pts[9].t + 60, string.format("the E/D %.0f s later", r.pts[9].t - r0.pts[9].t))
+    -- a speed constraint passed in the descent (spd_behind: the glue's) in
+    -- force on to the E/D
+    local rb = star(true, 250)
+    local mx = 0
+    for i = 1, #rb.dp.s do if rb.dp.s[i] > mx then mx = rb.dp.s[i] end end
+    T.near(mx, 250, 0.5, string.format("250 kt passed: the path at most %.1f kt", mx))
+    -- (2026-11-09, s273's second run) a steep line of windows (KLAX's
+    -- IRNMN2: about 300 ft/NM, 1,650 fpm, MUPTT's 280 kt to SYMON's 250
+    -- kt): the deceleration the model's drag gives at idle there, far
+    -- longer; the earlier waypoint passed slower than its constraint (at or
+    -- below it). Before, 15.4 NM planned where the drag took it to 266 kt
+    do
+        local steep = {{name = "CRZ", dist = 250},
+            {name = "M", dist = 60, con = {kind = "W", a = 27000, b = 23000}, spd = 280},
+            {name = "R", dist = 30, con = {kind = "W", a = 17000, b = 14000}},
+            {name = "S", dist = 13.4, con = {kind = "W", a = 13000, b = 12000}, spd = 250},
+            {name = "E", dist = 25, con = {kind = "AT", a = 6000}},
+            {name = "RW", dist = 18, con = {kind = "AT", a = 150}}}
+        -- (the transition's 250 kt: no deceleration after S)
+        local des3 = {cas = 290, mach = 0.84, trans_cas = 250, trans_alt = 10000}
+        local rs = PM.predict{P = P, t = pw, gw = 250000, fuel = 40000, alt = 37000, phase = "crz", crz = 37000,
+            clb = clb, des = des3, crzspd = {mach = 0.85}, legs = steep, ed = #steep}
+        local pS, pM, pR = rs.pts[4], rs.pts[2], rs.pts[3]
+        local cS = at(rs, pS.x)
+        T.near(cS, 250, 0.5, string.format("steep: the path at S %.1f kt (%.0f ft)", cS, pS.h))
+        local d = nil
+        for _, e in ipairs(decels(rs)) do if math.abs(e.x1 - pS.x) < 0.05 then d = e end end
+        T.check(d ~= nil and d.c == 250, "steep: a deceleration to 250 ending at S")
+        if d then
+            local grad = (pR.h - pS.h) / (pS.x - pR.x)
+            T.check(grad > 250 and grad < 350, string.format("steep: the line R to S %.0f ft/NM", grad))
+            T.check(d.x1 - d.x0 > 20, string.format("steep: the deceleration %.1f NM long (from %.0f ft)", d.x1 - d.x0, d.h0))
+            local cf = fwd(rs, d, 250000 - 40000 + pM.fuel)
+            T.near(cf, 250, 1.5, string.format("steep: the model's drag slows it to %.1f kt at S (from %.1f kt)", cf, at(rs, d.x0)))
+        end
+        local cM = at(rs, pM.x)
+        T.check(cM <= 280.5, string.format("steep: M passed at %.1f kt (at or below 280)", cM))
+        -- (LEGS) the waypoints' predicted speeds inside it the path's
+        T.near(pM.cas, cM, 0.5, string.format("steep: M's predicted speed %.1f kt, the path's", pM.cas))
+        T.near(pR.cas, at(rs, pR.x), 0.5, string.format("steep: R's %.1f kt", pR.cas))
+        -- a line steeper than idle (450 ft/NM) down to a 250 kt constraint:
+        -- the CAS kept on it (going back up it would fall at a true
+        -- airspeed), the deceleration before it; one deceleration ending
+        -- at the constraint, its CAS not rising on the way, the T/D before
+        -- it
+        local vsteep = {{name = "CRZ", dist = 250},
+            {name = "A", dist = 80, con = {kind = "W", a = 25000, b = 24000}},
+            {name = "B", dist = 20, con = {kind = "W", a = 16000, b = 15000}, spd = 250},
+            {name = "RW", dist = 50, con = {kind = "AT", a = 150}}}
+        local rv = PM.predict{P = P, t = pw, gw = 250000, fuel = 40000, alt = 37000, phase = "crz", crz = 37000,
+            clb = clb, des = des3, crzspd = {mach = 0.85}, legs = vsteep, ed = #vsteep}
+        local pB = rv.pts[3]
+        T.near(at(rv, pB.x), 250, 0.5, string.format("very steep: the path at B %.1f kt", at(rv, pB.x)))
+        local dv = nil
+        for _, e in ipairs(decels(rv)) do if math.abs(e.x1 - pB.x) < 0.05 then dv = e end end
+        T.check(dv ~= nil and dv.c == 250, "very steep: a deceleration to 250 ending at B")
+        local mono = true
+        for i = 2, #rv.dp.x do
+            if rv.dp.k[i] == "decel" and rv.dp.s[i] < rv.dp.s[i - 1] - 1e-6 then mono = false end
+        end
+        T.check(mono, "very steep: no CAS rising on the way in a deceleration")
+        T.check(rv.td and dv and rv.td < dv.x0 and dv.h0 < 37000,
+            string.format("very steep: the T/D (%.1f NM) before the deceleration (from %.1f NM, %.0f ft)", rv.td or -1, dv and dv.x0 or -1, dv and dv.h0 or -1))
+        -- (2026-11-09's review) a 250 kt constraint just under the cruise
+        -- altitude (AT 32,900 at FL330), its deceleration reaching back up
+        -- to FL330: the T/D's level deceleration on to the path's planned
+        -- CAS at its top (before, to the schedule's: the airplane at the
+        -- path 17 kt over its plan)
+        local function crzX(spd)
+            local lx = {{name = "CRZ", dist = 200}, {name = "X", dist = 100, con = {kind = "AT", a = 32900}, spd = spd},
+                {name = "RW", dist = 120, con = {kind = "AT", a = 150}}}
+            return PM.predict{P = P, t = pw, gw = 250000, fuel = 40000, alt = 33000, phase = "crz", crz = 33000,
+                clb = clb, des = des3, crzspd = {mach = 0.85}, legs = lx, ed = #lx}
+        end
+        local rX, rN = crzX(250), crzX(nil)
+        local xt = nil
+        for i = 2, #rX.dp.x do
+            if rX.dp.h[i] >= 33000 - 1 then
+                local f = (33000 - rX.dp.h[i - 1]) / math.max(rX.dp.h[i] - rX.dp.h[i - 1], 1e-9)
+                xt = rX.dp.x[i - 1] + (rX.dp.x[i] - rX.dp.x[i - 1]) * math.min(math.max(f, 0), 1)
+                break
+            end
+        end
+        local pcTop = xt and at(rX, xt)
+        local sched = PM.schedule(P, des3, 33000)
+        T.check(pcTop and pcTop < sched - 5, string.format("near the cruise: the path at FL330 %.1f kt (the schedule's %.1f)", pcTop or -1, sched))
+        -- the level deceleration from M.85 at FL330 to it, at idle
+        local kgX = 250000 - 40000 + rX.pts[1].fuel
+        local tas, dxs = P.tas(0.85, 33000), 0
+        local c = P.mach_to_cas(0.85, 33000)
+        while pcTop and c > pcTop + 0.5 do
+            dxs = dxs + tas * KT * 2 / NM
+            tas = tas - P.drag(pw, kgX, 33000, P.cas_to_mach(c, 33000)) / kgX * 2 / KT
+            c = P.mach_to_cas(tas / P.tas(1, 33000), 33000)
+        end
+        T.near(rX.td_decel or -1, dxs, 0.3, string.format("the T/D's level deceleration %.2f NM to it (%.2f by the drag; without the constraint %.2f)",
+            rX.td_decel or -1, dxs, rN.td_decel or -1))
+    end
+    -- (2026-11-09's review) a deceleration keeps the altitude constraints
+    -- inside it: along a constraint's line, or level at its altitude
+    -- (before, DECEL_VS whatever them). AT 6,000, 210 kt alone 4 NM after
+    -- it, AT 6,000 again: level at 6,000 (before, 6,607 ft at the first);
+    -- AT 7,000 with 210 kt 3 NM after it: 7,000 (before, 6,609 ft)
+    local function run2(legs)
+        return PM.predict{P = P, t = pw, gw = 250000, fuel = 40000, alt = 37000, phase = "crz", crz = 37000,
+            clb = clb, des = des2, crzspd = {mach = 0.85}, legs = legs, ed = #legs}
+    end
+    local rA = run2({{name = "CRZ", dist = 250}, {name = "C", dist = 80, con = {kind = "W", a = 13000, b = 12000}},
+        {name = "E", dist = 30, con = {kind = "AT", a = 6000}}, {name = "M", dist = 4, spd = 210},
+        {name = "E2", dist = 6, con = {kind = "AT", a = 6000}}, {name = "RW", dist = 18, con = {kind = "AT", a = 150}}})
+    T.near(rA.pts[3].h, 6000, 1, string.format("AT 6,000, 210 kt 4 NM on, AT 6,000: the first at %.0f ft", rA.pts[3].h))
+    T.near(rA.pts[4].h, 6000, 1, string.format("the 210 kt's point level at %.0f ft", rA.pts[4].h))
+    T.near(at(rA, rA.pts[4].x), 210, 0.5, "its 210 kt there")
+    local lvl = true
+    for i = 1, #rA.dp.x do
+        if rA.dp.x[i] >= rA.pts[3].x - 1e-6 and rA.dp.x[i] <= rA.pts[5].x + 1e-6 and math.abs(rA.dp.h[i] - 6000) > 1 then lvl = false end
+    end
+    T.check(lvl, "the deceleration level between the two AT 6,000")
+    local rB = run2({{name = "CRZ", dist = 250}, {name = "C", dist = 80, con = {kind = "W", a = 13000, b = 12000}},
+        {name = "E", dist = 30, con = {kind = "AT", a = 7000}}, {name = "M", dist = 3, spd = 210},
+        {name = "RW", dist = 24, con = {kind = "AT", a = 150}}})
+    T.near(rB.pts[3].h, 7000, 1, string.format("AT 7,000 with 210 kt 3 NM on: at %.0f ft", rB.pts[3].h))
+    T.near(at(rB, rB.pts[4].x), 210, 0.5, "210 kt at its point")
+end
+
+-- (FMC-08) the climb's: until passing its waypoint (FMSPG p.3.3-17), not
+-- under clb_floor (VREF + 100: FCOM p.1326); the climb faster after it
+do
+    local function sid(spd, floor)
+        local legs = {{name = "S1", dist = 30, con = {kind = "A", a = 5000}, spd = spd},
+            {name = "S2", dist = 30}, {name = "CRZ", dist = 400}, {name = "RW", dist = 150, con = {kind = "AT", a = 50}}}
+        return PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 1500, cas = 220, phase = "clb", crz = 35000,
+            clb = clb, des = des, crzspd = {mach = 0.85}, legs = legs, ed = 4, clb_last = 2, clb_floor = floor}
+    end
+    local r0, r1, r2 = sid(nil), sid(230, 220), sid(230, 245)
+    T.near(r1.pts[1].cas, 230, 0.5, string.format("S1 230 kt: its predicted speed %.0f", r1.pts[1].cas))
+    T.near(r2.pts[1].cas, 245, 0.5, string.format("under VREF + 100 (245): %.0f", r2.pts[1].cas))
+    T.check(r0.pts[1].cas >= 250, string.format("(without: the schedule's %.0f at %.0f ft)", r0.pts[1].cas, r0.pts[1].h))
+    T.check(r1.pts[1].t > r0.pts[1].t + 5, string.format("S1 %.0f s later at 230 kt", r1.pts[1].t - r0.pts[1].t))
+    T.near(r1.pts[2].cas, r0.pts[2].cas, 0.5, string.format("S2 after it: %.0f kt as without", r1.pts[2].cas))
 end
 
 T.done()

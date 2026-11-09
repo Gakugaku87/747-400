@@ -358,6 +358,33 @@ frames(0.2)
 local json = rt:get("laminar/B747/fms/data")
 T.check(json:find('"crzspd":"' .. data("crzspd")) and json:find('"clbspdmode":"E"'), "the A/P's data: the speeds and their modes")
 
+-- (2026-11-09) the CLB page's SPD TRANS (3L) not displayed above its
+-- altitude (FCOM p.1328; FMSPG p.3.3-4: blanked upon climbing through it),
+-- TRANS ALT kept; below it shown (here on the ground)
+do
+    local ALTDR = "sim/cockpit2/gauges/indicators/altitude_ft_pilot"
+    local tr = data("transpd") .. "/" .. data("spdtransalt")
+    vnav(1)
+    T.check(line(7):find("^" .. tr), "the CLB page's 3L on the ground: " .. tr .. ": " .. line(7))
+    rt:set(ALTDR, tonumber(data("spdtransalt")) + 500)
+    frames(0.2)
+    vnav(1)
+    T.check(not line(7):find(tr, 1, true) and line(7):find(data("transalt") .. "$"),
+        "above " .. data("spdtransalt") .. " ft: SPD TRANS gone, TRANS ALT kept: " .. line(7))
+    T.check(small(6):find("SPD TRANS"), "(its label kept: " .. small(6) .. ")")
+    rt:set(ALTDR, ALT)
+    frames(0.2)
+    vnav(1)
+    T.check(line(7):find("^" .. tr), "below it again: shown: " .. line(7))
+    -- the DES page outside the FMC's descent (here on the ground, below
+    -- 10,000 ft): its speed segment lines as before (FCOM p.1392's below
+    -- the altitudes are the descent's): 3L SPD TRANS, 2L its own speed
+    vnav(3)
+    T.check(line(7):find("^" .. data("destranspd") .. "/" .. data("desspdtransalt")), "the DES page on the ground: 3L SPD TRANS: " .. line(7))
+    T.check(line(5):find("^%." .. data("desspdmach") .. "/" .. data("desspd")) and not small(4):find("SEL SPD"),
+        "and 2L its own speed: " .. line(5) .. "|" .. small(4))
+end
+
 -- every line of the three pages 24 characters
 for _, pg in ipairs({1, 2, 3}) do
     vnav(pg)
