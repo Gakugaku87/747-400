@@ -586,8 +586,10 @@ co_frames(2.5)
 T.equal(get(HP .. "tail_valve_shut", 2), 0, "TAIL 3 open again")
 
 -- the old pitch law (B747.19.xt.afds_control.lua, until 6-3 step 3) with no
--- pitch mode (everything off: the AFDS model, 6-3 step 1a): its capture
--- window latches no ALT HOLD; with V/S inside it, it still does
+-- pitch law (here no AFDS model loaded: pitch_law 0): its capture window
+-- latches no ALT HOLD, with no pitch mode nor with V/S inside it
+-- (2026-11-09's audit: the mode flags are the AFDS model's; before, with
+-- V/S it latched ALT HOLD, against afds_sync)
 rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 0)
 rt:set("laminar/B747/autopilot/altitude_hold_status", 0)
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 10000)
@@ -597,7 +599,12 @@ frames(3)
 T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 0, "no pitch mode: no ALT HOLD latched near the target")
 rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 7)
 frames(3)
-T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 2, "V/S inside the window: ALT HOLD latched (the old capture)")
+T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 0, "V/S inside the window: no ALT HOLD latched by the old law (the AFDS model's)")
+rt:set("laminar/B747/autopilot/altitude_hold_status", 2)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 0)
+frames(3)
+T.equal(get("laminar/B747/autopilot/altitude_hold_status"), 2, "and ALT HOLD set by the AFDS model not cleared by it")
+rt:set("laminar/B747/autopilot/altitude_hold_status", 0)
 
 -- the flaps' angle X-Plane gets (2026-10-30, a correction: notes/AERO.md
 -- §3.10): the FCU's 20 degrees give X-Plane's wings the angle of the FCOM's

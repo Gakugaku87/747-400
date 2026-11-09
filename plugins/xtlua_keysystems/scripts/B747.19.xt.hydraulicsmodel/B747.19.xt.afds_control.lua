@@ -132,9 +132,11 @@ function ap_director_pitch(pitchMode)
     local holdAlt=simDR_autopilot_altitude_ft 
     local refreshHoldAlt=simDR_autopilot_hold_altitude_ft
     local refreshfd=simDR_flight_director_pitch
-    if simDR_autopilot_alt_hold_status==2 and (pitchMode~=5 and pitchMode~=6 and pitchMode~=9) then
-        simDR_autopilot_alt_hold_status=0
-    end
+    -- (2026-11-09's audit) the mode flags are the AFDS model's (afds_sync):
+    -- this old director, run only without a pitch law (the A/P engaged on
+    -- the ground), no longer writes them. Before, it cleared ALT HOLD here
+    -- and latched it in its capture window below, against afds_sync every
+    -- frame
     -- no pitch mode (everything off: the AFDS model, 6-3 step 1a): no
     -- command, and no capture (the window below latched ALT HOLD without a
     -- mode)
@@ -228,13 +230,9 @@ function ap_director_pitch(pitchMode)
             print("ap_director_pitch for ALT")
 
         end 
-        if simDR_autopilot_alt_hold_status~=2 then
-            simDR_autopilot_hold_altitude_ft=simDR_autopilot_altitude_ft
-            simDR_autopilot_alt_hold_status=2
-            simDR_autopilot_vs_status=0
-            simDR_autopilot_flch_status=0
-            holdAlt=simDR_autopilot_hold_altitude_ft
-        end
+        -- (2026-11-09's audit) its own hold altitude, the MCP's, without
+        -- the mode flags (the AFDS model's)
+        holdAlt=simDR_autopilot_altitude_ft
         local fpmBias=get_FPM_bias()
         local altDiff=math.abs(simDR_pressureAlt1-holdAlt+fpmBias*40)
         local targetFPM=(holdAlt-simDR_pressureAlt1)*2 --target alt in 30 secs
