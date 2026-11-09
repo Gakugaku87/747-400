@@ -132,6 +132,13 @@ $sp = Get-AutoSpeeds 146
 Check ($sp.up -eq 226 -and $sp.f1 -eq 206 -and $sp.f5 -eq 186 -and $sp.f10 -eq 166 -and $sp.f20 -eq 156 -and $sp.f30 -eq 146 -and $sp.app -eq 151) 'speeds: FCOM PI.10.3''s maneuver speeds from VREF 30 146'
 Near (Get-AutoLowerNm 37000 128) ((37000 - 128) / 1000 * 3.3 + 40) 1e-9 'lower: FL370 to a field at 128 ft'
 Check ((Get-AutoLowerNm 37000 128) -gt 140 -and (Get-AutoLowerNm 25000 0) -lt (Get-AutoLowerNm 37000 0)) 'lower: some 160 NM from FL370, less from lower'
+# EDDF-OMDB: FL390 to OMDB (62 ft), the FMC's T/D at 186 NM to E/D
+Check (Test-AutoLowerNow 2 200 39000 62 1) 'lower: RESET MCP ALT at 200 NM to E/D, before the distance (168 NM)'
+Check (-not (Test-AutoLowerNow 2 200 39000 62 0)) 'lower: not at 200 NM without RESET MCP ALT'
+Check (Test-AutoLowerNow 2 160 39000 62 0) 'lower: within the distance without RESET MCP ALT'
+Check (-not (Test-AutoLowerNow 1 160 39000 62 1)) 'lower: not in the climb'
+Check (-not (Test-AutoLowerNow 2 0 39000 62 0)) 'lower: no path (E/D 0) without RESET MCP ALT'
+Check (Test-AutoLowerNow 3 100 39000 62 0) 'lower: in the descent'
 Near (Get-AutoQnhInHg 101325) 29.92 1e-9 'QNH: 101,325 Pa'
 Near (Get-AutoQnhInHg (29.5 * 3386.389)) 29.5 1e-9 'QNH: 29.50 in Hg'
 Check ($null -eq (Get-AutoQnhInHg 0) -and $null -eq (Get-AutoQnhInHg $null) -and $null -eq (Get-AutoQnhInHg 120000) -and $null -eq (Get-AutoQnhInHg 80000)) 'QNH: none, 0 and out of range'

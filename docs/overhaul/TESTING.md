@@ -371,7 +371,8 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 上昇と巡航：
     - 出発地の転移高度の上で STD にする。
     - OFP のステップ上昇（`-Steps ofp`、既定）：そのフィックスを通ったら、MCP 高度をその高度にして高度セレクタを押す（FCOM p.649、p.1257）。通過は、2 NM 以内か、最も近づいた所から 0.5 NM 離れたとき。`-Steps fmc` なら、FMC のステップ（シムの Auto step climb）に任せる。
-    - T/D の前に、MCP を標高 + 3,000 ft（100 ft 単位で切り上げ）へ下げる。E/D までの距離が「(巡航高度 − 標高) ÷ 1,000 × 3.3 + 40 NM」を切ったとき（推定）。VNAV が T/D で止まったら（`td_hold`）、高度セレクタを押す。
+    - T/D の前に、MCP を標高 + 3,000 ft（100 ft 単位で切り上げ）へ下げる。FMC の RESET MCP ALT（VNAV で T/D の 2 分前：FCOM p.1433。`laminar/B747/fms/notification[33]`）が出たとき。それより先に、E/D までの距離が「(巡航高度 − 標高) ÷ 1,000 × 3.3 + 40 NM」を切れば、そこで（推定）。VNAV が T/D で止まったら（`td_hold`）、高度セレクタを押す。
+      - 2026-11-09 の EDDF-OMDB は距離だけで、FL390 から 168 NM だった。FMC の T/D は 186 NM で、VNAV が T/D で止まり、セレクタを押して降り始めた（数 NM 遅れ）。
     - 目的地の転移レベルの下で QNH にする（X-Plane の、機体の場所の QNH）。
     - 燃料（FCOM の Climb and Cruise Procedure、p.133〜134。TANK/ENG は p.120 も）：15 秒ごとに EICAS の advisory とタンクの量を見て、乗員の代わりにスイッチを動かす。
       - FUEL TANK/ENG が出て、主タンク 2 ≤ 1 か 3 ≤ 4：オーバーライド・ポンプ 2・3（前後）とクロスフィード 1・4 を切る（tank to engine）。
@@ -394,7 +395,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 他の飛行（シナリオのランナー、ランリスト、`perf.ps1`、別の `auto_flight.ps1`）が動いていれば始めない（`-Force` で始める）。
   - 終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（地上にいるとき）。
   - 出力：`runs/<日時>_autoflight/`（`ofp.json`、`plan.json`、`events.txt`、`status.txt`、`flight/`）。`-DryRun` は計画を書くだけ。
-  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（147 項目）。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（153 項目）。
     - acf の数。作った OFP からの計画（滑走路、重量、ステーション、タンク、フラップ、SID・STAR、転移、ステップ、単位、誤りの検出）。
     - 初期化、操作速度、MCP を下げる距離、QNH、フィックスの通過。
     - 誘導：CIFP の緯度経度、反対の端の名前、方位、作った滑走路の座標系、ダウンウインド・ベース・インターセプトの移り方と方位（左右とも）、旋回（毎秒 2.5°）込みで GADDO からの形（LOC は約 13 NM、滑走路まで約 26 NM）。この PC に CIFP があれば KLAX 24R（真 263.0°）。
