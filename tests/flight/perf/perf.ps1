@@ -526,6 +526,15 @@ function Set-PerfSimOptionsOff {
             }
         } catch { Note warn ('{0}: not read or written ({1})' -f $opt, $_.Exception.Message) }
     }
+    # the Auto fuel management option (the fuel session's, 2026-11-09;
+    # default off) off too, as the earlier runs flew; before it is in, no
+    # such dataref: nothing
+    try {
+        if ([int](Get-XPDataref 'laminar/B747/options/auto_fuel_mgmt') -ne 0) {
+            Set-XPDataref 'laminar/B747/options/auto_fuel_mgmt' 0
+            Note info 'laminar/B747/options/auto_fuel_mgmt was on: off for the measurement (not saved)'
+        }
+    } catch { }
 }
 function Set-PerfMcpMark {
     try { Set-XPDataref 'laminar/B747/autopilot/heading/altitude_dial_ft' $McpAltMark } catch { }

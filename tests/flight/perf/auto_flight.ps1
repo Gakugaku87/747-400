@@ -645,6 +645,16 @@ function Set-AutoFmc($Plan) {
     # (not saved: a write does not save them)
     Set-N 'laminar/B747/options/pause_at_td' 0
     Set-N 'laminar/B747/options/auto_step_climb' $(if ($afArgs.Steps -eq 'fmc') { 1 } else { 0 })
+    # the Auto fuel management option (Plugins > 747-400, the fuel session's,
+    # 2026-11-09; default off): off for the flight, the kit does the fuel
+    # steps itself (Get-AutoFuelSteps); before that option is in, no such
+    # dataref: nothing
+    try {
+        if ([int](Get-XPDataref 'laminar/B747/options/auto_fuel_mgmt') -ne 0) {
+            Set-XPDataref 'laminar/B747/options/auto_fuel_mgmt' 0
+            Note info 'Auto fuel management was on: off for the flight (not saved)'
+        }
+    } catch { }
     # MENU, SIM CONFIG (6R), NEXT: FMC DATALINK (4L: AUTO, ON, OFF) and the
     # SIMBRIEF PILOT ID (5L), as s218_simbrief_fetch
     Send-Cdu @('MENU', 'R6', 'NEXT')

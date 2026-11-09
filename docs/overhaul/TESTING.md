@@ -359,6 +359,7 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - 冷えた機体からのエンジン始動は、次の版で作る。
   - FMC：
     - IDENT。シムのオプション：T/D 前の一時停止を切る。Auto step climb は `-Steps fmc` のときだけ入れる。どちらも保存しない。
+      - Auto fuel management（燃料の自動管理のセッションのオプション、2026-11-09。既定は OFF）も、`laminar/B747/options/auto_fuel_mgmt` を 0 にして切る（保存しない。燃料の操作は道具がする：下の「燃料」）。オプションが入る前はその dataref が無いので、何もしない。`perf.ps1` の計測も同じく切る。
     - FMC DATALINK を ON。RTE REQUEST で、Pilot ID の最新の OFP を取る（notes/ATA-34-61-FMC.md §131）。LOAD。
     - アップリンクに進入方式が無ければ（か、ほかの方式なら）、目的地の滑走路の ILS を選ぶ。遷移は STAR の最後のフィックス（一覧にあれば）。経路を有効にする前に選ぶ（地上で経路が有効だと、DEP ARR キーは DEPARTURES を出す：`B747_cdu_deparr_page`）。
     - ACTIVATE・EXEC。ROUTE DISCONTINUITY は、次の点を箱へ入れて EXEC で閉じる。
