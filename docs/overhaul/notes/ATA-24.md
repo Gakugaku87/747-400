@@ -537,3 +537,17 @@
 - EXT PWR 1・2 のボタン、XPC、母線は前からの電源のモデル（§4）。
 - 試験：`elec_module_test` 110（XP12 の版で、電源車なしの場所・電源車を呼べる場所・動いているとき）。
 - X-Plane（カスタム acf、2026-11-04）：新しい `s239_ground_power` 13/13（成田 34L、エンジン停止：滑走路の上では X-Plane が電源車を呼べないので、L2 を押すと輪止めがかかり、電源車なしの 28 V ですぐ EXT PWR 1・2 AVAIL、L2 は <DISCONNECT GROUND POWER。EXT PWR 1・2 を押すと AC バス 1・4 に電気。L2 で外れる）と `s240_ground_power_gate` 17/17（T1 Gate 11：X-Plane が電源車を呼べるので L2 で呼び、待つ間は <CANCEL GROUND POWER、約 148 秒で X-Plane の電源車が着いて 28 V と EXT PWR AVAIL、外の写真に地上電源のケーブル）、回帰の `s02_elec_panel` 63/63。Log.txt に Lua の誤りなし。
+
+## 13. X-Plane の発電機のコマンドと BATTERY のスイッチ（2026-11-09：本家の古いコードの監査）
+
+- 前の状態（`B747.01.xt.manipulators.lua`、本家のまま）：
+  - X-Plane の発電機のコマンド（`sim/electrical/generator_1_on`〜`_4_off`、`generators_toggle`。ジョイスティックの割り当てやチェックリストの道具が使う）を置き換えていたが、中で置き換えた元のコマンドを呼ぶだけで、GEN CONT のスイッチは動かなかった。電気のモデルはスイッチを読むので、何も起きなかった。
+  - BATTERY のスイッチを押すたびに、電源に関係なく両席のミニマムを消していた（RA を −1、BARO を −101）。
+- 資料：
+  - FCOM p.786（6.10.8）：GEN CONT のスイッチ。p.781（6.10.3）：BATTERY のスイッチ（電池の母線と standby の電源。ミニマムには触れない）。
+  - FCOM p.1036（10.10.74）：ミニマムは EFIS の MINS で選ぶ。MINS RST は点滅する琥珀の RADIO を戻すだけ。
+- 作ったこと：
+  - 発電機のコマンドは GEN CONT のスイッチのコマンド（`laminar/B747/button_switch/elec_gen_ctrl_N`）を押す。ON は OFF のときだけ、OFF は ON のときだけ、toggle は 4 つとも。電池やクロスタイの X-Plane のコマンドと同じ形。
+  - BATTERY はスイッチだけを動かし、ミニマムに触らない（ミニマムの始めの値は表示のモジュールが決める）。
+- 試験：`battery_switch_test`（新、5 件）、`generator_commands_test`（新、6 件）。直す前のコードでは 5 件と 4 件が落ちる。
+- X-Plane（カスタム acf、2026-11-09）：`s275_upstream_remnants_ground` は 21/21。(1) 地上で両席の RA のミニマム（200・210）が、BATTERY を押した後も残る。(2) X-Plane の発電機のコマンドで GEN CONT 1 が OFF に動き、ELEC GEN OFF 1 が出て、ON のコマンドで戻る（前はスイッチが動かなかった）。

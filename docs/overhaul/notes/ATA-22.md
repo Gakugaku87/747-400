@@ -1285,3 +1285,11 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - 試験：`tests/autopilot/afds_pitch_model_test.lua` 173 件（遅れのある飛行機の模型で、IAS の目標が毎秒 0.33 kt 下がる上昇と上がる降下：ずれは前の +4.83・−5.01 kt から 1 kt の内。300 → 280 kt の跳びは行き過ぎ 2 kt の内）。全 234 本、構文。
 - X-Plane（カスタム acf、2026-11-08 08:44〜09:24、X-Plane を起動し直して読み込ませた）：新しい `s270_flch_mach_climb_descent` 16/16（2 回目、270 t）。FL270 から FL350 への M.84 の FLCH の上昇は、30,000 ft から 90 秒の Mach が M.839〜.841（IAS は動く目標に 0.3 kt の内。直す前は性能計測の記録で M.847〜.853）。FL290 への降下（約 4,000 fpm）は M.836〜.839（IAS は目標の 2〜3 kt 遅れ）。FL350 で水平になる所は M.859 まで（直す前は M.864〜.873）。1 回目は 13/16：見始めが入りの揺れと重なった 2 件と、FLCH を押した直後の一瞬の沈み（約 −400 fpm）で IAS/MACH の自動の切り替え（§54：降下で目標の CAS が 310 kt 超え）が窓を一度 IAS にした 1 件（上昇で Mach に戻る）。見る所を直した。回帰：`s108_afds_flch` 23/24（上昇の入りの行き過ぎが 262.5 kt で、幅の 262 kt をわずかに越えた。目標は 250 kt で一定なので今回の直しは効かない：前からの約 +12 kt の件、11-07 は 261.8 kt）、`s07_cruise_ff` 7/7、`s10_overspeed` 22/22。Lua の誤りなし。
 - 推定：`SPD_STEP_KT`、ならしの時定数（速さと同じ 1 秒）。
+
+## 57. X-Plane の V/S と FLCH のコマンド（2026-11-09：本家の古いコードの監査）
+
+- 前の状態：X-Plane の `sim/autopilot/vertical_speed`・`level_change`（ジョイスティックの割り当てなど）を `B747.01.xt.manipulators.lua` が置き換え、本家の古いモードの印（`vvi_status` 2 など）を書いていた。AFDS のモデル（6-3）を通らないので、V/S の灯と窓が出るだけで、モードは変わらず、A/P が切れていれば何も飛ばなかった。
+- 資料：FCOM p.646（4.10.8）：FLCH のスイッチは FLCH SPD を選ぶ。p.648（4.10.10）：V/S のスイッチ。
+- 作ったこと：2 つのコマンドは、MCP の FLCH SPD と V/S のスイッチのコマンド（`laminar/B747/autopilot/button_switch/flch_mode`・`vs_mode`）を押す（押した時に 1 回）。そこから先は AFDS のモデルの論理のまま（engage の条件、A/T のモードなど）。
+- 試験：`xplane_vs_flch_test`（新、6 件）。直す前のコードでは 4 件が落ちる。
+- X-Plane（カスタム acf、2026-11-09）：`s276_xplane_vs_flch_commands` は 6/6。A/P CMD L・ALT から、X-Plane の V/S のコマンドで FMA が V/S（7）に、MCP を 12,000 ft にして FLCH のコマンドで FLCH SPD になった。

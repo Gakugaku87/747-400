@@ -40,7 +40,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
 
 ### 電源（ATA 24）：作り直し済み（1-1）
 
-実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠、UTILITY と GALLEY を母線ごとの色で）と STAT のバッテリー値・CHG/DIS。autoland の母線の分離（ELEC-18、2026-10-30）：APP で multi-channel が arm すると FCC が分離を求め、BCU が発電機の数で構成 A〜E に BTB と DCIR を開く（LH24 p.244–247）。分離の間は ISLN 1〜3 の灯と ELEC BUS ISLN 1〜3 を出さず、カスタム acf の ELEC synoptic は「ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND」だけ（FCOM p.789、p.802）。分離の完了（BUS ISOLATED）が LAND 3 の条件で、分離しなければ NO LAND 3（ATA22 p.192、p.384）。
+実機に合わせた点：バス単位のモデル（AC 1〜4、同期バス、SSB、transfer bus、standby、ground service・ground handling、DC 1〜4、バッテリー母線）、電源の切替（LH24 の表と FCOM）、GCB・BTB の許可、standby 電源、ELEC GEN OFF・ELEC AC BUS・ELEC BUS ISLN、DRIVE 灯と DRIVE DISC、ELCU の load shed（簡略）、バッテリーの表示と BAT DISCH、air mode。P5 の灯、EICAS、表示器と CDU の電源もモデルから。カスタム acf の ELEC synoptic（ISLN・DRIVE の枠、UTILITY と GALLEY を母線ごとの色で）と STAT のバッテリー値・CHG/DIS。autoland の母線の分離（ELEC-18、2026-10-30）：APP で multi-channel が arm すると FCC が分離を求め、BCU が発電機の数で構成 A〜E に BTB と DCIR を開く（LH24 p.244–247）。分離の間は ISLN 1〜3 の灯と ELEC BUS ISLN 1〜3 を出さず、カスタム acf の ELEC synoptic は「ELECTRICAL SYNOPTIC INHIBITED FOR AUTOLAND」だけ（FCOM p.789、p.802）。分離の完了（BUS ISOLATED）が LAND 3 の条件で、分離しなければ NO LAND 3（ATA22 p.192、p.384）。2026-11-09 から（本家の古いコードの監査、notes/ATA-24.md §13）、X-Plane 標準の発電機のコマンド（ジョイスティックの割り当てなど）は GEN CONT のスイッチを動かし（前は何も起きなかった）、BATTERY のスイッチはミニマムを消さない（前は押すたびに、電源に関係なく両席の RA・BARO のミニマムを消した。FCOM p.781、p.786、p.1036）。
 
 残っている違い：
 - 3.5 秒の break power transfer、last source on が無い（ELEC-04）。故障は 2026-11-04 から dataref（`laminar/B747/electrical/fail/*`：発電機・AC の load bus・IDG・TRU・充電器・SSB）で入れられ、保護トリップ（GCR、BTB の auto reclose とラッチ）、ELEC GEN OFF・ELEC AC BUS・ELEC DRIVE・>ELEC SSB OPEN、STATUS の ELEC DRIVE・BAT CHARGER・ELEC TR UNIT が出る（notes/ATA-24.md §11）。Plugins → 747-400 → Failures... の故障の窓から入れられる（notes/FAILURES.md）。load bus の故障で GCB も開くこと、BAT CHARGER の遅れ 10 秒は推定。
@@ -498,6 +498,8 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
     - 題や rr の無いメッセージで、一覧と本文のページが空になっていた。
 
 ### 自動操縦・FD（ATA 22）：作り直し中（6-3 段 1a〜1e・2a・2b・3a〜3c・4a〜4d・5a〜5d・6a〜6c、A/P の姿勢とロールのループ）
+
+- 実機に合わせた点（2026-11-09、本家の古いコードの監査、notes/ATA-22.md §57）：X-Plane 標準の V/S と FLCH のコマンド（ジョイスティックの割り当てなど）は、MCP の V/S と FLCH SPD のボタンを押す形で AFDS のモデルに届く（FCOM p.646、p.648）。前は古いモードの印を直に書き、V/S の灯と窓が出るだけで、モードは変わらなかった。
 
 - 実機に合わせた点（FMC の段 9i、2026-11-07、notes/ATA-34-61-FMC.md §150）：VNAV の engage は arm と FMC DATA VALID の latch で、新しいピッチのモードまで続く（ATA22 p.340–341）。arm は FMC のデータが無くても待つ（前は消えた）。engage の後に FMC のデータが無くなっても VNAV のまま（推定。ATA22 p.341 の図で残るのは表示の latch で、則への ENGAGE には VNAV VALID が要る。その間のピッチは資料に無く、その時の高度の VNAV PTH にした。前は今の高度の ALT HOLD）。VNAV のサブモード（VNAV SPD・PTH・ALT）と則は、FMC の項の「VNAV の engage とサブモード」のモデルから。
 
