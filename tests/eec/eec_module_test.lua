@@ -539,4 +539,142 @@ frames(0.2)
 T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "sfc_corr_off 0: corrected again from the acf's own")
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 
+-- (2026-11-10, ENG-33) the EGT shown from the engine's state (B747.42.
+-- egt_model.lua through B747.42.xt.egt.lua): the P&W's display_EGT from the
+-- EPR shown, the GE's display_GE_EGT from the N1 shown, the RB211's
+-- X-Plane's EGT x 785/960 through egt_thermal_profile as before. X-Plane's
+-- EGT (its spikes) no longer reaches the P&W's and the GE's. Before, the
+-- P&W's was X-Plane's x 654/960: about 250 °C in the cruise
+local G = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.egt_model.lua")
+local XEGT, BURN, XN2 = "sim/flightmodel/engine/ENGN_EGT_c", "sim/flightmodel2/engines/engine_is_burning_fuel", "sim/flightmodel/engine/ENGN_N2_"
+local STARTER = "sim/flightmodel2/engines/starter_is_running"
+local function cruise(tat)
+    local d = (1 - 6.87559e-6 * 35000) ^ 5.25588
+    rt:set("sim/flightmodel/failures/onground_any", 0)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+    rt:set("sim/flightmodel2/position/pressure_altitude", 35000)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * d)
+    rt:set("sim/flightmodel/misc/machno", 0.84)
+    rt:set("sim/cockpit2/temperature/outside_air_temp_degc", tat - 35)
+    rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", tat)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 0.84 * math.sqrt(1.4 * 287 * (tat - 35 + 273.15)) * 1.943844)
+    for i = 0, 3 do
+        rt:set("sim/flightmodel/engine/ENGN_running", i, 1)
+        rt:set("sim/cockpit2/engine/actuators/prop_mode", i, 1)
+        rt:set("sim/cockpit2/engine/indicators/engine_speed_rpm", i, 3500)
+        rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", i, P.thrust(1.38, d, 0.84) * 1000)
+        rt:set(BURN, i, 1)
+        rt:set(XN2, i, 90)
+        rt:set(XEGT, i, 300)
+    end
+end
+rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"PW4056"}}')
+rt:set("laminar/B747/newsimconfig", 1)
+rt:set("laminar/B747/engines/type", 0)
+cruise(-14)
+frames(20)
+T.near(get(ENG .. "display_EPR", 0), 1.38, 0.002, "EGT: the P&W in the cruise at the FCOM's EPR 1.38")
+for i = 0, 3 do
+    T.near(get(ENG .. "display_EGT", i), 462, 3, "EGT: P&W engine " .. (i + 1) .. " in the cruise, EPR 1.38, TAT -14: 462 °C (FCOM p.830; before about 250)")
+end
+rt:set(XEGT, 0, 1951)
+frames(0.5)
+T.near(get(ENG .. "display_EGT", 0), 462, 3, "EGT: X-Plane's EGT spiking to 1951 °C does not reach the P&W's")
+rt:set(XEGT, 0, 300)
+-- engine 1 shut down in the air: cooling with the 60 s lag toward the
+-- windmilling engine's (57 °C at TAT -8, FCOM p.840: 49.5 at TAT -14)
+rt:set(BURN, 0, 0)
+rt:set(XN2, 0, 25)
+frames(60)
+local wm = G.windmill(-14)
+T.near(get(ENG .. "display_EGT", 0), wm + (462 - wm) * math.exp(-1), 5,
+    string.format("EGT: P&W engine 1 shut down in the air, a minute later (toward the windmill's %.1f)", wm))
+T.near(get(ENG .. "display_EGT", 1), 462, 3, "EGT: the others running at 462")
+rt:set(BURN, 0, 1)
+rt:set(XN2, 0, 90)
+-- a new flight: the EGT at its target at once (B747_egt_flight_start: 2 s)
+for i = 0, 3 do rt:set(ENG .. "display_EGT", i, 0) end
+rt:callout("flight_start")
+rt:frame(1 / 30)
+T.near(get(ENG .. "display_EGT", 0), 462, 3, "EGT: a new flight in the cruise: 462 °C from the first frame")
+-- (2026-11-10) the failure window's EGT failures reach the model (engines/
+-- fail/egt_high and fail/hot_start, B747.42.xt.egt.lua): EGT OVERTEMP on
+-- engine 2 in the cruise adds theta x 3 K/s x the share by the N1 shown
+-- (its corrected N1 near the FCOM figure's, the share near 1), about 155 °C
+-- in a minute (less the 2 s lag), the others as they were; cleared, back.
+-- HOT START on engine 3 lit below the idle's N2 (30 %): its target, 557 °C
+-- at TAT -14
+frames(3)
+rt:set(ENG .. "fail/egt_high", 1, 1)
+frames(60)
+local egt2 = get(ENG .. "display_EGT", 1)
+local th14 = G.theta(-14)
+local share2 = G.excess_share("PW", get(ENG .. "display_N1", 1) / math.sqrt(th14))
+local want2 = 462 + th14 * G.EGT_HIGH_RATE * (60 - G.TAU_UP) * share2
+T.check(share2 > 0.8 and math.abs(egt2 - want2) < 8,
+    string.format("EGT OVERTEMP on engine 2, a minute: %.1f °C (about %.1f, the share %.3f at the N1 shown %.1f)",
+        egt2, want2, share2, get(ENG .. "display_N1", 1)))
+T.near(get(ENG .. "display_EGT", 0), 462, 3, "EGT OVERTEMP on engine 2: engine 1 at 462")
+rt:set(ENG .. "fail/egt_high", 1, 0)
+frames(150)
+T.near(get(ENG .. "display_EGT", 1), 462, 3, "EGT OVERTEMP cleared: engine 2 back at 462 in 150 s")
+rt:set(ENG .. "fail/hot_start", 2, 1)
+rt:set(XN2, 2, 30)
+frames(15)
+T.near(get(ENG .. "display_EGT", 2), G.hot_target("PW", -14), 3,
+    string.format("HOT START on engine 3 starting (N2 30 %%): its target %.1f °C", G.hot_target("PW", -14)))
+rt:set(ENG .. "fail/hot_start", 2, 0)
+rt:set(XN2, 2, 90)
+frames(20)
+T.near(get(ENG .. "display_EGT", 2), 462, 3, "HOT START: engine 3 running again, 462")
+-- GE in the same cruise (the CRZ reference: the N1 from the thrust): its
+-- own dataref, from the N1 shown
+rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2B1F"}}')
+rt:set("laminar/B747/newsimconfig", 1)
+rt:set("laminar/B747/engines/type", 1)
+rt:set("laminar/B747/fms/thrlim/code", 30)
+frames(30)
+local n1 = get(ENG .. "display_N1", 0)
+T.check(n1 > 60 and n1 < 110, string.format("EGT: the GE's N1 shown in the cruise %.1f", n1))
+T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", n1, -14), 2,
+    string.format("EGT: the GE's display_GE_EGT the model's at the N1 shown (%.1f)", n1))
+rt:set(XEGT, 0, 1951)
+frames(0.5)
+T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", get(ENG .. "display_N1", 0), -14), 3, "EGT: X-Plane's EGT spike does not reach the GE's")
+rt:set("laminar/B747/fms/thrlim/code", 0)
+rt:set(ENG .. "ref_thr_limit_mode", "")
+-- RB211: X-Plane's EGT x 785/960 as before (egt_thermal_profile)
+rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"RB211-524G"}}')
+rt:set("laminar/B747/newsimconfig", 1)
+rt:set("laminar/B747/engines/type", 2)
+for i = 0, 3 do
+    rt:set(XEGT, i, 600)
+    rt:set("sim/flightmodel/engine/ENGN_N1_", i, 90)
+end
+frames(20)
+T.near(get(ENG .. "display_EGT", 0), 600 * 785 / 960, 1, "EGT: the RB211's X-Plane's EGT x 785/960 as before")
+-- (ENG-19) a stopped engine's N2 on the ground held at 0 for every type
+-- (B747_eec_hold_stopped_n2, every frame; before inside egt_thermal_profile)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+for _, ty in ipairs({0, 1, 2}) do
+    rt:set("laminar/B747/engines/type", ty)
+    rt:set(BURN, 1, 0)
+    rt:set(STARTER, 1, 0)
+    rt:set(XN2, 1, 15)
+    rt:frame(1 / 30)
+    T.equal(get(XN2, 1), 0, "ENG-19: type " .. ty .. ", engine 2 stopped on the ground: N2 held at 0")
+    rt:set(STARTER, 1, 1)
+    rt:set(XN2, 1, 15)
+    rt:frame(1 / 30)
+    T.equal(get(XN2, 1), 15, "ENG-19: type " .. ty .. ", the starter turning: N2 left")
+    rt:set(STARTER, 1, 0)
+end
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set(XN2, 1, 15)
+rt:frame(1 / 30)
+T.equal(get(XN2, 1), 15, "ENG-19: in the air it windmills: N2 left")
+rt:set("laminar/B747/engines/type", 0)
+
 T.done()

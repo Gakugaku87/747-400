@@ -397,22 +397,11 @@ function engine_idle_control_PW(altitude_ft_in)
       return B747_epr_model.epr(thrust_N_in / 1000, simDR_epr_ambient_pa / 101325, simDR_epr_mach)
   end
 
-  function EGT_display_PW(engine_in)
-    local EGT_display = 0.0
-  
-    if simDR_engn_EGT_c[engine_in] <= simDR_temperature then
-      EGT_display = simDR_temperature
-    else
-      EGT_display = B747_rescale(0.0, 0.0, 960, 654, simDR_engn_EGT_c[engine_in])
-    end
-  
-    if B747DR_log_level >= 1 then
-      print("EGT = ", EGT_display)
-    end
-  
-    return EGT_display
-  end
-  
+  --(2026-11-10, ENG-33) the EGT shown is the EGT model's (B747.42.egt_model.lua,
+  --B747_egt in B747.42.xt.egt.lua) from the engine's state and the EPR shown.
+  --Before, EGT_display_PW: X-Plane's EGT x 654/960 (about 250 C in the
+  --cruise: X-Plane's tops out near the acf's 460 C), then egt_thermal_profile
+
   local orig_thrust_n = 0.0
   function PW(altitude_ft_in)
     local altitude = 0.0  --round_thrustcalc(simDR_altitude, "ALT")
@@ -428,7 +417,6 @@ function engine_idle_control_PW(altitude_ft_in)
     local EPR_display = {}
     local N1_display = {}
     local N2_display = {}
-    local EGT_display = {}
     local target_weight = 0.0
     local target_alt = 0.0
     local EPR_target_bug = {}
@@ -654,9 +642,9 @@ function engine_idle_control_PW(altitude_ft_in)
       N2_display[i] = string.format("%3.0f", math.min(n2, 111.5))
       B747DR_display_N2[i] = math.max(N2_display[i], 0.0)
 
-      EGT_display[i] = EGT_display_PW(i)
-      B747DR_display_EGT[i] = egt_thermal_profile(EGT_display[i],i,B747DR_display_EGT[i])--math.max(EGT_display[i], 0.0)
-  
+      --(2026-11-10) the EGT model, from the EPR just shown (B747.42.xt.egt.lua)
+      B747DR_display_EGT[i] = B747_egt(i, "PW")
+
       B747DR_throttle_resolver_angle[i] = throttle_resolver_angle_PW(i)
 
     end

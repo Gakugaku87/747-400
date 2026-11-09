@@ -80,3 +80,8 @@ B747DR_eec_fail_fault = deferred_dataref("laminar/B747/engines/fail/eec_fault", 
 B747DR_eec_fail_idle_min = deferred_dataref("laminar/B747/engines/fail/idle_min", "array[4]")
 B747DR_eec_fail_idle_approach = deferred_dataref("laminar/B747/engines/fail/idle_approach", "array[4]")
 B747DR_eec_altn_light = deferred_dataref("laminar/B747/engines/eec/altn_light", "array[4]")
+-- (2026-11-10) a hot start (the start's EGT far over its normal peak) and an
+-- EGT rising while the engine runs (EGT OVERTEMP): the EGT model's inputs
+-- (B747.42.egt_model.lua, P&W and GE)
+B747DR_eec_fail_hot_start = deferred_dataref("laminar/B747/engines/fail/hot_start", "array[4]")
+B747DR_eec_fail_egt_high = deferred_dataref("laminar/B747/engines/fail/egt_high", "array[4]")

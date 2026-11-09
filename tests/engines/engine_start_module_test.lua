@@ -119,6 +119,24 @@ rt:set("laminar/B747/button_switch/position", 44, 1)
 seconds(1)
 T.equal(rt:get("sim/cockpit2/engine/actuators/igniter_on", 0), 1, "CON ON: X-Plane's igniter 1 on")
 T.equal(rt:get("laminar/B747/CAS/memo_status", 8), 1, "CON ON: CON IGNITION ON memo")
+-- (2026-11-10) the failure window's igniter failures (engines/fail/igniter:
+-- 0-3 igniter 1 of engines 1-4, 4-7 igniter 2) reach the model: AUTO
+-- IGNITION BOTH with igniter 1 of engine 1 failed, igniter 2 still fires;
+-- both failed, X-Plane's igniter off, no ENG IGNITION (the plugs are not
+-- watched), the memo stays
+local IGN_FAIL = "laminar/B747/engines/fail/igniter"
+rt:set(IGN_FAIL, 0, 1)
+seconds(0.2)
+T.equal(rt:get("sim/cockpit2/engine/actuators/igniter_on", 0), 1, "CON ON, engine 1's igniter 1 failed: igniter 2 fires")
+rt:set(IGN_FAIL, 4, 1)
+seconds(0.2)
+T.equal(rt:get("sim/cockpit2/engine/actuators/igniter_on", 0), 0, "CON ON, engine 1's igniters 1 and 2 failed: X-Plane's igniter off")
+T.equal(rt:get("laminar/B747/CAS/advisory_status", 109), 0, "CON ON, both failed: no ENG IGNITION")
+T.equal(rt:get("laminar/B747/CAS/memo_status", 8), 1, "CON ON, both failed: CON IGNITION ON memo stays")
+rt:set(IGN_FAIL, 0, 0)
+seconds(0.2)
+T.equal(rt:get("sim/cockpit2/engine/actuators/igniter_on", 0), 1, "CON ON, igniter 1 repaired: X-Plane's igniter on")
+rt:set(IGN_FAIL, 4, 0)
 rt:set("laminar/B747/button_switch/position", 44, 0)
 seconds(1)
 T.equal(rt:get("sim/cockpit2/engine/actuators/igniter_on", 0), 0, "CON OFF: igniter off")
@@ -130,5 +148,44 @@ rt:set(BURNING, 0, 1)
 seconds(0.2)
 T.equal(rt:get("laminar/B747/CAS/caution_status", 24), 1, "air, CUTOFF 2: >ENG 2 SHUTDOWN")
 T.equal(rt:get("laminar/B747/CAS/warning_status", 28), 1, "air, N2 40 % with RUN: ENG 1 FAIL (caution level)")
+
+-- (2026-11-10) the GE's start reads the GE's EGT (display_GE_EGT, the EEC's
+-- EGT model; before, display_EGT for every type): a GE autostart of engine 3
+-- on the ground past the light-off; the P&W's dataref hot does nothing, the
+-- GE's at its hot start (725 °C: the start limit 750 less the margin) cuts
+-- the fuel to put it back (FCOM p.880-881)
+local MIX = "sim/cockpit2/engine/actuators/mixture_ratio"
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set("laminar/B747/engines/type", 1)
+rt:set(N2, 2, 0)
+rt:set(BURNING, 2, 0)
+rt:set("laminar/B747/toggle_switch/position", 18, 1)            -- START 3
+rt:set("laminar/B747/fuel/fuel_control/toggle_sw_pos", 2, 1)    -- RUN 3
+-- the stand-ins for engine 3: N2 turned up, lit with fuel and ignition
+local function seconds3(s)
+    for _ = 1, math.floor(s * 30 + 0.5) do
+        rt:frame(1 / 30)
+        local n2 = rt:get(N2, 2)
+        local fuel = rt:get(MIX, 2) > 0.5
+        local ign = rt:get("sim/cockpit2/engine/actuators/igniter_on", 2) == 1
+        if fuel and ign and n2 > 10 then rt:set(BURNING, 2, 1) end
+        if not fuel then rt:set(BURNING, 2, 0) end
+        if rt:get(BURNING, 2) == 1 then n2 = n2 + 1.0 / 30 else n2 = math.min(30, n2 + 0.85 / 30) end
+        rt:set(N2, 2, n2)
+    end
+end
+rt:set("laminar/B747/engines/display_EGT", 2, 0)
+rt:set("laminar/B747/engines/display_GE_EGT", 2, 0)
+seconds3(22)                                          -- past 15 % N2 (GE: engines/type 1) and lit
+T.equal(rt:get(BURNING, 2), 1, "GE start: engine 3 lit")
+T.equal(rt:get(MIX, 2), 1, "GE start: fuel on")
+rt:set("laminar/B747/engines/display_EGT", 2, 730)
+rt:set("laminar/B747/engines/display_GE_EGT", 2, 400)
+seconds3(1)
+T.equal(rt:get(MIX, 2), 1, "GE start: display_EGT (the P&W's) at 730 °C: no hot start")
+rt:set("laminar/B747/engines/display_GE_EGT", 2, 730)
+seconds3(0.2)
+T.equal(rt:get(MIX, 2), 0, "GE start: display_GE_EGT at 730 °C: hot start, the fuel cut")
+rt:set("laminar/B747/engines/type", 0)
 
 T.done()

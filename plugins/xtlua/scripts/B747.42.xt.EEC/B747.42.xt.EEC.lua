@@ -546,6 +546,9 @@ end
 ** 				              EEC FUNCTIONS              		    	           **
 *************************************************************************************
 ]]
+--the RB211's EGT (B747.42.xt.EEC.RR.lua): X-Plane's EGT scaled, filtered a
+--frame at a time (no sources). P&W and GE: the EGT model since 2026-11-10
+--(B747.42.egt_model.lua, B747.42.xt.egt.lua)
 function egt_thermal_profile(tempIn,engineid,current_value)
 	--B747DR_display_EGT[i]
 
@@ -563,16 +566,19 @@ function egt_thermal_profile(tempIn,engineid,current_value)
 		div=1050
 	end
 
-	--freeze a stopped engine on the ground; in the air it windmills (ENG-19,
-	--FCOM p.879 and p.881: windmill starts and the N2 shown for them)
-	if simDR_onGround == 1 and simDR_N2[engineid]<22 and simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
-	 simDR_N2[engineid]=0
-	end
-
 	local rate = (thermalIn-current_value) /div
 	local tempOut=current_value+rate
 	--print(engineid.."="..tempIn.." to "..tempOut.." at ".. rate)
 	return math.max(simDR_temperature,tempOut)--current_value+rate
+end
+--freeze a stopped engine on the ground; in the air it windmills (ENG-19,
+--FCOM p.879 and p.881: windmill starts and the N2 shown for them). Every
+--frame for every engine type (set_engines); before 2026-11-10 inside
+--egt_thermal_profile, which the P&W and GE no longer call
+function B747_eec_hold_stopped_n2(engineid)
+	if simDR_onGround == 1 and simDR_N2[engineid]<22 and simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
+	 simDR_N2[engineid]=0
+	end
 end
 function clear_thrust_targets()
 	-- Clear Thrust Target Bugs
@@ -1106,6 +1112,8 @@ dofile("B747.42.xt.EEC.RR.lua")
 dofile("B747.42.xt.eec_thrust.lua")
 -- (2026-11-07) the fuel per thrust above FL370 (補正, notes/AERO.md §3.18)
 dofile("B747.42.xt.sfc_corr.lua")
+-- (2026-11-10) the P&W and GE EGT from the engine's state (ENG-33)
+dofile("B747.42.xt.egt.lua")
 
 function set_engines()
 	--Engine Thrust Parameters based on selected engine
@@ -1117,6 +1125,10 @@ function set_engines()
 		RR(simDR_altitude)
 	else  --Assume PW engine if all else fails
 		PW(simDR_altitude)
+	end
+	--(ENG-19) a stopped engine's N2 on the ground, after the displays read it
+	for i = 0, 3 do
+		B747_eec_hold_stopped_n2(i)
 	end
 end
 
@@ -1155,6 +1167,7 @@ function flight_start()
 	B747DR_pidepr_eccD = 0.01
 	B747DR_pidepr_eccP = 0.001
 	B747_eec_flight_start()
+	B747_egt_flight_start()  --the EGT its target at once for 2 s (B747.42.xt.egt.lua)
 end
 function after_physics()
 	-- (2026-11-05 review) no full garbage collection every frame: it marked

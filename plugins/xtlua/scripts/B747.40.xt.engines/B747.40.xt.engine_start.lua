@@ -1,8 +1,10 @@
 -- The engine start model (B747.40.engine_start_model.lua) in the aircraft
 -- (2-3, step 1): reads the START, FUEL CONTROL, fire, AUTOSTART, CON and
 -- ignition selector switches, the buses, air/ground, the flaps, the
--- nacelle anti-ice, X-Plane's N2, EGT and light-off, the start valves (bleed
--- model) and the spar valves (fuel model); runs the model every frame and
+-- nacelle anti-ice, X-Plane's N2 and light-off, the EGT the EICAS shows (the
+-- EEC's: display_EGT, the GE's display_GE_EGT), the start valves (bleed
+-- model), the spar valves (fuel model) and the failure window's igniter
+-- failures (2026-11-10); runs the model every frame and
 -- writes the start valve commands (read by the bleed glue), X-Plane's
 -- starters, igniters, auto-ignite and mixture, the engine fuel valves (read
 -- by the fuel glue), releases the START switches and sets the start EICAS
@@ -26,6 +28,12 @@ B747DR_engines_spar_valve3_pos  = find_dataref("laminar/B747/fuel/spar_vlv3_pos"
 B747DR_engines_spar_valve4_pos  = find_dataref("laminar/B747/fuel/spar_vlv4_pos")
 B747DR_engine_start_valve_cmd   = find_dataref("laminar/B747/engines/start_valve_cmd")
 B747DR_engine_inop              = find_dataref("laminar/B747/engines/inop")
+-- (2026-11-10) the GE's EGT is its own dataref (the EEC's B747_egt); the
+-- P&W's (and RR's) is display_EGT (B747.40.xt.engines.lua's binding)
+B747DR_engines_start_GE_EGT     = find_dataref("laminar/B747/engines/display_GE_EGT")
+-- (2026-11-10) the failure window's igniter failures (1 failed; created in
+-- the engines' init script): 0-3 igniter 1 of engines 1-4, 4-7 igniter 2
+B747DR_engines_start_ign_fail   = find_dataref("laminar/B747/engines/fail/igniter")
 
 local START_SWITCH = 16                     -- toggle_switch/position[16-19]
 local CON_SWITCH, AUTOSTART_SWITCH = 44, 45 -- button_switch/position
@@ -90,12 +98,17 @@ local function read_inputs(inp)
         inp.fuel_control[n] = B747DR_fuel_control_toggle_switch_pos[n - 1] > 0.95
         inp.fire_out[n] = fire_arm[n] > 0.5
         inp.n2[n] = simDR_engine_N2_pct[n - 1]
-        inp.egt[n] = B747DR_display_EGT[n - 1]
+        -- the EGT the EICAS shows (before 2026-11-10 display_EGT for all
+        -- types: the GE's hot start never saw its own EGT)
+        if inp.type == "GE" then inp.egt[n] = B747DR_engines_start_GE_EGT[n - 1]
+        else inp.egt[n] = B747DR_display_EGT[n - 1] end
         inp.burning[n] = simDR_engine_burning[n - 1] == 1
         inp.start_valve[n] = start_valve[n] > 0.5
         inp.spar_valve[n] = spar[n]
         -- the NACELLE ANTI-ICE switch selects the igniters (FCOM p.625, p.631)
         inp.nai[n] = B747DR_button_switch_position[NAI_SWITCH + n - 1] > 0.95
+        inp.ign_fail1[n] = B747DR_engines_start_ign_fail[n - 1] > 0.5
+        inp.ign_fail2[n] = B747DR_engines_start_ign_fail[n + 3] > 0.5
     end
 end
 
