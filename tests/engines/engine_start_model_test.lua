@@ -304,4 +304,163 @@ do
     T.check(not out.msg.autostart_off, "405 (no autostart): no >AUTOSTART OFF")
 end
 
+-- ======== (2026-11-10) the failure window's igniter failures
+-- (laminar/B747/engines/fail/igniter, inp.ign_fail1/2): a failed igniter
+-- does not fire, so X-Plane's ignition (o.ignition) comes only from a
+-- working one; igniter1/igniter2 stay the selected and powered ones. With
+-- one igniter selected for a ground start (AUTO IGNITION 1 or 2, GE SINGLE)
+-- and that one failed, no light-off: the autostart's no EGT rise, 30 s of
+-- motoring and the retry with both igniters (FCOM p.880-881 (7.20.10-11),
+-- p.863 (7.13.5))
+
+-- one start of engine 1 (START and RUN together), to its end or the abort;
+-- the try it lit on, and for each try the igniters selected while it waited
+-- for the light-off ("1", "2" or "12")
+local function autostart_once(s, inp, e, seconds)
+    inp.start_sw[1], inp.fuel_control[1] = true, true
+    local out, lit_attempt
+    local tries = {}
+    for _ = 1, math.floor(seconds / DT + 0.5) do
+        out = run(s, inp, e, DT)
+        local o = out.eng[1]
+        if e.burning and not lit_attempt then lit_attempt = o.attempt end
+        if o.phase == S.LIGHT then
+            tries[o.attempt] = (o.igniter1 and "1" or "") .. (o.igniter2 and "2" or "")
+        end
+        if o.phase == S.ABORTED or (o.phase == S.OFF and e.burning) then break end
+    end
+    return out, lit_attempt, tries
+end
+-- CUTOFF and spooled down
+local function shut_down(s, inp, e)
+    inp.fuel_control[1] = false
+    run(s, inp, e, 80)
+end
+
+-- 109, AUTO IGNITION 1 with the autostart: the EEC alternates the igniters
+-- every ground start (FCOM p.863), igniter 1 on the first (2026-11-10:
+-- before, igniter 2 on the first, e.starts counted with the start under way)
+do
+    local s, inp = setup("PW")
+    inp.auto_sel = S.AUTO_1
+    inp.ign_fail1[1] = true
+    local e = engine()
+    inp.start_sw[1], inp.fuel_control[1] = true, true
+    local out = run(s, inp, e, S.FUEL_ON_N2.PW / 0.85 + 1)
+    local o = out.eng[1]
+    T.check(o.phase == S.LIGHT and o.fuel and o.igniter1 and not o.igniter2 and not o.ignition and not e.burning,
+        "109 SINGLE, igniter 1 failed: the first ground start selects igniter 1, fuel on, no spark, no light-off")
+    out = run(s, inp, e, S.LIGHT_OFF_S.PW[1])
+    o = out.eng[1]
+    T.check(o.phase == S.DRY and not o.fuel and not o.ignition and o.starter and not e.burning,
+        "109 SINGLE, igniter 1 failed: no light-off in 20 s, fuel and ignition off, motoring")
+    out = run(s, inp, e, S.DRY_MOTOR_S - 1)
+    T.check(out.eng[1].phase == S.DRY and not e.burning, "109 SINGLE, igniter 1 failed: still motoring after 29 s")
+    out = run(s, inp, e, 2)
+    o = out.eng[1]
+    T.check(o.attempt == 2 and o.igniter1 and o.igniter2 and o.ignition and e.burning,
+        "109 SINGLE, igniter 1 failed: after 30 s of motoring the retry with both igniters lights (igniter 2)")
+    out = run(s, inp, e, 80)
+    T.check(out.eng[1].phase == S.OFF and e.burning and not out.msg.autostart[1],
+        "109 SINGLE, igniter 1 failed: the start completes at idle, no ENG AUTOSTART")
+    shut_down(s, inp, e)
+    local lit
+    out, lit = autostart_once(s, inp, e, 150)
+    T.check(out.eng[1].phase == S.OFF and e.burning and lit == 1,
+        "109 SINGLE, igniter 1 failed: the second ground start (igniter 2) lights on the first try")
+end
+-- 109, AUTO IGNITION 1, igniter 2 failed: the first ground start (igniter 1)
+-- lights on the first try
+do
+    local s, inp = setup("PW")
+    inp.auto_sel = S.AUTO_1
+    inp.ign_fail2[1] = true
+    local e = engine()
+    local out, lit = autostart_once(s, inp, e, 200)
+    T.check(out.eng[1].phase == S.OFF and e.burning and lit == 1 and not out.msg.autostart[1],
+        "109 SINGLE, igniter 2 failed: the first ground start (igniter 1) lights on the first try, completes")
+end
+-- both igniters of engine 1 failed: no light-off on either try; 109 aborts
+-- after 2 without motoring, GE after 3 with 30 s of motoring; ENG 1
+-- AUTOSTART (caution, FCOM p.899)
+for _, kind in ipairs({"PW", "GE"}) do
+    local s, inp = setup(kind)
+    inp.auto_sel = S.AUTO_1
+    inp.ign_fail1[1], inp.ign_fail2[1] = true, true
+    local e = engine()
+    local out, lit, tries = autostart_once(s, inp, e, 400)
+    local o = out.eng[1]
+    T.check(o.phase == S.ABORTED and o.attempt == S.ATTEMPTS[kind] and not lit and not e.burning,
+        kind .. " both igniters failed: aborted after " .. S.ATTEMPTS[kind] .. " tries, never lit")
+    local first = "1"
+    T.check(#tries == S.ATTEMPTS[kind] and tries[1] == first and tries[2] == "12" and (tries[3] or "12") == "12",
+        kind .. " both igniters failed: the first try on igniter " .. first .. ", the retries on both (" .. table.concat(tries, ", ") .. ")")
+    T.check(out.msg.autostart[1], kind .. " both igniters failed: ENG 1 AUTOSTART")
+    T.check(not o.fuel and not o.start_cmd and not inp.start_sw[1], kind .. " both igniters failed: fuel and start air off, START released")
+    local n2 = e.n2
+    run(s, inp, e, 5)
+    T.check(e.n2 < n2 - 3, string.format("%s both igniters failed: no motoring after the abort (N2 %.1f to %.1f)", kind, n2, e.n2))
+end
+-- GE SINGLE (AUTO IGNITION 1 or 2): the EEC alternates after every second
+-- ground start (FCOM p.863), igniter 1 on the first; igniter 1 failed
+do
+    local s, inp = setup("GE")
+    inp.auto_sel = S.AUTO_1
+    inp.ign_fail1[1] = true
+    local e = engine()
+    inp.start_sw[1], inp.fuel_control[1] = true, true
+    local out = run(s, inp, e, S.FUEL_ON_N2.GE / 0.85 + 1)
+    local o = out.eng[1]
+    T.check(o.phase == S.LIGHT and o.igniter1 and not o.igniter2 and not o.ignition and not e.burning,
+        "GE SINGLE, igniter 1 failed: the first ground start on igniter 1, no light-off")
+    out = run(s, inp, e, S.LIGHT_OFF_S.GE[1] + S.DRY_MOTOR_S + 1)
+    o = out.eng[1]
+    T.check(o.attempt == 2 and o.igniter1 and o.igniter2 and e.burning,
+        "GE SINGLE, igniter 1 failed: 20 s, 30 s of motoring, the retry with both igniters lights")
+    out = run(s, inp, e, 80)
+    T.check(out.eng[1].phase == S.OFF and e.burning and not out.msg.autostart[1], "GE SINGLE, igniter 1 failed: the start completes")
+end
+-- manual start (AUTOSTART OFF), AUTO IGNITION 1, igniter 1 failed: RUN gives
+-- fuel and selects igniter 1, nothing lights, the EGT stays at the outside
+-- air's (the crew's abort: no EGT rise in 20 s, FCOM p.185 (SP.7.3)); the
+-- selector to 2 lights it
+do
+    local s, inp = setup("PW")
+    inp.autostart = false
+    inp.auto_sel = S.AUTO_1
+    inp.ign_fail1[1] = true
+    local e = engine()
+    inp.start_sw[1] = true
+    run(s, inp, e, 40)                                -- the maximum motoring, 30 %
+    inp.fuel_control[1] = true
+    local out = run(s, inp, e, 30)
+    local o = out.eng[1]
+    T.check(o.fuel and o.igniter1 and not o.igniter2 and not o.ignition and not e.burning,
+        "manual, igniter 1 failed and selected: fuel on, no spark, no light-off in 30 s")
+    T.near(e.egt, 15, 0.01, "manual, igniter 1 failed: the EGT stays at the outside air's")
+    T.check(not out.msg.autostart[1] and o.phase == S.LIGHT, "manual, igniter 1 failed: no message, the model waits (the crew's abort)")
+    inp.auto_sel = S.AUTO_2
+    out = run(s, inp, e, 1)
+    T.check(out.eng[1].igniter2 and out.eng[1].ignition and e.burning, "manual, igniter 1 failed: AUTO IGNITION 2 lights it")
+end
+-- ENG IGNITION watches the selection and the power, not the plugs: CON ON
+-- with both igniters failed, no ignition reaches X-Plane, and no message
+-- (FCOM p.900; estimate); the CON IGNITION ON memo stays
+do
+    local s, inp = setup("PW")
+    inp.fuel_control[1] = true
+    local e = engine()
+    e.n2, e.burning = 68, true
+    inp.n2[1], inp.burning[1] = 68, true
+    inp.con = true
+    inp.ign_fail1[1], inp.ign_fail2[1] = true, true
+    local out = run(s, inp, e, 1)
+    local o = out.eng[1]
+    T.check(o.igniter1 and o.igniter2 and not o.ignition, "CON ON, both igniters failed: selected and powered, none firing")
+    T.check(not out.msg.eng_ignition and out.msg.con_memo, "CON ON, both igniters failed: no ENG IGNITION, the CON IGNITION ON memo")
+    inp.ign_fail2[1] = false
+    out = run(s, inp, e, 1)
+    T.check(out.eng[1].ignition, "CON ON, igniter 1 failed: igniter 2 fires")
+end
+
 T.done()

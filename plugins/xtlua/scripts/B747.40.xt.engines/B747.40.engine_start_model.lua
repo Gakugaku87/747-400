@@ -74,6 +74,9 @@ function M.inputs()
         ac1 = false, ac3 = false, ac_stby = false,   -- igniter power (ATA70_80 p.252-265)
         main_bat = false,                   -- engine fuel valve (ATA70_80 p.235)
         apu_bat = false,                    -- START switch hold-in solenoid (ATA70_80 p.554)
+        -- (2026-11-10) the failure window's igniter failures
+        -- (laminar/B747/engines/fail/igniter): igniter 1 and igniter 2 failed
+        ign_fail1 = four(false), ign_fail2 = four(false),
     }
 end
 
@@ -110,12 +113,16 @@ end
 -- conditions (FCOM p.863-864, p.882-883)
 local function pick(inp, e, both)
     if both or inp.auto_sel == M.AUTO_BOTH then return true, true end
+    -- (2026-11-10) e.starts already counts the ground start under way: the
+    -- first one igniter 1, the GE's two by two (before: the first on
+    -- igniter 2, the GE's 1, 2, 2, 1, 1); before any start igniter 1
+    local k = math.max(e.starts - 1, 0)
     if inp.type == "GE" then                   -- SINGLE: alternate every two ground starts
-        local first = math.floor(e.starts / 2) % 2 == 0
+        local first = math.floor(k / 2) % 2 == 0
         return first, not first
     end
     if inp.autostart_installed and inp.autostart then   -- 109: alternate the ground starts
-        local first = e.starts % 2 == 0
+        local first = k % 2 == 0
         return first, not first
     end
     return inp.auto_sel == M.AUTO_1, inp.auto_sel == M.AUTO_2
@@ -274,10 +281,15 @@ function M.update(s, inp, dt)
         end
         o.igniter1 = run and w1 and p1
         o.igniter2 = run and w2 and p2
-        o.ignition = o.igniter1 or o.igniter2
-        -- ENG IGNITION: CON (PW also TE flaps out of UP) and no igniter firing (FCOM p.900)
+        -- (2026-11-10) the failure window's failed igniter does not fire:
+        -- X-Plane's ignition (o.ignition) only from a working one. igniter1
+        -- and igniter2 stay the selected and powered ones
+        o.ignition = (o.igniter1 and not inp.ign_fail1[n]) or (o.igniter2 and not inp.ign_fail2[n])
+        -- ENG IGNITION: CON (PW also TE flaps out of UP) and no igniter firing (FCOM p.900),
+        -- from the selection and the power: a failed plug itself is not seen
+        -- (estimate: FCOM p.900 does not say what is monitored)
         local should = inp.con or (not ge and inp.flaps_out)
-        if run and should and not o.ignition then any_ign_fault = true end
+        if run and should and not (o.igniter1 or o.igniter2) then any_ign_fault = true end
 
         -- ======== messages
         local sv_open = inp.start_valve[n]

@@ -1,0 +1,73 @@
+{
+  "name": "s279_egt_cruise_overtemp",
+  "description": "EGT の作り直し（2026-11-10、ENG-33）の巡航と、故障の窓の EGT OVERTEMP の X-Plane での確認、空中。s263 と同じ初期化：238 t・FL370・M.85・ISA の静穏な大気・東向き（機体を読み直す、カスタム acf）。ALT HOLD・HDG SEL・A/T の SPD で 4 分落ち着かせて（A/T が EPR を約 1.15 まで下げきるまで）、巡航の EGT（P&W：約 350 °C、EPR 約 1.15・N1 約 84 %・TAT −25 °C、推定。FCOM p.830 は EPR 1.38・TAT −14 °C で 462 °C。前は約 250 °C）。エンジン 1 に EGT OVERTEMP：EGT が上がり続け、約 2 分で 629 °C を超えて琥珀、654 °C で赤と赤い枠（FCOM p.837–838。QRH 7.6–7.7 Engine Limit or Surge or Stall の状況）。上乗せの割合は補正した N1 で決める（1 回目の 2026-11-10 は EPR で決めていて、この巡航では約 470 °C 止まりだった）。故障を戻すと 629 °C の下に戻り、2 分でエンジン 2 の ±20 °C。記録を取る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 11277.6, "heading_true": 90, "speed_in_meters_per_second": 250.81 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 3750, 3750, 3750, 3750, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "wait", "note": "FMC の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "set", "note": "MCP 高度 FL370", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 37000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 37000 },
+    { "do": "set", "note": "MCP を Mach に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 1 },
+    { "do": "set", "note": "窓 M.85", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 85 },
+    { "do": "set", "note": "MCP 方位 098（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 98 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "FMA の A/T が SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10, "level": "warn" },
+    { "do": "wait", "note": "Mach が .85 の近く", "dref": "sim/flightmodel/misc/machno", "op": "between", "value": [0.844, 0.856], "timeout": 300, "level": "warn" },
+    { "do": "sleep", "seconds": 240, "note": "落ち着かせる（1 回目は 90 秒で、A/T がまだ EPR を 1.26 から 1.15 へ下げていた）" },
+    { "do": "record_start" },
+    { "do": "snapshot", "note": "巡航の EGT", "drefs": [ "laminar/B747/engines/display_EGT[0]", "laminar/B747/engines/display_EGT[1]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_N1[0]", "sim/weather/aircraft/temperature_leadingedge_deg_c", "sim/weather/aircraft/temperature_ambient_deg_c", "sim/flightmodel/misc/machno", "sim/flightmodel/weight/m_total" ] },
+    { "do": "check", "note": "巡航の EGT（約 350 °C：推定。前は約 250 °C）", "dref": "laminar/B747/engines/display_EGT[0]", "op": "between", "value": [320, 420] },
+    { "do": "check", "note": "白", "dref": "laminar/B747/engines/EGT/amber_on[0]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "EGT OVERTEMP（エンジン 1）" },
+    { "do": "set", "note": "故障：ENGINE 1 EGT OVERTEMP", "dref": "laminar/B747/engines/fail/egt_high[0]", "value": 1 },
+    { "do": "wait", "note": "最大連続の 629 °C を超えて琥珀（約 2 分：推定）", "dref": "laminar/B747/engines/EGT/amber_on[0]", "op": "==", "value": 1, "timeout": 240 },
+    { "do": "wait", "note": "離陸の 654 °C を超えて赤", "dref": "laminar/B747/engines/EGT/red_on[0]", "op": "==", "value": 1, "timeout": 120 },
+    { "do": "check", "note": "赤い枠", "dref": "laminar/B747/engines/EGT/box_red[0]", "op": "==", "value": 1 },
+    { "do": "check", "note": "ほかのエンジンは白のまま", "dref": "laminar/B747/engines/EGT/amber_on[1]", "op": "==", "value": 0 },
+    { "do": "snapshot", "note": "赤になったときの EGT", "drefs": [ "laminar/B747/engines/display_EGT[0]", "laminar/B747/engines/display_EGT[1]", "laminar/B747/engines/display_N1[0]" ] },
+    { "do": "view", "note": "上の EICAS", "the": -22, "psi": 29, "fov": 24 },
+    { "do": "shot", "name": "eicas_eng1_egt_overtemp" },
+    { "do": "view", "name": "forward" },
+    { "do": "set", "note": "故障を戻す", "dref": "laminar/B747/engines/fail/egt_high[0]", "value": 0 },
+    { "do": "wait", "note": "629 °C の下に戻る", "dref": "laminar/B747/engines/display_EGT[0]", "op": "<", "value": 629, "timeout": 90 },
+    { "do": "sleep", "seconds": 120 },
+    { "do": "remember", "dref": "laminar/B747/engines/display_EGT[1]", "as": "egt_normal" },
+    { "do": "check", "note": "ほぼ元の EGT（いまのエンジン 2 の ±20 °C）", "dref": "laminar/B747/engines/display_EGT[0]", "op": "between", "value": [-20, 20], "rel": "egt_normal" },
+    { "do": "record_stop" }
+  ]
+}

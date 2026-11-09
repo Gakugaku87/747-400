@@ -667,6 +667,14 @@ F sim/operation/failures/rel_ignitr0 xp ENGINE 1 IGNITERS
 F sim/operation/failures/rel_ignitr1 xp ENGINE 2 IGNITERS
 F sim/operation/failures/rel_ignitr2 xp ENGINE 3 IGNITERS
 F sim/operation/failures/rel_ignitr3 xp ENGINE 4 IGNITERS
+F laminar/B747/engines/fail/igniter[0] on ENGINE 1 IGNITER 1
+F laminar/B747/engines/fail/igniter[4] on ENGINE 1 IGNITER 2
+F laminar/B747/engines/fail/igniter[1] on ENGINE 2 IGNITER 1
+F laminar/B747/engines/fail/igniter[5] on ENGINE 2 IGNITER 2
+F laminar/B747/engines/fail/igniter[2] on ENGINE 3 IGNITER 1
+F laminar/B747/engines/fail/igniter[6] on ENGINE 3 IGNITER 2
+F laminar/B747/engines/fail/igniter[3] on ENGINE 4 IGNITER 1
+F laminar/B747/engines/fail/igniter[7] on ENGINE 4 IGNITER 2
 F sim/operation/failures/rel_revers0 xp THRUST REVERSER 1
 F sim/operation/failures/rel_revers1 xp THRUST REVERSER 2
 F sim/operation/failures/rel_revers2 xp THRUST REVERSER 3
@@ -708,3 +716,12 @@ F laminar/B747/air/fail/start_valve_closed[0] on START VALVE 1 FAILED CLOSED
 F laminar/B747/air/fail/start_valve_closed[1] on START VALVE 2 FAILED CLOSED
 F laminar/B747/air/fail/start_valve_closed[2] on START VALVE 3 FAILED CLOSED
 F laminar/B747/air/fail/start_valve_closed[3] on START VALVE 4 FAILED CLOSED
+G START AND EGT
+F laminar/B747/engines/fail/hot_start[0] on ENGINE 1 HOT START (P&W, GE)
+F laminar/B747/engines/fail/hot_start[1] on ENGINE 2 HOT START (P&W, GE)
+F laminar/B747/engines/fail/hot_start[2] on ENGINE 3 HOT START (P&W, GE)
+F laminar/B747/engines/fail/hot_start[3] on ENGINE 4 HOT START (P&W, GE)
+F laminar/B747/engines/fail/egt_high[0] on ENGINE 1 EGT OVERTEMP (P&W, GE)
+F laminar/B747/engines/fail/egt_high[1] on ENGINE 2 EGT OVERTEMP (P&W, GE)
+F laminar/B747/engines/fail/egt_high[2] on ENGINE 3 EGT OVERTEMP (P&W, GE)
+F laminar/B747/engines/fail/egt_high[3] on ENGINE 4 EGT OVERTEMP (P&W, GE)
