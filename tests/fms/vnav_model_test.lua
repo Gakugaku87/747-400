@@ -87,8 +87,18 @@ T.equal(o.phase, "DES", "past the T/D with the MCP below: the descent")
 T.check(not o.td_hold, "no td_hold in the descent")
 T.check(o.mode == "PTH" and o.at == V.AT_IDLE, "VNAV PTH with IDLE (path/idle: ATA34_2 p.616)")
 local g = (35000 - 3000) / 100
-T.near(o.path_alt, 35000, 1, "on the path at its top")
-T.near(o.vs, -g * 480 / 60, 1, string.format("the path's vertical speed: %.0f fpm (%.0f ft/NM at 480 kt)", o.vs, g))
+-- (2026-11-09) at its top the T/D's corner rounded (PATH_BLEND_S 30 s, 4 NM
+-- at 480 kt; PATH_LEAD_S 6 s, 0.8 NM): the mean 320 ft/NM x 4 / 8 = 160 ft
+-- under the corner, the slope 0.8 NM ahead 2.8 NM of the line's over 4 NM
+-- (224 ft/NM: 1,792 fpm) and K_PATH for the 160 ft above it. Before, the
+-- corner's 35,000 ft and the line's 2,560 fpm at once
+T.near(o.path_alt, 35000 - 160, 1, "on the path at its top, rounded: 160 ft under the corner")
+T.near(o.vs, -224 * 480 / 60 - V.K_PATH * 160, 1, string.format("the vertical speed from the rounded path ahead: %.0f fpm", o.vs))
+-- 5 NM down the line, away from its breaks, the path's own
+o = V.update(V.new(), inp{alt = 3000 + g * 95 + 100, mcp_alt = 10000, d_ed = 105, gs = 480})
+T.equal(o.phase, "DES", "5 NM down the line: the descent")
+T.near(o.path_alt, 3000 + g * 95, 1, "on the line the path's own altitude")
+T.near(o.vs, -g * 480 / 60 - V.K_PATH * 100, 1, string.format("the path's vertical speed: %.0f fpm (%.0f ft/NM at 480 kt) and K_PATH for 100 ft above", o.vs, g))
 local ph = 3000 + g * 50
 o = V.update(s2, inp{alt = ph + 200, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.near(o.path_dev, 200, 1e-6, string.format("200 ft above the path (%.0f ft)", ph))
@@ -862,5 +872,62 @@ do
     T.check(o.mode == "SPD" and math.abs(o.cas - 250) < 1e-6, "the reversion at 250")
     o = V.update(sR, inp{alt = p60r + 200, mcp_alt = 3000, d_ed = 60, gs = 450, ias = 255, des_spd = 240})
     T.check(o.mode == "SPD" and math.abs(o.cas - 240) < 1e-6, string.format("240 passed in it: the reversion at %.0f", o.cas))
+end
+
+-- (2026-11-09) the path rounded at its breaks (path_blend: PATH_BLEND_S,
+-- PATH_LEAD_S; estimates). s273's third run: from the idle descent's 2,700
+-- fpm (337.5 ft/NM at 480 kt) into the 500 fpm deceleration (62.5 ft/NM) at
+-- 27,500 ft, 386 ft under the path
+do
+    local pB = {e = {0, 30, 70}, h = {27500 - 62.5 * 30, 27500, 27500 + 337.5 * 40}, k = {"decel", "decel", "idle"}}
+    -- a line: its own (the mean of a line is the line)
+    local h, gB = V.path_blend(pB, 50, 4, 0.8)
+    T.near(h, 27500 + 337.5 * 20, 1e-6, "on a line, 2 NM from any break: the path's own altitude")
+    T.near(gB, 337.5, 1e-6, "and gradient")
+    -- at the break: the mean over 4 NM 275 ft/NM x 4 / 8 = 137.5 ft over it
+    h = V.path_blend(pB, 30, 4, 0.8)
+    T.near(h, 27500 + 137.5, 1e-6, "at the break the rounded path 137.5 ft over it (the change 275 ft/NM over 4 NM, / 8)")
+    -- the gradient 0.8 NM ahead: [27.2, 31.2] holds 1.2 NM of the steep and
+    -- 2.8 of the shallow line
+    local _, gA = V.path_blend(pB, 30, 4, 0.8)
+    T.near(gA, (337.5 * 1.2 + 62.5 * 2.8) / 4, 1e-6, "its slope taken 0.8 NM ahead: 1.2 NM steep and 2.8 NM shallow")
+    -- the change starts lead + l / 2 before the break and ends l / 2 - lead past it
+    _, gA = V.path_blend(pB, 32.81, 4, 0.8)
+    T.near(gA, 337.5, 1e-6, "2.81 NM before it (more than 0.8 + 2): the steep line's still")
+    _, gA = V.path_blend(pB, 28.79, 4, 0.8)
+    T.near(gA, 62.5, 1e-6, "1.21 NM past it (more than 2 - 0.8): the shallow line's")
+    -- past the E/D the first segment's slope on (no level there)
+    h, gA = V.path_blend(pB, 0.5, 4, 0.8)
+    T.near(h, 27500 - 62.5 * 29.5, 1e-6, "0.5 NM before the E/D: the line's own (its slope on past the E/D)")
+    T.near(gA, 62.5, 1e-6, "and its gradient")
+    -- at most the cap (CRZ ALT): the T/D's corner rounded under it (the
+    -- line meets 37,000 ft 28.15 NM back from the break), level over it
+    local ec = 30 + (37000 - 27500) / 337.5
+    h = V.path_blend(pB, ec, 4, 0, 37000)
+    T.near(h, 37000 - 337.5 * 4 / 8, 1e-6, "the cap's corner (the T/D's): 168.75 ft under it")
+    h, gA = V.path_blend(pB, 68, 4, 0, 37000)
+    T.check(h == 37000 and gA == 0, "over the cap: level at it")
+    -- no window: the path's own (capped)
+    h, gA = V.path_blend(pB, 30.5, 0, 0)
+    T.check(math.abs(h - (27500 + 337.5 * 0.5)) < 1e-6 and math.abs(gA - 337.5) < 1e-6, "no window: the path's own")
+    h, gA = V.path_blend(pB, 69, 0, 0, 37000)
+    T.check(h == 37000 and gA == 0, "no window, over the cap: the cap, level")
+    T.check(V.path_blend(nil, 10, 4, 0.8) == nil, "no path: nil")
+
+    -- the law on it: the vertical speed starts to shallow before the break
+    local sB = V.new()
+    V.update(sB, inp{alt = 37000, crz_alt = 37000, mcp_alt = 10000, d_ed = 59, gs = 480, path = pB})
+    local function at(e, above)
+        return V.update(sB, inp{alt = 27500 + (e - 30) * (e > 30 and 337.5 or 62.5) + above, crz_alt = 37000,
+            mcp_alt = 10000, d_ed = e, gs = 480, path = pB})
+    end
+    o = at(34, 0)
+    T.near(o.vs, -2700, 1, "4 NM before the break: the idle line's 2,700 fpm")
+    T.near(o.path_dev, 0, 1e-6, "on it")
+    o = at(30, 137.5)
+    T.near(o.path_dev, 0, 1e-6, "at the break, 137.5 ft over it: on the rounded path")
+    T.near(o.vs, -(337.5 * 1.2 + 62.5 * 2.8) / 4 * 8, 1, string.format("the vertical speed half way down already: %.0f fpm", o.vs))
+    o = at(25, 0)
+    T.near(o.vs, -500, 1, "5 NM past it: the deceleration's 500 fpm")
 end
 T.done()

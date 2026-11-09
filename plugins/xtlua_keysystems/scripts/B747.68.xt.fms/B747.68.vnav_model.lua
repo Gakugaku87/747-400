@@ -64,6 +64,19 @@ M.PLACARD_MARGIN, M.VMIN_MARGIN = 5, 5
 -- changes the vertical speed some 50 fpm a second at cruise speeds, so
 -- the path is closed over a minute)
 M.K_PATH, M.VS_STEEPER = 1, 1000
+-- (2026-11-09) the descent's path flown rounded at its breaks: its mean
+-- altitude over PATH_BLEND_S of flight about the airplane (half ahead,
+-- half behind), the vertical speed from its slope PATH_LEAD_S ahead (the
+-- AFDS's and the airplane's lag), the deviation from that mean
+-- (estimates: the sources name no transition between the path's
+-- segments). Before, the polyline's: s273's third run went from the idle
+-- descent's 2,700 fpm into the 500 fpm deceleration (FCOM p.1264) at
+-- FL294 and 386 ft under the path, the AFDS's V/S law within 0.05 g;
+-- offline (the pitch model on an airplane lagged as X-Plane's 747 in
+-- s107) 582 ft under it before, 43 ft with these, within 0.04 g
+M.PATH_BLEND_S, M.PATH_LEAD_S = 30, 6
+-- the mean's samples
+M.BLEND_N = 12
 -- the takeoff's target speed (FCOM p.1255): V2 + TO_ADD_MIN to V2 +
 -- TO_ADD_MAX; the flaps' retraction from the takeoff's by TO_FLAPS of the
 -- handle's ratio (estimate)
@@ -180,6 +193,40 @@ function M.path_at(path, e)
     local ss = path.s
     local planned = (ss and ss[lo] and ss[hi]) and ss[lo] + (ss[hi] - ss[lo]) * f or nil
     return hs[lo] + g * (e - es[lo]), g, path.k[hi] or "idle", (c and c > 0) and c or nil, planned
+end
+
+-- (2026-11-09) the path's altitude at e, its first segment's slope on past
+-- the E/D (no level there: the approach goes on down), at most cap
+local function path_h_at(path, e, cap)
+    local es, hs = path.e, path.h
+    local h
+    if e < es[1] then
+        local de = es[2] - es[1]
+        h = hs[1] + (de > 1e-9 and (hs[2] - hs[1]) / de or 0) * (e - es[1])
+    else
+        h = (M.path_at(path, e))
+    end
+    if cap and h > cap then h = cap end
+    return h
+end
+
+-- (2026-11-09) the path rounded at its breaks (PATH_BLEND_S): its mean
+-- altitude over l NM about e (BLEND_N + 1 samples) and its gradient (ft a
+-- NM, as path_at's) over l NM about lead NM ahead (e - lead), at most cap;
+-- the path's own at e without l. nil without a path
+function M.path_blend(path, e, l, lead, cap)
+    if not path or not path.e or #path.e < 2 then return nil end
+    if not l or l <= 1e-6 then
+        local h, g = M.path_at(path, e)
+        if cap and h > cap then h, g = cap, 0 end
+        return h, g
+    end
+    local n, sum = M.BLEND_N, 0
+    for k = 0, n do
+        sum = sum + ((k == 0 or k == n) and 0.5 or 1) * path_h_at(path, e - l / 2 + l * k / n, cap)
+    end
+    local el = e - (lead or 0)
+    return sum / n, (path_h_at(path, el + l / 2, cap) - path_h_at(path, el - l / 2, cap)) / l
 end
 
 -- the takeoff (FCOM p.1255): from the ground (with V2 selected) the
@@ -594,6 +641,14 @@ function M.update(s, inp)
         if cas < out.cas then out.cas, out.mach, out.mach_mode = cas, P.cas_to_mach(cas, inp.alt), false end
     end
     out.path_alt, out.path_dev, out.vs, out.msg = nil, nil, nil, nil
+    -- (2026-11-09) the descent's path flown rounded at its breaks
+    -- (PATH_BLEND_S, PATH_LEAD_S), for its law and its deviation; the
+    -- phases above on the path's own
+    local fh, fg = path_h, g
+    if path_h and ph == "DES" then
+        local gsk = math.max(inp.gs or 0, 0)
+        fh, fg = M.path_blend(inp.path, inp.d_ed, gsk * M.PATH_BLEND_S / 3600, gsk * M.PATH_LEAD_S / 3600, inp.crz_alt)
+    end
     -- (step 9i) the descent's FMC altitude: an AT OR BELOW's the lower of it
     -- and the path at its point (des_target)
     local desAlt = M.des_target(inp)
@@ -628,7 +683,7 @@ function M.update(s, inp)
         -- thrust: ATA34_2 p.615)
         out.mode, out.at, out.vs = "SPD", M.AT_THR, -M.EARLY_VS
         out.alt = desAlt
-        if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
+        if fh then out.path_alt, out.path_dev = fh, inp.alt - fh end
     elseif out.end_des then
         -- (step 9e2) END OF DES (FCOM p.1391: the E/D passed, no climb after
         -- it): level where the airplane is (V/S 0), the A/T on speed
@@ -644,7 +699,7 @@ function M.update(s, inp)
         -- step 9e2, below)
         out.mode, out.at = "SPD", M.AT_IDLE
         out.alt = desAlt
-        if path_h then out.path_alt, out.path_dev = path_h, inp.alt - path_h end
+        if fh then out.path_alt, out.path_dev = fh, inp.alt - fh end
     else
         out.mode = "PTH"
         out.alt = desAlt
@@ -666,11 +721,12 @@ function M.update(s, inp)
         local band = out.cas
         if kind == "decel" and plannedCas and band and plannedCas > band then band = plannedCas end
         local lo, hi, drag = speed_limits(P, inp, band, below, belowTr)
-        if path_h then
-            out.path_alt = path_h
-            out.path_dev = inp.alt - path_h
+        if fh then
+            -- (2026-11-09) the path rounded at its breaks
+            out.path_alt = fh
+            out.path_dev = inp.alt - fh
             local dev = out.path_dev
-            local rate = -g * math.max(inp.gs or 0, 0) / 60
+            local rate = -fg * math.max(inp.gs or 0, 0) / 60
             local vs = rate - M.K_PATH * dev
             vs = math.max(math.min(vs, 0), rate - M.VS_STEEPER)
             -- (step 9e1) past the speed's limits the path given up to
