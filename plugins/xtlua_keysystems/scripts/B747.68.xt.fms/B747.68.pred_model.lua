@@ -710,7 +710,7 @@ function M.predict(s)
     -- (2026-11-05 review 4) a step the airplane could not fly (its climb
     -- "unable"): no more steps this cruise
     local noStep = false
-    local function cruise_until(xstop, hcur)
+    local function cruise_until(xstop, hcur, clbLevel)
         -- level at hcur to xstop (or the T/D, a step point)
         -- the next planned step ahead above hcur (2026-11-05)
         local pnext = nil
@@ -719,9 +719,25 @@ function M.predict(s)
         end
         while x < xstop - 1e-6 and guard < 200000 do
             guard = guard + 1
-            local m = crz_mach(P, s.crzspd, hcur, kg)
+            local m
             local isa, hw = isa, wind.crz or 0
-            if s.field then isa, hw = s.field.isa(x, hcur), s.field.wind(x, hcur, "crz") end
+            if clbLevel then
+                -- (2026-11-09's review) a climb's level segment at an
+                -- altitude constraint: VNAV PTH holds the climb's command
+                -- speed there (FCOM p.1255), within the climb's waypoint
+                -- constraints (FMC-08), in the climb's wind. Before, the
+                -- cruise's Mach at that altitude (M.85 at 5,000 ft: 519 kt
+                -- CAS): the ETAs after it early, its fuel high
+                local cas, mc, machMode = M.schedule(P, s.clb, hcur)
+                local lim = clb_spd_at(x)
+                if lim and lim < cas then cas, machMode = lim, false end
+                m = machMode and mc or P.cas_to_mach(cas, hcur)
+                hw = wind.clb or 0
+                if s.field then isa, hw = s.field.isa(x, hcur), s.field.wind(x, hcur, "clb") end
+            else
+                m = crz_mach(P, s.crzspd, hcur, kg)
+                if s.field then isa, hw = s.field.isa(x, hcur), s.field.wind(x, hcur, "crz") end
+            end
             local v = P.tas(m, hcur, isa) * KT
             local gs = math.max(v - hw * KT, 50)
             local ff = s.eo and ne * P.eo_cruise_ff(t, s.eo, kg, hcur, m, isa) or 4 * P.cruise_ff(t, kg, hcur, m, isa)
@@ -825,7 +841,7 @@ function M.predict(s)
                     if r == "unable" then crzAlt = h break end
                     if cap and h >= cap - 1 and h < crzAlt - 1 then
                         -- level at the constraint to its waypoint
-                        local r2 = cruise_until(xcap, h)
+                        local r2 = cruise_until(xcap, h, true)
                         if r2 == "des" then phase = "des" break end
                     else
                         break
