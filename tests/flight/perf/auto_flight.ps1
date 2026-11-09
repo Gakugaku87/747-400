@@ -377,6 +377,9 @@ function Get-CduPageNo([string]$Line) {
 $script:afXtErr = Join-Path $script:XPRoot 'Output\B747_xtlua_errors.txt'
 $script:afXtFrom = 0
 $script:afClock = @{ sim = $null; wall = 0.0; checked = -1e9 }
+# the sim options as the aircraft's load gave them (Set-AutoFmc), put back
+# at the end
+$script:afOptsWas = $null
 $script:autoOut = $null
 
 function Note-Status([string]$Phase, [string]$Text) {
@@ -649,22 +652,9 @@ function Start-AutoFlight($Init) {
 # ---------------------------------------------------------------- the FMC
 
 function Set-AutoFmc($Plan) {
-    Note-Status 'fmc' 'IDENT, the sim options, FMC DATALINK'
+    Note-Status 'fmc' 'IDENT, FMC DATALINK, the Pilot ID, the sim options'
     Send-Cdu @('MENU', 'L1')
     if ($null -eq (Wait-AutoCond { ([string](Get-XPDataref 'laminar/B747/fms3/Line05_L')).Contains('AIRAC') } 180 1000)) { throw 'the FMC''s navigation data did not load (IDENT)' }
-    # (not saved: a write does not save them)
-    Set-N 'laminar/B747/options/pause_at_td' 0
-    Set-N 'laminar/B747/options/auto_step_climb' $(if ($afArgs.Steps -eq 'fmc') { 1 } else { 0 })
-    # the Auto fuel management option (Plugins > 747-400, the fuel session's,
-    # 2026-11-09; default off): off for the flight, the kit does the fuel
-    # steps itself (Get-AutoFuelSteps); before that option is in, no such
-    # dataref: nothing
-    try {
-        if ([int](Get-XPDataref 'laminar/B747/options/auto_fuel_mgmt') -ne 0) {
-            Set-XPDataref 'laminar/B747/options/auto_fuel_mgmt' 0
-            Note info 'Auto fuel management was on: off for the flight (not saved)'
-        }
-    } catch { }
     # MENU, SIM CONFIG (6R), NEXT: FMC DATALINK (4L: AUTO, ON, OFF) and the
     # SIMBRIEF PILOT ID (5L), as s218_simbrief_fetch
     Send-Cdu @('MENU', 'R6', 'NEXT')
@@ -677,6 +667,27 @@ function Set-AutoFmc($Plan) {
         if ($id -ne $afArgs.PilotId) { throw ('the SIMBRIEF PILOT ID not taken: {0}' -f $id) }
     }
     if ($id -le 0) { throw 'no SIMBRIEF PILOT ID in the aircraft (give -PilotId)' }
+    # the sim options for the flight, after the Pilot ID: its entry makes the
+    # FMS bridge save every option it holds in memory (the fuel session,
+    # 2026-11-09), so zeroed before it they would be saved over the user's.
+    # A write alone does not save them. As the aircraft's load gave them (the
+    # user's), put back at the end.
+    $script:afOptsWas = [ordered]@{}
+    foreach ($k in 'pause_at_td', 'auto_step_climb', 'auto_fuel_mgmt') {
+        try { $script:afOptsWas[$k] = [int](Get-XPDataref ('laminar/B747/options/' + $k)) } catch { }
+    }
+    Set-N 'laminar/B747/options/pause_at_td' 0
+    Set-N 'laminar/B747/options/auto_step_climb' $(if ($afArgs.Steps -eq 'fmc') { 1 } else { 0 })
+    # the Auto fuel management option (Plugins > 747-400, the fuel session's,
+    # 2026-11-09; default off): off for the flight, the kit does the fuel
+    # steps itself (Get-AutoFuelSteps); before that option is in, no such
+    # dataref: nothing
+    try {
+        if ([int](Get-XPDataref 'laminar/B747/options/auto_fuel_mgmt') -ne 0) {
+            Set-XPDataref 'laminar/B747/options/auto_fuel_mgmt' 0
+            Note info 'Auto fuel management was on: off for the flight (not saved)'
+        }
+    } catch { }
     Note-Status 'fmc' 'RTE REQUEST (the latest OFP by the Pilot ID)'
     $req = Get-N 'laminar/B747/fms/company/simbrief_fetch'
     Send-Cdu @('FMCCOMM', 'NEXT', 'L1')
@@ -1203,6 +1214,15 @@ if ($null -ne $payloadAtStart) {
             Note info ('the payload back to {0:0.0} kg, as the run found it' -f $payloadAtStart)
         }
     } catch { Note warn ('the payload not put back: {0}' -f $_.Exception.Message) }
+}
+# the sim options back as the aircraft's load gave them: left zeroed in
+# memory, the FMS bridge's next save (its menu, an option's command, a Pilot
+# ID) would write them over the user's file (the fuel session, 2026-11-09)
+if ($null -ne $script:afOptsWas -and $script:afOptsWas.Count -gt 0) {
+    foreach ($k in @($script:afOptsWas.Keys)) {
+        try { Set-N ('laminar/B747/options/' + $k) $script:afOptsWas[$k] } catch { Note warn ('the option {0} not put back: {1}' -f $k, $_.Exception.Message) }
+    }
+    Note info ('the sim options back as loaded: {0}' -f ((@($script:afOptsWas.Keys) | ForEach-Object { '{0} {1}' -f $_, $script:afOptsWas[$_] }) -join ', '))
 }
 [IO.File]::WriteAllLines((Join-Path $script:autoOut 'events.txt'), [string[]]$events, $utf8)
 "auto flight: $result; $($script:autoOut)"
