@@ -64,9 +64,11 @@
  * Plugins > 747-400 > Weight and balance... shows the sim's weights and
  * CGs (wb_window.c).
  *
- * the menu's and the commands' choices kept (.../auto_step_climb_toggle,
- * .../pause_at_td_toggle, .../auto_fuel_mgmt_toggle), a dataref's write (a
- * test's) not.
+ * the menu's and the commands' choices kept (laminar/B747/options/
+ * <name>_toggle), a dataref's write (a test's) not: the file gets only the
+ * kept values, so an option a test turned off by its dataref stays as it
+ * was in the file when another is chosen or the Pilot ID set (options.c,
+ * 2026-11-09).
  *
  * SimBrief's latest OFP by the Pilot ID (2026-11-02 the user; notes/
  * ATA-34-61-FMC.md §131): when the FMC writes a new request number, the OFP
@@ -364,18 +366,15 @@ static float loop(float since_call, float since_loop, int counter, void *ref)
     return -1.0f;
 }
 
-/* the sim's options: their file's names, the menu's items; on or off before
-   the file has them (2026-11-05: the CDU's weights and CG from the sim on,
-   the user's asking; 2026-11-09: the automatic fuel management off) */
-#define NOPTS 4
-static const char *opt_key[NOPTS] = {"auto_step_climb", "pause_at_td", "cdu_sim_values", "auto_fuel_mgmt"};
+/* the sim's options (their names in the file, the values in use and kept:
+   options.c); the menu's items */
+#include "options.c"
 static const char *opt_label[NOPTS] = {"Auto step climb", "Pause 2 min before T/D",
     "CDU: GR WT, ZFW and CG from the sim", "Auto fuel management"};
 static const char *opt_desc[NOPTS] = {"Toggle the automatic step climb",
     "Toggle the pause two minutes before the top of descent",
     "Toggle the CDU's GR WT, ZFW and takeoff CG entered from the sim with an empty scratchpad",
     "Toggle the automatic fuel management (the climb and cruise fuel switches at the fuel messages)"};
-static int opts[NOPTS] = {0, 0, 1, 0};
 static XPLMDataRef opt_ref[NOPTS];
 static XPLMCommandRef opt_cmd[NOPTS];
 static XPLMMenuID menu = NULL;
@@ -393,33 +392,19 @@ static void opts_path(char *out, size_t n)
     snprintf(out, n, "%sB747-400_options.prf", prefs);
 }
 
-/* "<name> <0 or 1>" lines and "simbrief_id <n>"; one not there: as before */
 static void opts_load(void)
 {
-    char p[PATH_LEN], line[128], key[64];
-    int v;
+    char p[PATH_LEN];
     opts_path(p, sizeof p);
-    FILE *f = fopen(p, "rb");
-    if (!f) return;
-    while (fgets(line, sizeof line, f)) {
-        if (sscanf(line, "%63s %d", key, &v) != 2) continue;
-        for (int i = 0; i < NOPTS; i++) {
-            if (strcmp(key, opt_key[i]) == 0) opts[i] = v ? 1 : 0;
-        }
-        if (strcmp(key, "simbrief_id") == 0) sb_id = v > 0 ? v : 0;
-    }
-    fclose(f);
+    opts_read(p, &sb_id);
 }
 
+/* the kept values (not a test's, written to the datarefs) and the Pilot ID */
 static void opts_save(void)
 {
     char p[PATH_LEN];
     opts_path(p, sizeof p);
-    FILE *f = fopen(p, "wb");
-    if (!f) return;
-    for (int i = 0; i < NOPTS; i++) fprintf(f, "%s %d\n", opt_key[i], opts[i]);
-    fprintf(f, "simbrief_id %d\n", sb_id);
-    fclose(f);
+    opts_write(p, sb_id);
 }
 
 /* the Pilot ID (the CDU's): kept */
@@ -432,11 +417,12 @@ static void sb_id_set(void *ref, int v)
     opts_save();
 }
 
-/* an option on or off, the menu's check mark with it, kept if `keep` */
+/* an option on or off, the menu's check mark with it, kept (and the file
+   written) if `keep` */
 static void opt_set(int i, int v, int keep)
 {
     if (i < 0 || i >= NOPTS) return;
-    opts[i] = v ? 1 : 0;
+    opts_change(i, v, keep);
     if (menu) XPLMCheckMenuItem(menu, i, opts[i] ? xplm_Menu_Checked : xplm_Menu_Unchecked);
     if (keep) opts_save();
 }
