@@ -1,0 +1,80 @@
+{
+  "name": "s277_at_cruise_gusts",
+  "description": "巡航のガストの中の A/T の SPD（2026-11-10、notes/ATA-34-61-FMC.md §162）の X-Plane での確認、空中。PERF_SIMBRIEF の KSEA-KLAX（2026-11-09）の巡航に似せて、FL390・M.86・238 t、高い層に 220° から 80〜90 kt の風・ガスト 1.3 kt・乱気流 0.02（実際の気象の値）で、真方位 160 で開始（機体を読み直す、カスタム acf）。FMC の空中の初期化（CMD L・ALT HOLD）のあと、MCP を FL390・Mach .86・HDG SEL にして A/T の SPD。落ち着かせてから、水平 300 秒、右へ 90° の旋回（風が横から向かい風へ：対地速度の変わり方ではなく、空気に対する経路の加速度で補うことの確かめ）、V/S −1,500 fpm で FL370 へ（Mach を保つ）。判定はゆるい（Mach が .86 の ±0.010、高度、モード）。直す前と後で同じシナリオを回し、記録（session.csv）から、水平の間のレバーの動き（全行程の何割を毎分動いたか）、速さの目標との差の平均とばらつき、旋回と降下の Mach の差を出して比べる。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 37.0, "longitude": -123.0, "elevation_in_meters": 11887.2, "heading_true": 160, "speed_in_meters_per_second": 253.8 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 313, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 3750, 3750, 3750, 3750, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 37.0, "longitude_in_degrees": -123.0, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 10, "direction_in_degrees_true": 220, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 30, "direction_in_degrees_true": 220, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 50, "direction_in_degrees_true": 220, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 80, "direction_in_degrees_true": 220, "gust_increase_in_knots": 1.3, "shear_in_degrees": 0, "turbulence_ratio": 0.02 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 90, "direction_in_degrees_true": 220, "gust_increase_in_knots": 1.3, "shear_in_degrees": 0, "turbulence_ratio": 0.02 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 80, "direction_in_degrees_true": 220, "gust_increase_in_knots": 1.3, "shear_in_degrees": 0, "turbulence_ratio": 0.02 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "wait", "note": "FMC の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "sleep", "seconds": 8, "note": "空中の初期化の速さの巻き取り" },
+    { "do": "set", "note": "MCP 高度 FL390", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 39000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 39000 },
+    { "do": "set", "note": "MCP を Mach に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 1 },
+    { "do": "set", "note": "窓 M.86（XTLua の dataref に小数は書けないので M.859 でなく .86）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 86 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "M.86 が目標", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts_mach", "op": "between", "value": [0.859, 0.861], "level": "warn" },
+    { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "as": "h0" },
+    { "do": "set", "note": "MCP 方位を今の磁方位に", "dref": "laminar/B747/autopilot/heading/degrees", "value": 0, "rel": "h0", "round": 1 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（空中の初期化の ALT HOLD。違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "FMA の A/T が SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10 },
+    { "do": "wait", "note": "Mach が .86 の近く", "dref": "sim/cockpit2/gauges/indicators/mach_pilot", "op": "between", "value": [0.855, 0.865], "timeout": 300, "level": "warn" },
+    { "do": "snapshot", "note": "風とガスト（実際の気象の KSEA-KLAX は shear 1.3 kt・乱気流 0.02）", "drefs": [ "sim/weather/aircraft/wind_speed_kts[0]", "sim/weather/aircraft/shear_speed_kts[0]", "sim/weather/aircraft/turbulence[0]", "sim/cockpit2/gauges/indicators/wind_speed_kts", "sim/cockpit2/gauges/indicators/wind_heading_deg_mag", "sim/flightmodel/weight/m_total", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
+    { "do": "sleep", "seconds": 180, "note": "落ち着かせる" },
+    { "do": "record_start" },
+    { "do": "mark", "note": "水平 300 秒" },
+    { "do": "watch", "note": "水平の 300 秒、Mach が .86 の ±0.010", "dref": "sim/cockpit2/gauges/indicators/mach_pilot", "min": 0.85, "max": 0.87, "timeout": 300 },
+    { "do": "check", "note": "A/T は SPD のまま", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
+    { "do": "check", "note": "FL390 の ±100 ft", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [38900, 39100] },
+    { "do": "mark", "note": "右へ 90° の旋回（風が右前から左前へ：対地速度が約 30 kt 減る）" },
+    { "do": "set", "note": "MCP 方位を 90° 右へ", "dref": "laminar/B747/autopilot/heading/degrees", "value": 90, "rel": "h0", "round": 1 },
+    { "do": "watch", "note": "旋回とその後の 200 秒、Mach が .86 の ±0.010", "dref": "sim/cockpit2/gauges/indicators/mach_pilot", "min": 0.85, "max": 0.87, "timeout": 200 },
+    { "do": "check", "note": "旋回を終えている（方位が 90° 右の ±3°）", "dref": "sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot", "op": "between", "value": [87, 93], "rel": "h0", "level": "warn" },
+    { "do": "mark", "note": "V/S −1,500 fpm で FL370 へ（A/T は SPD で Mach を保つ）" },
+    { "do": "set", "note": "MCP 高度 FL370", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 37000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 37000 },
+    { "do": "cmd", "note": "V/S", "name": "laminar/B747/autopilot/button_switch/vs_mode" },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "set", "note": "V/S −1,500 fpm", "dref": "sim/cockpit2/autopilot/vvi_dial_fpm", "value": -1500 },
+    { "do": "set", "dref": "laminar/B747/cockpit2/autopilot/vvi_dial_fpm", "value": -1500 },
+    { "do": "wait", "note": "−1,500 fpm に乗る（±300）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [-1800, -1200], "timeout": 40 },
+    { "do": "watch", "note": "降下の間、Mach が .86 の ±0.010（37,500 ft まで）。注意どまり：降下に入るときの行き過ぎ（2026-11-10、ガストの補いの前も後も .872〜.873）は別の残り", "dref": "sim/cockpit2/gauges/indicators/mach_pilot", "min": 0.85, "max": 0.87, "timeout": 150, "level": "warn", "until": { "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "<", "value": 37500 } },
+    { "do": "wait", "note": "FL370 の捕捉で ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 120 },
+    { "do": "sleep", "seconds": 60, "note": "捕捉の後" },
+    { "do": "check", "note": "A/T は SPD のまま", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
+    { "do": "check", "note": "Mach が .86 の ±0.010", "dref": "sim/cockpit2/gauges/indicators/mach_pilot", "op": "between", "value": [0.85, 0.87] },
+    { "do": "snapshot", "note": "終わり", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/mach_pilot", "sim/flightmodel/weight/m_total", "sim/weather/aircraft/shear_speed_kts[0]" ] },
+    { "do": "record_stop" }
+  ]
+}

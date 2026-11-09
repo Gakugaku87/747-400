@@ -943,6 +943,19 @@ simDR_at_N1_bug = find_dataref("sim/cockpit2/engine/actuators/N1_target_bug")
 -- (step 9d2) the TAS (m/s) for VNAV's THR's energy's rate at the target
 -- speed (the A/T model's target_vs)
 simDR_at_tas = find_dataref("sim/flightmodel/position/true_airspeed")
+-- (2026-11-10) SPD in the air's gusts (the A/T model's GUST_TAU): the
+-- inertial acceleration along the air path (its path_accel), X-Plane's
+-- OpenGL acceleration on its velocity less the wind at the airplane (the
+-- IRU's flight path acceleration, ATA34_2 p.280)
+simDR_at_acc_x = find_dataref("sim/flightmodel/position/local_ax")
+simDR_at_acc_y = find_dataref("sim/flightmodel/position/local_ay")
+simDR_at_acc_z = find_dataref("sim/flightmodel/position/local_az")
+simDR_at_vel_x = find_dataref("sim/flightmodel/position/local_vx")
+simDR_at_vel_y = find_dataref("sim/flightmodel/position/local_vy")
+simDR_at_vel_z = find_dataref("sim/flightmodel/position/local_vz")
+simDR_at_wind_x = find_dataref("sim/weather/aircraft/wind_now_x_msc")
+simDR_at_wind_y = find_dataref("sim/weather/aircraft/wind_now_y_msc")
+simDR_at_wind_z = find_dataref("sim/weather/aircraft/wind_now_z_msc")
 -- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
 -- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
 -- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
@@ -1040,6 +1053,11 @@ local function afds_at()
 	end
 	i.thrust_max = tmax > (n1 and 10 or 0.5) and tmax or nil
 	i.dt, i.ias, i.accel, i.target = dt, ias, atAccel, afds_speed_ref()
+	-- (2026-11-10) SPD in the air's gusts: the TAS (kt) and the inertial
+	-- acceleration along the air path (kt/s)
+	i.tas = simDR_at_tas * 3600 / 1852
+	i.accel_in = B747_at_model.path_accel(simDR_at_acc_x, simDR_at_acc_y, simDR_at_acc_z,
+		simDR_at_vel_x, simDR_at_vel_y, simDR_at_vel_z, simDR_at_wind_x, simDR_at_wind_y, simDR_at_wind_z)
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
 	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
 	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
