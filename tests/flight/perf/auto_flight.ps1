@@ -177,6 +177,16 @@ function Get-AutoSpeeds([double]$Vref30) {
 # the MCP down before T/D at this distance to E/D (NM): 3.3 NM a 1,000 ft
 # above the field and 40 NM more, some minutes before the T/D (estimate)
 function Get-AutoLowerNm([double]$CrzFt, [double]$DestElevFt) { return ($CrzFt - $DestElevFt) / 1000 * 3.3 + 40 }
+# the MCP down in the cruise at the FMC's RESET MCP ALT (two minutes before
+# the T/D with VNAV active: FCOM p.1433; laminar/B747/fms/notification[33]),
+# or at Get-AutoLowerNm's distance if that comes first (the 2026-11-09
+# EDDF-OMDB flight: the FMC's T/D 186 NM to E/D from FL390, the distance
+# 168 NM, VNAV held at the T/D)
+function Test-AutoLowerNow([int]$Ph, [double]$Ed, [double]$CrzFt, [double]$DestElevFt, [int]$ResetMcp) {
+    if ($Ph -lt 2) { return $false }
+    if ($ResetMcp -eq 1) { return $true }
+    return ($Ed -gt 0 -and $Ed -lt (Get-AutoLowerNm $CrzFt $DestElevFt))
+}
 # X-Plane's QNH (Pa) in inches of mercury to 0.01; out of 27.5-31.5: $null
 function Get-AutoQnhInHg($Pa) {
     if ($null -eq $Pa -or -not ([double]$Pa -gt 0)) { return $null }
@@ -968,6 +978,7 @@ function Watch-AutoCruise($Plan) {
             $ed = [double](Get-XPDataref 'laminar/B747/fms/vnav/dist'); $ph = [int](Get-XPDataref 'laminar/B747/fms/vnav/phase')
             $alt = [double](Get-XPDataref 'sim/cockpit2/gauges/indicators/altitude_ft_pilot')
             $gnd = [int](Get-XPDataref 'sim/flightmodel/failures/onground_any'); $hold = [int](Get-XPDataref 'laminar/B747/fms/vnav/td_hold')
+            $resetMcp = if ($lowered) { 0 } else { [int](@(Get-XPDataref 'laminar/B747/fms/notification')[33]) }
             $fails = 0
         } catch {
             $fails++
@@ -1003,10 +1014,10 @@ function Watch-AutoCruise($Plan) {
                 } elseif (-not $stepWarned) { Note warn ('the step fix {0} passed before the cruise: the step once in it' -f $st.fix); $stepWarned = $true }
             }
         }
-        # the MCP down before T/D
-        if (-not $lowered -and $ph -ge 2 -and $ed -gt 0 -and $ed -lt (Get-AutoLowerNm (Get-N 'laminar/B747/autopilot/dist/cruise_alt') $Plan.dest_elev_ft)) {
+        # the MCP down before T/D: at RESET MCP ALT or the distance
+        if (-not $lowered -and (Test-AutoLowerNow $ph $ed (Get-N 'laminar/B747/autopilot/dist/cruise_alt') $Plan.dest_elev_ft $resetMcp)) {
             Set-Mcp 'alt' $Plan.app_mcp_ft; $lowered = $true
-            Note-Status 'cruise' ('MCP {0} ft at {1:0} NM to E/D (before T/D)' -f $Plan.app_mcp_ft, $ed)
+            Note-Status 'cruise' ('MCP {0} ft at {1:0} NM to E/D (before T/D{2})' -f $Plan.app_mcp_ft, $ed, $(if ($resetMcp -eq 1) { ': RESET MCP ALT' } else { '' }))
         }
         if ($hold -eq 1) {
             if (-not $lowered) { Set-Mcp 'alt' $Plan.app_mcp_ft; $lowered = $true; Start-Sleep -Milliseconds 1500 }
