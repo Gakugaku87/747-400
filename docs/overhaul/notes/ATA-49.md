@@ -194,3 +194,11 @@
 - 前からの論理がそのまま働く：閉で固着すると、selector を START にしてもドアが全開にならず starter が入らない（FCOM p.896）。指令の位置に無い時間が 20 秒で APU DOOR（FCOM p.902）。開で固着すると、停止の後に APU DOOR。故障を消すとドアが動き、START の latch が残っていれば始動が続く。
 - 試験：`apu_model_test` 72、`apu_module_test` 40。
 - X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（成田で窓の章 49 の行を押してドアを固着、APU を START：20.4 秒で APU DOOR、N1 は 0 のまま。REPAIR ALL でドアが開き、START の latch が残っていて 15 秒で N1 10 % 超、APU DOOR は消えた。窓の写真）。Log.txt に Lua の誤りなし。
+
+## 13. APU が燃料弁を見る（2026-11-09：本家の古いコードの監査）
+
+- 前の状態：APU のつなぎ（`B747.03.xt.apu.lua`）の燃料の入力は、主タンク 2 の燃料があるかだけだった。燃料モデルの APU の燃料弁（`laminar/B747/fuel/main2_tank/apu_vlv_pos`）を見ないので、故障の窓で弁を閉で固着させても、APU は回り続けた。
+- 資料：FCOM p.820：APU の燃料弁は hot battery bus。ATA26_28 p.464：弁の動く時間 3〜5 秒。
+- 作ったこと：X-Plane の APU が始動中か運転中（燃料のつなぎが弁を開ける条件）で、弁がまだ半分より閉なら時間を数え、6 秒（弁の時間と余裕 2 秒：推定）を過ぎたら燃料なしとする。そこから先は前からの APU の論理（始動の打ち切り、APU の advisory）。
+- 試験：`apu_module_test`（弁の代わりを置いて 4 秒で開く。閉で固着の 3 件）。直す前のコードでは 2 件が落ちる。
+- X-Plane（カスタム acf、2026-11-09）：`s275` の (5)：燃料弁を閉で固着させて APU を始動すると、X-Plane の APU の始動が扉の開いた後に始まり、6.1 秒で止まって APU の advisory が出た（選択器 OFF で消える）。
