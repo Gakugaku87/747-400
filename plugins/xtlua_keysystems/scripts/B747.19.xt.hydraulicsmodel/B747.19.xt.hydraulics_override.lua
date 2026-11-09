@@ -359,9 +359,11 @@ function flight_controls_consumption()
         
     end
 
-    -- steering 
-    hydraulics_consumer({1,0,0,0},controlDiff[1]*5)
-    --rudder lower 
+    -- (2026-11-09's audit) no steering draw here: the steering is the gear
+    -- module's model (B747.10.xt.steering.lua), and controlDiff[1] is the
+    -- lower rudder's movement (systems 2 and 4: FCSOV_SRC.rud_lwr below).
+    -- Before, 5 psi a degree of rudder from system 1, in flight too
+    --rudder lower
     if hydraulics_consumer(fcsov_src.rud_lwr,controlDiff[1]*3)==0 then
         controlRatios[1]=B747_animate_value(lastControlValue[1],0,-100,100,10)
     end
