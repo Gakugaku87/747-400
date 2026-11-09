@@ -435,6 +435,10 @@ B747DR_irs_on_bat                   = find_dataref("laminar/B747/irs/on_bat")
 B747DR_simDR_captain_display             = deferred_dataref("laminar/B747/electrical/capt_display_power", "number")
 B747DR_simDR_fo_display             = deferred_dataref("laminar/B747/electrical/fo_display_power", "number")
 B747DR_elec_display_power               = find_dataref("laminar/B747/electrical/display_has_power")
+-- (2026-11-09's audit) the maintenance panel's FIELD OFF and SSB OPEN lights
+-- (FCOM p.788) from the electrical model
+B747DR_lt_gen_field_open                = find_dataref("laminar/B747/electrical/gen_field_open")
+B747DR_lt_breaker_ssb                   = find_dataref("laminar/B747/electrical/breaker/ssb")
 
 
 --wxr lighting
@@ -879,13 +883,21 @@ function B747_cabin_lights()
        brightnessPower[0]=B747_animate_value(brightnessPower[0],on(3),0,1,0.5) --C ND
        brightnessPower[2]=B747_animate_value(brightnessPower[2],on(0),0,1,0.5) --C PFD
        brightnessPower[9]=B747_animate_value(brightnessPower[9],on(4),0,1,0.5) --UPPER EICAS
-     if B747DR_simDR_fo_display==6 then --FO Transfer bus
+     -- (2026-11-09's audit) the CDUs' screens by the CDUs' own power
+     -- (display_has_power: 6 powered; [7] the right CDU on the F/O transfer
+     -- bus, [8] the left on the main standby bus: B747.03.xt.elec_buses.lua):
+     -- FMS R by the right's, FMS C/L (one for both) by the left's. Before,
+     -- FMS C/L by the captain's displays' bus (the APU standby bus): on the
+     -- battery alone its glass dark for the APU start's 65 s (the APU
+     -- inverter stopped) with the left CDU powered (the main inverter);
+     -- FMS R's bus the same as now
+     if B747DR_elec_display_power[7] ~= 6 then
        brightnessPower[13]=0 --FMS R
      else
        brightnessPower[13]=B747_animate_value(brightnessPower[13],1,0,1,0.5)
      end
-     
-     if B747DR_simDR_captain_display==6 then --Capt Transfer bus
+
+     if B747DR_elec_display_power[8] ~= 6 then
        brightnessPower[12]=0 --FMS C/L
      else
        brightnessPower[12]=B747_animate_value(brightnessPower[12],1,0,1,0.5)
@@ -1202,14 +1214,18 @@ function B747_annunciators()
     annun.a.flt_ctl_hyd_vlv_tail_03 = B747_ternary((B747DR_lt_fcsov_tail_valve[2] > 0), 1, 0)
     annun.a.flt_ctl_hyd_vlv_tail_04 = B747_ternary((B747DR_lt_fcsov_tail_valve[3] > 0), 1, 0)
 
-    -- GEN FIELD
-    annun.a.eng_gen_field_01 = 0
-    annun.a.eng_gen_field_02 = 0
-    annun.a.eng_gen_field_03 = 0
-    annun.a.eng_gen_field_04 = 0
+    -- GEN FIELD: (2026-11-09's audit) FIELD OFF with the generator field
+    -- open (FCOM p.788: the electrical model's GCR) and SSB OPEN with the
+    -- split system breaker open (its breaker/ssb: 1 closed). The APU
+    -- generators' fields are not in the model: dark (as before). Before,
+    -- all dark whatever the system
+    annun.a.eng_gen_field_01 = B747DR_lt_gen_field_open[0]
+    annun.a.eng_gen_field_02 = B747DR_lt_gen_field_open[1]
+    annun.a.eng_gen_field_03 = B747DR_lt_gen_field_open[2]
+    annun.a.eng_gen_field_04 = B747DR_lt_gen_field_open[3]
     annun.a.apu_gen_field_01 = 0
     annun.a.apu_gen_field_02 = 0
-    annun.a.split_sys_breaker = 0
+    annun.a.split_sys_breaker = 1 - B747DR_lt_breaker_ssb
 
     -- SQUIB TEST
     annun.a.squib_test_eng_01 = B747DR_fire_light_squib[0]   -- SQUIB TEST 1, 2 (FCOM p.187-188)

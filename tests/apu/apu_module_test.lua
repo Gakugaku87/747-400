@@ -26,7 +26,12 @@ local DOOR = "laminar/B747/electrical/apu_inlet_door"
 local AVAIL = "laminar/B747/electrical/apu_pwr1_avail"
 local SEL = "laminar/B747/electrical/apu/sel_dial_pos"
 
--- X-Plane's APU: up to 100 % in 50 s on START, held on ON, down in 20 s on OFF
+-- X-Plane's APU: up to 100 % in 50 s on START, held on ON, down in 20 s on OFF.
+-- (2026-11-09) the fuel model's APU fuel valve: open in 4 s while X-Plane's
+-- APU starts or runs (the fuel glue's demand), closed otherwise; held
+-- closed for a failed valve (valve_stuck)
+local VALVE = "laminar/B747/fuel/main2_tank/apu_vlv_pos"
+local valve_stuck = false
 local function xplane(dt)
     local n1, starter = get(N1), get(STARTER)
     if starter == 2 then n1 = math.min(100, n1 + 2 * dt)
@@ -34,6 +39,11 @@ local function xplane(dt)
     elseif starter == 0 then n1 = math.max(0, n1 - 5 * dt) end
     rt:set(N1, n1)
     rt:set("sim/cockpit2/electrical/APU_running", (n1 >= 90) and 1 or 0)
+    if not valve_stuck then
+        local v = get(VALVE)
+        v = (starter >= 1) and math.min(1, v + dt / 4) or math.max(0, v - dt / 4)
+        rt:set(VALVE, v)
+    end
 end
 local function frames(seconds)
     for _ = 1, math.floor(seconds * 30 + 0.5) do
@@ -148,6 +158,21 @@ frames(80)
 T.equal(get(STARTER), 1, "freed: the APU started")
 rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
 frames(100)
+-- (2026-11-09's audit) the APU fuel valve stuck closed (the fuel model's
+-- failed valve; here the stand-in held): the start begins, no fuel past
+-- the valve's travel and a margin (6 s, an estimate): shut down with the
+-- APU advisory. Before, the APU ran on main tank 2's fuel alone
+valve_stuck = true
+rt:set(VALVE, 0)
+for _ = 1, 2 do rt:command("laminar/B747/electrical/apu/sel_dial_up", 0) end
+frames(14)
+T.equal(get(STARTER), 2, "the APU fuel valve stuck closed: the start begins (the door open)")
+frames(7)
+T.equal(get(STARTER), 0, "no fuel past its travel and 2 s: X-Plane's APU shut down")
+T.equal(get(ADVISORY, 13), 1, "and the APU advisory")
+valve_stuck = false
+rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
+frames(30)
 
 -- (2026-11-04; APU-09) the starter's power from the electrical model (FCOM
 -- p.895-896): the APU battery run down, a P&W start does not begin; a GE's

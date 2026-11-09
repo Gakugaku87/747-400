@@ -208,23 +208,18 @@ B747CMD_ap_reset 					= find_command("laminar/B747/autopilot/mode_reset")
 --*************************************************************************************--
 --** 				             X-PLANE COMMAND HANDLERS               	    	 **--
 --*************************************************************************************--
-simDR_autopilot_alt_hold_status         = find_dataref("laminar/B747/autopilot/altitude_hold_status")
-simDR_autopilot_vs_status          = find_dataref("laminar/B747/autopilot/vvi_status")
-simDR_autopilot_flch_status         	= find_dataref("laminar/B747/autopilot/speed_status")
+-- (2026-11-09's audit) X-Plane's FLCH and V/S commands (a joystick's, a
+-- checklist tool's) push the MCP's FLCH SPD and V/S switches, the AFDS
+-- model's (B747.70.xt.autopilot.lua). Before, they wrote the old mode
+-- flags (vvi_status 2 and so on): the V/S light and window with no mode,
+-- nothing flown with the A/P off
+B747CMD_ap_flch_mode                    = find_command("laminar/B747/autopilot/button_switch/flch_mode")
+B747CMD_ap_vs_mode                      = find_command("laminar/B747/autopilot/button_switch/vs_mode")
 function sim_flch_CMDhandler(phase, duration)
-    if phase == 0 then
-        simDR_autopilot_vs_status=0
-        simDR_autopilot_flch_status=2
-        simDR_autopilot_alt_hold_status=0
-        B747DR_ap_thrust_mode=2
-    end
+    if phase == 0 then B747CMD_ap_flch_mode:once() end
 end
 function sim_vert_speed_CMDhandler(phase, duration)
-    --if phase == 0 then
-    simDR_autopilot_vs_status=2
-    simDR_autopilot_flch_status=0
-    simDR_autopilot_alt_hold_status=0
-    --end
+    if phase == 0 then B747CMD_ap_vs_mode:once() end
 end
 -- BATTERY
 function sim_battery1_on_CMDhandler(phase, duration)
@@ -277,65 +272,73 @@ end
 
 
 -- GENERATORS
+-- (2026-11-09's audit) X-Plane's generator commands (a joystick's, a
+-- checklist tool's) move the GEN CONT switches, which the electrical
+-- model reads, as the battery's and cross tie's do; generators_toggle
+-- each of the four. Before, they called themselves (the replaced
+-- commands) and never moved the switches
 function sim_generator_1_on_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[22] < 0.01 then
-            simCMD_generator_1_on:once()
+            B747CMD_elec_gen_ctrl_1:once()
         end
     end
 end
 function sim_generator_2_on_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[23] < 0.01 then
-            simCMD_generator_2_on:once()
+            B747CMD_elec_gen_ctrl_2:once()
         end
     end
 end
 function sim_generator_3_on_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[24] < 0.01 then
-            simCMD_generator_3_on:once()
+            B747CMD_elec_gen_ctrl_3:once()
         end
     end
 end
 function sim_generator_4_on_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[25] < 0.01 then
-            simCMD_generator_4_on:once()
+            B747CMD_elec_gen_ctrl_4:once()
         end
     end
 end
 function sim_generator_1_off_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[22] > 0.99 then
-            simCMD_generator_1_off:once()
+            B747CMD_elec_gen_ctrl_1:once()
         end
     end
 end
 function sim_generator_2_off_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[23] > 0.99 then
-            simCMD_generator_2_off:once()
+            B747CMD_elec_gen_ctrl_2:once()
         end
     end
 end
 function sim_generator_3_off_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[24] > 0.99 then
-            simCMD_generator_3_off:once()
+            B747CMD_elec_gen_ctrl_3:once()
         end
     end
 end
 function sim_generator_4_off_CMDhandler(phase, duration)
     if phase == 0 then
         if B747_button_switch_position_target[25] > 0.99 then
-            simCMD_generator_4_off:once()
+            B747CMD_elec_gen_ctrl_4:once()
         end
     end
 end
 function sim_generators_toggle_CMDhandler(phase, duration)
     if phase == 0 then
-        simCMD_generators_toggle:once()
+        B747CMD_elec_gen_ctrl_1:once()
+        B747CMD_elec_gen_ctrl_2:once()
+        B747CMD_elec_gen_ctrl_3:once()
+        B747CMD_elec_gen_ctrl_4:once()
     end
 end
 
@@ -623,10 +626,11 @@ end
 function B747_elec_battery_CMDhandler(phase, duration)
     if phase == 0 then
         B747_button_switch_position_target[13] = 1.0 - B747_button_switch_position_target[13]
-        simDR_radio_alt_DH_capt=-1
-        simDR_radio_alt_DH_fo=-1
-        B747DR_efis_baro_alt_ref_capt=-101
-        B747DR_efis_baro_alt_ref_fo=-101
+        -- (2026-11-09's audit) both pilots' minimums left alone: the EFIS
+        -- control panels keep their power from the AC transfer buses with
+        -- the generators on (the display module sets them at its start).
+        -- Before, the upstream code set the RA minimums to -1 and the BARO
+        -- references to -101 on every push, whatever the power
         if is_timer_scheduled(B747_close_button_cover[9]) then
             stop_timer(B747_close_button_cover[9])
         end

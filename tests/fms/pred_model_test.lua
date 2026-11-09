@@ -712,4 +712,24 @@ do
     T.near(r1.pts[2].cas, r0.pts[2].cas, 0.5, string.format("S2 after it: %.0f kt as without", r1.pts[2].cas))
 end
 
+-- (2026-11-09's review) a climb's level segment at an altitude constraint
+-- at the climb's speed (FCOM p.1255: VNAV PTH holds the climb's command
+-- speed there), within the climb's waypoint constraint: AT 5,000 at S1 40
+-- NM out from 1,500 ft. Before, the cruise's Mach at 5,000 ft (M.85, 519
+-- kt CAS): S1 at 467 kt on average
+do
+    local function sid(spd)
+        return PM.predict{P = P, t = pw, gw = 300000, fuel = 80000, alt = 1500, cas = 200, phase = "clb", crz = 35000,
+            clb = clb, des = des, crzspd = {mach = 0.85}, legs = {{name = "S1", dist = 40, con = {kind = "AT", a = 5000}, spd = spd},
+            {name = "S2", dist = 30}, {name = "CRZ", dist = 400}, {name = "RW", dist = 150, con = {kind = "AT", a = 50}}}, ed = 4, clb_last = 2}
+    end
+    local r220, r0 = sid(220), sid(nil)
+    local tas220, tas250 = P.tas(P.cas_to_mach(220, 5000), 5000), P.tas(P.cas_to_mach(250, 5000), 5000)
+    local gs220, gs0 = 40 / r220.pts[1].t * 3600, 40 / r0.pts[1].t * 3600
+    T.check(r220.pts[1].h == 5000 and gs220 > 200 and gs220 < tas220 + 2,
+        string.format("level at 5,000 ft with 220 kt: S1 at %.0f kt on average (220 kt's TAS %.0f)", gs220, tas220))
+    T.check(gs0 > gs220 and gs0 < tas250 + 2,
+        string.format("without the constraint the climb's 250 kt below 10,000 ft: %.0f kt (TAS %.0f)", gs0, tas250))
+end
+
 T.done()

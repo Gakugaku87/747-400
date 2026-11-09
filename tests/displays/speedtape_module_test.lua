@@ -40,7 +40,7 @@ T.near(rt:get(A .. "Vf25"), 164, 1e-6, "25: the FMC's VREF25")
 T.equal(bugs(), "3,4", "flaps 20: the 20 and 10 bugs (FCOM p.972)")
 T.equal(rt:get("laminar/B747/pfd/show_mins"), 0, "on the ground: no minimum maneuvering band")
 rt:set("laminar/B747/gear/air_ground/pri_air", 1)
--- fltInst02 clears the CDU's landing flaps below 5 ft RA
+-- (before 2026-11-09, fltInst02 cleared the CDU's landing flaps below 5 ft RA)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 1000)
 frames(0.2)
 T.equal(rt:get("laminar/B747/pfd/show_mins"), 0, "airborne at the takeoff flaps: not yet")
@@ -54,6 +54,15 @@ frames(0.2)
 T.equal(bugs(), "5", "flaps 30 with landing flaps 30: 25 only (the REF bug is VREF30)")
 T.equal(rt:get(A .. "showVf25"), 1, "showVf25 kept")
 T.equal(rt:get(A .. "showVf30"), 0, "showVf30 kept")
+-- (2026-11-09's audit) on the ground too the CDU's landing flaps stay (FCOM
+-- p.973: VREF shown while selected; the FMC clears them at its flight
+-- complete). Before, cleared below 5 ft RA every frame
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 0)
+frames(1)
+T.equal(rt:get(A .. "VrefFlap"), 2, "at 0 ft RA the CDU's landing flaps 30 kept")
+T.equal(bugs(), "5", "and the 30 bug still left to the REF bug")
+rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 1000)
+frames(0.2)
 
 -- the minimum speeds (step 3b, the minimum speed model): 300 t at 10,000 ft
 -- with the flaps at 20 (the FCU's position in the detents' numbers)

@@ -2284,9 +2284,11 @@ function B747_Vspeeds()
     -- Vf (the flap maneuver speeds) and their bugs: the speed tape model
     -- (B747.60.xt.speedtape.lua, 5-2 step 3a)
 
-    if simDR_radio_alt_height_capt< 5.0 then
-        B747DR_airspeed_VrefFlap=0
-    end
+    -- (2026-11-09's audit) the landing flaps and VREF selected on the CDU
+    -- (airspeed/VrefFlap) are the FMC's: shown while selected (FCOM p.973),
+    -- cleared at its flight complete (B747.68.xt.fms.lua). Before, the
+    -- upstream code set the flaps to 0 below 5 ft RA every frame: no REF
+    -- bug on the ground, gone at touchdown
 
     -- Vfe (MAXIMUM FLAP EXTENDED SPEED - [PLACARD])
     B747DR_airspeed_Vfe1 = 280.0

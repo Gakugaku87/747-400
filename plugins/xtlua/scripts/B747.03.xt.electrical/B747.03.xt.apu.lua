@@ -21,6 +21,15 @@ B747DR_apu_fail_duct_leak_in    = find_dataref("laminar/B747/apu/fail/duct_leak"
 B747DR_apu_fail_door_in         = find_dataref("laminar/B747/apu/fail/door")
 
 local MAIN2_TANK = 2                -- main tank 2 in X-Plane's tank list (B747.25.xt.fuel.lua)
+-- (2026-11-09's audit) the fuel model's APU fuel valve (B747.28.fuel_model.lua:
+-- on the hot battery bus, FCOM p.820; open while X-Plane's APU starts or
+-- runs, the fuel glue's demand): no fuel to the APU once the valve, wanted
+-- open, has had its travel and a margin (APU_VALVE_S: the valve's 3-5 s,
+-- ATA26_28 p.464, plus 2 s, an estimate) and is still under half open.
+-- Before, main tank 2's fuel only: the APU ran with its valve failed closed
+B747DR_apu_fuel_vlv_pos         = find_dataref("laminar/B747/fuel/main2_tank/apu_vlv_pos")
+local APU_VALVE_S = 6
+local apu_valve_wait = 0
 local BATTERY_SWITCH = 13           -- button_switch/position[13]
 -- EICAS slots (laminar/B747/CAS/*_status, B747.87.xt.warning.lua)
 local ADV_APU, ADV_APU_DOOR = 13, 14
@@ -56,7 +65,12 @@ function B747_apu()
     inp.n1 = simDR_apu_N1_pct
     inp.running = simDR_apu_running == 1
     inp.fire = B747DR_apu_fire_shutdown > 0.5
-    inp.fuel = simDR_apu_fuel_tank_kg[MAIN2_TANK] > 0
+    if simDR_apu_start_switch_mode >= 1 and B747DR_apu_fuel_vlv_pos < 0.5 then
+        apu_valve_wait = apu_valve_wait + SIM_PERIOD
+    else
+        apu_valve_wait = 0
+    end
+    inp.fuel = simDR_apu_fuel_tank_kg[MAIN2_TANK] > 0 and apu_valve_wait < APU_VALVE_S
     inp.limit_fail = B747DR_apu_fail_limit_in > 0.5
     inp.duct_leak = B747DR_apu_fail_duct_leak_in > 0.5
     inp.door_stuck = B747DR_apu_fail_door_in > 0.5
