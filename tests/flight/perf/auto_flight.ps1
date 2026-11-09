@@ -887,13 +887,70 @@ function Invoke-AutoTakeoff($Plan) {
     Note-Status 'climb' ('flaps up; {0:0} ft' -f (Get-N 'sim/cockpit2/gauges/indicators/altitude_ft_pilot'))
 }
 
+# ---------------------------------------------------------------- the fuel
+# The Climb and Cruise Procedure's fuel steps (FCOM p.133-134; the TANK/ENG
+# step also p.120), done by the kit as the crew. The 2026-11-09 EDDF-OMDB
+# flight had none: past FUEL TANK/ENG main 2 and 3 went on feeding all four
+# engines (their override pumps over the open crossfeed valves) and were 3.6
+# t under main 1 and 4 an hour later (FUEL IMBALANCE, FCOM p.1473; balanced
+# by hand, FCOM SP.12.1 p.199).
+#   FUEL TANK/ENG, main 2 <= main 1 or main 3 <= main 4: override pumps 2
+#     and 3 off, crossfeed valves 1 and 4 off
+#   FUEL LOW CTR L or R (3,200 kg in climb, 1,300 kg in cruise): both center
+#     pumps off
+#   FUEL OVD CTR L or R (1,800 kg or more in cruise) with the pitch under 5
+#     degrees: both center pumps on
+# $Q m_fuel (center, main 1-4, reserve 2 and 3, stabilizer: B747.25.xt.fuel's
+# TANK_OF_INDEX), $Adv laminar/B747/CAS/advisory_status, $Sw
+# laminar/B747/button_switch/position; the steps to take (none: empty)
+$AutoFuelAdv = @{ tank_eng = 171; low_ctr_l = 302; low_ctr_r = 303; ovd_ctr_l = 153; ovd_ctr_r = 154 }
+$AutoFuelSw = [ordered]@{ ovrd_fwd_2 = @(64, 'fuel_overd_pump_fwd_2'); ovrd_fwd_3 = @(65, 'fuel_overd_pump_fwd_3'); ovrd_aft_2 = @(66, 'fuel_overd_pump_aft_2')
+    ovrd_aft_3 = @(67, 'fuel_overd_pump_aft_3'); xfeed_1 = @(48, 'fuel_xfeed_vlv_1'); xfeed_4 = @(51, 'fuel_xfeed_vlv_4'); ctr_l = @(52, 'fuel_ctr_wing_tnk_pump_L')
+    ctr_r = @(53, 'fuel_ctr_wing_tnk_pump_R') }
+function Get-AutoFuelSteps($Q, $Adv, $Sw, [double]$Pitch) {
+    $steps = New-Object System.Collections.ArrayList
+    $on = { param($k) [double]$Sw[$AutoFuelSw[$k][0]] -eq 1 }
+    $tankEngOpen = @('ovrd_fwd_2', 'ovrd_fwd_3', 'ovrd_aft_2', 'ovrd_aft_3', 'xfeed_1', 'xfeed_4') | Where-Object { & $on $_ }
+    if ([double]$Adv[$AutoFuelAdv.tank_eng] -eq 1 -and ([double]$Q[2] -le [double]$Q[1] -or [double]$Q[3] -le [double]$Q[4]) -and @($tankEngOpen).Count -gt 0) { [void]$steps.Add('tank_eng') }
+    $ctrOn = (& $on 'ctr_l') -or (& $on 'ctr_r')
+    if (([double]$Adv[$AutoFuelAdv.low_ctr_l] -eq 1 -or [double]$Adv[$AutoFuelAdv.low_ctr_r] -eq 1) -and $ctrOn) { [void]$steps.Add('ctr_off') }
+    elseif (([double]$Adv[$AutoFuelAdv.ovd_ctr_l] -eq 1 -or [double]$Adv[$AutoFuelAdv.ovd_ctr_r] -eq 1) -and $Pitch -lt 5) { [void]$steps.Add('ctr_on') }
+    return ,($steps.ToArray())
+}
+# a fuel switch to on (1) or off (0): its toggle command pressed and released
+# (0.2 s: a press alone toggled every other time, MCP knobs 2026-11-08) until
+# it is there, three presses at most
+function Set-AutoFuelSwitch([string]$Key, [double]$Want) {
+    $i = $AutoFuelSw[$Key][0]; $cmd = $AutoFuelSw[$Key][1]
+    for ($n = 0; $n -lt 3; $n++) {
+        if ([math]::Abs((Get-N "laminar/B747/button_switch/position[$i]") - $Want) -le 0.01) { return $true }
+        Send-Cmd "laminar/B747/button_switch/$cmd" 0.2
+        Start-Sleep -Milliseconds 800
+    }
+    $ok = [math]::Abs((Get-N "laminar/B747/button_switch/position[$i]") - $Want) -le 0.01
+    if (-not $ok) { Note warn ('the fuel switch {0} not {1} after 3 presses' -f $Key, $Want) }
+    return $ok
+}
+function Invoke-AutoFuelSteps([string[]]$Steps) {
+    foreach ($s in $Steps) {
+        switch ($s) {
+            'tank_eng' {
+                foreach ($k in 'ovrd_fwd_2', 'ovrd_fwd_3', 'ovrd_aft_2', 'ovrd_aft_3', 'xfeed_1', 'xfeed_4') { [void](Set-AutoFuelSwitch $k 0) }
+                Note info 'FUEL TANK/ENG: override pumps 2 and 3 off, crossfeed valves 1 and 4 off (FCOM p.134)'
+            }
+            'ctr_off' { foreach ($k in 'ctr_l', 'ctr_r') { [void](Set-AutoFuelSwitch $k 0) }; Note info 'FUEL LOW CTR: the center pumps off (FCOM p.134)' }
+            'ctr_on' { foreach ($k in 'ctr_l', 'ctr_r') { [void](Set-AutoFuelSwitch $k 1) }; Note info 'FUEL OVD CTR: the center pumps on (FCOM p.134)' }
+        }
+    }
+}
+
 # the climb and the cruise to 28 NM to E/D in the descent
 function Watch-AutoCruise($Plan) {
     $std = $false; $qnh = $false; $lowered = $false; $phaseSeen = -1; $fails = 0
     $steps = @($Plan.steps | Where-Object { $null -ne $_.lat })
     foreach ($s in @($Plan.steps | Where-Object { $null -eq $_.lat })) { Note warn ('the step at {0} not on the navlog: left out' -f $s.fix) }
     $si = 0; $stepState = @{ min = $null }; $stepWarned = $false
-    $lastLog = [Diagnostics.Stopwatch]::StartNew()
+    $lastLog = [Diagnostics.Stopwatch]::StartNew(); $fuelWatch = [Diagnostics.Stopwatch]::StartNew()
     while ($true) {
         Start-Sleep -Seconds 5
         Assert-AutoAlive
@@ -908,6 +965,15 @@ function Watch-AutoCruise($Plan) {
             continue
         }
         if ($gnd -eq 1) { throw 'on the ground before the approach' }
+        # the fuel steps of the Climb and Cruise Procedure, every 15 s (FUEL
+        # LOW CTR's pressure caution comes 60 s after it: B747.28.fuel_model.lua)
+        if ($fuelWatch.Elapsed.TotalSeconds -ge 15) {
+            $fuelWatch.Restart()
+            try {
+                $fs = Get-AutoFuelSteps @(Get-XPDataref 'sim/flightmodel/weight/m_fuel') @(Get-XPDataref 'laminar/B747/CAS/advisory_status') @(Get-XPDataref 'laminar/B747/button_switch/position') ([double](Get-XPDataref 'sim/flightmodel/position/theta'))
+                if ($fs.Count -gt 0) { Invoke-AutoFuelSteps $fs }
+            } catch { Note warn ('the fuel steps: {0}' -f $_.Exception.Message) }
+        }
         if ($ph -ne $phaseSeen) { Note-Status $(switch ($ph) { 1 { 'climb' } 2 { 'cruise' } 3 { 'descent' } default { "phase $ph" } }) ('{0:0} ft, E/D {1:0} NM' -f $alt, $ed); $phaseSeen = $ph }
         if (-not $std -and $ph -le 2 -and $alt -gt $Plan.origin_trans_alt_ft + 100) { Set-AutoStd; $std = $true }
         # the OFP's step at its fix: once passed, in the cruise
