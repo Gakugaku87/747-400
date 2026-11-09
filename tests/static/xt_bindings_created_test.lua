@@ -49,10 +49,10 @@ local KNOWN_CMDS = {
 }
 -- (2026-11-09) and the commands the aircraft's native plugin creates
 -- (plugins/b747_fms_bridge, Windows): its XPLMCreateCommand names and the
--- sim options' toggles (laminar/B747/options/<opt_key>_toggle,
--- b747_fms_bridge.c), which the CDU's SIM CONFIG finds (FUEL MGMT)
+-- sim options' toggles (laminar/B747/options/<opt_key>_toggle, options.c
+-- since 2026-11-09), which the CDU's SIM CONFIG finds (FUEL MGMT)
 local native_cmds = {}
-for _, f in ipairs({"b747_fms_bridge.c", "failures_window.c", "wb_window.c", "gh_window.c"}) do
+for _, f in ipairs({"b747_fms_bridge.c", "options.c", "failures_window.c", "wb_window.c", "gh_window.c"}) do
     local h = io.open("plugins/b747_fms_bridge/src/" .. f, "rb")
     if h then
         local text = h:read("*a")
