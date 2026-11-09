@@ -87,6 +87,11 @@ M.SLOW_KT, M.SLOW_KT_LOW, M.SLOW_BACK_KT = 15, 10, 5
 -- (estimate: FCOM p.665 holds the altitude, RESET MCP ALT, while the MCP
 -- altitude stays at the cruise altitude)
 M.MCP_BELOW = 200
+-- (step 9b) below the descent path the A/T on speed from PATH_BELOW under
+-- it (levelling to meet it), (2026-11-09) until back within PATH_BELOW_BACK
+-- (estimates: before, none: s273's first run, the A/T between IDLE and SPD
+-- three times in 1 s at 200 ft under the path)
+M.PATH_BELOW, M.PATH_BELOW_BACK = 200, 50
 -- (step 9d2a) the early descent's vertical speed (FCOM p.1393, FMSPG
 -- p.3.5-5: about 1,250 fpm), the cruise descent's the same (FCOM p.1268's
 -- condition 3, p.1269: step 9h4c); the early descent's path met once the airplane was
@@ -148,7 +153,7 @@ end
 -- approach (ATA34_2 p.472)
 function M.missed(s)
     s.phase, s.early, s.early_below, s.crz_chg = "CLB", false, false, nil
-    s.drag, s.rev, s.rev_cas, s.slow = false, nil, nil, false
+    s.drag, s.rev, s.rev_cas, s.slow, s.below = false, nil, nil, false, false
 end
 
 -- the descent path at e NM to go to the E/D: its altitude, gradient (ft a
@@ -597,7 +602,7 @@ function M.update(s, inp)
     out.end_des = (ph == "DES" and inp.end_des) and true or nil
     -- (step 9e1) DRAG REQUIRED and the speed reversion only in the descent
     -- on its path (not the early descent's, nor in speed intervention)
-    if ph ~= "DES" or s.early or int or out.end_des then s.drag, s.rev = false, nil end
+    if ph ~= "DES" or s.early or int or out.end_des then s.drag, s.rev, s.below = false, nil, false end
     if ph == "CLB" then
         out.mode = "SPD"
         out.alt = inp.clb_alt or inp.crz_alt
@@ -680,8 +685,12 @@ function M.update(s, inp)
             end
             out.vs = vs
             -- a line too shallow for idle, or below the path (levelling to
-            -- meet it): the A/T on speed
-            if kind == "spd" or dev < -M.MCP_BELOW then out.at = M.AT_SPD end
+            -- meet it): the A/T on speed, (2026-11-09) from PATH_BELOW
+            -- under it until back within PATH_BELOW_BACK
+            if dev < -M.PATH_BELOW then s.below = true elseif dev >= -M.PATH_BELOW_BACK then s.below = false end
+            if kind == "spd" or s.below then out.at = M.AT_SPD end
+        else
+            s.below = false
         end
         -- too slow: the A/T on speed until near the target again ((FMC-08)
         -- the low limit below the first speed constraint: the transition's

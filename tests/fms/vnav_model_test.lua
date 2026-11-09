@@ -96,6 +96,15 @@ T.near(o.vs, -g * 400 / 60 - V.K_PATH * 200, 1, "above it: steeper by K_PATH a f
 o = V.update(s2, inp{alt = ph - 500, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.near(o.vs, -g * 400 / 60 + V.K_PATH * 500, 1, "500 ft below the path: shallower, to meet it")
 T.equal(o.at, V.AT_SPD, "and the A/T on speed")
+-- (2026-11-09) the A/T's SPD from 200 ft under the path until back within
+-- 50 ft (estimates; before, none: IDLE and SPD three times in 1 s at 200
+-- ft under it, s273's first run)
+for _, c in ipairs({{150, V.AT_SPD, "150 ft below, from 500: SPD still"}, {190, V.AT_SPD, "190: SPD (before, IDLE)"},
+    {40, V.AT_IDLE, "40 ft below: back within 50, IDLE"}, {150, V.AT_IDLE, "150 below again: IDLE (not 200 under since)"},
+    {210, V.AT_SPD, "210 below: SPD"}, {190, V.AT_SPD, "190: SPD still"}, {40, V.AT_IDLE, "40: IDLE"}}) do
+    o = V.update(s2, inp{alt = ph - c[1], mcp_alt = 10000, d_ed = 60, gs = 400})
+    T.equal(o.at, c[2], c[3])
+end
 o = V.update(s2, inp{alt = ph - 2500, mcp_alt = 10000, d_ed = 60, gs = 400})
 T.equal(o.vs, 0, "2,500 ft below: level until the path comes down (never up)")
 o = V.update(s2, inp{alt = ph + 2000, mcp_alt = 10000, d_ed = 60, gs = 400})
