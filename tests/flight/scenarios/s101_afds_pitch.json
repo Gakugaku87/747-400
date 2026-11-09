@@ -36,6 +36,7 @@
     { "do": "check", "note": "FMC の巡航高度 35,000 ft", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 35000 },
     { "do": "check", "note": "まだ ALT（経路を入れても）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9 },
     { "do": "sleep", "seconds": 5, "note": "高度と速度を落ち着かせる" },
+    { "do": "wait", "note": "空中開始の上昇から ALT の高度への戻りが落ち着くまで（2026-11-09 の回は −1,449 fpm のまま V/S に入り、30 秒で +800 fpm に届かなかった。11-03 は −1,265 fpm から 28.1 秒）", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-300, 300], "timeout": 180 },
 
     { "do": "mark", "note": "V/S（FCOM p.648、ATA22 p.282）" },
     { "do": "set", "note": "MCP 高度 11,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 11000 },
