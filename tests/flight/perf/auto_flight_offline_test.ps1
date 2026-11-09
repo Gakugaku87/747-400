@@ -260,6 +260,32 @@ Near $sv.total 25.9 1.0 'vectors: about 26 NM from GADDO to the threshold'
 $sl = Sim-Vectors 5.7 -4.2 263
 Check ($null -ne $sl -and [math]::Abs($sl.total - $sv.total) -lt 0.2) 'vectors: the same from the other side'
 
+# ---------------------------------------------------------------- the fuel steps (FCOM p.134)
+# m_fuel (center, main 1-4, reserve 2 and 3, stabilizer), the advisory slots
+# and the switch positions as the aircraft gives them
+function New-TestAdv([int[]]$On) { $a = New-Object double[] 320; foreach ($i in $On) { $a[$i] = 1 }; return ,$a }
+function New-TestSw([int[]]$On) { $a = New-Object double[] 120; foreach ($i in $On) { $a[$i] = 1 }; return ,$a }
+$swAll = @(48, 49, 50, 51, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67)          # crossfeeds, main and override pumps on, center off
+$swTankEng = @(49, 50, 56, 57, 58, 59, 60, 61, 62, 63)                              # override 2 and 3, crossfeed 1 and 4 off
+$q0 = [double[]]@(0, 13499, 13499, 13499, 13499, 0, 0, 0)
+$q1 = [double[]]@(0, 13499, 9866, 9866, 13499, 0, 0, 0)                            # EDDF-OMDB 2026-11-09 14:00
+$s1 = Get-AutoFuelSteps $q0 (New-TestAdv @(171)) (New-TestSw $swAll) 2.5
+Check ($s1.Count -eq 1 -and $s1[0] -eq 'tank_eng') ('fuel: TANK/ENG with the mains equal, the overrides and crossfeeds on ({0})' -f ($s1 -join ','))
+$s2 = Get-AutoFuelSteps $q1 (New-TestAdv @(171, 148)) (New-TestSw $swAll) 2.5
+Check ($s2.Count -eq 1 -and $s2[0] -eq 'tank_eng') 'fuel: TANK/ENG late (EDDF-OMDB 14:00, FUEL IMBALANCE too)'
+Check ((Get-AutoFuelSteps $q1 (New-TestAdv @(171)) (New-TestSw $swTankEng) 2.5).Count -eq 0) 'fuel: tank to engine set, nothing more'
+Check ((Get-AutoFuelSteps ([double[]]@(0, 9000, 12000, 12000, 9000, 0, 0, 0)) (New-TestAdv @(171)) (New-TestSw $swAll) 2.5).Count -eq 0) 'fuel: TANK/ENG shown with main 2 and 3 above 1 and 4, nothing'
+Check ((Get-AutoFuelSteps $q0 (New-TestAdv @()) (New-TestSw $swAll) 2.5).Count -eq 0) 'fuel: no message, nothing'
+$qc = [double[]]@(1300, 13000, 16000, 16000, 13000, 0, 0, 0)
+$s3 = Get-AutoFuelSteps $qc (New-TestAdv @(302, 303)) (New-TestSw (@($swAll) + @(52, 53))) 2.5
+Check ($s3.Count -eq 1 -and $s3[0] -eq 'ctr_off') 'fuel: FUEL LOW CTR with the center pumps on, off'
+Check ((Get-AutoFuelSteps $qc (New-TestAdv @(302)) (New-TestSw $swAll) 2.5).Count -eq 0) 'fuel: FUEL LOW CTR with the center pumps off, nothing'
+$s4 = Get-AutoFuelSteps ([double[]]@(3200, 13000, 16000, 16000, 13000, 0, 0, 0)) (New-TestAdv @(153, 154)) (New-TestSw $swAll) 2.5
+Check ($s4.Count -eq 1 -and $s4[0] -eq 'ctr_on') 'fuel: FUEL OVD CTR in cruise, the center pumps on'
+Check ((Get-AutoFuelSteps ([double[]]@(3200, 13000, 16000, 16000, 13000, 0, 0, 0)) (New-TestAdv @(153)) (New-TestSw $swAll) 6).Count -eq 0) 'fuel: FUEL OVD CTR at a climb pitch, nothing'
+$s5 = Get-AutoFuelSteps ([double[]]@(1300, 13000, 13000, 13000, 13000, 0, 0, 0)) (New-TestAdv @(171, 302)) (New-TestSw (@($swAll) + @(52, 53))) 2.5
+Check ($s5.Count -eq 2 -and $s5[0] -eq 'tank_eng' -and $s5[1] -eq 'ctr_off') ('fuel: both at once ({0})' -f ($s5 -join ','))
+
 # ---------------------------------------------------------------- the CDU's pages
 # B744.fms.pages.deparr.lua's lines: lr(l, r) on 24 columns, the left
 # column's mark after it, the right's before it

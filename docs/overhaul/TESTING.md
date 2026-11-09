@@ -372,6 +372,12 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
     - OFP のステップ上昇（`-Steps ofp`、既定）：そのフィックスを通ったら、MCP 高度をその高度にして高度セレクタを押す（FCOM p.649、p.1257）。通過は、2 NM 以内か、最も近づいた所から 0.5 NM 離れたとき。`-Steps fmc` なら、FMC のステップ（シムの Auto step climb）に任せる。
     - T/D の前に、MCP を標高 + 3,000 ft（100 ft 単位で切り上げ）へ下げる。E/D までの距離が「(巡航高度 − 標高) ÷ 1,000 × 3.3 + 40 NM」を切ったとき（推定）。VNAV が T/D で止まったら（`td_hold`）、高度セレクタを押す。
     - 目的地の転移レベルの下で QNH にする（X-Plane の、機体の場所の QNH）。
+    - 燃料（FCOM の Climb and Cruise Procedure、p.133〜134。TANK/ENG は p.120 も）：15 秒ごとに EICAS の advisory とタンクの量を見て、乗員の代わりにスイッチを動かす。
+      - FUEL TANK/ENG が出て、主タンク 2 ≤ 1 か 3 ≤ 4：オーバーライド・ポンプ 2・3（前後）とクロスフィード 1・4 を切る（tank to engine）。
+      - FUEL LOW CTR L か R（上昇で 3,200 kg、巡航で 1,300 kg）：センター・ポンプ L・R を切る。60 秒で FUEL PRESS CTR の caution になる（`B747.28.fuel_model.lua`）。
+      - FUEL OVD CTR L か R（巡航で 1,800 kg 以上）で、ピッチが 5° より下：センター・ポンプ L・R を入れる。
+      - スイッチはトグルのコマンドを 0.2 秒押して放し、位置を見て最大 3 回。
+      - 2026-11-09 の EDDF-OMDB は、これが無かった。FUEL TANK/ENG の後も主タンク 2・3 のオーバーライド・ポンプが、開いたクロスフィードから 4 発に送り続けた。1 時間ほどで主タンク 2・3 が 1・4 より 3.6 t ずつ少なくなり、FUEL IMBALANCE が出た（FCOM p.1473）。手で釣り合わせた（FCOM SP.12.1、p.199）。
   - 進入と着陸：E/D の 28 NM 手前（か、下の VECTORS の脚）から、s198 の手順を FCOM の操作速度で行う。1 秒ごとに状態を見て進める。
     - 速度介入（フラップ 1 の速さ）とスピードブレーキ。UP の速さの下でフラップ 1。on approach（か、誘導のベースかインターセプト、か、最終進入コースの上で 16 NM 内）でフラップ 5 の速さにし、フラップ 1 の速さの下でフラップ 5。APP・CMD C・CMD R。
     - 最終進入コースの上：滑走路から 16 NM 内、コースから 2 NM 内、航跡（`hpath`）がコースから 30° 内（推定：大きさは目安。LOC の電波の届く 18 NM の内側で、G/S の 6 NM ほど手前にフラップ 5 と APP が来る。最初の飛行の誘導と同じくらい）。VECTORS の脚なしで最終進入コースに乗る STAR のため（例：OMDB の VUTE4D は DB506 の 27 NM 外からコースの上を飛び、ULDOT（15 NM）から ILS 30L）。FMC の on approach は進入の最初のフィックス（SEDPO、10.8 NM）を過ぎてからで（`B747.68.xt.fms.lua` の `on_approach`。STAR の ULDOT が残る）、標高 + 3,000 ft の G/S（9.4 NM）の 30 秒ほど前になる。
@@ -387,11 +393,12 @@ SimBrief のカスタム機体（B744 ベース）に入れる値を、カスタ
   - 他の飛行（シナリオのランナー、ランリスト、`perf.ps1`、別の `auto_flight.ps1`）が動いていれば始めない（`-Force` で始める）。
   - 終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（地上にいるとき）。
   - 出力：`runs/<日時>_autoflight/`（`ofp.json`、`plan.json`、`events.txt`、`status.txt`、`flight/`）。`-DryRun` は計画を書くだけ。
-  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（137 項目）。
+  - X-Plane なしの試験：`powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\perf\auto_flight_offline_test.ps1`（147 項目）。
     - acf の数。作った OFP からの計画（滑走路、重量、ステーション、タンク、フラップ、SID・STAR、転移、ステップ、単位、誤りの検出）。
     - 初期化、操作速度、MCP を下げる距離、QNH、フィックスの通過。
     - 誘導：CIFP の緯度経度、反対の端の名前、方位、作った滑走路の座標系、ダウンウインド・ベース・インターセプトの移り方と方位（左右とも）、旋回（毎秒 2.5°）込みで GADDO からの形（LOC は約 13 NM、滑走路まで約 26 NM）。この PC に CIFP があれば KLAX 24R（真 263.0°）。
     - 最終進入コースの上かどうか（距離・コースからの横・航跡の向き、北をまたぐ向き）。この PC に CIFP があれば OMDB 30L（真 301.5°。ULDOT は 15.3 NM でコースの上、DB504 は 19 NM でまだ、TUKAK はダウンウインドで左に 4.2 NM）。
+    - 燃料の手順（TANK/ENG：主タンクがそろったとき・EDDF-OMDB の 14:00 の量・設定済み・主タンク 2・3 の方が多いとき・メッセージなし。センター・ポンプ：LOW CTR で切る・切ってあれば何もしない・OVD CTR で入れる・上昇のピッチでは入れない。2 つ同時）。
     - CDU の画面（語と印、片側の印の付いた語、キー、ROUTE DISCONTINUITY、ページ番号）。
 - 空中スタート：`POST /flight` の `lle_air_start`（真の速さ）・`weight`（ペイロードは acf の `_fixed_max` の比で分け、燃料は機体の積み込み順：`B747.25.xt.fuel.lua` の `fuel_distribution`）・`engine_status`・気象のカスタム定義（ISA の 15 ℃・1013.25 hPa、13 層とも無風・乱気流 0、雲なし、`static`）。初期化が HTTP の誤りで断られたら止まる（`xp.ps1` の `Start-XPFlight` は警告だけで、前のフライトが続いて見える）。キットのランナーと同じく、8 秒後に全エンジンの燃焼を確かめて、もう一度かける。
   - 走らせ終わりに、始めに読んだペイロード（`m_fixed`）へ戻す（2026-11-07 から）。最後の点の 40 t が、後のフライトの機体の読み直しの後も X-Plane に残り、機体の修正のセッションの s108 が 310 t で流れた（前は 270 t）。燃料は戻さない（タンクは機体の燃料モデルが持つ）。
