@@ -75,6 +75,15 @@ M.K_PATH, M.VS_STEEPER = 1, 1000
 -- offline (the pitch model on an airplane lagged as X-Plane's 747 in
 -- s107) 582 ft under it before, 43 ft with these, within 0.04 g
 M.PATH_BLEND_S, M.PATH_LEAD_S = 30, 6
+-- (2026-11-09) the T/D's corner rounded over the time the idle line's
+-- vertical speed takes at TD_ACC_FPMS (0.035 g), PATH_BLEND_S to
+-- TD_BLEND_MAX_S, and the descent begun where that rounding begins when
+-- the level deceleration before the corner is shorter (estimates: the
+-- sources give no pitch-over at the T/D; s273's fourth run, no level
+-- deceleration at M.858 from FL370, went 1,448 ft over the path past the
+-- T/D, the descent begun at the corner and the AFDS's 0.05 g taking about
+-- 40 s to 4,000 fpm)
+M.TD_ACC_FPMS, M.TD_BLEND_MAX_S = 0.035 * 32.174 * 60, 90
 -- the mean's samples
 M.BLEND_N = 12
 -- the takeoff's target speed (FCOM p.1255): V2 + TO_ADD_MIN to V2 +
@@ -516,6 +525,10 @@ function M.update(s, inp)
     local P = inp.P
     local path_h, g, kind, decelCas, plannedCas = nil, nil, nil, nil, nil
     local etd = nil
+    -- (2026-11-09) the T/D's corner (where the path meets CRZ ALT) and its
+    -- rounding's width (NM: TD_ACC_FPMS); before it the descent begins this
+    -- far (NM) when the level deceleration is shorter
+    local ec, ltd, pre = nil, nil, 0
     if inp.path and inp.d_ed then
         path_h, g, kind, decelCas, plannedCas = M.path_at(inp.path, inp.d_ed)
         -- (step 9d2a) the T/D where the path reaches CRZ ALT (its top
@@ -525,6 +538,15 @@ function M.update(s, inp)
         -- deceleration before it (FCOM p.1264)
         etd = inp.crz_alt and M.td_e(inp.path, inp.crz_alt) or inp.path.e[#inp.path.e]
         if path_h and inp.crz_alt and path_h > inp.crz_alt then path_h, g = inp.crz_alt, 0 end
+        ec = inp.crz_alt and M.path_e_at(inp.path, inp.crz_alt) or nil
+        if ec then
+            local gsk = math.max(inp.gs or 0, 0)
+            local _, gc = M.path_at(inp.path, math.max(ec - 1e-3, 0))
+            local t = math.max(gc or 0, 0) * gsk / 60 / M.TD_ACC_FPMS
+            t = math.min(math.max(t, M.PATH_BLEND_S), M.TD_BLEND_MAX_S)
+            ltd = gsk * t / 3600
+            pre = math.max(0, ltd / 2 + gsk * M.PATH_LEAD_S / 3600 - (inp.path.td_decel or 0))
+        end
     end
 
     -- the phase
@@ -559,7 +581,9 @@ function M.update(s, inp)
         if ph ~= "DES" then
             local ref = inp.crz_alt and math.min(inp.alt, inp.crz_alt) or inp.alt
             local mcpBelow = inp.mcp_alt and inp.mcp_alt < ref - M.MCP_BELOW
-            local past = path_h and etd and inp.d_ed <= etd + 1e-6
+            -- (2026-11-09) from where the T/D's rounding begins when the
+            -- level deceleration before the corner is shorter than it (pre)
+            local past = path_h and etd and inp.d_ed <= etd + pre + 1e-6
             if past and path_h <= inp.alt + 50 then
                 if mcpBelow then
                     ph, s.crz_chg = "DES", nil
@@ -647,7 +671,15 @@ function M.update(s, inp)
     local fh, fg = path_h, g
     if path_h and ph == "DES" then
         local gsk = math.max(inp.gs or 0, 0)
-        fh, fg = M.path_blend(inp.path, inp.d_ed, gsk * M.PATH_BLEND_S / 3600, gsk * M.PATH_LEAD_S / 3600, inp.crz_alt)
+        local l, lead = gsk * M.PATH_BLEND_S / 3600, gsk * M.PATH_LEAD_S / 3600
+        -- (2026-11-09) wider (ltd) about the T/D's corner, narrowing back
+        -- to l over ltd / 2 once the corner is out of the windows
+        if ec and ltd and ltd > l then
+            local d = math.abs(inp.d_ed - ec) - ltd / 2 - lead
+            local w = d <= 0 and 1 or math.max(0, 1 - d / (ltd / 2))
+            l = l + (ltd - l) * w
+        end
+        fh, fg = M.path_blend(inp.path, inp.d_ed, l, lead, inp.crz_alt)
     end
     -- (step 9i) the descent's FMC altitude: an AT OR BELOW's the lower of it
     -- and the path at its point (des_target)

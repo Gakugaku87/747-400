@@ -67,9 +67,9 @@ end
 
 local function blend(on)
     if on then
-        V.PATH_BLEND_S, V.PATH_LEAD_S = 30, 6
+        V.PATH_BLEND_S, V.PATH_LEAD_S, V.TD_BLEND_MAX_S = 30, 6, 90
     else
-        V.PATH_BLEND_S, V.PATH_LEAD_S = 0, 0
+        V.PATH_BLEND_S, V.PATH_LEAD_S, V.TD_BLEND_MAX_S = 0, 0, 0
     end
 end
 
@@ -101,6 +101,20 @@ T.check(r.des and r.dmax > 400, string.format("the old law: %.0f ft over the pat
 blend(true)
 r = fly(pT, 37000, ecT + 12, 32, 37000, 2, 3)
 T.check(r.dmin > -60 and r.dmax < 80, string.format("rounded: within 80 ft of the path past the T/D (%.0f to %.0f ft)", r.dmin, r.dmax))
+T.check(r.g <= 0.05, string.format("within 0.05 g (%.3f)", r.g))
+
+-- (2026-11-09) a T/D without a level deceleration (s273's fourth run: M.858
+-- on from FL370) into a steep idle line, 4,000 fpm (500 ft/NM at 480 kt):
+-- the rounding over 59 s (0.035 g) and the descent begun 4.7 NM before the
+-- corner. Before (begun at the corner) 1,448 ft over the path in X-Plane
+local pN = {e = {0, 30, 60}, h = {27500 - 62.5 * 30, 27500, 27500 + 500 * 30}, k = {"decel", "decel", "idle"}}
+local ecN = 30 + (37000 - 27500) / 500
+blend(false)
+r = fly(pN, 37000, ecN + 12, 32, 37000, 2, 3)
+T.check(r.des and r.dmax > 1000, string.format("no level deceleration, the old law: %.0f ft over the path past the T/D", r.dmax))
+blend(true)
+r = fly(pN, 37000, ecN + 12, 32, 37000, 2, 3)
+T.check(r.dmin > -60 and r.dmax < 80, string.format("no level deceleration, rounded: within 80 ft of the path (%.0f to %.0f ft)", r.dmin, r.dmax))
 T.check(r.g <= 0.05, string.format("within 0.05 g (%.3f)", r.g))
 
 -- two breaks in a row: the idle line, a constraints' line (1,650 fpm,
