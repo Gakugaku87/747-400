@@ -87,7 +87,12 @@ function take_off_N1_GE(altitude_ft_in)
   TOGA_corrected_thrust_lbf, _, TOGA_actual_thrust_N = take_off_thrust_corrected(altitude_ft_in, temperature_K)
 
   --Mach should always be 0 for purposes of this calculation
-  mach = 0.0
+  --(2026-11-10) local, as in the P&W's and the RB211's: it set the module's
+  --mach to 0, and GE() calls this every frame (its takeoff_thrust_n1 starts
+  --at 0 each call), so the N1 shown in the air came from the corrected
+  --thrust's polynomial at Mach 0: about 10 % low in the cruise (FL390,
+  --M.86: 82.7 for 93.5; notes/ATA-70-80.md §15)
+  local mach = 0.0
 
   N1_corrected = (-1.4446E-12 * mach^2 + 1.2102E-12 * mach + 4.8911E-13) * TOGA_corrected_thrust_lbf^3 + (1.1197E-07 * mach^2 - 7.8717E-08 * mach - 6.498200000000002E-08)
                   * TOGA_corrected_thrust_lbf^2 + (-0.0027 * mach^2 + 0.0011 * mach + 0.0036) * TOGA_corrected_thrust_lbf + (36.93 * mach + 20.96)

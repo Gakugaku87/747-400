@@ -1,0 +1,63 @@
+{
+  "name": "s280_ge_cruise_n1",
+  "description": "GE（Saudia、CF6-80C2B1F）の巡航の表示の N1 と EGT（2026-11-10：GE の表示の N1 が Mach 0 の式で計算されていた不具合の直しの確かめ。notes/ATA-70-80.md §15）。s279 と同じ空中開始（FL370・M.85・238 t・ISA の静穏な大気、東向き、機体を読み直す、カスタム acf）で、ALT HOLD・HDG SEL・A/T の SPD で 4 分落ち着かせて、表示の N1・EGT・推力を写す。直す前は Mach 0 の式で N1 約 83 、本当の Mach では約 92 （補正推力の式）。EGT は約 620 °C（推定。FCOM p.829 は TAT −14 °C・N1 95.2  で 662 °C）。Lua の誤りも確かめる",
+  "reload": true,
+  "livery": "Saudia",
+  "flight": {
+    "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 11277.6, "heading_true": 90, "speed_in_meters_per_second": 250.81 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 3750, 3750, 3750, 3750, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "wait", "note": "FMC の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "set", "note": "MCP 高度 FL370", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 37000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 37000 },
+    { "do": "set", "note": "MCP を Mach に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 1 },
+    { "do": "set", "note": "窓 M.85", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 85 },
+    { "do": "set", "note": "MCP 方位 098（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 98 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "FMA の A/T が SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10, "level": "warn" },
+    { "do": "wait", "note": "Mach が .85 の近く", "dref": "sim/flightmodel/misc/machno", "op": "between", "value": [0.844, 0.856], "timeout": 300, "level": "warn" },
+    { "do": "sleep", "seconds": 240, "note": "落ち着かせる（1 回目は 90 秒で、A/T がまだ EPR を 1.26 から 1.15 へ下げていた）" },
+    { "do": "record_start" },
+    { "do": "check", "note": "GE", "dref": "laminar/B747/engines/type", "op": "==", "value": 1 },
+    { "do": "snapshot", "note": "巡航の N1・EGT・推力", "drefs": [ "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N1[3]", "sim/flightmodel/engine/ENGN_N1_[0]", "laminar/B747/engines/display_GE_EGT[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "sim/flightmodel/engine/ENGN_thro_use[0]", "laminar/B747/engines/display_N1_max[0]", "laminar/B747/engines/display_N1_ref[0]", "sim/weather/aircraft/temperature_leadingedge_deg_c", "sim/flightmodel/misc/machno", "sim/flightmodel/weight/m_total" ] },
+    { "do": "check", "note": "表示の N1 は本当の Mach の式（約 92 %。Mach 0 なら約 83 %）", "dref": "laminar/B747/engines/display_N1[0]", "op": "between", "value": [88, 97] },
+    { "do": "check", "note": "EGT は約 620 °C（推定）", "dref": "laminar/B747/engines/display_GE_EGT[0]", "op": "between", "value": [560, 680] },
+    { "do": "view", "note": "上の EICAS", "the": -22, "psi": 29, "fov": 24 },
+    { "do": "shot", "name": "eicas_ge_cruise" },
+    { "do": "view", "name": "forward" },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "record_stop" }
+  ]
+}

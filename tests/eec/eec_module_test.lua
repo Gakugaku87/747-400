@@ -668,6 +668,13 @@ rt:set("laminar/B747/fms/thrlim/code", 30)
 frames(30)
 local n1 = get(ENG .. "display_N1", 0)
 T.check(n1 > 60 and n1 < 110, string.format("EGT: the GE's N1 shown in the cruise %.1f", n1))
+-- (2026-11-10) the module's Mach stays the cruise's through the GE's frame
+-- (take_off_N1_GE's own Mach is local now; before, it set the module's to
+-- 0 every frame and the N1 shown in the air came from the corrected
+-- thrust's polynomial at Mach 0)
+T.check(ns.mach > 0.8, string.format("GE: the module's Mach after a frame %.3f (the cruise's, not 0)", ns.mach))
+T.near(n1, ns.B747_ge_n1_of_thrust(get("sim/cockpit2/engine/indicators/thrust_dry_n", 0)), 0.06,
+    string.format("GE: the N1 shown (%.1f) the corrected thrust's polynomial at the cruise's Mach", n1))
 T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", n1, -14), 2,
     string.format("EGT: the GE's display_GE_EGT the model's at the N1 shown (%.1f)", n1))
 rt:set(XEGT, 0, 1951)
