@@ -270,11 +270,14 @@ local last_N1 = {0.0, 0.0, 0.0, 0.0}
 -- state: a table in a global turns into XTLua's namespace
 local ge_n1_from_xp = {[0] = true, true, true, true}
 function B747_ge_n1_from_xp(engine) return ge_n1_from_xp[engine] ~= false end
+-- (2026-11-10, ENG-33) the formula fitted to the FCOM's CF6-80C2B1F %N1
+-- (B747.42.ge_n1_model.lua, notes/ATA-70-80.md §17); before, the upstream's
+-- cubic in the corrected thrust, 1.5 % high in the cruise and up to 14 % in
+-- the high climbs (its N1 for a thrust: the climbs at the max climb N1 came
+-- out about 9 % slow, s253)
+dofile("B747.42.ge_n1_model.lua")
 function B747_ge_n1_of_thrust(thrust_N)
-    local fc = math.max(0, thrust_N) / pressure_ratio / lbf_to_N
-    local n1c = (-1.4446E-12 * mach^2 + 1.2102E-12 * mach + 4.8911E-13) * fc^3 + (1.1197E-07 * mach^2 - 7.8717E-08 * mach - 6.498200000000002E-08)
-        * fc^2 + (-0.0027 * mach^2 + 0.0011 * mach + 0.0036) * fc + (36.93 * mach + 20.96)
-    return n1c * math.sqrt(temperature_ratio)
+    return B747_ge_n1_model.n1(math.max(0, thrust_N), pressure_ratio, mach, temperature_ratio)
 end
 
 function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
