@@ -13,8 +13,10 @@
 -- Mach by least squares, q0 and q1 on a grid; fitted to the clean points
 -- (level, holding, terminal flaps up, climbs) and the static anchor (the
 -- rated 57,160 lbf at the go-around table's 103.8 %, estimate). Prints the
--- constants and the errors by kind (the extended flaps and the final
--- approach not fitted: the freighter's airframe differs there). Redo it
+-- constants, the errors by kind (the extended flaps and the final approach
+-- not fitted, kept to check) and the drag the terminal-area and final-
+-- approach rows ask by each table (notes/ATA-70-80.md §19: the CF6 table's
+-- flaps 10 and 20 do not fit its own other rows). Redo it
 -- when the EPR model changes (the points' thrust comes from it); the same
 -- points are tests/eec/ge_n1_model_test.lua's
 local P = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
@@ -237,4 +239,43 @@ table.sort(order)
 for _, kind in ipairs(order) do
     local g = groups[kind]
     print(string.format("  %-10s %3d points: rms %5.2f  max %+6.2f %% N1%s", kind, g.n, math.sqrt(g.e / g.n), g.m, CLEAN[kind] and "" or "  (not fitted)"))
+end
+
+-- the drag each table's terminal-area (level) and final-approach (gear down,
+-- 3 deg) rows ask, 2026-11-10 (notes/ATA-70-80.md §19): D = 4 F level, 4 F +
+-- W sin 3 deg on the glide slope; F the PW4056's EPR through the EPR model or
+-- the CF6's %N1 through the N1 model now turned around, both at the CF6
+-- table's KIAS (the PW4056's within a knot). The two tables agree but at
+-- flaps 10 and 20, where the CF6's asks about 40 % more and its flaps 20
+-- (gear down, level) more than its own flaps 25 and 30 (gear down, 3 deg;
+-- flaps 30 at the same VREF30+10): the opposite of more flap
+local function ge_thrust(n1, h, m)
+    local t, d = isa(h)
+    local lo, hi = 0, 400000
+    for _ = 1, 60 do
+        local mid = (lo + hi) / 2
+        if Gm.n1(mid, d, m, t / 288.15) < n1 then lo = mid else hi = mid end
+    end
+    return (lo + hi) / 2
+end
+local SIN3 = math.sin(math.rad(3))
+print("the drag the rows ask (kN, the PW4056 / the CF6; 25 and 30 on the 3 deg glide slope):")
+for i = 2, 3 do -- 500,000 and 600,000 lb: in both tables' weights
+    local w = T6[i] * KLB
+    local line, dd = {}, {}
+    for _, flap in ipairs({0, 1, 5, 10, 20, 25, 30}) do
+        local fin = flap >= 25
+        local c = (fin and GE_FINAL or GE_TERM)[flap][i]
+        local h = fin and 1500 or 5000
+        local m = mach_cas(c[2], h)
+        local epr = fin and by_weight(flap == 30 and {200, 250, 300} or W6, PW_FINAL[flap], w)
+            or by_weight(W6, PW_TERM[flap], w)
+        local slope = fin and w * 1000 * G0 * SIN3 or 0
+        local dp, dg = 4 * thrust(epr, h, m) + slope, 4 * ge_thrust(c[1], h, m) + slope
+        dd[flap] = {dp, dg}
+        line[#line + 1] = string.format("%d %.0f/%.0f", flap, dp / 1000, dg / 1000)
+    end
+    print(string.format("  %d,000 lb: %s", T6[i], table.concat(line, "  ")))
+    print(string.format("    flaps 20 (level) / flaps 25, 30 (3 deg), all gear down: the PW4056 %.2f, %.2f; the CF6 %.2f, %.2f",
+        dd[20][1] / dd[25][1], dd[20][1] / dd[30][1], dd[20][2] / dd[25][2], dd[20][2] / dd[30][2]))
 end

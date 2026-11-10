@@ -29,9 +29,13 @@
 -- 30,000 ft, and the GE climbed 15 % slow there in X-Plane (s282
 -- 2026-11-10; the PW4056 at its Max Climb EPR climbs at the FCOM's rate,
 -- aero_climb_maxclb 2026-11-09, needing 75 kN an engine). The extended flaps are
--- not fitted: the freighter's FCOM needs 7 to 8 % more N1 at flaps 10 and 20
--- than at 5 where the PW4056's passenger airplane needs no more (an airframe
--- difference); there this N1 shows about 10 % under the freighter's. Above
+-- not fitted (flaps 1 and 5 and the final approach agree, rms 0.6-1.7 % N1).
+-- At flaps 10 and 20 this N1 shows 8 to 10 % under the CF6 table: those two
+-- rows ask about 40 % more drag than the PW4056's, and the CF6's flaps 20
+-- (gear down, level) more than its own flaps 25 and 30 (gear down, 3 deg),
+-- the opposite of more flap. With the same wing, flaps and gear and the other
+-- rows agreeing, hardly an airframe difference; why the table has them is
+-- unknown (notes/ATA-70-80.md §19). Above
 -- M_MAX (the points end at .84) the Mach terms of k and q are held.
 -- Estimates: the form, n0, the anchor, M_MAX
 local M = setmetatable({}, {})
