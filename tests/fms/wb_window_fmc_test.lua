@@ -5,8 +5,8 @@
 -- (laminar/B747/wb/load_zones, load_cargo, load_pax_kg, load_freighter)
 -- and enters it as that page does (req_field, req_value, req_id): the
 -- passengers' total round the zones as the page's L1, a zone, cargo, kg a
--- passenger (SIM CONFIG's); X-Plane's payload and CG shift follow; on the
--- ground only. The ground handling window's chocks (laminar/B747/gear/
+-- passenger (SIM CONFIG's), the cargo's total over the holds (2026-11-11);
+-- X-Plane's payload and CG shift follow; on the ground only. The ground handling window's chocks (laminar/B747/gear/
 -- chocks_toggle) as GROUND HANDLING's L2: out, a refuelling stops.
 local T = dofile("tests/lib/check.lua")("wb_window_fmc")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -98,6 +98,35 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 req(0, 100)
 T.equal(zones(), 350, "in the air: the passengers kept")
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+
+-- (2026-11-11, the user) the cargo's total: FWD, AFT and BULK in the ratio
+-- of the page's limits (26,490, 22,938, 6,749 kg), whole kg, BULK the rest
+local spread = rt.modules[1].ns.B747_fms_cargo_spread
+local CAP = {26490, 22938, 6749}
+local ok_all, worst = true, ""
+for x = 0, 56177, 7 do
+    local n = spread(x)
+    if n[1] + n[2] + n[3] ~= x or n[1] < 0 or n[2] < 0 or n[3] < 0 or n[1] > CAP[1] or n[2] > CAP[2] or n[3] > CAP[3] then
+        ok_all, worst = false, x .. ": " .. n[1] .. " " .. n[2] .. " " .. n[3]
+        break
+    end
+end
+T.check(ok_all, "every total 0-56,177 kg: the three add up to it, each within its limit " .. worst)
+local full = spread(56177)
+T.check(full[1] == 26490 and full[2] == 22938 and full[3] == 6749, "56,177 kg: each hold at its limit")
+local over = spread(90000)
+T.equal(over[1] + over[2] + over[3], 56177, "90,000 kg: the three limits together")
+T.equal(spread(-5)[1] + spread(-5)[2] + spread(-5)[3], 0, "below 0: none")
+req(11, 40000)
+T.equal(cargo(0) + cargo(1) + cargo(2), 40000, "40,000 kg in the window: 40,000 kg in the holds")
+T.check(cargo(0) == 18862 and cargo(1) == 16333 and cargo(2) == 4805,
+    "shared 18,862 / 16,333 / 4,805: " .. cargo(0) .. " " .. cargo(1) .. " " .. cargo(2))
+T.equal(payload(), 350 * 100 + 40000, "the payload with the cargo's total")
+req(11, 70000)
+T.check(cargo(0) == 26490 and cargo(1) == 22938 and cargo(2) == 6749, "70,000 kg: each hold full")
+req(11, 0)
+T.equal(cargo(0) + cargo(1) + cargo(2), 0, "0: the holds empty")
+T.equal(payload(), 350 * 100, "the payload: the passengers only")
 
 -- the chocks' command, as GROUND HANDLING's L2
 local ch0 = rt:get("laminar/B747/gear/chocked")

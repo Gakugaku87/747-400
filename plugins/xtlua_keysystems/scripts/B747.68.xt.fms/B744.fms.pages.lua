@@ -770,7 +770,8 @@ end
 -- 1-5 zone A-E (a freighter's main deck freight, kg), 6-8 cargo FWD, AFT,
 -- BULK (kg), 9 kg a passenger (SIM CONFIG's std_pax_weight, which this
 -- page had no entry for), 10 the fuel's total (the fuel module's:
--- B747.25.xt.fuel.lua)
+-- B747.25.xt.fuel.lua), 11 the cargo's total (kg: FWD, AFT and BULK in the
+-- ratio of this page's limits, 2026-11-11)
 B747DR_wb_req_id = find_dataref("laminar/B747/wb/req_id")
 B747DR_wb_req_field = find_dataref("laminar/B747/wb/req_field")
 B747DR_wb_req_value = find_dataref("laminar/B747/wb/req_value")
@@ -782,6 +783,7 @@ local WB_PAX = {"paxFirstClassA", "paxBusClassB", "paxEconClassC", "paxEconClass
 local WB_PAX_MAX = {23, 80, 77, 104, 132}     -- this page's zones (upstream: 416 seats)
 local WB_FREIGHT = {"freightZoneA", "freightZoneB", "freightZoneC", "freightZoneD", "freightZoneE"}
 local WB_CARGO = {"cargoFwd", "cargoAft", "cargoBulk"}
+local WB_CARGO_MAX = {26490, 22938, 6749}     -- this page's limits, kg (upstream's: setdata below)
 local WB_PAX_KG_MIN, WB_PAX_KG_MAX = 40, 200  -- kg a passenger with baggage (estimate: a sanity range)
 
 -- a SIM CONFIG section (SIM, PLANE) or nil: simConfigData["data"] is an
@@ -816,6 +818,20 @@ local function wb_set_pax(n)
 	for z = 1, 5 do fmsModules["data"][WB_PAX[z]] = string.format(z <= 3 and "%2d" or "%3d", n[z]) end
 	calc_pax_cargo()
 end
+-- (2026-11-11, the user: the cargo's weight entered at once) a cargo total
+-- over FWD, AFT and BULK in the ratio of this page's limits, so that they
+-- fill together (the sim's: the airplane's holds are loaded to the load
+-- control's plan; estimate). Whole kg, BULK the rest; at most the three
+-- limits together (56,177 kg)
+function B747_fms_cargo_spread(total)
+	local cap = WB_CARGO_MAX[1] + WB_CARGO_MAX[2] + WB_CARGO_MAX[3]
+	local x = math.max(0, math.min(cap, math.floor(total + 0.5)))
+	local fwd = math.floor(x * WB_CARGO_MAX[1] / cap + 0.5)
+	local aft = math.floor(x * WB_CARGO_MAX[2] / cap + 0.5)
+	local bulk = x - fwd - aft
+	if bulk < 0 then aft, bulk = aft + bulk, 0 end
+	return {fwd, aft, bulk}
+end
 -- an entry as typed on this page's key, in the page's units
 local function wb_entry(value, text)
 	local o = {id = "fmsL", scratchpad = text, notify = ""}
@@ -835,6 +851,10 @@ local function wb_request(f, v)
 		end
 	elseif f >= 6 and f <= 8 then
 		wb_entry(WB_CARGO[f - 5], string.format("%d", math.floor(v * wb_units() + 0.5)))
+	elseif f == 11 then
+		-- each hold through its own entry, as a cargo row
+		local n = B747_fms_cargo_spread(v)
+		for c = 1, 3 do wb_entry(WB_CARGO[c], string.format("%d", math.floor(n[c] * wb_units() + 0.5))) end
 	elseif f == 9 then
 		local sim = wb_section("SIM")
 		if sim == nil or v < WB_PAX_KG_MIN or v > WB_PAX_KG_MAX then return end
