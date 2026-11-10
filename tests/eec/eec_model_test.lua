@@ -500,6 +500,57 @@ do
         string.format("thrust control: the takeoff within 0.005 of 1.513 after %s s (peak %.4f)", tostring(reach and string.format("%.1f", reach)), peak))
 end
 
+-- (2026-11-10) the takeoff roll's thrust lapse (M.RAMP_W): the same plant
+-- with the throttle it needs rising `lapse` a second from brake release at
+-- 2 s, the glue's roll above 30 kt: s11, 270 t (0.0024 at about 6.3 kt a
+-- second) and s281, 215 t (0.0032 at 7.9 kt/s). Without the ramp term the
+-- PI settles 0.0028 under the rating (s11: 0.0028, where the EICAS's red
+-- begins 0.003 under); with it within 0.0015 by 80 kt at 270 t and 0.0015
+-- by 110 kt at 215 t, no more than 0.0005 over the rating
+local function lapse_takeoff(lapse, use_roll, seconds, accel)
+    local s = E.new()
+    local x1, x2, buf = 1.0, 1.0, {0, 0, 0}
+    local th, t, peak = 0, 0, 0
+    local at = {}
+    while t < (seconds or 22) do
+        local ud = table.remove(buf, 1)
+        buf[#buf + 1] = th
+        local eff = math.max(0, ud - lapse * math.max(0, t - 2))
+        local ss = 1.0 + 0.513 * (eff / 0.94) ^ 2.5
+        x1 = x1 + math.max(-0.3, math.min(0.25, (ss - x1) / 2.1)) * DT
+        x2 = x2 + (x1 - x2) / 0.65 * DT
+        local kt = (accel or 6.3) * math.max(0, t - 2)
+        th = E.thrust_control(s, "PW", 1, 1.513, x2, th, 0.95, DT, 1.2, 1.0, use_roll and kt > 30)
+        peak = math.max(peak, x2)
+        for _, v in ipairs({80, 110}) do
+            if not at[v] and kt >= v then at[v] = 1.513 - x2 end
+        end
+        t = t + DT
+    end
+    return at, peak, s
+end
+do
+    local at, peak = lapse_takeoff(0.0024, false)
+    T.check(at[110] > 0.0025, string.format("thrust control: the roll's lapse without the ramp term: %.4f under the rating at 110 kt (s11 0.0028)", at[110]))
+    at, peak = lapse_takeoff(0.0024, true)
+    T.check(at[80] < 0.0015 and at[110] < 0.001 and peak < 1.513 + 0.0005,
+        string.format("thrust control: with the ramp term %.4f under at 80 kt, %.4f at 110 kt (peak %+.4f)", at[80], at[110], peak - 1.513))
+    at, peak = lapse_takeoff(0.0032, true, 24, 7.9)
+    T.check(at[110] < 0.0015 and peak < 1.513 + 0.0005,
+        string.format("thrust control: a lighter, quicker roll (215 t, 0.0032 a second at 7.9 kt/s): %.4f under at 110 kt (peak %+.4f)", at[110], peak - 1.513))
+    -- with the brakes held (no roll) it learns nothing: as before, no overshoot
+    local _, peak0, s0 = lapse_takeoff(0, false)
+    T.check(peak0 < 1.513 + 0.0003 and (s0.rate[1] or 0) == 0, string.format("thrust control: no roll, no rate learned (peak %+.4f)", peak0 - 1.513))
+    -- in the air the learned rate fades out; a reset clears it
+    local _, _, s1 = lapse_takeoff(0.0024, true)
+    local r0 = s1.rate[1]
+    T.check(r0 > 0.001, string.format("thrust control: the rate learned on the roll %.4f a second (the lapse 0.0024)", r0))
+    for _ = 1, 120 do E.thrust_control(s1, "PW", 1, 1.513, 1.513, 0.95, 0.95, DT, 1.2, 0.95, false) end
+    T.check(math.abs(s1.rate[1]) < 0.1 * r0, string.format("thrust control: in the air the rate fades (%.5f after 12 s)", s1.rate[1]))
+    E.reset_thrust_control(s1, 1)
+    T.equal(s1.rate[1], nil, "thrust control: a reset clears the learned rate")
+end
+
 -- X-Plane's idle ratio (M.IDLE, measured in X-Plane against the FCOM's idle
 -- descents): minimum idle in the air by pressure altitude, one value on the
 -- ground, approach idle 0.5 above the air's

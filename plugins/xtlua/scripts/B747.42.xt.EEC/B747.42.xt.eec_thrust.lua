@@ -290,6 +290,11 @@ local function plant_slope(key, engine, delta)
     local c = thrust_per_throttle(f, simDR_engn_thro_use[engine], delta)
     return math.max(SLOPE_MIN[key], dydf * c)
 end
+-- (2026-11-10) the takeoff roll, where the thrust control learns the
+-- throttle's rate (B747.42.eec_model.lua, M.RAMP_W): the PSEU's ground and
+-- above ROLL_GS (estimate: rolling, not held on the brakes)
+simDR_eec_groundspeed           = find_dataref("sim/flightmodel/position/groundspeed")
+local ROLL_GS = 30 * 0.514444       -- m/s
 function B747_eec_throttle(engine)
     if eec_out == nil then return 0 end
     local test = test_throttle(engine)
@@ -299,8 +304,9 @@ function B747_eec_throttle(engine)
     if key == "GE" then actual = B747DR_display_N1[engine] end
     local n = engine + 1
     local delta = math.max(0.1, simDR_epr_ambient_pa / 101325)
+    local roll = B747DR_eec_pseu_pri_gnd == 1 and simDR_eec_groundspeed > ROLL_GS
     return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], idle_command(key),
-        math.min(SIM_PERIOD, EEC_DT_MAX), plant_slope(key, engine, delta), delta)
+        math.min(SIM_PERIOD, EEC_DT_MAX), plant_slope(key, engine, delta), delta, roll)
 end
 
 function B747_eec_reset_throttle(engine)
