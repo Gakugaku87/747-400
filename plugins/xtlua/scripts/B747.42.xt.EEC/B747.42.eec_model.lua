@@ -170,6 +170,30 @@ M.THRUST = {
 M.KP, M.KI = 2.0, 0.5
 M.KI_DELTA_REF = 0.66               -- about 11,000 ft
 M.KI_POWER = {0.5, 1.8}             -- below KI_DELTA_REF (higher up), above it (lower down)
+-- (2026-11-10) the takeoff roll: X-Plane's thrust at a steady throttle falls
+-- as the speed grows, so holding the EPR needs the throttle to rise (s11, 270
+-- t: 0.0024 a second at about 6.3 kt a second), and the PI lags that ramp by
+-- its rate x slope / KI: the full-forward EPR settled 0.0028 under the
+-- maximum (the previous law 0.0016), where the EICAS shows it red from 0.003
+-- under (B747.40.engine_display_model.lua, an estimate; FCOM p.873: red when
+-- the maximum is reached), so a lighter, quicker takeoff could stay white.
+-- On the roll (the glue's `roll`: on the ground above 30 kt, so not with the
+-- brakes held) the control learns that rate while its reference has
+-- settled and its error is small, and adds it (a second integral, RAMP_W x
+-- KI); otherwise the learned rate fades out in RAMP_FADE seconds (in the air
+-- the ramps are about a hundred times slower: 0.9 to 1.0 over a climb). A
+-- higher KI alone would not do (1.47 at sea level: 0.0020 under, the phase
+-- margin 50 to 40 degrees). Offline (tests/eec/eec_model_test.lua's
+-- takeoff with the lapse): at 270 t 0.0010 under at 80 kt, at most 0.0003
+-- over after; at 215 t (s281: 7.9 kt a second, 0.0032 a second) 0.0010
+-- under at 110 kt. The first gain, 0.05, left 0.0027 at 110 kt in X-Plane's
+-- 215 t roll (s281 2026-11-10: it learns from about 9 s after TO/GA, the
+-- spool's tail first). Estimates: the gate, the gain, the bands
+M.RAMP_W = 0.08
+M.RAMP_SETTLED = {PW = 0.002, GE = 0.2}     -- |target - reference| (EPR, N1 %) to learn
+M.RAMP_BAND = {PW = 0.02, GE = 2}           -- |error| (EPR, N1 %) to learn
+M.RAMP_MAX = 0.01                           -- throttle a second
+M.RAMP_FADE = 5                             -- s
 
 -- FCOM PI tables, 3 packs on, anti-ice off. Rows by TAT (°C, warm to cold),
 -- columns by pressure altitude (ft); false where the table is blank (too
@@ -709,6 +733,7 @@ end
 function M.new()
     return {approach = {false, false, false, false}, hold = {0, 0, 0, 0},
         altn = {false, false, false, false}, throttle = {}, err = {}, ref = {},
+        rate = {},          -- (2026-11-10) the roll's learned throttle rate (RAMP_W)
         soft_top = {}}      -- (2026-11-04) the schedule an automatic reversion keeps
 end
 
@@ -722,11 +747,12 @@ end
 -- engine n's throttle for its target (key "GE" or "PW"; current: X-Plane's
 -- throttle now, where the control starts from; idle: the lever's idle end
 -- command; slope: the controlled value's for each unit of throttle, nil for
--- the tables'; delta: the pressure ratio)
-function M.thrust_control(s, key, n, target, actual, current, idle, dt, slope, delta)
+-- the tables'; delta: the pressure ratio; roll: on the takeoff roll, where
+-- the throttle's rate is learned: M.RAMP_W)
+function M.thrust_control(s, key, n, target, actual, current, idle, dt, slope, delta, roll)
     local g = M.THRUST[key]
     if target <= idle then
-        s.throttle[n], s.err[n], s.ref[n] = 0, nil, actual
+        s.throttle[n], s.err[n], s.ref[n], s.rate[n] = 0, nil, actual, nil
         return 0
     end
     local ref = s.ref[n] or actual
@@ -735,15 +761,23 @@ function M.thrust_control(s, key, n, target, actual, current, idle, dt, slope, d
     local err = ref - actual
     if not slope or slope <= 0 then slope = interp(g.at, g.slope, actual) end
     local kp, ki = M.thrust_gains(delta)
-    th = clamp(th + (ki * err * dt + kp * (err - (s.err[n] or err))) / slope, 0, 1)
-    s.throttle[n], s.err[n], s.ref[n] = th, err, ref
+    local rate = s.rate[n] or 0
+    th = clamp(th + (ki * err * dt + kp * (err - (s.err[n] or err))) / slope + rate * dt, 0, 1)
+    if not roll then
+        rate = rate * math.max(0, 1 - dt / M.RAMP_FADE)
+    elseif math.abs(target - ref) < M.RAMP_SETTLED[key] and math.abs(err) < M.RAMP_BAND[key] then
+        rate = clamp(rate + M.RAMP_W * ki * err * dt / slope, -M.RAMP_MAX, M.RAMP_MAX)
+    end
+    -- at full or no throttle the rate cannot help: no winding up
+    if th >= 1 and rate > 0 or th <= 0 and rate < 0 then rate = 0 end
+    s.throttle[n], s.err[n], s.ref[n], s.rate[n] = th, err, ref, rate
     return th
 end
 
 -- the control starts again from X-Plane's throttle (engine stopped,
 -- starting or in reverse)
 function M.reset_thrust_control(s, n)
-    s.throttle[n], s.err[n], s.ref[n] = nil, nil, nil
+    s.throttle[n], s.err[n], s.ref[n], s.rate[n] = nil, nil, nil, nil
 end
 
 -- (ENG-31) the CF6's reverse thrust: with the reverser not stowed the ECU

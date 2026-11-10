@@ -338,6 +338,50 @@ for i = 0, 3 do rt:set(USER, i, 0.0) end
 frames(3)
 T.equal(get(THRO, 0), 0, "after the test: idle lever: throttle 0")
 
+-- (2026-11-10) the takeoff roll (B747.42.eec_model.lua, M.RAMP_W): on the
+-- PSEU's ground above 30 kt the control also learns the throttle's rate, so
+-- with the same small steady error (the EPR 0.01 under the command) the
+-- throttle rises faster than at rest
+do
+    local P = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
+    rt:set("sim/flightmodel/failures/onground_any", 1)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325)
+    rt:set("sim/flightmodel/misc/machno", 0.06)
+    -- running engines (on the ground the fuel is cut below a shown N2 of 60 %;
+    -- the shown N2 follows X-Plane's slowly)
+    for i = 0, 3 do rt:set("sim/flightmodel/engine/ENGN_N2_", i, 90) end
+    frames(90)
+    -- from idle to a lever part forward, the stand-in engine's thrust held
+    -- so that the EPR stays about 0.014 under the command; the control
+    -- learns once its reference has settled within 0.002 (about 8 s)
+    local function run(gs)
+        for i = 0, 3 do rt:set(USER, i, 0.0) end
+        rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, 0)
+        frames(1)
+        rt:set("sim/flightmodel/position/groundspeed", gs)
+        for i = 0, 3 do rt:set(USER, i, 0.6) end
+        frames(1)
+        local command = get(ENG .. "TRA", 0)
+        rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, P.thrust(command - 0.01, 1.0, 0.06) * 1000)
+        frames(20)
+        return get(THRO, 0), command
+    end
+    run(0)                                  -- the first one settles the display's filters
+    local still, command = run(0)
+    local rolling = run(20)                 -- 39 kt
+    T.check(command > 1.1 and still > 0 and still < 1, string.format("the roll: at rest the PI alone (throttle %.3f, command EPR %.3f)", still, command))
+    T.check(rolling > still + 0.01, string.format("the roll: above 30 kt on the ground the throttle rises faster (%.3f, at rest %.3f)", rolling, still))
+    rt:set("sim/flightmodel/position/groundspeed", 0)
+    for i = 0, 3 do rt:set(USER, i, 0.0) end
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, 0)
+    rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+    rt:set("sim/flightmodel/failures/onground_any", 0)
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * (1 - 6.87559e-6 * 10000) ^ 5.25588)
+    rt:set("sim/flightmodel/misc/machno", 0.45)
+    frames(3)
+end
+
 -- (2026-11-05) a fast descent at X-Plane's idle (M.66, 12,600 ft; its net
 -- thrust -3.3 kN an engine, under no net thrust): with the lever a hair
 -- above idle (the A/T's HOLD at 0.0013) the throttle stays closed, the EPR

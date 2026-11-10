@@ -1,0 +1,64 @@
+{
+  "name": "s281_takeoff_epr_light",
+  "description": "軽い機体（約 215 t）の全開の離陸での EPR（2026-11-10：EEC の推力の制御の滑走の追い遅れの直しの確かめ。notes/ATA-70-80.md §14）。s11 と同じ RJAA 34L・エンジン運転中・フラップ 10 で、重さを決めて（ペイロード 10 t、燃料 22 t）スラスト・レバーを最前方にして TO/GA。滑走で速さとともに X-Plane の推力が減るのを EEC が追い、EPR が最大 EPR の 0.003 の内（EPR の数字が赤になる境目：B747.40.engine_display_model.lua の推定）に入って赤になり（FCOM p.873：最大 EPR に届くと赤）、最大を越えないことを 80 kt と 110 kt で見る。直す前は 270 t の s11 で最大の 0.0028 下、軽い機体は加速が速くもっと下（境目の外）だった。80 kt は離陸推力が合っていること（0.005 の内）、110 kt は滑走の追い遅れ（0.0025 の内）と赤を見る。110 kt で離陸中止（レバー idle とブレーキ）。機体を読み直す",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [2000, 2000, 2000, 2000, 0, 1000, 1000, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 5500, 5500, 5500, 5500, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "set", "note": "パーキング・ブレーキを外す", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 0 },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "snapshot", "note": "開始", "drefs": [
+      "sim/flightmodel/weight/m_total", "laminar/B747/engines/type",
+      "sim/cockpit2/temperature/outside_air_temp_degc", "laminar/B747/engines/ref_thr_limit_mode",
+      "laminar/B747/engines/display_EPR_max[0]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/TRA[0]" ] },
+    { "do": "check", "note": "軽い機体（約 215 t）", "dref": "sim/flightmodel/weight/m_total", "op": "between", "value": [205000, 225000] },
+    { "do": "check", "note": "P&W", "dref": "laminar/B747/engines/type", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "離陸推力" },
+    { "do": "set", "note": "スラスト・レバー 4 本を最前方", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 1 },
+    { "do": "wait", "note": "レバー 1 が最前方", "dref": "laminar/B747/engine/throttle[0]", "op": ">", "value": 0.98, "timeout": 5 },
+    { "do": "cmd", "note": "TO/GA スイッチ（EGT が琥珀の帯でも 5 分は白：FCOM p.872）", "name": "sim/engines/TOGA_power" },
+    { "do": "watch", "note": "80 kt まで、EPR は最大 EPR（s11 と同じ天気で 1.5127）を大きく越えない（粗い見張り。細かい確かめは下の 80 kt・110 kt の差）", "dref": "laminar/B747/engines/display_EPR[0]", "max": 1.515, "until": { "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 80 }, "timeout": 60 },
+    { "do": "remember", "dref": "laminar/B747/engines/display_EPR_max[0]", "as": "max80" },
+    { "do": "snapshot", "note": "80 kt", "drefs": [
+      "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "laminar/B747/engines/display_EPR_max[0]",
+      "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_EPR[3]", "laminar/B747/engines/TRA[0]",
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "laminar/B747/engines/EPR/red_on[0]" ] },
+    { "do": "check", "note": "80 kt：EPR は最大 EPR の 0.005 下から 0.0005 上の間（FCTM：離陸推力は 80 kt までに合わせる。軽い機体はこのころまだ回転の上がりきりの尾：2026-11-10 の 1 回目で 0.0035 下）", "dref": "laminar/B747/engines/display_EPR[0]", "op": "between", "value": [-0.005, 0.0005], "rel": "max80" },
+    { "do": "watch", "note": "80〜110 kt、EPR は最大 EPR を大きく越えない", "dref": "laminar/B747/engines/display_EPR[0]", "max": 1.515, "until": { "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 110 }, "timeout": 30 },
+    { "do": "remember", "dref": "laminar/B747/engines/display_EPR_max[0]", "as": "max110" },
+    { "do": "snapshot", "note": "110 kt", "drefs": [
+      "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "laminar/B747/engines/display_EPR_max[0]",
+      "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_EPR[3]", "laminar/B747/engines/TRA[0]",
+      "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "laminar/B747/engines/EPR/red_on[0]" ] },
+    { "do": "check", "note": "110 kt：EPR は最大 EPR の 0.0025 下から 0.0005 上の間（赤の境目 0.003 の内に余裕を持って。2026-11-10：直す前の見込みは 0.0034 下、利得 0.05 で 0.0027 下、0.08 で 0.0021 下）", "dref": "laminar/B747/engines/display_EPR[0]", "op": "between", "value": [-0.0025, 0.0005], "rel": "max110" },
+    { "do": "check", "note": "全開で最大 EPR に届くと EPR の数字が赤（FCOM p.873）", "dref": "laminar/B747/engines/EPR/red_on[0]", "op": "==", "value": 1 },
+    { "do": "check", "note": "RPM LIM は出ない", "dref": "laminar/B747/CAS/advisory_status[134]", "op": "==", "value": 0 },
+
+    { "do": "mark", "note": "離陸中止" },
+    { "do": "set", "note": "スラスト・レバーを idle", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "set", "note": "ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
+    { "do": "wait", "note": "止まる", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 20, "timeout": 90 },
+    { "do": "wait", "note": "アイドルで EPR の数字は白に戻る", "dref": "laminar/B747/engines/EPR/red_on[0]", "op": "==", "value": 0, "timeout": 10 },
+    { "do": "record_stop" }
+  ]
+}
