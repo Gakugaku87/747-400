@@ -401,17 +401,41 @@ function pushSimConfig(values)
 	run_after_time(doneNewSimConfig, 1)
 end
 
-local setSimConfig=false
+-- the config taken (set), and (2026-11-11) the seconds this module waited
+-- for its first config without the pulse and how long it waits before it
+-- takes the one published (late_s, estimate: the pulse comes within about
+-- 5 s of the plugins' start). One local: this chunk is at Lua's 200
+local simConfigGot = {set = false, wait = 0, late_s = 10}
 function hasSimConfig()
 	if B747DR_newsimconfig_data==1 then
 		if string.len(B747DR_simconfig_data) > 1 then
 			simConfigData["data"] = json.decode(B747DR_simconfig_data)
-			setSimConfig=true
+			simConfigGot.set=true
 		else
 			return false
 		end
+	elseif not simConfigGot.set then
+		-- (2026-11-11) the simconfig module (plugin xtlua) holds newsimconfig
+		-- at 1 for about 4 s when it publishes the livery's config; started
+		-- after that (the user's cold start of the release), this module never
+		-- saw it and returned in after_physics for good: the CDUs blank, the
+		-- weight and balance window's inputs dead. Without a config after
+		-- late_s, the one published once it decodes to a config
+		-- (tests/fms/simconfig_late_start_test.lua). Not at once: a usual
+		-- start still takes it with the pulse, at the moment it always did
+		-- (right after an aircraft's reload the previous flight's config can
+		-- still be published)
+		simConfigGot.wait = simConfigGot.wait + (SIM_PERIOD or 0)
+		local s = simConfigGot.wait >= simConfigGot.late_s and B747DR_simconfig_data or ""
+		if string.len(s) > 1 then
+			local d = json.decode(s)
+			if type(d) == "table" and d.PLANE ~= nil then
+				simConfigData["data"] = d
+				simConfigGot.set=true
+			end
+		end
 	end
-	return setSimConfig
+	return simConfigGot.set
 end
 
 --Marauder28
