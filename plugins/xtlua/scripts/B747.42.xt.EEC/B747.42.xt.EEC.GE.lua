@@ -257,6 +257,21 @@ end
 
 local last_thrust_n = {0.0, 0.0, 0.0, 0.0}
 local last_N1 = {0.0, 0.0, 0.0, 0.0}
+-- (2026-11-10) the N1 shown in the air for a thrust (N) at this frame's air
+-- data (the corrected thrust's polynomial below, no state): N1_display_GE's,
+-- and the EEC's thrust control takes its slope against the thrust from it
+-- (B747.42.xt.eec_thrust.lua). B747_ge_n1_from_xp(engine): the display is
+-- X-Plane's N1 instead (the takeoff), the EEC then uses its tables. Local
+-- state: a table in a global turns into XTLua's namespace
+local ge_n1_from_xp = {[0] = true, true, true, true}
+function B747_ge_n1_from_xp(engine) return ge_n1_from_xp[engine] ~= false end
+function B747_ge_n1_of_thrust(thrust_N)
+    local fc = math.max(0, thrust_N) / pressure_ratio / lbf_to_N
+    local n1c = (-1.4446E-12 * mach^2 + 1.2102E-12 * mach + 4.8911E-13) * fc^3 + (1.1197E-07 * mach^2 - 7.8717E-08 * mach - 6.498200000000002E-08)
+        * fc^2 + (-0.0027 * mach^2 + 0.0011 * mach + 0.0036) * fc + (36.93 * mach + 20.96)
+    return n1c * math.sqrt(temperature_ratio)
+end
+
 function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
     local N1_corrected = 0.0
     local N1_actual = 0.0
@@ -294,18 +309,17 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
 
     corrected_thrust_N = thrust_N_in / pressure_ratio
     corrected_thrust_lbf = corrected_thrust_N / lbf_to_N
-    
+
     actual_thrust_lbf = corrected_thrust_lbf * pressure_ratio
 
-    N1_corrected = (-1.4446E-12 * mach^2 + 1.2102E-12 * mach + 4.8911E-13) * corrected_thrust_lbf^3 + (1.1197E-07 * mach^2 - 7.8717E-08 * mach - 6.498200000000002E-08)
-    * corrected_thrust_lbf^2 + (-0.0027 * mach^2 + 0.0011 * mach + 0.0036) * corrected_thrust_lbf + (36.93 * mach + 20.96)
-
-    N1_actual = N1_corrected * math.sqrt(temperature_ratio)
+    N1_actual = B747_ge_n1_of_thrust(thrust_N_in)
 
     --Keep the N1 display steady during TO until we manage thrust or 2000 AGL unmanaged
+    ge_n1_from_xp[engine_in] = false
     if (string.match(B747DR_ref_thr_limit_mode, "TO") or (simDR_onGround == 1 and B747DR_ref_thr_limit_mode == "GA"))
       or ((B747DR_ref_thr_limit_mode == "NONE" or B747DR_ref_thr_limit_mode == "") and B747DR_radio_altitude < 2000) then
         N1_actual = simDR_N1[engine_in] * n1_factor_in
+        ge_n1_from_xp[engine_in] = true
     end
 
     --Engine Idle Logic (Minimum / Approach)

@@ -136,13 +136,40 @@ M.RPM_LIM_SHOW = {GE = 0.2, PW = 0.005}     -- N1 % or EPR
 -- two EPR formulas at 10,000 ft, M.45 (the same thrusts); above 1.42 (full
 -- throttle there) carried on (estimate).
 M.THRUST = {
-    PW = {ki = 2.0, kp = 3.0, lag = 1.5, up = 0.15, down = 0.15,       -- EPR each second
+    PW = {lag = 1.5, up = 0.15, down = 0.15,                            -- EPR each second
         at = {0.97, 1.02, 1.09, 1.20, 1.26, 1.32, 1.37, 1.42, 1.71},
         slope = {0.3, 0.62, 0.82, 0.93, 1.03, 1.16, 1.17, 1.47, 1.8}}, -- EPR for each unit of throttle
-    GE = {ki = 2.0, kp = 3.0, lag = 1.5, up = 15, down = 5,            -- N1 % each second
+    GE = {lag = 1.5, up = 15, down = 5,                                 -- N1 % each second
         at = {35, 45, 60, 75, 90, 100},
         slope = {20, 100, 112, 100, 80, 77}},                          -- N1 % for each unit of throttle
 }
+-- (2026-11-10) the loop for the plant measured in X-Plane (PROGRESS.md
+-- "next" 20; the open-loop test: tests/flight/measure/eec_steps_*.json,
+-- tests/flight/tools/eec_steps.lua). The throttle drives X-Plane's thrust
+-- through two lags and a short dead time, slower with height (11,000 ft 2.9
+-- and 1.3 s, FL250 3.2 and 1.8 s, FL390 5.8 and 2.1 s: about 1 / sqrt of the
+-- pressure ratio delta), and the shown EPR (and the GE's N1 in the air)
+-- come from the thrust over delta, so their slope against the throttle
+-- grows as delta falls (P&W: 0.81 EPR a unit of throttle at 11,000 ft, 1.65
+-- at FL250, 3.67 at FL390, where the tables above gave 0.36, 0.49, 0.91).
+-- With the tables and ki 2, kp 3 the phase margin was 12 degrees at 11,000
+-- ft, 3 at FL250 and -11 at FL390: in gusts at FL390 the throttle swung
+-- 0.76 to 0.94 with a 5.6 s period (s277). Now the glue gives each engine's
+-- slope (its display formula's slope against the thrust times X-Plane's
+-- thrust for each unit of throttle: B747.42.xt.eec_thrust.lua) and delta;
+-- the gains KP and KI are for the slope, KI times (delta /
+-- KI_DELTA_REF)^KI_POWER: above KI_DELTA_REF's height the square root, with
+-- the plant's lags (the phase margin 55 to 60 degrees at the measured
+-- heights, a 0.05 EPR step within 0.003 in 5 to 8 s); below it more, so
+-- that the takeoff brings the EPR to the takeoff rating about as fast as
+-- the previous law (within 0.005 in about 10 s; the first version with
+-- the square root down to sea level took 14.5 s in s11 2026-11-10): KI
+-- 1.06 at sea level, the phase margin 46 degrees or more. Without a slope
+-- (the GE's N1 from X-Plane's on the takeoff) the tables' (estimates: the
+-- gains, the scaling)
+M.KP, M.KI = 2.0, 0.5
+M.KI_DELTA_REF = 0.66               -- about 11,000 ft
+M.KI_POWER = {0.5, 1.8}             -- below KI_DELTA_REF (higher up), above it (lower down)
 
 -- FCOM PI tables, 3 packs on, anti-ice off. Rows by TAT (°C, warm to cold),
 -- columns by pressure altitude (ft); false where the table is blank (too
@@ -685,10 +712,18 @@ function M.new()
         soft_top = {}}      -- (2026-11-04) the schedule an automatic reversion keeps
 end
 
+-- the gains for the pressure ratio delta (nil: KI_DELTA_REF's)
+function M.thrust_gains(delta)
+    local d = clamp(delta or M.KI_DELTA_REF, 0.1, 1)
+    local p = d < M.KI_DELTA_REF and M.KI_POWER[1] or M.KI_POWER[2]
+    return M.KP, M.KI * (d / M.KI_DELTA_REF) ^ p
+end
+
 -- engine n's throttle for its target (key "GE" or "PW"; current: X-Plane's
 -- throttle now, where the control starts from; idle: the lever's idle end
--- command)
-function M.thrust_control(s, key, n, target, actual, current, idle, dt)
+-- command; slope: the controlled value's for each unit of throttle, nil for
+-- the tables'; delta: the pressure ratio)
+function M.thrust_control(s, key, n, target, actual, current, idle, dt, slope, delta)
     local g = M.THRUST[key]
     if target <= idle then
         s.throttle[n], s.err[n], s.ref[n] = 0, nil, actual
@@ -698,8 +733,9 @@ function M.thrust_control(s, key, n, target, actual, current, idle, dt)
     ref = ref + clamp((target - ref) * math.min(1, dt / g.lag), -g.down * dt, g.up * dt)
     local th = s.throttle[n] or clamp(current, 0, 1)
     local err = ref - actual
-    local slope = interp(g.at, g.slope, actual)
-    th = clamp(th + (g.ki * err * dt + g.kp * (err - (s.err[n] or err))) / slope, 0, 1)
+    if not slope or slope <= 0 then slope = interp(g.at, g.slope, actual) end
+    local kp, ki = M.thrust_gains(delta)
+    th = clamp(th + (ki * err * dt + kp * (err - (s.err[n] or err))) / slope, 0, 1)
     s.throttle[n], s.err[n], s.ref[n] = th, err, ref
     return th
 end

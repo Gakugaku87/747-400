@@ -225,13 +225,82 @@ function B747_eec_idle(engine) return eec_inputs.idle[engine + 1] end
 -- at most X-Plane's 0.05 s a frame (2026-10-31: below 20 fps X-Plane's time
 -- runs slower while SIM_PERIOD stays real time)
 local EEC_DT_MAX = 0.05
+-- (2026-11-10) the open-loop test (the EEC's init script; tests/flight/
+-- measure/eec_steps_*.json): while test_open is 1 each engine's throttle is
+-- the one it had when the test began plus test_step_pm per mille, and the
+-- control starts again from X-Plane's throttle after it
+B747DR_eec_test_open_in         = find_dataref("laminar/B747/engines/eec/test_open")
+B747DR_eec_test_step_pm_in      = find_dataref("laminar/B747/engines/eec/test_step_pm")
+local test_base = {}
+local function test_throttle(engine)
+    local n = engine + 1
+    if B747DR_eec_test_open_in < 0.5 then
+        test_base[n] = nil
+        return nil
+    end
+    if test_base[n] == nil then test_base[n] = simDR_engn_thro_use[engine] end
+    E.reset_thrust_control(eec_state, n)
+    return math.max(0, math.min(1, test_base[n] + B747DR_eec_test_step_pm_in / 1000))
+end
+-- (2026-11-10) the slope of the value the thrust control follows against
+-- X-Plane's throttle (B747.42.eec_model.lua, M.KP): the display formula's
+-- slope against the thrust (P&W: the EPR model, B747_epr_model.epr; GE in
+-- the air: its N1 polynomial, B747_ge_n1_of_thrust) times X-Plane's thrust
+-- for each unit of throttle; nil where the GE's display is X-Plane's N1
+-- (the takeoff: the model's tables). X-Plane's thrust for each unit of
+-- throttle (kN, alike for both types): X-Plane's thrust goes about as the
+-- throttle to the n-th power, so n x the thrust over the throttle, n =
+-- N_A - N_B x delta (the open-loop test, 2026-11-10, tests/flight/measure/
+-- eec_steps_*.json, and the takeoff roll of s11: n x thrust / throttle =
+-- the measured slope with n 1.9 on the takeoff roll, 2.2 at 6,000 ft, 2.7
+-- at 11,000 ft, 3.0 at FL250, 3.2 at FL390; the formula within -9 to +2 %
+-- of the measured 470, 241, 187, 177, 142 kN). The present thrust and
+-- throttle, the throttle at least THR_MIN, the result within C_RANGE
+-- (estimates). Near idle X-Plane's thrust hardly moves with the throttle
+-- (C_RANGE's low end; the slope's at SLOPE_MIN).
+-- The first version (THRUST_C x delta^THRUST_P, from the cruise points
+-- alone) gave 246 on the takeoff roll and the takeoff EPR 0.005 short at
+-- 59 kt (s11 2026-11-10: too strong a proportional part held the throttle
+-- back). The second took the larger of the present thrust and the
+-- target's (for a spool-up, whose thrust lags its throttle): from idle
+-- that made the slope about ten times X-Plane's, the throttle opened
+-- slowly and the A/T overshot 250 kt by 6 kt at 10,000 ft (s220
+-- 2026-11-10; offline from idle to EPR 1.01: 16 s, now 4 s, the previous
+-- law 2.9 s with 0.03 over); the takeoff alike either way (10 to 11 s)
+local N_A, N_B = 3.5, 1.6
+local THR_MIN = 0.2
+local C_RANGE = {50, 600}
+local SLOPE_MIN = {PW = 0.2, GE = 15}       -- EPR, N1 % for each unit of throttle
+local function thrust_per_throttle(f, thr, delta)
+    local c = (N_A - N_B * delta) * f / math.max(THR_MIN, thr)
+    return math.max(C_RANGE[1], math.min(C_RANGE[2], c))
+end
+local function plant_slope(key, engine, delta)
+    local f = simDR_thrust_n[engine] / 1000
+    local dydf
+    if key == "GE" then
+        if B747_ge_n1_from_xp(engine) then return nil end
+        dydf = (B747_ge_n1_of_thrust((f + 0.5) * 1000) - B747_ge_n1_of_thrust(math.max(0, f - 0.5) * 1000)) / (f + 0.5 - math.max(0, f - 0.5))
+    else
+        local M = simDR_epr_mach
+        dydf = (B747_epr_model.epr(f + 0.5, delta, M) - B747_epr_model.epr(f - 0.5, delta, M)) / 1.0
+    end
+    -- NaN or infinite: no air data yet (the GE's pressure ratio 0)
+    if dydf ~= dydf or dydf == math.huge or dydf == -math.huge then return nil end
+    local c = thrust_per_throttle(f, simDR_engn_thro_use[engine], delta)
+    return math.max(SLOPE_MIN[key], dydf * c)
+end
 function B747_eec_throttle(engine)
     if eec_out == nil then return 0 end
+    local test = test_throttle(engine)
+    if test ~= nil then return test end
     local key = eec_inputs.type
     local actual = B747DR_display_EPR[engine]
     if key == "GE" then actual = B747DR_display_N1[engine] end
     local n = engine + 1
-    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], idle_command(key), math.min(SIM_PERIOD, EEC_DT_MAX))
+    local delta = math.max(0.1, simDR_epr_ambient_pa / 101325)
+    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], idle_command(key),
+        math.min(SIM_PERIOD, EEC_DT_MAX), plant_slope(key, engine, delta), delta)
 end
 
 function B747_eec_reset_throttle(engine)
@@ -261,7 +330,7 @@ end
 -- code's remedy, estimate)
 local THRUST_SHORT = {GE = 0.2, PW = 0.005}
 function B747_eec_thrust_short()
-    if eec_out == nil then return false end
+    if eec_out == nil or B747DR_eec_test_open_in > 0.5 then return false end
     local key = eec_inputs.type
     for engine = 0, 3 do
         local actual = B747DR_display_EPR[engine]

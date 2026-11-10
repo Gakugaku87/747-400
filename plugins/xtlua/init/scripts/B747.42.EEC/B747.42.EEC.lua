@@ -85,3 +85,10 @@ B747DR_eec_altn_light = deferred_dataref("laminar/B747/engines/eec/altn_light", 
 -- (B747.42.egt_model.lua, P&W and GE)
 B747DR_eec_fail_hot_start = deferred_dataref("laminar/B747/engines/fail/hot_start", "array[4]")
 B747DR_eec_fail_egt_high = deferred_dataref("laminar/B747/engines/fail/egt_high", "array[4]")
+-- (2026-11-10) the thrust control's open-loop test, for measuring X-Plane's
+-- engine (B747.42.xt.eec_thrust.lua, tests/flight/measure/eec_steps_*.json):
+-- test_open 1 holds each engine's throttle at its value when the test began
+-- plus test_step_pm per mille (integers: the Web API writes no fractions to
+-- XTLua's datarefs). Not used in flight
+B747DR_eec_test_open = deferred_dataref("laminar/B747/engines/eec/test_open", "number")
+B747DR_eec_test_step_pm = deferred_dataref("laminar/B747/engines/eec/test_step_pm", "number")

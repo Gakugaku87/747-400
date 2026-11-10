@@ -291,12 +291,18 @@ frames(1)
 local THRO = "sim/flightmodel/engine/ENGN_thro_use"
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+-- (2026-11-10) air data in the air (10,000 ft, M.45): the thrust control's
+-- slope comes from the EPR model at the pressure ratio and Mach (with none
+-- the pressure ratio is held at 0.1); the fast descent below sets its own
+rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * (1 - 6.87559e-6 * 10000) ^ 5.25588)
+rt:set("sim/flightmodel/misc/machno", 0.45)
 for i = 0, 3 do
     rt:set("sim/flightmodel/engine/ENGN_running", i, 1)
     rt:set("sim/cockpit2/engine/actuators/prop_mode", i, 1)
 end
 for i = 0, 3 do rt:set(USER, i, 1.0) end
-frames(3)
+-- (2026-11-10: the gains for the plant, slower than before: 6 s, was 3)
+frames(6)
 T.near(get(THRO, 0), 1, 1e-6, "thrust control: full forward, EPR short of the command: full throttle")
 T.equal(get("sim/operation/override/override_throttles"), 1, "thrust control: X-Plane's throttles are overridden")
 for i = 0, 3 do rt:set(USER, i, 0.0) end
@@ -306,6 +312,31 @@ rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)       -- engine 2 in rev
 frames(0.2)
 T.equal(get(THRO, 1), 0, "thrust control: reverser not deployed: no thrust")
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
+
+-- (2026-11-10) the open-loop test (laminar/B747/engines/eec/test_open and
+-- test_step_pm; tests/flight/measure/eec_steps_*.json): the throttle held at
+-- its value when the test began plus the step (per mille), whatever the
+-- lever; after it the control takes the throttle up from there
+local TEST_OPEN, TEST_STEP = "laminar/B747/engines/eec/test_open", "laminar/B747/engines/eec/test_step_pm"
+rt:set(TEST_OPEN, 1)
+rt:set(TEST_STEP, 300)
+frames(0.5)
+T.near(get(THRO, 0), 0.3, 1e-9, "open-loop test: the throttle when it began (0) plus 300 per mille, the lever at idle")
+for i = 0, 3 do rt:set(USER, i, 1.0) end
+frames(3)
+T.near(get(THRO, 2), 0.3, 1e-9, "open-loop test: the lever full forward does not move it")
+rt:set(TEST_STEP, -100)
+frames(0.2)
+T.equal(get(THRO, 0), 0, "open-loop test: not under 0")
+rt:set(TEST_STEP, 0)
+rt:set(TEST_OPEN, 0)
+rt:frame(1 / 30)
+T.check(get(THRO, 0) < 0.1, string.format("after the test: the control starts again from X-Plane's throttle (%.3f, not 1 at once)", get(THRO, 0)))
+frames(6)
+T.near(get(THRO, 0), 1, 1e-6, "after the test: full forward, the EPR short: full throttle again")
+for i = 0, 3 do rt:set(USER, i, 0.0) end
+frames(3)
+T.equal(get(THRO, 0), 0, "after the test: idle lever: throttle 0")
 
 -- (2026-11-05) a fast descent at X-Plane's idle (M.66, 12,600 ft; its net
 -- thrust -3.3 kN an engine, under no net thrust): with the lever a hair
