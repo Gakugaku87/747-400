@@ -6,9 +6,10 @@
 -- terminal area, the final approach) at the thrust the same flight needs on
 -- the custom acf - the PW4056 FCOM's EPR at that weight and speed
 -- (PI.10.38-10.40 p.264-266) through the EPR model (B747.42.epr_model.lua),
--- the climbs with the climb's power (W g V/S / TAS). The form: N1c (N1 /
+-- the climbs with the climb's power and its acceleration along the 290 KIAS / .84
+-- schedule (m (g V/S / TAS + dTAS/dh V/S)). The form: N1c (N1 /
 -- sqrt(theta static)) = n0(M) + k(M) x^(q0 + q1 M), x = F / delta in 10,000
--- lbf, n0 the model's (the upstream's zero-thrust N1), k quadratic in the
+-- lbf, n0 the model's (the upstream's zero-thrust N1), k cubic in the
 -- Mach by least squares, q0 and q1 on a grid; fitted to the clean points
 -- (level, holding, terminal flaps up, climbs) and the static anchor (the
 -- rated 57,160 lbf at the go-around table's 103.8 %, estimate). Prints the
@@ -139,6 +140,14 @@ for flap, row in pairs(GE_FINAL) do
         if epr then add("final" .. flap, 1500, m, thrust(epr, 1500, m), c[1]) end
     end
 end
+-- the TAS (m/s) along the climb's schedule (290 KIAS, .84 above) and its
+-- change with height (m/s a metre): at 290 KIAS the TAS grows as the airplane
+-- climbs, and that acceleration takes thrust too (2026-11-10: left out at
+-- first, the fit gave 6-7 kN too little at 30,000 ft and the GE climbed 15 %
+-- slow there in X-Plane, s282; the PW4056 at the Max Climb EPR needs 75 kN
+-- an engine at 30,000 ft for its FCOM rate, aero_climb_maxclb 2026-11-09)
+local function climb_tas(h) local t = isa(h); return climb_mach(h) * math.sqrt(1.4 * 287.053 * t) end
+local function climb_dvdh(h) return (climb_tas(h + 50) - climb_tas(h - 50)) / (100 * 0.3048) end
 for h, row in pairs(GE_CLIMB) do
     for i, vs in ipairs(row) do
         local w, m = G6[i] * KLB, climb_mach(h)
@@ -146,8 +155,9 @@ for h, row in pairs(GE_CLIMB) do
         local t = isa(h)
         local n1 = max_climb_n1(t * (1 + 0.2 * m * m) - 273.15, h)
         if epr and n1 then
-            local tas = m * math.sqrt(1.4 * 287.053 * t)
-            add("climb", h, m, thrust(epr, h, m) + w * 1000 * G0 * (vs * 0.3048 / 60) / tas / 4, n1)
+            local vz = vs * 0.3048 / 60
+            local climb = w * 1000 * (G0 * vz / climb_tas(h) + climb_dvdh(h) * vz) / 4
+            add("climb", h, m, thrust(epr, h, m) + climb, n1)
         end
     end
 end
@@ -156,29 +166,45 @@ local fitted = {}
 for _, p in ipairs(pts) do if CLEAN[p.kind] then fitted[#fitted + 1] = p end end
 fitted[#fitted + 1] = {fc = 57160, m = 0, n1c = 103.8, kind = "anchor", th = 1, w = 3}
 
--- k(M) for q0, q1 by least squares (3 x 3)
-local function det3(a) return a[1][1]*(a[2][2]*a[3][3]-a[2][3]*a[3][2]) - a[1][2]*(a[2][1]*a[3][3]-a[2][3]*a[3][1]) + a[1][3]*(a[2][1]*a[3][2]-a[2][2]*a[3][1]) end
+-- k(M), cubic in the Mach, for q0, q1 by least squares (4 x 4, Gaussian
+-- elimination); the Mach as the points have it (all at .84 or under)
+local NK = 4
+local function solve(A, b)
+    local n = #b
+    for c = 1, n do
+        local p = c
+        for r = c + 1, n do if math.abs(A[r][c]) > math.abs(A[p][c]) then p = r end end
+        A[c], A[p], b[c], b[p] = A[p], A[c], b[p], b[c]
+        for r = c + 1, n do
+            local f = A[r][c] / A[c][c]
+            for k = c, n do A[r][k] = A[r][k] - f * A[c][k] end
+            b[r] = b[r] - f * b[c]
+        end
+    end
+    local x = {}
+    for r = n, 1, -1 do
+        local s = b[r]
+        for k = r + 1, n do s = s - A[r][k] * x[k] end
+        x[r] = s / A[r][r]
+    end
+    return x
+end
 local function n0(m) return Gm.N0[1] + Gm.N0[2] * m end
 local function fit(q0, q1)
-    local A = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}}
-    local b = {0, 0, 0}
+    local A, b = {}, {}
+    for i = 1, NK do A[i] = {}; for j = 1, NK do A[i][j] = 0 end; b[i] = 0 end
     for _, p in ipairs(fitted) do
         local w = p.w or 1
         local xq = (p.fc / 10000) ^ (q0 + q1 * p.m)
-        local bs = {xq, xq * p.m, xq * p.m * p.m}
-        for i = 1, 3 do
+        local bs = {xq, xq * p.m, xq * p.m ^ 2, xq * p.m ^ 3}
+        for i = 1, NK do
             b[i] = b[i] + w * bs[i] * (p.n1c - n0(p.m))
-            for j = 1, 3 do A[i][j] = A[i][j] + w * bs[i] * bs[j] end
+            for j = 1, NK do A[i][j] = A[i][j] + w * bs[i] * bs[j] end
         end
     end
-    local D, k = det3(A), {}
-    for c = 1, 3 do
-        local T = {{A[1][1], A[1][2], A[1][3]}, {A[2][1], A[2][2], A[2][3]}, {A[3][1], A[3][2], A[3][3]}}
-        for r = 1, 3 do T[r][c] = b[r] end
-        k[c] = det3(T) / D
-    end
+    local k = solve(A, b)
     local f = function(fc, m)
-        return n0(m) + (k[1] + k[2] * m + k[3] * m * m) * (fc / 10000) ^ (q0 + q1 * m)
+        return n0(m) + (k[1] + m * (k[2] + m * (k[3] + m * k[4]))) * (fc / 10000) ^ (q0 + q1 * m)
     end
     local e2, n = 0, 0
     for _, p in ipairs(fitted) do
@@ -196,8 +222,8 @@ for q0 = 0.30, 1.2001, 0.01 do
         if rms == rms and (not best or rms < best.rms) then best = {rms = rms, q0 = q0, q1 = q1, k = k, f = f} end
     end
 end
-print(string.format("q0 %.2f  q1 %.2f  k %.4f %.4f %.4f  (rms %.2f %% N1 over %d clean points)",
-    best.q0, best.q1, best.k[1], best.k[2], best.k[3], best.rms, #fitted - 1))
+print(string.format("q0 %.2f  q1 %.2f  k %.4f %.4f %.4f %.4f  (rms %.2f %% N1 over %d clean points)",
+    best.q0, best.q1, best.k[1], best.k[2], best.k[3], best.k[4], best.rms, #fitted - 1))
 print("the model now: q0 " .. Gm.Q[1] .. "  q1 " .. Gm.Q[2] .. "  k " .. table.concat(Gm.K, " "))
 local groups, order = {}, {}
 for _, p in ipairs(pts) do
