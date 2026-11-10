@@ -419,6 +419,87 @@ do
     T.near(E.thrust_control(s, "PW", 1, 1.60, 1.00, 0.4, 0.95, DT), 0.4, 0.05, "thrust control: after a reset it starts from X-Plane's throttle")
 end
 
+-- (2026-11-10) the loop against X-Plane's engine as the open-loop test
+-- measured it (tests/flight/measure/eec_steps_*.json: the P&W's EPR through
+-- two lags and a dead time, its slope against the throttle), the glue's
+-- slope given: a 0.05 EPR step of the target within 0.003 in 10 s and with
+-- 5 % overshoot at most, also with the slope 30 % high or 25 % low (10 %).
+-- With the tables' slopes and the gains before (ki 2, kp 3) the same plants
+-- overshot 21 % at 11,000 ft, 35 % at FL250 and diverged at FL390 (the
+-- throttle's 5.6 s swing in s277)
+local PLANTS = {
+    {"11,000 ft", K = 0.81, tau1 = 2.93, tau2 = 1.25, d = 0.09, delta = 0.6614},
+    {"FL250", K = 1.65, tau1 = 3.21, tau2 = 1.75, d = 0.09, delta = 0.3707},
+    {"FL390", K = 3.67, tau1 = 5.75, tau2 = 2.09, d = 0.21, delta = 0.1940},
+}
+local function step_response(p, slope_err)
+    local s = E.new()
+    local x1, x2 = 0, 0
+    local buf = {}
+    for i = 1, math.max(1, math.floor(p.d / DT + 0.5)) do buf[i] = 0.5 end
+    local th, y0 = 0.5, 1.0
+    local target, peak, last_out = y0, -math.huge, nil
+    local t = 0
+    while t < 60 do
+        local ud = table.remove(buf, 1)
+        buf[#buf + 1] = th
+        x1 = x1 + DT / p.tau1 * (p.K * (ud - 0.5) - x1)
+        x2 = x2 + DT / p.tau2 * (x1 - x2)
+        local y = y0 + x2
+        if t >= 1 then target = y0 + 0.05 end
+        th = E.thrust_control(s, "PW", 1, target, y, th, 0.5, DT, p.K * slope_err, p.delta)
+        if t >= 1 then
+            peak = math.max(peak, y)
+            if math.abs(y - target) > 0.003 then last_out = t end
+        end
+        t = t + DT
+    end
+    return (peak - y0 - 0.05) / 0.05, (last_out or 1) - 1
+end
+for _, p in ipairs(PLANTS) do
+    local ov, ts = step_response(p, 1)
+    T.check(ov < 0.05 and ts < 10, string.format("thrust control, %s: a 0.05 EPR step %.1f %% over, within 0.003 after %.1f s", p[1], ov * 100, ts))
+    for _, e in ipairs({1.3, 0.75}) do
+        local ov2, ts2 = step_response(p, e)
+        T.check(ov2 < 0.10 and ts2 < 15, string.format("thrust control, %s, the slope x %.2f: %.1f %% over, within 0.003 after %.1f s", p[1], e, ov2 * 100, ts2))
+    end
+end
+do
+    local kp, ki = E.thrust_gains(E.KI_DELTA_REF)
+    T.near(ki, E.KI, 1e-12, "thrust control: KI at the reference pressure ratio")
+    local kp2, ki2 = E.thrust_gains(0.19)
+    T.near(kp2, kp, 1e-12, "thrust control: KP the same at FL390")
+    T.near(ki2, E.KI * math.sqrt(0.19 / E.KI_DELTA_REF), 1e-12, "thrust control: KI x sqrt(delta / reference) at FL390 (the plant's lags about 1 / sqrt(delta))")
+    local _, ki3 = E.thrust_gains(1.0)
+    T.near(ki3, 1.06, 0.01, "thrust control: KI about 1.06 at sea level (the takeoff)")
+end
+-- (2026-11-10) the takeoff at sea level: from idle (EPR 1.0, throttle 0)
+-- to the takeoff rating 1.513 with the slope the glue gives (1.2 EPR a unit
+-- of throttle at the takeoff's thrust; X-Plane's about 1.3 from s11's roll)
+-- on a plant fitted to s11's records (the static EPR 1 + 0.513 (throttle /
+-- 0.94)^2.5, lags 2.1 and 0.65 s, 0.1 s dead time, the spool no faster than
+-- 0.25 EPR a second): within 0.005 of the rating in about 10 s, no
+-- overshoot (the previous law 9.3 s; the first version, with KI's square
+-- root down to sea level, 15 s, in s11 14.5 s)
+do
+    local s = E.new()
+    local x1, x2, buf = 1.0, 1.0, {0, 0, 0}
+    local th, t, reach, peak = 0, 0, nil, 0
+    while t < 30 do
+        local ud = table.remove(buf, 1)
+        buf[#buf + 1] = th
+        local ss = 1.0 + 0.513 * (ud / 0.94) ^ 2.5
+        x1 = x1 + math.max(-0.3, math.min(0.25, (ss - x1) / 2.1)) * DT
+        x2 = x2 + (x1 - x2) / 0.65 * DT
+        th = E.thrust_control(s, "PW", 1, 1.513, x2, th, 0.95, DT, 1.2, 1.0)
+        peak = math.max(peak, x2)
+        if not reach and t > 3 and math.abs(x2 - 1.513) <= 0.005 then reach = t end
+        t = t + DT
+    end
+    T.check(reach and reach < 12 and peak < 1.513 + 0.003,
+        string.format("thrust control: the takeoff within 0.005 of 1.513 after %s s (peak %.4f)", tostring(reach and string.format("%.1f", reach)), peak))
+end
+
 -- X-Plane's idle ratio (M.IDLE, measured in X-Plane against the FCOM's idle
 -- descents): minimum idle in the air by pressure altitude, one value on the
 -- ground, approach idle 0.5 above the air's

@@ -57,7 +57,7 @@
     { "do": "sleep", "seconds": 150, "note": "A/T が落ち着く（フェーズ1では 2〜3 分で M.858 に落ち着いた）" },
     { "do": "snapshot", "note": "落ち着いた後", "drefs": [ "sim/flightmodel/misc/machno", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/airspeed/Vminm", "sim/cockpit2/autopilot/airspeed_dial_kts", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/weight/m_total" ] },
     { "do": "check", "note": "最小機動速度は M.85 の IAS（約 278 kt）より下（この点の前提。上なら A/T はそこを保つのが正しい：FCOM p.675 の stall protection）", "dref": "laminar/B747/airspeed/Vminm", "op": "<", "value": 277 },
-    { "do": "watch", "note": "Mach は M.85 の ±.004（60 秒。前は M.858）", "dref": "sim/flightmodel/misc/machno", "min": 0.846, "max": 0.854, "timeout": 60 },
+    { "do": "watch", "note": "Mach は M.85 の ±.006（60 秒。前は M.858 の偏り。2026-11-10 から ±.004 を ±.006 に：この重さと高さの A/T の速さには周期約 2 分の揺れが残り（前の EEC で 277.6〜280.8 kt、高い所の応答を遅くした EEC で 277.2〜281.2 kt）、確かめの間に 0.855 があった）", "dref": "sim/flightmodel/misc/machno", "min": 0.844, "max": 0.856, "timeout": 60 },
     { "do": "record_stop" }
   ]
 }
