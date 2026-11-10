@@ -718,10 +718,23 @@ end
 -- the IRUs at NAV (`inp.iru_nav`), HDG SEL and HDG HOLD with a heading
 -- (`inp.iru_hdg`: ATT's set heading too); G/A's pitch with multi-channel
 -- and a selected ADC lost (`inp.adc_sel` false)
+-- (2026-11-10) the receivers' loss confirmed over NCD_CONFIRM_S before it
+-- fails LOC or G/S (estimate: ATA22 p.382 gives no time). X-Plane's NAV 1
+-- stands for two of the three ILS receivers (L and C), so a single frame of
+-- its glide slope flag was "two ILS NCD": in s114 (2026-11-10, twice in
+-- seven runs) NAV 1's flag alone came on 8 to 16 s after the G/S capture
+-- (NAV 2's, the same transmitter, did not; the frequency unchanged), G/S
+-- failed, and the airplane held its attitude to a landing 2.8 km short. A
+-- real receiver's NCD (an anomaly, the transmitter failed) lasts; a retuned
+-- frequency still fails at once
+M.NCD_CONFIRM_S = 1.0
 local function mode_failures(s, inp)
     local freq = s.ils_freq and inp.ils_freq and inp.ils_freq ~= s.ils_freq
-    local roll_bad = s.roll == "LOC" and ((inp.loc_rx or 3) < M.SENSORS_MIN or freq)
-    local pitch_bad = s.pitch == "GS" and ((inp.gs_rx or 3) < M.SENSORS_MIN or freq)
+    local dt = inp.dt or 0
+    s.loc_ncd_t = (inp.loc_rx or 3) < M.SENSORS_MIN and (s.loc_ncd_t or 0) + dt or 0
+    s.gs_ncd_t = (inp.gs_rx or 3) < M.SENSORS_MIN and (s.gs_ncd_t or 0) + dt or 0
+    local roll_bad = s.roll == "LOC" and (s.loc_ncd_t >= M.NCD_CONFIRM_S or freq)
+    local pitch_bad = s.pitch == "GS" and (s.gs_ncd_t >= M.NCD_CONFIRM_S or freq)
     if s.roll == "LOC" and s.pitch == "GS" and (inp.ra or 9999) < M.MULTI_RA and (inp.ra_n or 3) < M.SENSORS_MIN then
         roll_bad, pitch_bad = true, true
     end
