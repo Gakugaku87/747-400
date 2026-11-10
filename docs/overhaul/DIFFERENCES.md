@@ -525,7 +525,7 @@ Sparky744（この作業ツリーの機体）が、実機の 747-400 とどこ�
   - RA TEST INHIBIT も同じ条件（地上を除く）で dataref に出す。電波高度計と ILS の自己試験は X-Plane にも機体にも無い。
 
 - 実機に合わせた点（段 5c、2026-10-30）：
-  - 作動中のモードのセンサーを失うと、そのモードが故障になる：PFD の FMA のモードに琥珀の線、A/P は入ったまま姿勢を保ち、>AUTOPILOT の caution（FCOM p.660；ATA22 p.382）。LOC・G/S は受信機が 2 台を切る（故障か電波なし）か捕捉の後の周波数の変更、1,500 ft の下の電波高度計の 2 台目、LNAV・LOC と HDG SEL・HDG HOLD は IRU の 2 台目、multi-channel の G/A は選んだ ADC。新しいモードを選ぶ（LOC と G/S の捕捉の後は TO/GA）まで故障のまま、A/P を外すと caution は消える（ATA22 p.254）。単一チャンネルの FLARE でも >AUTOPILOT。前は >AUTOPILOT が出ず（定義されていない X-Plane の故障を見ていた）、LOC・G/S は電波が途切れてもそのまま飛ぼうとした。
+  - 作動中のモードのセンサーを失うと、そのモードが故障になる：PFD の FMA のモードに琥珀の線、A/P は入ったまま姿勢を保ち、>AUTOPILOT の caution（FCOM p.660；ATA22 p.382）。LOC・G/S は受信機が 2 台を切る（故障か電波なし。2026-11-10 から 1 秒続いたら：X-Plane の NAV 1 は L と C の 2 台に数えるので、その G/S の旗が一瞬点いただけで G/S が故障し、自動着陸が姿勢を保って滑走路の手前に接地した。時間は資料に無く推定、notes/ATA-22.md §59）か捕捉の後の周波数の変更、1,500 ft の下の電波高度計の 2 台目、LNAV・LOC と HDG SEL・HDG HOLD は IRU の 2 台目、multi-channel の G/A は選んだ ADC。新しいモードを選ぶ（LOC と G/S の捕捉の後は TO/GA）まで故障のまま、A/P を外すと caution は消える（ATA22 p.254）。単一チャンネルの FLARE でも >AUTOPILOT。前は >AUTOPILOT が出ず（定義されていない X-Plane の故障を見ていた）、LOC・G/S は電波が途切れてもそのまま飛ぼうとした。
   - F/D のモードが故障するとバーが消える：109・405 は故障した軸のバー、570 は両方（FCOM p.660。RR は PW と同じ：推定）。前はモードがあれば出た。
   - multi-channel で ILS の電波が無くなる（NCD）のは、解除ではなくモード故障（段 5a の解除は受信機の故障の 2 台目だけ）。
   - 残り：F/D の故障旗（故障の模型が無い。master FMC の故障は FMC の段 11d2a から：LNAV・VNAV のモード故障、MCP 高度なら ALT HOLD、FMC の選択を動いている方に回すと戻る）、caution の後に解除する FCC・MCP の内部の故障、>AUTOPILOT の「caution だけ」の条件の大半（stab trim の故障、要求なしの V/S への遷移、1.3 Vs の V/S、地上の試験）、操縦士の override（detent と camout）。故障の時の姿勢の保ち方（バンクとピッチをそのまま）は推定。

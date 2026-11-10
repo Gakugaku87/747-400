@@ -1057,8 +1057,16 @@ approach(mx, sgl({ra = 2000}))
 T.equal(mx.roll .. mx.pitch, "LOCGS", "(single channel: LOC and G/S)")
 approach(mx, sgl({ra = 2000, loc_rx = 2, gs_rx = 2}))
 T.check(not mx.roll_fail and not mx.pitch_fail and not A.caution(mx), "5c: one receiver lost: no failure")
-approach(mx, sgl({ra = 2000, loc_rx = 1, gs_rx = 3, bank = 4, pitch_att = 1.5}))
-T.check(mx.roll_fail and not mx.pitch_fail, "the second localizer lost: LOC failed, G/S not")
+-- (2026-11-10) the loss confirmed over NCD_CONFIRM_S (1 s): X-Plane's NAV 1
+-- (the L and C receivers) flagged its glide slope for a moment (s114): half
+-- a second of both lost fails nothing, and the signal back starts it anew
+for _ = 1, 5 do approach(mx, sgl({ra = 2000, loc_rx = 1, gs_rx = 1, bank = 4, pitch_att = 1.5})) end
+approach(mx, sgl({ra = 2000}))
+for _ = 1, 5 do approach(mx, sgl({ra = 2000, loc_rx = 1, gs_rx = 1, bank = 4, pitch_att = 1.5})) end
+T.check(not mx.roll_fail and not mx.pitch_fail and not A.caution(mx), "5c: two losses of half a second, the signal back between: no failure (NCD_CONFIRM_S)")
+approach(mx, sgl({ra = 2000}))
+for _ = 1, 11 do approach(mx, sgl({ra = 2000, loc_rx = 1, gs_rx = 3, bank = 4, pitch_att = 1.5})) end
+T.check(mx.roll_fail and not mx.pitch_fail, "the second localizer lost over a second: LOC failed, G/S not")
 T.equal(mx.fail_bank, 4, "the bank then held")
 T.equal(mx.roll, "LOC", "LOC stays on the FMA (with the amber line)")
 T.check(A.caution(mx), "AUTOPILOT")
@@ -1067,8 +1075,10 @@ T.check(mx.roll_fail and mx.fail_bank == 4, "the signal back: still failed until
 A.hdg_sel(mx, app_inp({hyd = {0, 0, 3000}}))
 T.check(mx.roll == "LOC" and mx.roll_fail, "HDG SEL not taken with G/S captured (table p.351): LOC still failed")
 -- G/S: the glide slope's second receiver lost; the pitch of then held
-approach(mx, sgl({ra = 2000, gs_rx = 1, pitch_att = -2.5}))
-T.check(mx.pitch_fail and mx.fail_pitch == -2.5 and A.caution(mx), "the second glide slope lost: G/S failed, its pitch held, AUTOPILOT")
+for _ = 1, 9 do approach(mx, sgl({ra = 2000, gs_rx = 1, pitch_att = -2.5})) end
+T.check(not mx.pitch_fail, "the second glide slope lost for 0.9 s: G/S not yet failed")
+for _ = 1, 2 do approach(mx, sgl({ra = 2000, gs_rx = 1, pitch_att = -2.5})) end
+T.check(mx.pitch_fail and mx.fail_pitch == -2.5 and A.caution(mx), "the second glide slope lost over a second: G/S failed, its pitch held, AUTOPILOT")
 A.toga(mx, app_inp({hyd = {0, 0, 3000}, ra = 2000}))
 T.check(mx.roll == "GA" and mx.pitch == "GA" and not mx.roll_fail and not mx.pitch_fail and not A.caution(mx),
     "TO/GA: G/A's modes, no longer failed, no AUTOPILOT")
@@ -1079,7 +1089,7 @@ A.cmd(ml, "L", app_inp(single))
 A.loc(ml, app_inp(single))
 approach(ml, sgl({ra = 2000, gs_detect = false}))
 T.equal(ml.roll, "LOC", "(LOC alone)")
-approach(ml, sgl({ra = 2000, loc_rx = 0}))
+for _ = 1, 11 do approach(ml, sgl({ra = 2000, loc_rx = 0})) end
 T.check(ml.roll_fail, "LOC's signal lost: failed")
 A.hdg_sel(ml, app_inp({hyd = {0, 0, 3000}}))
 T.check(ml.roll == "HDG_SEL" and not ml.roll_fail and not A.caution(ml), "HDG SEL: no longer failed, no AUTOPILOT")
@@ -1124,7 +1134,7 @@ T.check(A.engaged(mf2) == 1 and A.caution(mf2), "a single channel in FLARE: AUTO
 -- multi-channel: the ILS's signal lost (NCD) is a mode failure, not the
 -- dual failure that disengages (step 5a: failures only)
 local mn2 = land3()
-approach(mn2, {cap = cap(), sensors = 1, loc_rx = 1, gs_rx = 1})
+for _ = 1, 11 do approach(mn2, {cap = cap(), sensors = 1, loc_rx = 1, gs_rx = 1}) end
 T.check(A.engaged(mn2) == 3 and mn2.roll_fail and mn2.pitch_fail, "LAND 3, the signal lost: three still engaged, LOC and G/S failed")
 approach(mn2, {cap = cap({ils = 1}), sensors = 1, loc_rx = 1, gs_rx = 1})
 T.check(A.engaged(mn2) == 0 and mn2.disc, "two receivers failed: disengaged (p.320, p.322)")

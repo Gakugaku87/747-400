@@ -1201,6 +1201,55 @@ local function afds_apply(act)
 	end
 	if act.pitch == "VS" then afds_vs_default() end
 end
+-- (2026-11-10) a mode failure's inputs, when it begins, to
+-- Output/B747_afds_mode_fail.txt (the flight tests read it): s114 at 15:30
+-- failed G/S once, 8 to 16 s after its capture with the roll not failed
+-- (the glide slope receivers then, not the frequency), and the airplane
+-- held 1.22 degrees to a landing 2.8 km short; three runs after it did not
+-- fail. In pcall: a Lua error here would stop the plugin's modules
+local function afds_log_mode_fail(axis)
+	pcall(function()
+		local log = io and io.open("Output/B747_afds_mode_fail.txt", "a")
+		if not log then return end
+		log:write(string.format("%s t %.1f %s failed: roll %s pitch %s gs_rx %s loc_rx %s ils %s at capture %s ra_n %s iru_nav %s iru_hdg %s ra %.0f"
+			.. " nav1 vert %s gs_flag %s horiz %s nav2 vert %s gs_flag %s horiz %s xp_fail nav1 %s nav2 %s gs %s\n",
+			os.date("%Y-%m-%d %H:%M:%S"), simDRTime, axis, tostring(afds.roll), tostring(afds.pitch),
+			tostring(afdsIn.gs_rx), tostring(afdsIn.loc_rx), tostring(afdsIn.ils_freq), tostring(afds.ils_freq),
+			tostring(afdsIn.ra_n), tostring(afdsIn.iru_nav), tostring(afdsIn.iru_hdg), simDR_radarAlt1,
+			tostring(simDR_hsi_nav1_vertical_signal), tostring(simDR_nav1_gs_flag), tostring(simDR_hsi_nav1_horizontal_signal),
+			tostring(simDR_hsi_nav2_vertical_signal), tostring(simDR_nav2_gs_flag), tostring(simDR_hsi_nav2_horizontal_signal),
+			tostring(simDR_afds_fail_nav1), tostring(simDR_afds_fail_nav2), tostring(simDR_afds_fail_gs)))
+		log:close()
+	end)
+end
+-- (2026-11-10) in LOC and G/S, each change of the receivers' signals and
+-- glide slope flags, to the same file (how long X-Plane's flag lasts:
+-- NCD_CONFIRM_S in B747.70.afds_model.lua). At most AFDS_RX_LOG_MAX lines
+-- a session
+local AFDS_RX_LOG_MAX = 500
+local afdsRxLogged = 0
+local afdsRxLast = {-1, -1, -1, -1, -1, -1}
+local function afds_log_receivers()
+	if afds.roll ~= "LOC" and afds.pitch ~= "GS" then
+		afdsRxLast[1] = -1
+		return
+	end
+	local a, b, c = simDR_hsi_nav1_vertical_signal, simDR_nav1_gs_flag, simDR_hsi_nav1_horizontal_signal
+	local d, e, f = simDR_hsi_nav2_vertical_signal, simDR_nav2_gs_flag, simDR_hsi_nav2_horizontal_signal
+	local l = afdsRxLast
+	if l[1] == a and l[2] == b and l[3] == c and l[4] == d and l[5] == e and l[6] == f then return end
+	l[1], l[2], l[3], l[4], l[5], l[6] = a, b, c, d, e, f
+	if afdsRxLogged >= AFDS_RX_LOG_MAX then return end
+	afdsRxLogged = afdsRxLogged + 1
+	pcall(function()
+		local log = io and io.open("Output/B747_afds_mode_fail.txt", "a")
+		if not log then return end
+		log:write(string.format("%s t %.2f receivers: roll %s pitch %s nav1 vert %s gs_flag %s horiz %s nav2 vert %s gs_flag %s horiz %s ra %.0f\n",
+			os.date("%Y-%m-%d %H:%M:%S"), simDRTime, tostring(afds.roll), tostring(afds.pitch),
+			tostring(a), tostring(b), tostring(c), tostring(d), tostring(e), tostring(f), simDR_radarAlt1))
+		log:close()
+	end)
+end
 -- the engage state on the datarefs: the channels (CMD lights), the servos
 -- (and the time they came on), AUTOPILOT DISC
 local function afds_sync()
@@ -1303,6 +1352,9 @@ local function afds_sync()
 	-- bar of the failed axis goes, the 570's both: RR as PW, an estimate);
 	-- AUTOPILOT (caution [4]: before, an undefined X-Plane failure's)
 	local rf, pf = afds.roll_fail, afds.pitch_fail
+	afds_log_receivers()
+	if rf and B747DR_ap_FMA_roll_fail == 0 then afds_log_mode_fail("roll") end
+	if pf and B747DR_ap_FMA_pitch_fail == 0 then afds_log_mode_fail("pitch") end
 	local both = afdsIn.engine == B747_afds_model.ENGINE_GE and (rf or pf)
 	local v = rf and 1 or 0
 	if B747DR_ap_FMA_roll_fail ~= v then B747DR_ap_FMA_roll_fail = v end
