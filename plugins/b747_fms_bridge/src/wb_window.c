@@ -36,7 +36,11 @@
  *   laminar/B747/wb/req_field  (int) 0 the passengers' total, 1-5 zone A-E
  *                              (a freighter's main deck freight, kg), 6-8
  *                              cargo FWD, AFT, BULK (kg), 9 kg a
- *                              passenger, 10 the fuel's total (kg)
+ *                              passenger, 10 the fuel's total (kg), 11 the
+ *                              cargo's total (kg: the FMC shares it over
+ *                              FWD, AFT and BULK in the ratio of the page's
+ *                              limits; 2026-11-11 the user: "the cargo's
+ *                              weight entered at once")
  *   laminar/B747/wb/req_value  (float) the value entered
  *   laminar/B747/wb/req_id     (int) counted up after each entry (the
  *                              three writable: the flight tests, others)
@@ -58,8 +62,8 @@
 static const char *WBW_TANK[WBW_TANKS] = {"CTR", "MAIN 1", "MAIN 2", "MAIN 3", "MAIN 4", "RES 2", "RES 3", "STAB"};
 static const float WBW_LB_PER_KG = 2.20462262f;
 /* the load's fields (laminar/B747/wb/req_field) */
-enum { WBF_PAX = 0, WBF_ZONE = 1, WBF_CARGO = 6, WBF_PAX_KG = 9, WBF_FUEL = 10, WBF_N = 11 };
-static const char *WBW_CARGO[3] = {"Cargo FWD", "Cargo AFT", "Cargo BULK"};
+enum { WBF_PAX = 0, WBF_ZONE = 1, WBF_CARGO = 6, WBF_PAX_KG = 9, WBF_FUEL = 10, WBF_CARGO_TOTAL = 11, WBF_N = 12 };
+static const char *WBW_CARGO[3] = {"  Cargo FWD", "  Cargo AFT", "  Cargo BULK"};
 
 static XPLMWindowID wb_win = NULL;
 static XPLMCommandRef wb_cmd_toggle = NULL;
@@ -197,6 +201,10 @@ static void wb_draw_body(XPLMWindowID w)
             wb_load_row(x0, x_kg, x_lb, y, fh, WBF_PAX_KG, "Weight a passenger", XPLMGetDataf(pax_kg), 1, 1, can);
             y -= lh;
         }
+        /* the cargo's total, shared over the holds by the FMC; the holds
+           under it, as the passengers' zones */
+        wb_load_row(x0, x_kg, x_lb, y, fh, WBF_CARGO_TOTAL, "Cargo (total)", c[0] + c[1] + c[2], 1, 0, can);
+        y -= lh;
         for (int k = 0; k < 3; k++) {
             wb_load_row(x0, x_kg, x_lb, y, fh, WBF_CARGO + k, WBW_CARGO[k], c[k], 1, 0, can);
             y -= lh;

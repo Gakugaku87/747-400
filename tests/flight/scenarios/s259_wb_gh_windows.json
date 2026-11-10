@@ -1,6 +1,6 @@
 {
   "name": "s259_wb_gh_windows",
-  "description": "シムの窓 2 つ（2026-11-05 の利用者の依頼、実機に無い）の X-Plane での確認、地上・cold & dark（RJAA 34L、機体を読み直す）。重量の窓（Plugins → 747-400 → Weight and balance...）の LOAD：窓と同じ入力を Web API で書く（laminar/B747/wb/req_field と req_value、req_id を 1 増やす）。乗客 300 人は CDU の PAX/CARGO と同じく A〜E に振り分け、X-Plane のペイロードと重心が動く。貨物 FWD、1 人の重量、燃料の合計（CDU の給油と同じ順に即配分：主翼 1・4 が先に満タン）。Ground Handling の窓（Plugins → 747-400 → Ground handling...）：チョーク・GPU・ASU のボタンと同じコマンド。窓を撮る。",
+  "description": "シムの窓 2 つ（2026-11-05 の利用者の依頼、実機に無い）の X-Plane での確認、地上・cold & dark（RJAA 34L、機体を読み直す）。重量の窓（Plugins → 747-400 → Weight and balance...）の LOAD：窓と同じ入力を Web API で書く（laminar/B747/wb/req_field と req_value、req_id を 1 増やす）。乗客 300 人は CDU の PAX/CARGO と同じく A〜E に振り分け、X-Plane のペイロードと重心が動く。貨物 FWD、1 人の重量、燃料の合計（CDU の給油と同じ順に即配分：主翼 1・4 が先に満タン）、貨物の合計（2026-11-11：区画の上限の比で FWD・AFT・BULK に）。Ground Handling の窓（Plugins → 747-400 → Ground handling...）：チョーク・GPU・ASU のボタンと同じコマンド。窓を撮る。",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -58,6 +58,15 @@
     { "do": "wait", "note": "合計 100 t", "dref": "sim/flightmodel/weight/m_fuel_total", "op": "between", "value": [99900, 100100], "timeout": 5 },
     { "do": "snapshot", "note": "タンクごと（主翼 1・4 が満タン、残りが 2・3）", "drefs": ["sim/flightmodel/weight/m_fuel", "sim/flightmodel/weight/m_fixed", "sim/flightmodel2/misc/cg_offset_z_mac"] },
     { "do": "check", "note": "センターは空", "dref": "sim/flightmodel/weight/m_fuel[0]", "op": "<", "value": 1 },
+
+    { "do": "mark", "note": "貨物の合計 40,000 kg（2026-11-11 の利用者の依頼：区画の上限の比で FWD・AFT・BULK に分ける）" },
+    { "do": "set", "dref": "laminar/B747/wb/req_field", "value": 11 },
+    { "do": "set", "dref": "laminar/B747/wb/req_value", "value": 40000 },
+    { "do": "set", "dref": "laminar/B747/wb/req_id", "value": 5, "rel": "id0" },
+    { "do": "wait", "note": "FWD 18,862", "dref": "laminar/B747/wb/load_cargo[0]", "op": "==", "value": 18862, "timeout": 5 },
+    { "do": "check", "note": "AFT 16,333", "dref": "laminar/B747/wb/load_cargo[1]", "op": "==", "value": 16333 },
+    { "do": "check", "note": "BULK 4,805", "dref": "laminar/B747/wb/load_cargo[2]", "op": "==", "value": 4805 },
+    { "do": "wait", "note": "ペイロード 300 × 100 + 40,000 = 70,000 kg", "dref": "sim/flightmodel/weight/m_fixed", "op": "between", "value": [69990, 70010], "timeout": 5 },
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "shot", "note": "重量の窓", "name": "wb_window_load" },
     { "do": "cmd", "note": "重量の窓を閉じる", "name": "laminar/B747/wb/window_toggle" },

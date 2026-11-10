@@ -138,6 +138,7 @@ Lua が作る名前の数：dataref 1617 個、コマンド 628 個。静的に�
 - コマンドの多い名前空間：`button_switch`（185）、`comm`（156）、`toggle_switch`（88）、`flt_inst`（62）、`ap_L/C/R`（各 62）、`nd`（52）、`efis`（48）、`ai`（34）、`fdr`（30）、`autopilot`（30）。
 - 名前を変えてはいけないものの一覧：[INTERFACES.tsv](INTERFACES.tsv)。3D オブジェクト・パネル計器（`DATAREF` 行と表示条件 `SHOW_EQUAL/LESS/GREATER`）・FMOD サウンド・AutoATC が参照する `laminar/*` の名前が 2029 個あり、内訳は dataref 1072、コマンド 537、実行時に作られる名前（または未定義）420。
 - 機体設定のよりどころ：`laminar/B747/simconfig`（JSON 文字列）と `laminar/B747/newsimconfig`（更新フラグ）。エンジン型式は `laminar/B747/engines/type`（§7）。
+  - フラグは、設定のモジュール（xtlua の `B747.05.xt.simconfig`）が配るとき約 4 秒だけ 1 になる。別のプラグイン（xtlua_keysystems）の FMC と自動操縦は、まだ設定を持たないまま 10 秒待っても来なければ、配られている文字列を設定として受け取る（2026-11-11：起動の遅れで合図を取り逃がし、CDU・重量の窓・MCP の速さの窓が動かなかった。notes/ATA-34-61-FMC.md §163）。
 
 ### 4.1 電源の公開 dataref（1-1 で新設）
 
