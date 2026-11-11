@@ -747,7 +747,15 @@ function M.predict(s)
             if dp then lim = math.min(lim, td_x(hcur)) end
             if pnext and phase == "crz" and not desNow then lim = math.min(lim, pnext.x) end
             if x + dx > lim then dx = lim - x; dt = dx * NM / gs end
-            if dx <= 0 then break end
+            if dx <= 0 then
+                -- (2026-11-11 review) the T/D for this altitude at or behind
+                -- x: the descent starts here. Before, "end" without moving,
+                -- and the climb's level segment at an AT OR BELOW repeated
+                -- it forever: the FMC's plugin froze (a SID's FL150 at 55 NM
+                -- on a 92 NM route, CRZ FL250)
+                if dp and x >= td_x(hcur) - 1e-6 then return "des" end
+                break
+            end
             step_state(dx, 0, dt, ff * dt / 3600)
             if dp and x >= td_x(hcur) - 1e-6 then return "des" end
             if pnext and phase == "crz" and not desNow and x >= pnext.x - 1e-6 then return "step", pnext.to end
@@ -841,8 +849,12 @@ function M.predict(s)
                     if r == "unable" then crzAlt = h break end
                     if cap and h >= cap - 1 and h < crzAlt - 1 then
                         -- level at the constraint to its waypoint
+                        local x0 = x
                         local r2 = cruise_until(xcap, h, true)
                         if r2 == "des" then phase = "des" break end
+                        -- (2026-11-11 review) no way forward: out of the
+                        -- climb rather than the same segment again
+                        if x <= x0 + 1e-6 then break end
                     else
                         break
                     end

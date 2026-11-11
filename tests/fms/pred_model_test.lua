@@ -732,4 +732,37 @@ do
         string.format("without the constraint the climb's 250 kt below 10,000 ft: %.0f kt (TAS %.0f)", gs0, tas250))
 end
 
+-- (2026-11-11 review) a climb's level segment at an AT OR BELOW whose T/D
+-- for that altitude is already behind: the descent starts there. Before,
+-- the segment returned without moving and the climb repeated it forever
+-- (in XTLua the FMC's plugin froze): a SID's AT OR BELOW FL150 at 55 NM on
+-- a 92 NM route, CRZ FL250 (the review's case). An instruction-count hook
+-- (the JIT off) ends a run that does not
+do
+    local rest = 92 - 55
+    local legs = {{name = "SID1", dist = 55, con = {kind = "B", a = 15000}, proc = "SID"},
+        {name = "ENR", dist = rest * 0.6}, {name = "IAF", dist = rest * 0.3, con = {kind = "AT", a = 3000}, proc = "STAR"},
+        {name = "RW", dist = rest * 0.1, con = {kind = "AT", a = 50}, proc = "APPR"}}
+    local jitWas = jit and jit.status and jit.status()
+    if jit then jit.off() end
+    local ticks = 0
+    debug.sethook(function()
+        ticks = ticks + 1
+        if ticks > 400 then error("the prediction did not end", 0) end
+    end, "", 1000000)
+    local ok, r = pcall(PM.predict, {P = P, t = pw, gw = 330000, fuel = 50000, alt = 30, phase = "clb", crz = 25000,
+        clb = clb, des = {cas = 300, mach = 0.84, trans_cas = 240, trans_alt = 10000},
+        crzspd = {fn = function(h, kg) return (P.lrc(pw, kg, h)) end}, legs = legs, ed = 4, clb_last = 1})
+    debug.sethook()
+    if jit and jitWas then jit.on() end
+    T.check(ok, "a climb's level segment past its T/D: the prediction ends (" .. tostring(ok and "" or r) .. ")")
+    if ok then
+        -- up to FL150, then down from its T/D (about 34 NM): SID1 crossed
+        -- descending, the runway reached
+        T.check(r.tc == nil and r.td ~= nil and r.td < 55 and r.pts[1].h <= 15001 and r.pts[4].h <= 60,
+            string.format("no T/C, the descent from FL150 at its T/D %.0f NM: SID1 at %.0f ft, the runway at %.0f",
+                r.td or -1, r.pts[1].h or -1, r.pts[4].h or -1))
+    end
+end
+
 T.done()
