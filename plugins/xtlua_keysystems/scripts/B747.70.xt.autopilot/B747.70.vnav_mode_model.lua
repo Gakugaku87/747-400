@@ -64,8 +64,10 @@
 --    the MCP altitude moves: LF2), or on approach with the MCP altitude
 --    POS_APP_FT or more above (FCOM p.1261: VNAV continues to command a
 --    descent); it becomes the FMC's VNAV PTH when the FMC holds the same
---    altitude (estimate). On approach an MCP altitude POS_APP_FT or more
---    above does not stop the descent (FCOM p.1261).
+--    altitude (estimate; the ALT law, or the descent's path level at the
+--    FMC altitude: fmc_holds, 2026-11-11 review). On approach an MCP
+--    altitude POS_APP_FT or more above does not stop the descent (FCOM
+--    p.1261).
 --  - In the descent on a level part of the path (the FMC's V/S under
 --    DES_FPM: no conflict, no FMC altitude's capture) the MCP altitude is
 --    still captured from above (FMSPG p.227 (4-16): in the descent the FMC
@@ -163,6 +165,22 @@ local function conflict(inp, dir)
     return (inp.mcp - inp.alt) * dir <= 0
 end
 
+-- (2026-11-11 review) the FMC holding the altitude a itself on the descent's
+-- path: a level part of it (the V/S law shallower than DES_FPM) at a, the
+-- FMC altitude a too (FCTM p.187's VNAV approach: the path level at the
+-- FAF's constraint, the MCP set to it, the DA set before the FAF). There the
+-- MCP altitude is the FMC's (FCOM p.1256: VNAV ALT is for an MCP altitude
+-- not in the FMC): VNAV PTH, over once the FMC altitude moves on (the FAF
+-- sequenced: on down with the DA set by then; the MCP left there, VNAV ALT).
+-- Before, VNAV ALT, its end wanting the push from over the path: level past
+-- the FAF. On a descending part the path goes on through the constraint:
+-- the MCP's capture VNAV ALT as before (LF2)
+local function fmc_holds(inp, tgt, dir, levels, a)
+    return inp.phase == M.PHASE_DES and inp.mode ~= M.MODE_SPD and not levels and dir == 0
+        and math.abs(tgt - a) <= M.SAME_FT
+        and math.abs(inp.alt - (inp.path_dev or 0) - a) <= M.SAME_FT
+end
+
 -- a new level, or false
 local function new_level(inp, tgt, dir, levels)
     if not inp.valid then return {kind = "invalid", alt = inp.alt} end
@@ -176,6 +194,14 @@ local function new_level(inp, tgt, dir, levels)
     -- knob's passing values; nil, as settled)
     local settled = inp.settled ~= false
     local dMcp = (inp.mcp - inp.alt) * way
+    -- (2026-11-11 review) the MCP altitude captured where the FMC holds it
+    -- itself (fmc_holds: the descent's path level at the FMC altitude, FCTM
+    -- p.187's VNAV approach with the MCP at the FAF's): the FMC's level, VNAV
+    -- PTH (FCOM p.1256: VNAV ALT is for an MCP altitude not in the FMC)
+    if settled and fmc_holds(inp, tgt, dir, levels, inp.mcp)
+        and inp.cap_mcp and dMcp >= -M.CAP_NEAR_FT and not app_above(inp) then
+        return {kind = "fmc", alt = tgt}
+    end
     if settled and dir ~= 0 and conflict(inp, dir) then
         if math.abs(inp.mcp - inp.alt) <= M.AT_MCP_FT then
             -- at the MCP altitude (FCOM p.645: VNAV ALT keeps it), not gone
@@ -241,6 +267,10 @@ function M.update(s, inp)
             if app_above(inp) then
                 L = false
             elseif law == "ALT" and dir == 0 and math.abs(tgt - L.alt) <= M.SAME_FT then
+                L = false
+            elseif fmc_holds(inp, tgt, dir, levels, L.alt) then
+                -- (2026-11-11 review) captured on the way down, the path
+                -- level at it now: the FMC's (new_level: VNAV PTH)
                 L = false
             elseif ok and pushed then
                 L = false

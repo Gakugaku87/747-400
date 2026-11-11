@@ -324,4 +324,50 @@ T.equal(o.fma, V.FMA.SPD, "the missed approach: VNAV SPD")
 o = V.update(m, inp({alt = 2700, mcp = 3000, fmc_alt = 3000, cap_mcp = true, cap_fmc = true}))
 T.check(o.fma == V.FMA.PTH and o.law_alt == 3000, "at its altitude: VNAV PTH (FCOM p.1264's 7)")
 
+-- (2026-11-11 review) FCTM p.187's VNAV approach: the path level at the
+-- FAF's 2,000 ft constraint (the FMC altitude), the MCP set to it, the DA
+-- (600 ft) set before the FAF. The FMC holds 2,000 itself there: the MCP
+-- altitude the FMC's, VNAV PTH (FCOM p.1256: VNAV ALT is for an MCP altitude
+-- not in the FMC); the FAF passed, on down the path whether the airplane was
+-- 4 ft under or over it. Before, VNAV ALT, and from over the path it wanted
+-- the push: level past the FAF
+local function faf(dev, t)
+    local i = inp({phase = 3, mode = 2, fmc_alt = 2000, vs = -40, at = 3, path_dev = dev, on_app = true,
+        mcp = 2000, alt = 2000 + dev, cap_mcp = true, settled = true})
+    for k, v in pairs(t or {}) do i[k] = v end
+    return i
+end
+for _, dev in ipairs({-4, 4}) do
+    local a = V.new()
+    o = V.update(a, faf(dev))
+    T.check(o.fma == V.FMA.PTH and o.kind == "fmc" and o.law_alt == 2000,
+        string.format("%+d ft: the MCP's 2,000 ft captured on the path level at the FAF's: VNAV PTH (%d %s)", dev, o.fma, tostring(o.kind)))
+    V.update(a, faf(dev, {mcp = 1900, cap_mcp = false, settled = false}))
+    o = V.update(a, faf(dev, {mcp = 600, cap_mcp = false}))
+    T.check(o.fma == V.FMA.PTH and o.law_alt == 2000, string.format("%+d ft: the DA set: VNAV PTH held at 2,000 ft", dev))
+    o = V.update(a, faf(dev, {mcp = 600, cap_mcp = false, vs = -800, path_dev = 60, fmc_alt = 600}))
+    T.check(o.fma == V.FMA.PTH and o.law == "VS" and o.law_vs == -800,
+        string.format("%+d ft: the FAF passed: on down the path (%s %d)", dev, tostring(o.law), o.law_vs))
+end
+-- captured on the way down (the path still descending: VNAV ALT, LF2), the
+-- path level at it then: the FMC's, VNAV PTH, and on down past the FAF
+local f2 = V.new()
+o = V.update(f2, faf(0, {alt = 2200, vs = -800, path_dev = 0}))
+T.check(o.fma == V.FMA.ALT and o.kind == "mcp", "captured with the path still descending: VNAV ALT (LF2)")
+o = V.update(f2, faf(4))
+T.check(o.fma == V.FMA.PTH and o.kind == "fmc", "the path level at the FAF's 2,000 ft: VNAV PTH")
+V.update(f2, faf(4, {mcp = 600, cap_mcp = false}))
+o = V.update(f2, faf(4, {mcp = 600, cap_mcp = false, vs = -800, path_dev = 60, fmc_alt = 600}))
+T.check(o.fma == V.FMA.PTH and o.law == "VS", "then the DA and the FAF: on down without the push")
+-- the MCP left at 2,000 past the FAF: the path on down, VNAV ALT there
+local f3 = V.new()
+V.update(f3, faf(4))
+o = V.update(f3, faf(4, {vs = -800, path_dev = 60, fmc_alt = 600, alt = 2000}))
+T.check(o.fma == V.FMA.ALT and o.kind == "mcp" and o.law_alt == 2000, "the MCP left at 2,000 past the FAF: VNAV ALT there")
+-- the path level at 5,000 ft, the FMC altitude the next constraint's 3,000
+-- ft: the MCP's 5,000 not the FMC's, VNAV ALT
+local f4 = V.new()
+o = V.update(f4, faf(0, {alt = 5010, mcp = 5000, fmc_alt = 3000, path_dev = 10}))
+T.check(o.fma == V.FMA.ALT and o.kind == "mcp", "the path level at an altitude not the FMC's: VNAV ALT")
+
 T.done()
