@@ -110,4 +110,23 @@ rt:command("sim/autopilot/knots_mach_toggle")
 frames(15)
 T.equal(rt:get(IS_MACH), 0, "IAS/MACH SEL with the window 0: IAS")
 T.equal(rt:get(DIAL), 301, "the IAS flown, 301 kt")
+
+-- 5. (2026-11-11 review) the new value kept in the MCP's range (FCOM p.643:
+-- 100 to 399 kt, .400 to .950): M.80 at 15,000 ft is 410 kt, 320 kt at
+-- FL370 .96 (before, the window showed them)
+T.check(cas(0.80, 15000) > 405 and mach(320, 37000) > 0.955, "(M.80 at 15,000 ft above 399 kt, 320 kt at FL370 above .95)")
+at(15000, 300, 0.60, 0)
+rt:command("sim/autopilot/knots_mach_toggle")      -- to Mach
+frames(15)
+rt:set(DIAL, 80)
+frames(5)
+rt:command("sim/autopilot/knots_mach_toggle")      -- M.80 to IAS
+frames(15)
+T.check(rt:get(IS_MACH) == 0 and rt:get(DIAL) == 399, "M.80 at 15,000 ft to IAS: 399 kt (the MCP's top; before 410): " .. rt:get(DIAL))
+at(37000, 250, 0.84, 0)
+rt:set(DIAL, 320)
+frames(5)
+rt:command("sim/autopilot/knots_mach_toggle")      -- 320 kt to Mach
+frames(15)
+T.check(rt:get(IS_MACH) == 1 and rt:get(DIAL) == 95, "320 kt at FL370 to Mach: .95 (the MCP's top; before .96): " .. rt:get(DIAL))
 T.done()

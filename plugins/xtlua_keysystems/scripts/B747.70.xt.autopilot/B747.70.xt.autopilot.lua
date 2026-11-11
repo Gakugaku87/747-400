@@ -2052,21 +2052,25 @@ end
 -- set-up's slowdown, and the window and the target became 301 kt (M.81),
 -- held for good (PERF_SIMBRIEF, notes/ATA-22.md §54). A window out of the
 -- MCP's range (FCOM p.643: 100 to 399 kt, .400 to .950) keeps the speed
--- flown, as before
+-- flown, as before. (2026-11-11 review) The new value kept in that range
+-- too: before, M.80 at 15,000 ft became 410 kt and 320 kt at FL370 .96
 function B747_updateIASWindow()
 	local w, ft = B747DR_ap_ias_dial_value, simDR_ap_mach_press_alt
+	local v
 	if simDR_autopilot_airspeed_is_mach == 0 then
 		if w >= 40 and w <= 95 then
-			B747DR_ap_ias_dial_value = math.floor(ap_mach_cas(w * 0.01, ft) + 0.5)
+			v = math.floor(ap_mach_cas(w * 0.01, ft) + 0.5)
 		else
-			B747DR_ap_ias_dial_value = math.floor(simDR_ind_airspeed_kts_pilot)
+			v = math.floor(simDR_ind_airspeed_kts_pilot)
 		end
+		B747DR_ap_ias_dial_value = math.max(100, math.min(399, v))
 	else
 		if w >= 100 and w <= 399 then
-			B747DR_ap_ias_dial_value = math.floor(ap_cas_mach(w, ft) * 100 + 0.5)
+			v = math.floor(ap_cas_mach(w, ft) * 100 + 0.5)
 		else
-			B747DR_ap_ias_dial_value = math.floor(simDR_airspeed_mach * 100)
+			v = math.floor(simDR_airspeed_mach * 100)
 		end
+		B747DR_ap_ias_dial_value = math.max(40, math.min(95, v))
 	end
 	simDR_autopilot_airspeed_kts = B747DR_lastap_dial_airspeed
 	B747DR_ap_ias_mach_window_open = 1
