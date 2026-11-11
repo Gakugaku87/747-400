@@ -457,6 +457,9 @@ end
 --   behind      (2026-11-09) nil, or the waypoint passed last in the
 --               descent: {x (NM, 0 or less: behind the airplane), con} (its
 --               constraint kept in the descent path)
+--   behind_list (2026-11-11) nil, or the waypoints passed in the descent
+--               with their constraints, the nearest first, each as behind:
+--               all kept in the descent path (in place of behind)
 --   spd_behind  (FMC-08) nil, or the lowest speed constraint (CAS kt) of
 --               the waypoints passed in the descent: in force on to the E/D
 --   clb_floor   (FMC-08) nil, or the least a climb's waypoint speed
@@ -525,9 +528,21 @@ function M.predict(s)
         -- the first constraint; the path fixed to the ground). Before, the
         -- leg flown became the idle path back from the next constraint at
         -- each sequencing, 229 to 469 ft higher on IRNMN2 (the perf
-        -- session's KSEA-KLAX flight: the A/T's SPD at each waypoint)
+        -- session's KSEA-KLAX flight: the A/T's SPD at each waypoint).
+        -- (2026-11-11) every waypoint passed in the descent with its
+        -- constraint (s.behind_list, the glue's, the nearest first; here
+        -- the farthest first, in route order): with the last one only, the
+        -- path built back past a waypoint without a constraint (nothing
+        -- behind then) or past the one that bent it took another shape (300
+        -- random STARs offline: 126 of 1,178 sequencings moved it over 100
+        -- ft, up to 26,104 ft; with all of them none of 4,658 on 1,200)
         local b = s.behind
-        if b and b.con and b.x and b.x <= 0 then cons[1] = {x = b.x, c = b.con} end
+        if s.behind_list then
+            for j = #s.behind_list, 1, -1 do
+                local e = s.behind_list[j]
+                if e.con and e.x and e.x <= 0 then cons[#cons + 1] = {x = e.x, c = e.con} end
+            end
+        elseif b and b.con and b.x and b.x <= 0 then cons[1] = {x = b.x, c = b.con} end
         for i, l in ipairs(legs) do
             if l.con and i > clbLast and lx[i] > xfrom and lx[i] < xed - 0.01 then cons[#cons + 1] = {x = lx[i], c = l.con} end
         end

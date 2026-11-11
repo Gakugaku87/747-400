@@ -1380,7 +1380,10 @@ function M.delete_alt_active(st, i)
     return true
 end
 
-function M.sequence(st, n, start)
+-- (2026-11-11) des: the legs passed in the descent, marked des_seq (the
+-- predictions keep their constraints behind the airplane: the glue's
+-- behind_list)
+function M.sequence(st, n, start, des)
     local r, m = st.rte, st.mod
     if not st.active then return false end
     n = math.min(n, #r.legs - 1)
@@ -1392,8 +1395,14 @@ function M.sequence(st, n, start)
         if m and not same_leg(r.legs[k], m.legs[k]) then m = nil end
     end
     for _ = 1, n do
-        r.passed[#r.passed + 1] = table.remove(r.legs, 1)
-        if m then m.passed[#m.passed + 1] = table.remove(m.legs, 1) end
+        local l = table.remove(r.legs, 1)
+        if des then l.des_seq = true end
+        r.passed[#r.passed + 1] = l
+        if m then
+            local ml = table.remove(m.legs, 1)
+            if des then ml.des_seq = true end
+            m.passed[#m.passed + 1] = ml
+        end
     end
     if start then
         -- where the conditional leg ended and the next one starts (its

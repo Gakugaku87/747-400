@@ -246,6 +246,25 @@ T.equal(R.leg_from(R.shown(st), 1).ident, "BRAVO", "the active leg from the last
 T.check(R.sequence(st, 5) and idents(st) == "DELTA", "never past the last leg: DELTA active")
 T.check(not R.sequence(st, 1), "the active leg stays")
 
+-- (2026-11-11) legs passed in the descent (the glue's sequencing in DES)
+-- marked des_seq, a modification's with them: the predictions keep their
+-- constraints behind the airplane (the glue's behind_list)
+st = R.new(N, db)
+R.set_origin(st, "ZZAA")
+R.set_dest(st, "ZZBB")
+R.add_to(st, fix("ALPHA"))
+R.add_via(st, "Z1")
+R.add_to(st, fix("DELTA"))
+R.activate(st)
+R.exec(st)
+T.check(R.sequence(st, 1), "ALPHA passed out of the descent")
+R.legs_delete(st, 3)
+T.check(R.sequence(st, 1, nil, true) and idents(st) == "CHARL", "BRAVO passed in the descent (a modification pending)")
+T.check(st.rte.passed[1].des_seq == nil and st.rte.passed[2].des_seq == true,
+    "the route's: ALPHA not des_seq, BRAVO des_seq")
+T.check(st.mod.passed[#st.mod.passed].fix.ident == "BRAVO" and st.mod.passed[#st.mod.passed].des_seq == true,
+    "the modification's BRAVO des_seq too")
+
 -- a modification sequences with the route when it starts with the same
 -- legs; a direct-to's keeps its own
 st = R.new(N, db)
@@ -258,6 +277,8 @@ R.activate(st)
 R.exec(st)
 R.legs_delete(st, 4)
 T.check(R.sequence(st, 1) and idents(st) == "BRAVO CHARL", "DELTA deleted in the modification, ALPHA passed: BRAVO CHARL")
+-- (2026-11-11) a sequencing not in the descent leaves the legs unmarked
+T.check(st.rte.passed[1].des_seq == nil and st.mod.passed[1].des_seq == nil, "ALPHA passed out of the descent: not des_seq")
 R.exec(st)
 T.equal(table.concat({st.rte.passed[1].fix.ident, #st.rte.passed}, " "), "ALPHA 1", "EXEC: ALPHA passed")
 T.equal(R.direct_to(st, fix("CHARL"), nil, {lat = 35.9, lon = 140.4}), nil, "DIRECT TO CHARL")

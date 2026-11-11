@@ -454,6 +454,170 @@ do
     end
 end
 
+-- (2026-11-11) KLAX's IRNMN2 (the BURGL transition, the E/D at GADDO as
+-- s271's) with every waypoint passed in the descent kept behind
+-- (behind_list): the path the cruise made at each waypoint after each
+-- sequencing, each constraint kept (with a window at every waypoint the
+-- last passed alone kept it too)
+do
+    -- {name, NM to go to GADDO (s271's record), constraint, speed}
+    local W = {
+        {"CROWY", 84.92, {kind = "W", a = 29000, b = 26000}},
+        {"MUPTT", 72.64, {kind = "W", a = 27000, b = 23000}, 280},
+        {"MDOTS", 65.38, {kind = "W", a = 24000, b = 20000}},
+        {"GRIPR", 58.92, {kind = "W", a = 23000, b = 19000}},
+        {"BIKNG", 49.90, {kind = "W", a = 20000, b = 16000}},
+        {"RUNNN", 42.54, {kind = "W", a = 17000, b = 14000}},
+        {"IRNMN", 36.00, {kind = "W", a = 16000, b = 12000}},
+        {"SYMON", 29.16, {kind = "W", a = 13000, b = 12000}, 250},
+        {"BAYST", 18.40, {kind = "A", a = 9000}, 240},
+        {"JUUSE", 12.86, {kind = "W", a = 9000, b = 8000}},
+        {"CLIFY", 8.02, {kind = "W", a = 8000, b = 7000}, 210},
+        {"DAHJR", 3.00, {kind = "AT", a = 6000}, 210},
+        {"GADDO", 0.00, {kind = "AT", a = 6000}},
+    }
+    local desK = {cas = 305, mach = 0.85, trans_cas = 250, trans_alt = 10000}
+    -- the airplane e NM to go, waypoints 1..last passed (in the descent)
+    local function path(e, last, alt, list)
+        local legs, prev, slow = {{name = "PPOS", dist = 0}}, e, nil
+        for i, w in ipairs(W) do
+            if i > last then
+                legs[#legs + 1] = {name = w[1], dist = prev - w[2], con = w[3], spd = w[4]}
+                prev = w[2]
+            elseif w[4] then
+                slow = math.min(slow or 999, w[4])
+            end
+        end
+        local bl = {}
+        for j = last, 1, -1 do bl[#bl + 1] = {x = -(W[j][2] - e), con = W[j][3]} end
+        return PM.predict{P = P, t = pw, gw = 235000, fuel = 9000, alt = alt, phase = last > 0 and "des" or "crz",
+            crz = 37000, clb = clb, des = desK, crzspd = {mach = 0.858}, legs = legs, ed = #legs, clb_last = 0,
+            behind = bl[1], behind_list = list and (#bl > 0 and bl or nil) or nil, spd_behind = slow}
+    end
+    local function h_at(r, e, g)
+        local dp = r.dp
+        for i = 2, #dp.x do
+            local g0, g1 = e - dp.x[i - 1], e - dp.x[i]
+            if g1 >= g then return dp.h[i - 1] + (dp.h[i] - dp.h[i - 1]) * (g - g0) / math.max(g1 - g0, 1e-9) end
+        end
+    end
+    local r0 = path(90, 0, 37000, true)
+    local worstL, worstB, whereB = 0, 0, ""
+    for k = 1, #W - 1 do
+        local e = W[k][2] - 0.2
+        local hA = h_at(r0, 90, e)
+        local rl, rb = path(e, k, hA, true), path(e, k, hA, false)
+        for i = k + 1, #W do
+            local h0 = h_at(r0, 90, W[i][2])
+            worstL = math.max(worstL, math.abs(h_at(rl, e, W[i][2]) - h0))
+            local db = math.abs(h_at(rb, e, W[i][2]) - h0)
+            if db > worstB then worstB, whereB = db, W[k][1] end
+        end
+    end
+    T.check(worstL < 1, string.format("IRNMN2: every one passed kept behind, the path the cruise made at each waypoint after each sequencing (at most %.1f ft off)", worstL))
+    T.check(worstB < 1, string.format("(the last passed only: %.1f ft off; a window at every waypoint)", worstB))
+    for i = 1, #W - 1 do
+        local h, c = h_at(r0, 90, W[i][2]), W[i][3]
+        local ok = (c.kind == "AT" and math.abs(h - c.a) < 5) or (c.kind == "A" and h > c.a - 5)
+            or (c.kind == "W" and h > c.b - 5 and h < c.a + 5)
+        T.check(ok, string.format("IRNMN2: %s at %.0f ft (%s %d/%s)", W[i][1], h, c.kind, c.a, tostring(c.b)))
+    end
+end
+
+-- (2026-11-11) random STARs built back from the runway (feasible altitudes;
+-- AT, AT OR ABOVE, AT OR BELOW, windows and waypoints without one): at each
+-- sequencing in the descent, with every waypoint passed in the descent kept
+-- behind (behind_list alone: the model's list), the path where the cruise
+-- made it; with the last passed only (the glue's of 2026-11-09: behind, when
+-- it had a constraint) it moved past a waypoint without a constraint
+-- (nothing behind then) or past the one that shaped it
+do
+    local d2 = {cas = 300, mach = 0.84, trans_cas = 240, trans_alt = 10000}
+    local function gen(R)
+        local pts, h = {{name = "RW", con = {kind = "AT", a = 50}}}, 50
+        local n = R(3, 9)
+        for i = 1, n do
+            local d = 3 + R() * 25
+            local dh = R() * 250 * d
+            if R() < 0.15 then dh = 0 end
+            h = math.min(h + dh, 34000)
+            local a = math.floor(h / 100) * 100
+            local l = {name = "W" .. (n - i + 1), dnext = d}
+            local r = R()
+            if r < 0.3 then l.con = {kind = "AT", a = a}
+            elseif r < 0.45 then l.con = {kind = "A", a = math.max(a - math.floor(R() * 20) * 100, 100)}
+            elseif r < 0.6 then l.con = {kind = "B", a = a + math.floor(R() * 20) * 100}
+            elseif r < 0.75 then
+                local lo = math.max(a - math.floor(R() * 10) * 100, 100)
+                l.con = {kind = "W", a = lo + 1000 + math.floor(R() * 20) * 100, b = lo}
+            end
+            pts[#pts + 1] = l
+        end
+        local legs, prevD = {}, 120 + R() * 100
+        for i = #pts, 1, -1 do
+            legs[#legs + 1] = {name = pts[i].name, dist = prevD, con = pts[i].con}
+            prevD = pts[i].dnext
+        end
+        return legs
+    end
+    local function h_at(r, e, g)
+        local dp = r.dp
+        for i = 2, #dp.x do
+            local g0, g1 = e - dp.x[i - 1], e - dp.x[i]
+            if g1 >= g - 1e-9 then return dp.h[i - 1] + (dp.h[i] - dp.h[i - 1]) * (g - g0) / math.max(g1 - g0, 1e-9) end
+        end
+    end
+    local moved = {list = 0, last = 0}
+    local n = 0
+    for trial = 1, 60 do
+        math.randomseed(20261111 + trial)
+        local legs = gen(math.random)
+        local r0 = PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = 37000, phase = "crz", crz = 37000,
+            clb = clb, des = d2, crzspd = {mach = 0.85}, legs = legs, ed = #legs, clb_last = 0}
+        if r0.td then
+            local total, togo, acc = 0, {}, 0
+            for _, l in ipairs(legs) do total = total + l.dist end
+            for i, l in ipairs(legs) do acc = acc + l.dist; togo[i] = total - acc end
+            local tdTogo = total - r0.td
+            local function path(e, last, hA, mode)
+                local sub = {{name = "PPOS", dist = 0}}
+                for i = last + 1, #legs do
+                    sub[#sub + 1] = {name = legs[i].name, dist = (i == last + 1) and (e - togo[i]) or legs[i].dist, con = legs[i].con}
+                end
+                local beh = {}
+                for j = last, 1, -1 do
+                    if legs[j].con and (j == last or (mode == "list" and togo[j] < tdTogo)) then
+                        beh[#beh + 1] = {x = -(togo[j] - e), con = legs[j].con}
+                    end
+                    if mode == "last" then break end
+                end
+                return PM.predict{P = P, t = pw, gw = 280000, fuel = 60000, alt = hA, phase = "des", crz = 37000,
+                    clb = clb, des = d2, crzspd = {mach = 0.85}, legs = sub, ed = #sub, clb_last = 0,
+                    behind = mode == "last" and beh[1] or nil, behind_list = mode == "list" and beh or nil}
+            end
+            for k = 2, #legs - 2 do
+                if togo[k] < tdTogo - 1 then
+                    local eb, ea = togo[k] + 0.5, togo[k] - 0.2
+                    n = n + 1
+                    for _, mode in ipairs({"list", "last"}) do
+                        local rb = path(eb, k - 1, h_at(r0, total, eb), mode)
+                        local ha = h_at(rb, eb, ea)
+                        local ra = path(ea, k, ha, mode)
+                        local j = math.abs((h_at(ra, ea, ea) or ha) - ha)
+                        for i = k + 1, #legs do
+                            local h1, h0 = h_at(ra, ea, togo[i]), h_at(rb, eb, togo[i])
+                            if h1 and h0 then j = math.max(j, math.abs(h1 - h0)) end
+                        end
+                        if j > (mode == "list" and 1 or 100) then moved[mode] = moved[mode] + 1 end
+                    end
+                end
+            end
+        end
+    end
+    T.check(n > 100 and moved.list == 0, string.format("random STARs: %d sequencings, none moved the path with every one passed kept behind (%d)", n, moved.list))
+    T.check(moved.last > 0, string.format("(with the last passed only %d moved it over 100 ft)", moved.last))
+end
+
 -- (2026-11-09) two AT constraints at one altitude (KLAX's DAHJR and GADDO
 -- at 6,000 ft): the path level between them (before: DAHJR at 6,963 ft on
 -- the idle path back from GADDO); an AT OR ABOVE there not levelled
