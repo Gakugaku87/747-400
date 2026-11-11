@@ -154,7 +154,7 @@
   - 火災・分解・限界超過は、操縦が落ち着き、gear が上がり、安全高度（通常 400 ft AGL 以上）で recall 項目を行う。参照項目は flap 上げ後（FCTM p.117; p.284 (8.6)）。
   - 旋回は 400 ft AGL 以上、T/O flap のまま V2〜V2+10。AFDS は（LNAV/HDG SEL、bank limit AUTO で）V2+10 までバンクを 15° に制限する。V2+10 では 25° まで可（FCTM p.118 (3.30)）。
   - A/P は 250 ft AGL 以上、rudder か rudder trim が正しければ入れてよい（FCTM p.118）。
-  - flap 上げ：最低 400 ft AGL、訓練は 1,000 ft AGL。VNAV 中ならほぼ水平の加速区間を指令し、flaps up 機動速度+20（VREF30+100）へ。flaps up で VREF30+98 を超えると VNAV が推力上限を CON にする。VNAV なしなら FLCH と flaps up 機動速度+20（F/D はほぼ水平を指令）。F/D なしならほぼ水平に pitch を下げる。加速に合わせて rudder を調整し、trim で踏力を抜く（FCTM p.118 (3.30)）。
+  - flap 上げ：最低 400 ft AGL、訓練は 1,000 ft AGL。VNAV 中ならほぼ水平の加速区間を指令し、flaps up 機動速度+20（VREF30+100）へ。flaps up で VREF30+98 を超えると VNAV が推力上限を CON にする。VNAV なしなら FLCH と flaps up 機動速度+20（F/D はほぼ水平を指令）。F/D なしならほぼ水平に pitch を下げる。加速に合わせて rudder を調整し、trim で踏力を抜く（FCTM p.118 (3.30)）。加速と上昇の能力は推力重量比で決まる、とも書く。上昇率の数値は無い（2026-11-12 に本文を確かめた。AFDS の速度の則の「ほぼ水平」の根拠：notes/ATA-22.md §62）。
   - flaps up 後、VNAV でなければ THR を押して CON を確かめ、障害物クリアの高度まで上昇。NNC → After Takeoff checklist（FCTM p.118-119 (3.30-3.31)）。エンジン故障後は騒音対策は不要（FCTM p.119）。
   - 2 発目の故障：推力を増す。同じ側の 2 発なら低速では外側を少し絞る。aileron lockout 速度以上では A/P の aileron が足りず手動になることがある（FCTM p.117 (3.29)）。
   - ATM 離陸での故障：推力を増す必要はないが、地上では手で、空中では TO/GA で full まで増してよい。固定 derate（併用を含む）では、地形衝突が迫らない限り derate を超えない（FCTM p.119 (3.31)）。
