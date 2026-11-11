@@ -30,6 +30,22 @@ local MAIN2_TANK = 2                -- main tank 2 in X-Plane's tank list (B747.
 B747DR_apu_fuel_vlv_pos         = find_dataref("laminar/B747/fuel/main2_tank/apu_vlv_pos")
 local APU_VALVE_S = 6
 local apu_valve_wait = 0
+-- (2026-11-11 review) the model and the valve's wait run in X-Plane's time,
+-- as the fuel model moves the valve and X-Plane spins its APU
+-- (B747.25.xt.fuel.lua's fuel_frame_dt: at most 1 s a frame, 0 paused or
+-- when the clock goes back). Before, XTLua's SIM_PERIOD, which runs on in a
+-- pause and does not follow the time acceleration: an APU start paused
+-- with the valve under half open was shut down for want of fuel (the valve
+-- stood still), and the start's 120 s, the door's travel and the cooldown
+-- ran on paused
+simDR_apu_time_now              = find_dataref("sim/time/total_running_time_sec")
+local apu_clock_t = nil
+local function apu_frame_dt()
+    local now = simDR_apu_time_now
+    local dt = apu_clock_t and math.max(0, math.min(1, now - apu_clock_t)) or 0
+    apu_clock_t = now
+    return dt
+end
 local BATTERY_SWITCH = 13           -- button_switch/position[13]
 -- EICAS slots (laminar/B747/CAS/*_status, B747.87.xt.warning.lua)
 local ADV_APU, ADV_APU_DOOR = 13, 14
@@ -48,6 +64,7 @@ end
 function B747_apu_flight_start()
     apu_state = A.new()
     B747_apu_start_pushed = false
+    apu_clock_t = nil
 end
 
 -- the APU generators may connect (the electrical model adds the ground rule)
@@ -58,6 +75,7 @@ end
 -- every frame, before the electrical glue
 function B747_apu()
     local inp = apu_inputs
+    local dt = apu_frame_dt()
     inp.selector = B747DR_elec_apu_sel_pos
     inp.start_pushed = B747_apu_start_pushed
     B747_apu_start_pushed = false
@@ -66,7 +84,7 @@ function B747_apu()
     inp.running = simDR_apu_running == 1
     inp.fire = B747DR_apu_fire_shutdown > 0.5
     if simDR_apu_start_switch_mode >= 1 and B747DR_apu_fuel_vlv_pos < 0.5 then
-        apu_valve_wait = apu_valve_wait + SIM_PERIOD
+        apu_valve_wait = apu_valve_wait + dt
     else
         apu_valve_wait = 0
     end
@@ -89,7 +107,7 @@ function B747_apu()
         end
     end
     inp.start_power = sp
-    local out = A.update(apu_state, inp, SIM_PERIOD)
+    local out = A.update(apu_state, inp, dt)
 
     -- X-Plane's APU spins as the model commands (read every frame, written
     -- only when different: ARCHITECTURE.md §9a)
