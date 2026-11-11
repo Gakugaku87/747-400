@@ -1805,6 +1805,7 @@ laminar/B747/fuel/stab_xfr_status	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/synoptic/main_amber	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/synoptic/pump	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/synoptic/suction	dataref	panel	B747.25.fuel,B747.25.xt.fuel
+laminar/B747/fuel/synoptic/xf_flow	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/fuel/temperature	dataref	panel	B747.25.fuel,B747.25.xt.fuel
 laminar/B747/gauges/indicators/airspeed_kts_copilot	dataref	panel,snd	B747.60.fltInst
 laminar/B747/gauges/indicators/airspeed_kts_pilot	dataref	obj,panel	B747.42.xt.EEC,B747.60.fltInst

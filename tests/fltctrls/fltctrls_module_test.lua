@@ -705,6 +705,12 @@ local added = 0.0044 / 0.0664
 T.near(get(FUSE), 0.085 + added, 1e-6, "gear down: the acf's 0.085 + 0.066")
 frames(0.5)
 T.near(get(FUSE), 0.085 + added, 1e-6, "the frames after: the same, not added again")
+-- (2026-11-11 review) the scripts going (XTLua's aircraft_unload): the
+-- acf's own back (a reloaded module reads it, not the corrected one)
+rt:callout("aircraft_unload")
+T.near(get(FUSE), 0.085, 1e-6, "aircraft_unload: the acf's own back")
+frames(0.1)
+T.near(get(FUSE), 0.085 + added, 1e-6, "the next frame: corrected again from it")
 for i = 0, 1 do rt:set(GEAR, i, 0) end
 frames(0.1)
 T.near(get(FUSE), 0.085 + 0.6 * added, 1e-6, "three legs of five down: 0.6")

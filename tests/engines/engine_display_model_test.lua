@@ -81,7 +81,9 @@ do
 end
 
 -- the start limit line (FCOM p.838, p.879): at CUTOFF and until the start
--- settles at idle; the EGT turns red at the start limit while it shows
+-- settles at idle; the EGT turns red at the start limit while starting
+-- (2026-11-11 review: ATA70_80 p.356, "exceeded during starting"; before,
+-- at CUTOFF too, an engine just shut down from high power red)
 do
     local s, inp = D.new(), D.inputs()
     inp.type = "PW"
@@ -89,7 +91,11 @@ do
     T.check(all(o.start_limit, true), "CUTOFF: start limit line shown")
     inp.egt = {534, 535, 20, 20}
     o = D.update(s, inp, DT)
-    T.check(o.white[1] and o.red[2], "start limit 535: red from 535 (P&W)")
+    T.check(o.white[1] and o.white[2], "CUTOFF, not starting: 535 is white (just shut down)")
+    inp.starting = {true, true, false, false}       -- the starter turning, CUTOFF still
+    o = D.update(s, inp, DT)
+    T.check(o.white[1] and o.red[2], "start limit 535: red from 535 while starting (P&W)")
+    inp.starting = {false, false, false, false}
     inp.cutoff[1], inp.starting[1] = false, true   -- RUN, the start under way
     inp.egt[1] = 540
     o = D.update(s, inp, DT)
@@ -101,8 +107,10 @@ do
     inp.type = "GE"
     inp.egt = {760, 760, 760, 760}
     inp.cutoff = {false, true, true, true}
+    inp.starting = {false, true, false, false}
     o = D.update(s, inp, DT)
-    T.check(o.white[1] and o.red[2], "GE: 760 is white running, red at the 750 start limit")
+    T.check(o.white[1] and o.red[2] and o.white[3],
+        "GE: 760 is white running, red at the 750 start limit starting, white shut down")
 end
 
 -- the oil and vibration spreads at their lowest (0) or highest (1)

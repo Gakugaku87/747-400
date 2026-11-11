@@ -49,7 +49,7 @@
     { "do": "wait", "note": "FL300 の 50 ft の内（T/D の前に落ち着く：2026-11-08 の 1 回目は T/D が揺れの終わりと重なり、MCP の 30〜140 ft 上で T/D を過ぎた）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [29950, 30050], "timeout": 180 },
     { "do": "wait", "note": "水平（±100 fpm）", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-100, 100], "timeout": 60 },
     { "do": "check", "note": "まだ T/D の前（td_hold でない）", "dref": "laminar/B747/fms/vnav/td_hold", "op": "==", "value": 0 },
-    { "do": "wait", "note": "RESET MCP ALT（T/D の 2 分の内、MCP が巡航高度：FCOM p.665、p.1433）", "dref": "laminar/B747/fms/notification[33]", "op": "==", "value": 1, "timeout": 180 },
+    { "do": "wait", "note": "RESET MCP ALT（T/D の 2 分の内、MCP が巡航高度：FCOM p.665、p.1433。T/D は VNAV を入れてから約 404 秒で、ここまでの揺れが早く収まると待ちが長い：2026-11-11 は 101 秒で収まり 183 秒待った）", "dref": "laminar/B747/fms/notification[33]", "op": "==", "value": 1, "timeout": 300 },
     { "do": "check", "note": "T/D の前は VNAV PTH（巡航）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
     { "do": "check", "note": "T/D の前は td_hold でない", "dref": "laminar/B747/fms/vnav/td_hold", "op": "==", "value": 0 },
     { "do": "wait", "note": "T/D を過ぎる：FMC の td_hold（MCP が巡航高度で巡航を保つ）", "dref": "laminar/B747/fms/vnav/td_hold", "op": "==", "value": 1, "timeout": 240 },

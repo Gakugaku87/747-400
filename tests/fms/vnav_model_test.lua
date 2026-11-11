@@ -871,6 +871,13 @@ do
     o = V.update(sF, inp{alt = 7700, mcp_alt = 3000, d_ed = 22, gs = 260, ias = 240, path = pathL, vmin = 190})
     T.check(math.abs(o.cas - 210) < 1e-6 and o.title == nil and o.spd_kt == 210,
         string.format("the minimum 190 (flaps 5): 210, its title's (%.0f)", o.cas))
+    -- (2026-11-11 review) the flaps' placard limiting the schedule above the
+    -- deceleration's 210 (230 less 5): the deceleration's 210 the target, its
+    -- title's (before, LIM SPD from the placard stayed)
+    o = V.update(sF, inp{alt = 7700, mcp_alt = 3000, d_ed = 22, gs = 260, ias = 224, path = pathL, vmin = 170,
+        flaps_placard = 230})
+    T.check(math.abs(o.cas - 210) < 1e-6 and o.title == nil and o.spd_kt == 210,
+        string.format("the placard 230 above it: 210, its title's (%.0f, %s, %s)", o.cas, tostring(o.title), tostring(o.spd_kt)))
     -- (2026-11-09, s273) on a deceleration past a waypoint's constraint
     -- (below the first speed constraint) the limits around the path's
     -- planned speed there: 280 passed, the deceleration toward 250 planned

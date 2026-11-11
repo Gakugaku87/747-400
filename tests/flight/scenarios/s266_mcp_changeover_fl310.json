@@ -59,7 +59,7 @@
     { "do": "wait", "note": "ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 60 },
     { "do": "wait", "note": "水平（キットと同じ：|V/S| 150 fpm 未満、90 秒まで）", "dref": "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "op": "between", "value": [-150, 150], "timeout": 90 },
     { "do": "snapshot", "note": "水平になったときの窓", "drefs": [ "sim/cockpit2/autopilot/airspeed_is_mach", "laminar/B747/autopilot/ias_dial_value", "sim/cockpit2/autopilot/airspeed_dial_kts", "sim/cockpit2/autopilot/airspeed_dial_kts_mach", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/machno", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
-    { "do": "check", "note": "目標は M.85 の近く：降りる途中で切り替わっていれば、窓はそのときの高度での M.85 の CAS（31,700〜31,000 ft で 312〜318 kt。前はそのときの IAS、約 300 kt）", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts", "op": "between", "value": [312, 319] },
+    { "do": "check", "note": "目標は M.85 の近く：降りる途中で切り替わっていれば、窓はそのときの高度での M.85 の CAS（31,700〜31,000 ft で 312〜318 kt。それより上から降りれば、M.85 の CAS が約 310 kt になる所で切り替わる：FCOM p.643。2026-11-11 は空中開始の上昇が 32,731 ft まで行き、32,300 ft で 310 kt。前はそのときの IAS、約 300 kt）", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts", "op": "between", "value": [309, 319] },
     { "do": "set", "note": "キットと同じく、水平で Mach を入れ直す（perf.ps1 の Set-PerfCruise）", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 1 },
     { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 85 },
     { "do": "sleep", "seconds": 2 },

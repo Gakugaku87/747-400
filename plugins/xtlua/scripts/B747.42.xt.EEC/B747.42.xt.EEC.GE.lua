@@ -276,8 +276,32 @@ function B747_ge_n1_from_xp(engine) return ge_n1_from_xp[engine] ~= false end
 -- the high climbs (its N1 for a thrust: the climbs at the max climb N1 came
 -- out about 9 % slow, s253)
 dofile("B747.42.ge_n1_model.lua")
+-- (2026-11-11 review) the air data as the P&W's EPR model has them
+-- (B747.42.xt.EEC.PW.lua's simDR_epr_*): the static pressure's ratio and
+-- the Mach. Before, atmosphere()'s: the ISA pressure at the captain's
+-- altimeter (with QNH 990 at 3,000 ft, about 635 ft low; frozen with a
+-- static failure) and the captain's TAS over the speed of sound (a pitot
+-- failure took the N1 shown for a thrust with it, and the EEC's control)
 function B747_ge_n1_of_thrust(thrust_N)
-    return B747_ge_n1_model.n1(math.max(0, thrust_N), pressure_ratio, mach, temperature_ratio)
+    local delta = math.max(0.1, simDR_epr_ambient_pa / 101325)
+    return B747_ge_n1_model.n1(math.max(0, thrust_N), delta, simDR_epr_mach, temperature_ratio)
+end
+
+-- the idle N1 the display is pinned to with the lever's command under it
+-- (engine_idle_control_GE, the upstream's). (2026-11-11 review) In the air,
+-- where the display is the N1 model's, not under the model's N1 at no
+-- thrust (by the Mach and the air: X-Plane's idle thrust is about 0 there):
+-- the display goes on smoothly as the lever leaves idle. Before, the
+-- upstream's idle under it at low altitude (5,000 ft and 250 kt: 31.6 %
+-- against 35.6 %): a 4 to 8 % jump up, and the commands between the two
+-- gave throttle 0 (about 10 % of the lever's travel). High up the
+-- upstream's stays the higher (FL350: 50.5 against 43.9; no source for
+-- the idle N1). Not the model's at the thrust then: the pin's 10 s lag
+-- would come into the EEC's control on every reduction
+function B747_ge_idle_pin(engine, altitude_ft)
+    local idle = engine_idle_control_GE(altitude_ft)
+    if not ge_n1_from_xp[engine] then idle = math.max(idle, B747_ge_n1_of_thrust(0)) end
+    return idle
 end
 
 function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
@@ -331,7 +355,7 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
     end
 
     --Engine Idle Logic (Minimum / Approach)
-    N1_low_idle = engine_idle_control_GE(altitude_ft_in)
+    N1_low_idle = B747_ge_idle_pin(engine_in, altitude_ft_in)
     if simDR_reverser_on[engine_in] ==0 and B747DR_throttle_resolver_angle[engine_in] < tonumber(N1_low_idle) and simDR_engine_running[engine_in] == 1 then
      -- N1_actual = N1_low_idle
       N1_actual = B747_animate_value(last_N1[engine_in],N1_low_idle,0,115,0.1) 
@@ -556,7 +580,7 @@ function GE(altitude_ft_in)
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
     --Boost engine output as necessary: an engine at full throttle still short of the EEC's target
     if B747_eec_thrust_short() then
-            B747_setMaxThrust(simDR_thrust_max + 200)
+            B747_setMaxThrust(B747_eec_boosted_max(simDR_thrust_max, engine_max_thrust_n))  -- (2026-11-11 review) with a top
     elseif simDR_thrust_max > orig_thrust_n and simDR_onGround == 0 and B747DR_radio_altitude > 1500 then  --slowly reset max engine thrust to normal
       if simDR_thrust_max > orig_thrust_n + 10 then
         B747_setMaxThrust(simDR_thrust_max - 10)

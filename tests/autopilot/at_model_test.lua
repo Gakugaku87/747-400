@@ -264,6 +264,23 @@ T.near(s12.cmd - 0.5, A.K_EPR * 0.2, 1e-9, "THR REF 0.2 EPR below: up at K_EPR")
 c0 = s12.cmd
 A.servo(s12, sv{thrust = 1.3, thrust_ref = 1.5, ias = 362})
 T.check(s12.cmd < c0, "at the limit speed: down")
+-- (2026-11-11 review) the takeoff: from idle at TO/GA the levers set the
+-- reference thrust before HOLD (65 kt, some 18 s on), the EEC's command
+-- from the levers without lag (P&W 0.54 EPR a lever's unit, GE 81 % N1, as
+-- X-Plane's: the review's fits). Before (K_EPR 0.33, K_N1 0.003): EPR 0.036
+-- and N1 1.9 % short at 15 s
+for _, e in ipairs({{"P&W", false, 0.99, 0.54, 1.5127, 0.005}, {"GE", true, 22, 81, 100, 0.5}}) do
+    local st = A.new()
+    A.update(st, inp{pitch = "ALT", thr = true})        -- THR REF's law, as s12
+    local function tra(lever) return e[3] + e[4] * lever end
+    local lever = 0
+    for _ = 1, 15 * 30 do
+        A.servo(st, sv{dt = 1 / 30, ias = 150, n1 = e[2], thrust = tra(lever), thrust_ref = e[5], lever = lever})
+        lever = st.cmd
+    end
+    T.check(math.abs(tra(lever) - e[5]) < e[6], string.format(
+        "takeoff, %s: THR REF at the reference 15 s after TO/GA (%.4f against %.4f)", e[1], tra(lever), e[5]))
+end
 -- (2026-11-05 review 4) no reference thrust (0: the EEC's bug not set): no
 -- limit, THR REF holds the levers, SPD not capped (before: the whole thrust
 -- over the reference, down to the aft stop)
@@ -655,6 +672,26 @@ for n = 1, 100 do
     A.servo(y, v)
 end
 T.near(pf.g.cmd, pf.i.cmd, 1e-12, "no TAS or inertial acceleration given: the IAS law")
+-- (2026-11-11 review) under the time acceleration (X-Plane's time faster
+-- than the frames' dt): the IAS law in the gust (before, the complement
+-- fell short of the TAS's change)
+local pt = gust_pair{}
+for n = 1, 400 do
+    local t = n * DTG
+    local tas = TAS0 + 2 * math.max(0, math.min(1, t - 2, 7 - t))
+    pt.tl = tas
+    local ias = tas * 0.55
+    if pt.last then pt.accel = pt.accel + ((ias - pt.last) / DTG - pt.accel) * math.min(1, DTG / 0.5) end
+    pt.last = ias
+    for _, k in ipairs({"g", "i"}) do
+        local x = pt[k]
+        local v = sv{dt = DTG, ias = ias, accel = pt.accel, target = 270, v_max = 365, v_min = 200, flaps_up = true,
+            thrust = 1.4, thrust_ref = 1.6, lever = x.servo and x.cmd or 0.45, time_accel = true}
+        if k == "g" then v.tas, v.accel_in = tas, 0 end
+        A.servo(x, v)
+    end
+end
+T.near(pt.g.cmd, pt.i.cmd, 1e-12, "the time acceleration: the IAS law in the gust")
 -- the complement runs on outside SPD (HOLD), ready when SPD comes
 local sg = A.new()
 A.update(sg, inp{pitch = "FLCH"})

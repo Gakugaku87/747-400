@@ -174,6 +174,29 @@ valve_stuck = false
 rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
 frames(30)
 
+-- (2026-11-11 review) X-Plane paused for 30 s during a start with the valve
+-- a quarter open: its clock (sim/time/total_running_time_sec), its APU and
+-- the fuel model's valve stand still while XTLua's frames go on; the APU
+-- carries on with the start after it. Before, the valve's wait counted
+-- XTLua's frames: shut down for want of fuel 6 s into the pause
+rt:set(VALVE, 0)
+frames(60)
+for _ = 1, 2 do rt:command("laminar/B747/electrical/apu/sel_dial_up", 0) end
+local t = 0
+while get(STARTER) ~= 2 and t < 30 do frames(0.1) t = t + 0.1 end
+frames(1)
+T.check(get(STARTER) == 2 and get(VALVE) > 0.2 and get(VALVE) < 0.5,
+    string.format("starting, the valve %.2f open: X-Plane paused here", get(VALVE)))
+for _ = 1, 30 * 30 do
+    rt.time = rt.time - 1 / 30     -- X-Plane's clock held: the frame sets it back where it was
+    rt:frame(1 / 30)
+end
+T.check(get(STARTER) == 2 and get(ADVISORY, 13) == 0, "30 s paused: still starting, no APU advisory")
+frames(60)
+T.check(get(STARTER) == 1 and get(ADVISORY, 13) == 0, "after the pause: running")
+rt:command("laminar/B747/electrical/apu/sel_dial_dn", 0.1)
+frames(100)
+
 -- (2026-11-04; APU-09) the starter's power from the electrical model (FCOM
 -- p.895-896): the APU battery run down, a P&W start does not begin; a GE's
 -- runs on the APU start TR while utility bus 4 is powered

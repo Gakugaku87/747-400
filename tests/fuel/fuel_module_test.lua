@@ -115,6 +115,11 @@ T.equal(rt:get("laminar/B747/fuel/engine1_status"), 2, "running: engine 1 fed th
 -- (2026-11-09) the manifold's flow from the model (fuel_model_test has its
 -- cases: mains through open crossfeeds too)
 T.equal(rt:get("laminar/B747/fuel/gen_XFmfld_status"), 1, "running: the crossfeed manifold's flow on the synoptic")
+-- (2026-11-11) the flow through each open crossfeed valve (the panel's
+-- segment between the manifold and its engine's line)
+for n = 0, 3 do
+    T.equal(rt:get("laminar/B747/fuel/synoptic/xf_flow", n), 1, "running: the flow through crossfeed " .. (n + 1) .. " on the synoptic")
+end
 local ctr0, used0, all0 = rt:get(FUEL, 0), rt:get("laminar/B747/fuel/totaliser", 0), rt:get("laminar/B747/fuel/totaliser", 4)
 frames(rt, 60)
 T.near(ctr0 - rt:get(FUEL, 0), 4 * 0.6 * 60, 2, "running: the CWT gives 2.4 kg/s")
@@ -360,6 +365,20 @@ do
         frames(rtT, 2)
         T.equal(rtT:get("laminar/B747/fuel/temperature"), c[2], string.format("fuel temperature %.2f C shown as %d", c[1], c[2]))
     end
+end
+
+-- (2026-11-11 review) a new flight takes the fuel temperature from its TAT
+-- again (a second after it); before, the last flight's stayed, creeping
+-- toward the new TAT
+do
+    local rtN = aircraft({20000, 11000, 25000, 25000, 11000, 3000, 3000, 0})
+    rtN:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 30)
+    frames(rtN, 2)
+    T.equal(rtN:get("laminar/B747/fuel/temperature"), 30, "the first flight at TAT 30: 30")
+    rtN:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", -20)
+    rtN:callout("flight_start")
+    frames(rtN, 2)
+    T.equal(rtN:get("laminar/B747/fuel/temperature"), -20, "a new flight at TAT -20: -20 (before: about 30)")
 end
 
 T.done()

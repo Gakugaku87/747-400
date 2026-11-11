@@ -139,13 +139,14 @@ function M.new()
         stab_low_t = {stab_l = 0, stab_r = 0}, stab_tripped = {stab_l = false, stab_r = false},
         ctr_low_t = {0, 0}, imbal = {}, tank_eng_reached = false,
         jett_active = false, jett_done = false, jett_done_t = 0, jett_t = 0, jett_start_qty = 0,
-        ovrd_after_jett = flags(M.OJ, false)}
+        ovrd_after_jett = flags(M.OJ, false), xf_main = {false, false, false, false}}
     for _, t in ipairs(M.TANKS) do s.qty[t] = 0 end
     for _, v in ipairs(M.VALVES) do s.valve[v], s.disagree_t[v] = 0, 0 end
     s.out = {qty = s.qty, valve = s.valve, cmd = s.cmd, pump = {}, low = {}, feed = {{}, {}, {}, {}},
         suction = {false, false, false, false}, has_fuel = {false, false, false, false},
         cas = {}, light = {}, flow = {}, total = 0,
-        syn = {pump = {}, main = {false, false, false, false}, suction = {false, false, false, false}, mfld = false},
+        syn = {pump = {}, main = {false, false, false, false}, suction = {false, false, false, false}, mfld = false,
+            xf = {false, false, false, false}},
         ftr_state = 0}
     return s
 end
@@ -539,12 +540,41 @@ function M.update(s, inp, dt)
     -- override/jettison and CWT pumps only: mains 1 and 4 feeding all four
     -- engines through open crossfeeds (SP.12's balancing) showed none
     local mf = false
+    local main_in = s.xf_main
+    for n = 1, 4 do main_in[n] = false end
     for i, p in ipairs(M.PUMPS) do
         local v = syn.pump[i]
         if v == M.SYN_ON or v == M.SYN_JETT_FLOW then
             if p.kind == "oj" or p.kind == "ctr" then mf = true end
-            if p.kind == "main" and s.cmd["x" .. p.n] and s.valve["x" .. p.n] >= 0.99 then mf = true end
+            if p.kind == "main" and s.cmd["x" .. p.n] and s.valve["x" .. p.n] >= 0.99 then
+                mf = true
+                main_in[p.n] = true
+            end
         end
+    end
+    -- (2026-11-11) the flow through each crossfeed valve between the manifold
+    -- and its engine's line (estimate, the same reading of p.1447): a main
+    -- tank's pump with pressure through its valve shown open, or the engine
+    -- drawn from the manifold (the glue's engine status 2: its spar valve
+    -- open, a share from a tank other than its own main), whose path goes
+    -- through its valve whatever the symbol shows (in transit for about 2 s,
+    -- or stuck open with the switch OFF). Before, the panel's segment went
+    -- green only with its engine fed from the manifold: in the tank to engine
+    -- (crossfeeds 2 and 3 open, the main pumps on) the manifold was green
+    -- with the segments to mains 2 and 3 white, and in SP.12's balancing
+    -- those to mains 1 and 4 (the user's report). A valve shown open with no
+    -- pressure from its main and no draw by its engine stays white: at the
+    -- gate with the APU (mains 2 and 3 AFT running for it, FCOM p.1465) the
+    -- segments 2 and 3 only. FCOM p.1450-1452 (the jettison synoptic, main
+    -- pumps ON, every crossfeed open): the manifold, all four segments and
+    -- the engine lines from the main pumps green
+    for n = 1, 4 do
+        local via = false
+        if s.valve["s" .. n] >= 0.5 and (out.feed[n][M.MAIN[n]] or 0) < 1 then
+            for _, share in pairs(out.feed[n]) do if share > 0 then via = true end end
+        end
+        if via then mf = true end
+        syn.xf[n] = main_in[n] or via
     end
     syn.mfld = mf
     -- the fuel to remain on the primary EICAS: 0 magenta; once the jettison

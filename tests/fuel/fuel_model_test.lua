@@ -441,6 +441,47 @@ do
     out = run(s, inp, 6)
     T.check(pump_syn(out, "m2_fwd") == F.SYN_LOW and not out.syn.mfld, "manifold: main 2's pumps without pressure through crossfeed 2: no flow")
 end
+-- (2026-11-11) the flow through each crossfeed valve between the manifold
+-- and its engine's line: the valve shown open with the manifold flowing.
+-- Before (the panel's engine fed from the manifold): the tank to engine's
+-- segments to mains 2 and 3 white under a green manifold, and in the
+-- balancing those to mains 1 and 4 (the user's report)
+local function xf(out) return (out.syn.xf[1] and "1" or "-") .. (out.syn.xf[2] and "2" or "-")
+    .. (out.syn.xf[3] and "3" or "-") .. (out.syn.xf[4] and "4" or "-") end
+do
+    local q = {ctr = 0, m1 = 13500, m2 = 9900, m3 = 9900, m4 = 13500, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    engines_running(inp)
+    local out = run(s, inp, 6)
+    T.equal(xf(out), "----", "crossfeed segments: every pump off: none")
+    -- SP.12's balancing: mains 2 and 3 off, every crossfeed open
+    pumps_on(inp, {"m1_fwd", "m1_aft", "m4_fwd", "m4_aft"})
+    out = run(s, inp, 6)
+    T.equal(xf(out), "1234", "crossfeed segments: the balancing (mains 1 and 4 into the manifold, out to 2 and 3): all four")
+    -- tank to engine: crossfeeds 1 and 4 closed, every main pump on
+    pumps_on(inp, MAINS)
+    inp.xfeed[1], inp.xfeed[4] = false, false
+    out = run(s, inp, 6)
+    T.equal(xf(out), "-23-", "crossfeed segments: tank to engine: 2 and 3 (mains 2 and 3 into the manifold)")
+    -- every crossfeed closed: none
+    inp.xfeed[2], inp.xfeed[3] = false, false
+    out = run(s, inp, 6)
+    T.equal(xf(out), "----", "crossfeed segments: every crossfeed closed: none")
+end
+do
+    -- the takeoff (FCOM p.1465): the CWT through crossfeeds 1 and 4 to
+    -- engines 1 and 4, crossfeeds 2 and 3 closed by the FSMC
+    local q = {ctr = 20000, m1 = 12000, m2 = 30000, m3 = 30000, m4 = 12000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    engines_running(inp)
+    pumps_on(inp, MAINS); pumps_on(inp, OJS); pumps_on(inp, {"ctr_l", "ctr_r"})
+    inp.flap_lever = 0.5
+    local out = run(s, inp, 46)
+    T.check(out.valve.x2 == 0 and xf(out) == "1--4", "crossfeed segments: takeoff, 2 and 3 closed: 1 and 4 (" .. xf(out) .. ")")
+    inp.on_ground, inp.flap_lever = false, 0
+    out = run(s, inp, 8)
+    T.equal(xf(out), "1234", "crossfeed segments: flaps up after takeoff, 2 and 3 open: all four")
+end
 do
     -- the CWT pumps with fuel reach it whatever the crossfeeds
     local q = {ctr = 20000, m1 = 12000, m2 = 30000, m3 = 30000, m4 = 12000, r2 = 0, r3 = 0, stab = 0}
@@ -449,6 +490,57 @@ do
     pumps_on(inp, {"ctr_l", "ctr_r"})
     local out = run(s, inp, 6)
     T.check(pump_syn(out, "ctr_l") == F.SYN_ON and out.syn.mfld, "manifold: CWT pumps on with fuel, crossfeeds closed: flow")
+    T.equal(xf(out), "----", "crossfeed segments: the CWT with every crossfeed closed: none (the manifold alone)")
+end
+-- (2026-11-11 review) a valve shown open with no pressure from its main and
+-- no draw by its engine stays white: at the gate with the APU, mains 2 and
+-- 3 AFT running for it (FCOM p.1465), every crossfeed ON, the engines
+-- stopped: segments 2 and 3 (before: all four, under four empty engine lines)
+do
+    local s, inp = aircraft(FULL)
+    inp.apu_fuel = true
+    local out = run(s, inp, 6)
+    T.check(out.syn.mfld, "the gate with the APU: the manifold flows (mains 2 and 3 AFT through crossfeeds 2 and 3)")
+    T.equal(xf(out), "-23-", "the gate with the APU: segments 2 and 3 only")
+    pumps_on(inp, MAINS)
+    out = run(s, inp, 6)
+    T.equal(xf(out), "1234", "before start, every main pump on, every crossfeed open: all four (FCOM p.1450-1452)")
+end
+-- (2026-11-11 review) the engine drawn from the manifold: its segment green
+-- whatever its valve's symbol shows. The FSMC opens crossfeeds 2 and 3 at
+-- the flaps' retraction with the CWT feeding: engines 2 and 3 from the
+-- manifold once the valves are past half, the symbols open at the end of
+-- travel (before: about 2 s with the engine line green and its segment white)
+do
+    local q = {ctr = 20000, m1 = 12000, m2 = 30000, m3 = 30000, m4 = 12000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    engines_running(inp)
+    pumps_on(inp, MAINS); pumps_on(inp, OJS); pumps_on(inp, {"ctr_l", "ctr_r"})
+    inp.flap_lever = 0.5
+    local out = run(s, inp, 46)
+    inp.on_ground, inp.flap_lever = false, 0
+    local seen, bad = false, 0
+    for _ = 1, 300 do
+        out = F.update(s, inp, DT)
+        local v = out.valve.x2
+        if v > 0.5 and v < 0.99 and from(out, 2) ~= "m2" and out.feed[2] and next(out.feed[2]) then
+            seen = true
+            if not out.syn.xf[2] then bad = bad + 1 end
+        end
+    end
+    T.check(seen, "crossfeed 2 in travel with engine 2 from the manifold: seen")
+    T.equal(bad, 0, "crossfeed 2 in travel, engine 2 from the manifold: its segment green every frame")
+    -- stuck open with its switch OFF: green while engine 2 draws through it
+    inp.fail.valve.x2 = true
+    inp.xfeed[2] = false
+    out = run(s, inp, 6)
+    T.check(out.valve.x2 == 1 and from(out, 2) ~= "m2" and out.syn.xf[2],
+        "crossfeed 2 stuck open, switch OFF, engine 2 from the manifold: its segment green")
+    inp.sw.ctr_l, inp.sw.ctr_r = false, false
+    for _, id in ipairs(OJS) do inp.sw[id] = false end
+    out = run(s, inp, 6)
+    T.check(from(out, 2) == "m2" and not out.syn.xf[2],
+        "crossfeed 2 stuck open, switch OFF, engine 2 from main 2: its segment white")
 end
 do
     -- main tanks: amber below 900 kg (2,000 lb on 570), and both tanks of an

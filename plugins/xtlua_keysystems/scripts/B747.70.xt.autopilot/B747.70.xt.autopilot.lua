@@ -892,7 +892,9 @@ local function afds_sensors()
 	local r = simDR_hsi_nav2_horizontal_signal == 1
 		and (not gs_used or (simDR_hsi_nav2_vertical_signal == 1 and simDR_nav2_gs_flag == 0))
 	local ils = (l and 2 or 0) + (r and 1 or 0)
-	return math.min(iru, ra, ils)
+	-- (2026-11-11 review) the ILS's count and the others' too: the AFDS
+	-- model confirms the ILS's loss for the autoland status
+	return math.min(iru, ra, ils), ils, math.min(iru, ra)
 end
 -- LOC's inputs to the roll laws (step 2b): NAV 1's deviation (X-Plane's
 -- dots), both receivers' localizer, the course and the track (magnetic),
@@ -956,6 +958,7 @@ simDR_at_vel_z = find_dataref("sim/flightmodel/position/local_vz")
 simDR_at_wind_x = find_dataref("sim/weather/aircraft/wind_now_x_msc")
 simDR_at_wind_y = find_dataref("sim/weather/aircraft/wind_now_y_msc")
 simDR_at_wind_z = find_dataref("sim/weather/aircraft/wind_now_z_msc")
+simDR_at_sim_speed = find_dataref("sim/time/sim_speed")     -- (2026-11-11 review) the time acceleration
 -- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
 -- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
 -- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
@@ -1058,6 +1061,9 @@ local function afds_at()
 	i.tas = simDR_at_tas * 3600 / 1852
 	i.accel_in = B747_at_model.path_accel(simDR_at_acc_x, simDR_at_acc_y, simDR_at_acc_z,
 		simDR_at_vel_x, simDR_at_vel_y, simDR_at_vel_z, simDR_at_wind_x, simDR_at_wind_y, simDR_at_wind_z)
+	-- (2026-11-11 review) X-Plane's time faster than XTLua's frames (the
+	-- time acceleration): no gust complement (B747.70.at_model.lua)
+	i.time_accel = simDR_at_sim_speed > 1
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
 	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
 	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
@@ -1118,7 +1124,7 @@ local function afds_inp()
 	-- the autoland status's redundancy (step 4a), the engage interlocks
 	-- (step 5a: the FCCs' power after afds_power)
 	afdsIn.power = afds_power()
-	afdsIn.sensors = afds_sensors()
+	afdsIn.sensors, afdsIn.ils_n, afdsIn.iru_ra_n = afds_sensors()
 	afds_interlocks(afdsIn)
 	afds_cap(afdsIn)
 	afds_mode_inputs(afdsIn)
@@ -2050,21 +2056,25 @@ end
 -- set-up's slowdown, and the window and the target became 301 kt (M.81),
 -- held for good (PERF_SIMBRIEF, notes/ATA-22.md §54). A window out of the
 -- MCP's range (FCOM p.643: 100 to 399 kt, .400 to .950) keeps the speed
--- flown, as before
+-- flown, as before. (2026-11-11 review) The new value kept in that range
+-- too: before, M.80 at 15,000 ft became 410 kt and 320 kt at FL370 .96
 function B747_updateIASWindow()
 	local w, ft = B747DR_ap_ias_dial_value, simDR_ap_mach_press_alt
+	local v
 	if simDR_autopilot_airspeed_is_mach == 0 then
 		if w >= 40 and w <= 95 then
-			B747DR_ap_ias_dial_value = math.floor(ap_mach_cas(w * 0.01, ft) + 0.5)
+			v = math.floor(ap_mach_cas(w * 0.01, ft) + 0.5)
 		else
-			B747DR_ap_ias_dial_value = math.floor(simDR_ind_airspeed_kts_pilot)
+			v = math.floor(simDR_ind_airspeed_kts_pilot)
 		end
+		B747DR_ap_ias_dial_value = math.max(100, math.min(399, v))
 	else
 		if w >= 100 and w <= 399 then
-			B747DR_ap_ias_dial_value = math.floor(ap_cas_mach(w, ft) * 100 + 0.5)
+			v = math.floor(ap_cas_mach(w, ft) * 100 + 0.5)
 		else
-			B747DR_ap_ias_dial_value = math.floor(simDR_airspeed_mach * 100)
+			v = math.floor(simDR_airspeed_mach * 100)
 		end
+		B747DR_ap_ias_dial_value = math.max(40, math.min(95, v))
 	end
 	simDR_autopilot_airspeed_kts = B747DR_lastap_dial_airspeed
 	B747DR_ap_ias_mach_window_open = 1
@@ -2572,8 +2582,13 @@ function B747_ap_ias_mach_mode()
 	----- AUTO-SWITCH AUTOPILOT IAS/MACH WINDOW AIRSPEED MODE
 	-- (2026-11-07, step 9i's review, finding 4) with VNAV off or armed (the
 	-- MCP's speed flown: vnav_state under 2); before, off only, and the arm
-	-- waiting for the FMC's data can last
-	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
+	-- waiting for the FMC's data can last. (2026-11-11 review) In VNAV's
+	-- speed intervention too: the window open, its speed flown (FCOM p.643:
+	-- the window changes from IAS to Mach at about M.840 in the climb, back
+	-- at about 310 kt in the descent); before, the window kept IAS climbing
+	-- through M.86
+	local mcpSpd = B747DR_ap_vnav_state < 2 or getVNAVState("manualVNAVspd") == 1
+	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and mcpSpd then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
@@ -2587,7 +2602,7 @@ function B747_ap_ias_mach_mode()
 		end
 	end
     --D6-30151-481 4.10.4/5
-	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
+	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and mcpSpd then
 		if simDR_vvi_fpm_pilot > 250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 0 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
@@ -2599,7 +2614,7 @@ function B747_ap_ias_mach_mode()
 			end
 		end
 	end
-	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
+	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and mcpSpd then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts

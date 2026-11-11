@@ -1446,16 +1446,37 @@ function B747_fms_pred_input(crz)
   -- behind): before, the leg flown became the idle path back from the
   -- next constraint at each sequencing (IRNMN2: 229 to 469 ft higher, the
   -- A/T's SPD at each waypoint in the perf session's KSEA-KLAX flight)
-  local behind = nil
-  local pl = r.passed[#r.passed]
-  if phase == "des" and pl and pl.fix and pl.alt and pl.proc ~= "SID" and pl.fix.kind ~= "RWY" and not missed_leg(pl) then
-    local con
-    if pl.akind == "A" then con = {kind = "A", a = pl.alt}
-    elseif pl.akind == "B" then con = {kind = "B", a = pl.alt}
-    elseif pl.akind == "AB" then con = {kind = "W", a = math.max(pl.alt, pl.alt2 or pl.alt), b = math.min(pl.alt, pl.alt2 or pl.alt)}
-    else con = {kind = "AT", a = pl.alt} end
-    local _, d = R.course(pl.fix.lat, pl.fix.lon, simDR_latitude, simDR_longitude)
-    behind = {x = -d, con = con}
+  -- (2026-11-11) and the others passed in the descent (des_seq: marked at
+  -- their sequencing in DES), each at the great circles' distance back fix
+  -- to fix (behind_list, the nearest first): with the last one only, the
+  -- path built back past a waypoint without a constraint, or past the one
+  -- that shaped it, took another shape at the sequencing (offline, 300
+  -- random STARs: 126 of 1,178 sequencings moved it over 100 ft; IRNMN2's
+  -- windows at every waypoint kept it). A discontinuity passed: across it,
+  -- as the predictions' direct; a leg without an end point ends the list
+  local behind, behindList = nil, nil
+  if phase == "des" then
+    local lat, lon, dacc = simDR_latitude, simDR_longitude, 0
+    for k = #r.passed, 1, -1 do
+      local pl = r.passed[k]
+      if not pl.disc then
+        if k < #r.passed and not pl.des_seq then break end
+        local p = pl.fix or pl.end_at
+        if not p then break end
+        local _, d = R.course(p.lat, p.lon, lat, lon)
+        dacc, lat, lon = dacc + d, p.lat, p.lon
+        if pl.fix and pl.alt and pl.proc ~= "SID" and pl.fix.kind ~= "RWY" and not missed_leg(pl) then
+          local con
+          if pl.akind == "A" then con = {kind = "A", a = pl.alt}
+          elseif pl.akind == "B" then con = {kind = "B", a = pl.alt}
+          elseif pl.akind == "AB" then con = {kind = "W", a = math.max(pl.alt, pl.alt2 or pl.alt), b = math.min(pl.alt, pl.alt2 or pl.alt)}
+          else con = {kind = "AT", a = pl.alt} end
+          behindList = behindList or {}
+          behindList[#behindList + 1] = {x = -dacc, con = con}
+          if k == #r.passed then behind = behindList[1] end
+        end
+      end
+    end
   end
   -- (2026-11-08, step 9i's review, finding 3) the climb's legs, the
   -- predictions' and VNAV's (vnav_geo_set): B747_vnav_model.clb_last, the
@@ -1519,7 +1540,7 @@ function B747_fms_pred_input(crz)
   return {P = B747_perf_db, t = perf, isa = isa, gw = B747_fms_gw_kg(), fuel = perf_fuel_t() * 1000,
     alt = math.max(0, simDR_pressureAlt1), cas = (simDR_onGround ~= 1 and simDR_ias_pilot > 100) and simDR_ias_pilot or nil,
     phase = phase, crz = crz, clb = clb, des = des, crzspd = crzspd, legs = legs, ed = ed, clb_last = clbLast,
-    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes, behind = behind,
+    steps = steps, wind = {clb = 0, crz = 0, des = 0}, field = field, eo = eo, crz_des = crzDes, behind = behind, behind_list = behindList,
     spd_behind = (phase == "des" or phase == "crz") and B747_fms_des_spd() or nil, clb_floor = floor}
 end
 -- the ND's altitude profile points (6-1/6-2 step 8d3; notes/
@@ -2137,6 +2158,16 @@ function B747_fms_alt_sel_push()
   local st = B747_fmc_route
   local alt, mcp, ph = simDR_pressureAlt1, B747DR_fms_vnav_mcp_alt, vnavState.phase
   if ph == "CLB" and vnavState.crz_chg == "CLB" then ph = "CRZ" end
+  -- (2026-11-11 review) the push that ends the T/D's VNAV ALT: past the T/D,
+  -- still level at CRZ ALT in VNAV ALT (the AFDS's FMA 5), a cruise push
+  -- (FCOM p.649: in cruise in VNAV PTH or VNAV ALT it begins the descent; the
+  -- AFDS's own handler does that). Before, the MCP set below had already made
+  -- the phase DES, and this push deleted the next descent constraint
+  local crzA = B747BR_cruiseAlt
+  if ph == "DES" and B747DR_fms_afds_pitch == 5 and crzA and crzA > 0 and math.abs(alt - crzA) < 300 then
+    local td = B747_fms_vnav_td()
+    if td and td <= 0 then return end
+  end
   if st.active and ph ~= "CRZ" then
     local up = mcp > alt
     -- the climb's legs in the climb, the others in the descent
@@ -2394,6 +2425,14 @@ local function update_vnav()
     end
   end
   local out = B747_vnav_model.update(vnavState, inp)
+  -- (2026-11-11 review, FMC-2b F1) the descent over (a missed approach, on
+  -- the ground): its legs' marks cleared, the dataref still last frame's
+  -- phase. Before, after a go-around with one leg or none sequenced in the
+  -- climb, the second descent's path took the first arrival's constraints
+  -- behind the airplane (1,200 to 1,500 ft low at its start)
+  if out.phase ~= "DES" and B747DR_fms_vnav_phase == 3 and B747_fmc_route.rte then
+    for _, l in ipairs(B747_fmc_route.rte.passed) do l.des_seq = nil end
+  end
   B747DR_fms_vnav_valid = out.valid and 1 or 0
   B747DR_fms_vnav_phase = VNAV_PHASE[out.phase] or 0
   B747DR_fms_vnav_mode = VNAV_MODE[out.mode] or 0
@@ -3166,8 +3205,13 @@ function B747_fmc_lnav_update()
       if d>(t and t.d or 0)+2.5 then pe=nil end
     end
     B747_fmc_nd_line_prev(pe)
-    -- (the AFDS's and the ND's current waypoint the next row: route sync)
-    if B747_route_model.sequence(st,n,start) then B747_fmc_route_changed() end
+    -- (the AFDS's and the ND's current waypoint the next row: route sync;
+    -- 2026-11-11: those passed in the descent marked, des_seq, for the
+    -- predictions' behind_list; past the T/D still in the cruise too, the
+    -- MCP not set down (the late descent: the 2026-11-11 review's FMC-2b F2)
+    local tdNm=B747_fms_vnav_td()
+    local inDes=vnavState.phase=="DES" or (vnavState.phase=="CRZ" and tdNm~=nil and tdNm<=0)
+    if B747_route_model.sequence(st,n,start,inDes) then B747_fmc_route_changed() end
     lnavSequencing=false
   end
   local valid=s.valid and 1 or 0

@@ -36,6 +36,26 @@ M.ENG_CAP_MAX = 4.0             -- 1.5 at idle (65 %), 2.0 at 70 %: a crossbleed
                                 -- donor at about 70 % N2 (FCOM p.183)
 M.APU_PSI, M.APU_CAP = 42, 3.2  -- the APU runs all three packs, not three packs and a start
                                 -- (FCOM p.895)
+-- (2026-11-11, the user's "合わせて") the APU's air while a start is
+-- signalled: the APU controller raises it from the START switch pulled (with
+-- AUTOSTART, the FUEL CONTROL switch at RUN) until the starter cuts out at
+-- 50 % N2 (ATA70_80 p.556). For two engines at once (FCOM p.123-124: "To
+-- start two engines at the same time, it may be necessary to set three packs
+-- off"): APU_START_CAP at ISA at sea level, times the outside air's
+-- apu_air_ratio, never less than APU_CAP (estimate: the sources give no
+-- figures). With demand pump 1 in AUTO, as before the start (FCOM p.119,
+-- p.1483: its ADP on the APU's air, ADP_IDLE_FLOW): the packs off, two at
+-- once (the duct 31 psi at sea level, 22 psi at 13,300 ft); one pack on,
+-- two at once in cool air at high pressure only (at sea level up to about
+-- 21 °C at 1013 hPa, 0.6 °C less a hPa below it and none under about
+-- 1,002 hPa; at ISA up to about 750 ft; with the demand pumps OFF up to
+-- 34 °C and 2,700 ft); two packs on and one start, yes; three packs and a
+-- start, none below about 12,000 ft (FCOM p.895; above it the start's need,
+-- 1 psi less a 1,000 ft, lets it open as before). Before, 3.2
+-- whatever the air and the start: one start at a time even with the packs
+-- off; then (the first 2026-11-11 change) 4.3 at all times, which raised the
+-- duct's pressure on the APU's air for the packs too (the review)
+M.APU_START_CAP = 4.38
 -- (2026-11-04; APU-10) the APU's air in flight: one pack, up to 15,000 ft
 -- (FCOM p.895: "APU bleed air is available in flight for one pack up to
 -- 15,000 feet"); none above it (estimate: the sources give no fall-off)
@@ -43,6 +63,11 @@ M.APU_AIR_CAP, M.APU_AIR_ALT = 1.0, 15000
 M.GND_CAP = 3.0                 -- ground air cart
 M.STARTER_FLOW = 1.8
 M.WAI_FLOW, M.ADP_FLOW = 0.5, 0.3
+-- (2026-11-11 review) an ADP's air with its hydraulic load: ADP_IDLE_FLOW
+-- unloaded (the system's leakage only, as before a start), ADP_FLOW at the
+-- pump's rated flow (estimates: the sources give no turbine air; the pump
+-- 32 gpm at 2,850 psi, ATA29_32 p.26). Before, ADP_FLOW whenever it ran
+M.ADP_IDLE_FLOW = 0.1
 M.DROOP = 0.3                   -- the duct falls by 30 % from no flow to full flow
 M.DUCT_LAG_S = 1.0
 M.ISLN_TRAVEL_S, M.APU_TRAVEL_S = 2, 2    -- motor valves (no value in the sources)
@@ -67,8 +92,21 @@ M.LEAK_FLOW = 0.5
 -- pack 2), 3 right (engines 3, 4, pack 3) (FCOM p.611-615)
 M.ENGINE_SECTION = {1, 1, 3, 3}
 
+-- (2026-11-11) the APU's air for the outside air (APU_START_CAP's note):
+-- delta / sqrt(theta), the flow at a constant corrected speed (estimate: at
+-- a governed speed a hot day's flow falls faster), at most ISA's at that
+-- pressure (delta ^ 0.9049: a cold day gives no more, as a flat rating;
+-- estimate. The review: capped at 1, three packs and a start opened on
+-- cold days at the elevated airports); without the air given, 1
+function M.apu_air_ratio(delta, theta)
+    if not delta or not theta or theta <= 0 then return 1 end
+    return math.max(0, math.min(delta / math.sqrt(theta), delta ^ 0.9049))
+end
+
 function M.inputs()
     return {
+        amb_delta = nil,                           -- (2026-11-11) the outside air's pressure and
+        amb_theta = nil,                           -- temperature ratios to ISA sea level (APU_CAP)
         bleed_on = {true, true, true, true},       -- ENGINE BLEED switches
         fire_out = {false, false, false, false},   -- engine fire switches
         n2 = {0, 0, 0, 0},                         -- %
@@ -90,6 +128,7 @@ function M.inputs()
         pack_flow = {0, 0, 0},                     -- the air packs 1-3 take (the pack model)
         wai = {false, false},                      -- wing anti-ice valves L, R
         adp = {false, false},                      -- demand pumps 1 (left) and 4 (right)
+        adp_load = {1, 1},                         -- (2026-11-11) their hydraulic load, 0 to 1
         altitude = 0,                              -- ft
         air = false,                               -- (2026-11-04) in flight (the PSEU)
         -- (2026-11-04) failures, true failed (laminar/B747/air/fail/*;
@@ -196,11 +235,13 @@ function M.update(s, inp, dt)
     -- with the bleed switch ON and the fire switch in (FCOM p.612, p.862,
     -- p.879; LH36 p.64, p.74)
     local prev = s.duct
+    local starting = false      -- (2026-11-11) a start signalled to the APU controller
     for n = 1, 4 do
         local se, oe = s.eng[n], out.eng[n]
         local sect = M.ENGINE_SECTION[n]
         if inp.start_cmd then oe.start_cmd = inp.start_cmd[n]
         else oe.start_cmd = inp.start_pulled[n] and (not inp.autostart or inp.fuel_run[n]) end
+        if oe.start_cmd then starting = true end
         se.reverse = inp.bleed_on[n] and not inp.fire_out[n] and inp.start_pulled[n] and inp.dc[n]
             and prev[sect] >= M.PRSOV_MIN_PSI
     end
@@ -212,8 +253,9 @@ function M.update(s, inp, dt)
     for p = 1, 3 do demand[p] = inp.pack_flow[p] end
     if inp.wai[1] then demand[1] = demand[1] + M.WAI_FLOW end
     if inp.wai[2] then demand[3] = demand[3] + M.WAI_FLOW end
-    if inp.adp[1] then demand[1] = demand[1] + M.ADP_FLOW end
-    if inp.adp[2] then demand[3] = demand[3] + M.ADP_FLOW end
+    local load = inp.adp_load
+    if inp.adp[1] then demand[1] = demand[1] + M.ADP_IDLE_FLOW + (M.ADP_FLOW - M.ADP_IDLE_FLOW) * clamp(load[1], 0, 1) end
+    if inp.adp[2] then demand[3] = demand[3] + M.ADP_IDLE_FLOW + (M.ADP_FLOW - M.ADP_IDLE_FLOW) * clamp(load[2], 0, 1) end
     for p = 1, 3 do if inp.leak[p] then demand[p] = demand[p] + M.LEAK_FLOW end end
     for n = 1, 4 do
         if s.eng[n].start_open then
@@ -239,9 +281,13 @@ function M.update(s, inp, dt)
                 end
             end
             if sect == 2 then
-                -- the APU's air: all the packs on the ground, one pack in
-                -- flight up to 15,000 ft, none above (FCOM p.895)
+                -- the APU's air: all the packs on the ground, more while a
+                -- start is signalled (ATA70_80 p.556), one pack in flight up
+                -- to 15,000 ft, none above (FCOM p.895)
                 local apu_max = M.APU_CAP
+                if starting then
+                    apu_max = math.max(M.APU_CAP, M.APU_START_CAP * M.apu_air_ratio(inp.amb_delta, inp.amb_theta))
+                end
                 if inp.air then apu_max = (inp.altitude <= M.APU_AIR_ALT) and M.APU_AIR_CAP or 0 end
                 if s.apu_pos > 0.5 and inp.apu_n1 > 0 and not inp.apu_air_failed and apu_max > 0 then
                     apu_cap = apu_max * s.apu_pos

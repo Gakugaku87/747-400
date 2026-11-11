@@ -48,7 +48,7 @@ T.near(get(ENG .. "TRA", 0), 1.51, 0.005, "P&W: full forward commands the max EP
 T.near(get(ENG .. "TRA", 3), 1.51, 0.005, "P&W: 48° TLA commands the max EPR")
 -- the idle end the EPR of no net thrust at the Mach (2026-10-31; before
 -- 0.95 at any Mach): standing, 1.00
-T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 0.5, 0.01, "P&W: 24° TLA commands half way from the idle end")
+T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 22 / 46, 0.01, "P&W: 24° TLA commands 22/46 of the way from the idle end (the flat idle to 2°)")
 T.near(get(ENG .. "TRA", 2), 1.0, 0.005, "P&W: idle lever commands the idle end (no net thrust standing: 1.00)")
 rt:set("sim/flightmodel/misc/machno", 0.78)
 frames(0.2)
@@ -612,6 +612,12 @@ rt:set(SFC .. "hicrz", ACF.hicrz * KGNS)
 rt:set("laminar/B747/debug/sfc_corr_off", 0)
 frames(0.2)
 T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "sfc_corr_off 0: corrected again from the acf's own")
+-- (2026-11-11 review) the scripts going (XTLua's aircraft_unload): the
+-- acf's own back (a reloaded module reads them, not the corrected ones)
+rt:callout("aircraft_unload")
+T.near(sfc("hicrz"), ACF.hicrz * KGNS, 1e-12, "aircraft_unload: the acf's own back")
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "the next frames: corrected again from them")
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 
 -- (2026-11-10, ENG-33) the EGT shown from the engine's state (B747.42.
@@ -721,6 +727,85 @@ T.near(n1, ns.B747_ge_n1_of_thrust(get("sim/cockpit2/engine/indicators/thrust_dr
     string.format("GE: the N1 shown (%.1f) the corrected thrust's polynomial at the cruise's Mach", n1))
 T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", n1, -14), 2,
     string.format("EGT: the GE's display_GE_EGT the model's at the N1 shown (%.1f)", n1))
+-- (2026-11-11 review) the GE's N1 for a thrust from the static pressure and
+-- the Mach (as the P&W's EPR), not the captain's altimeter and TAS: those
+-- off (a static and a pitot failure: 10,000 ft and 300 kt TAS) leave it.
+-- Before, 10,000 ft took the pressure ratio from 0.235 to 0.688
+do
+    local F = get("sim/cockpit2/engine/indicators/thrust_dry_n", 0)
+    local GN = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.ge_n1_model.lua")
+    local d35 = (1 - 6.87559e-6 * 35000) ^ 5.25588
+    local want = GN.n1(F, get("sim/weather/aircraft/barometer_current_pas") / 101325, 0.84, (-49 + 273.15) / 288.15)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 10000)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 300)
+    frames(1)
+    T.near(ns.B747_ge_n1_of_thrust(F), want, 0.05,
+        string.format("GE: the captain's altimeter and TAS off: the N1 for the thrust %.1f (the static pressure's, δ %.3f, M.84)", want, d35))
+    T.near(get(ENG .. "display_N1", 0), n1, 0.3, "GE: the N1 shown as before")
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 0.84 * math.sqrt(1.4 * 287 * (-49 + 273.15)) * 1.943844)
+    frames(1)
+end
+-- (2026-11-11 review) the GE's slope for the thrust control near no thrust
+-- (an idle descent's X-Plane thrust, about -3 to +0.5 kN): the same from
+-- -1 to 2.5 kN (the curve's from 2 to 3 kN), continuous above. Before, it
+-- rose to about 1,500 toward -0.5 kN, nil there and 15 below
+do
+    local THR = "sim/cockpit2/engine/indicators/thrust_dry_n"
+    local F0 = get(THR, 0)
+    local d = get("sim/weather/aircraft/barometer_current_pas") / 101325
+    local s = {}
+    for k, f in ipairs({-1, -0.5, -0.49, 0, 0.5, 2.5, 2.6}) do
+        rt:set(THR, 0, f * 1000)
+        s[k] = ns.B747_eec_plant_slope("GE", 0, d)
+    end
+    rt:set(THR, 0, F0)
+    local flat = s[1] ~= nil and s[7] ~= nil
+    for k = 2, 6 do flat = flat and s[k] == s[1] end
+    T.check(flat and s[1] > 15 and s[1] < 400 and math.abs(s[7] - s[6]) < 0.1 * s[6],
+        string.format("GE: the slope from -1 to 2.5 kN %s, %s, %s, %s, %s, %s; at 2.6 kN %s",
+            tostring(s[1]), tostring(s[2]), tostring(s[3]), tostring(s[4]), tostring(s[5]), tostring(s[6]), tostring(s[7])))
+end
+-- (2026-11-11 review) the GE's idle pin in the air: not under the N1
+-- model's at no thrust. FL350: the upstream's the higher (50.5 against
+-- 43.9); 5,000 ft at 250 kt (M.413): the model's (about 35.6 against 31.6;
+-- before, the upstream's, and the display jumped 4 % as the lever left idle)
+do
+    local OAT, ALT = "sim/cockpit2/temperature/outside_air_temp_degc", "sim/cockpit2/gauges/indicators/altitude_ft_pilot"
+    local BARO, MACH = "sim/weather/aircraft/barometer_current_pas", "sim/flightmodel/misc/machno"
+    T.near(ns.B747_ge_idle_pin(0, 35000), ns.engine_idle_control_GE(35000), 1e-9, "GE's idle pin at FL350: the upstream's (the higher)")
+    local was = {get(OAT), get(ALT), get(BARO), get(MACH)}
+    rt:set(OAT, 5)
+    rt:set(ALT, 5000)
+    rt:set(BARO, 101325 * (1 - 6.87559e-6 * 5000) ^ 5.25588)
+    rt:set(MACH, 0.413)
+    frames(1)
+    local pin, up = ns.B747_ge_idle_pin(0, 5000), ns.engine_idle_control_GE(5000)
+    T.check(pin > up + 3 and math.abs(pin - ns.B747_ge_n1_of_thrust(0)) < 1e-9,
+        string.format("GE's idle pin at 5,000 ft and M.413: the model's at no thrust %.1f (the upstream's %.1f)", pin, up))
+    rt:set(OAT, was[1])
+    rt:set(ALT, was[2])
+    rt:set(BARO, was[3])
+    rt:set(MACH, was[4])
+    frames(20)                     -- the cruise's N1 and EGT settled again
+end
+-- (2026-11-11 review) an engine short of its target at full throttle raises
+-- X-Plane's maximum thrust by 200 N a frame up to 1.1 times the rated
+-- (258,000 N); a shut down one not at all. Before, without a top, and a shut
+-- down engine at full throttle raised it for good
+do
+    local TMAX = "sim/aircraft/engine/acf_tmax"
+    T.near(ns.B747_eec_boosted_max(258000, 258000), 258200, 1e-6, "the raise: 200 N a frame")
+    T.near(ns.B747_eec_boosted_max(283700, 258000), 283800, 1e-6, "up to 1.1 times the rated (283,800 N)")
+    T.near(ns.B747_eec_boosted_max(283800, 258000), 283800, 1e-6, "not past it")
+    T.near(ns.B747_eec_boosted_max(300000, 258000), 300000, 1e-6, "one already above: not lowered here")
+    rt:set("sim/flightmodel/engine/ENGN_running", 3, 0)
+    rt:set("sim/flightmodel/engine/ENGN_thro_use", 3, 1)
+    rt:set(ENG .. "display_N1", 3, 20)
+    T.check(not ns.B747_eec_thrust_short(), "engine 4 shut down at full throttle: not short")
+    rt:set("sim/flightmodel/engine/ENGN_running", 3, 1)
+    frames(1)
+end
 rt:set(XEGT, 0, 1951)
 frames(0.5)
 T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", get(ENG .. "display_N1", 0), -14), 3, "EGT: X-Plane's EGT spike does not reach the GE's")

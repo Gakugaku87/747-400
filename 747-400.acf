@@ -161094,7 +161094,7 @@ GROUP LOWER EICAS POWER
               END_GROUP
             END_GROUP
             GROUP Xfeed Vlv 1 Closed
-              SHOW_LESS 1.000000 laminar/B747/fuel/engine1_status
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/xf_flow[0]
               gen_rotary Flow Bar
                 POS 1468.000000 171.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/XfeedVlv1_closed
@@ -161117,7 +161117,7 @@ GROUP LOWER EICAS POWER
 
             END_GROUP
             GROUP Xfeed Vlv 2 Closed
-              SHOW_LESS 1.000000 laminar/B747/fuel/engine2_status
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/xf_flow[1]
               gen_rotary Flow Bar 2
                 POS 1555.500000 209.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/XfeedVlv2_closed
@@ -161140,7 +161140,7 @@ GROUP LOWER EICAS POWER
 
             END_GROUP
             GROUP Xfeed Vlv 3 Closed
-              SHOW_LESS 1.000000 laminar/B747/fuel/engine3_status
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/xf_flow[2]
               gen_rotary Flow Bar
                 POS 1840.500000 209.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/XfeedVlv3_closed
@@ -161163,7 +161163,7 @@ GROUP LOWER EICAS POWER
 
             END_GROUP
             GROUP Xfeed Vlv 4 Closed
-              SHOW_LESS 1.000000 laminar/B747/fuel/engine4_status
+              SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/xf_flow[3]
               gen_rotary Flow Bar 2
                 POS 1928.000000 171.500000
                 IMAGE CRT Displays/EICAS Lower/FUEL/flow_std/XfeedVlv4_closed

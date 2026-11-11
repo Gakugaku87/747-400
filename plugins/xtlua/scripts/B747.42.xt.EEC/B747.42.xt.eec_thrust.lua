@@ -271,6 +271,7 @@ local N_A, N_B = 3.5, 1.6
 local THR_MIN = 0.2
 local C_RANGE = {50, 600}
 local SLOPE_MIN = {PW = 0.2, GE = 15}       -- EPR, N1 % for each unit of throttle
+local SLOPE_GE_FLOOR_KN = 2                 -- (2026-11-11 review) see plant_slope
 local function thrust_per_throttle(f, thr, delta)
     local c = (N_A - N_B * delta) * f / math.max(THR_MIN, thr)
     return math.max(C_RANGE[1], math.min(C_RANGE[2], c))
@@ -280,7 +281,18 @@ local function plant_slope(key, engine, delta)
     local dydf
     if key == "GE" then
         if B747_ge_n1_from_xp(engine) then return nil end
-        dydf = (B747_ge_n1_of_thrust((f + 0.5) * 1000) - B747_ge_n1_of_thrust(math.max(0, f - 0.5) * 1000)) / (f + 0.5 - math.max(0, f - 0.5))
+        -- (2026-11-11 review) the difference over 1 kN, from SLOPE_GE_FLOOR_KN
+        -- at least: under it the curve's there (the N1 model's x^q is
+        -- steepest at no thrust; an estimate, the review's "a floor of a few
+        -- kN"). Before, from 0 to f + 0.5 kN: the interval shrank toward
+        -- -0.5 kN (the slope up to 5 to 10 times the cruise's, at -0.5 a
+        -- division by 0) and under it the difference was 0 (the floor's 15):
+        -- around an idle descent's thrust the slope jumped a hundredfold (on
+        -- the review's stand-in plant at FL250: from -1 to -3 kN an 8 kN step
+        -- peaked at 15 to 19 kN, from -0.3 to +0.5 kN 20 to 28 s to 90 %; now
+        -- no overshoot and 16 to 20 s)
+        local lo = math.max(SLOPE_GE_FLOOR_KN, f - 0.5)
+        dydf = B747_ge_n1_of_thrust((lo + 1) * 1000) - B747_ge_n1_of_thrust(lo * 1000)
     else
         local M = simDR_epr_mach
         dydf = (B747_epr_model.epr(f + 0.5, delta, M) - B747_epr_model.epr(f - 0.5, delta, M)) / 1.0
@@ -290,6 +302,7 @@ local function plant_slope(key, engine, delta)
     local c = thrust_per_throttle(f, simDR_engn_thro_use[engine], delta)
     return math.max(SLOPE_MIN[key], dydf * c)
 end
+B747_eec_plant_slope = plant_slope      -- (for the tests)
 -- (2026-11-10) the takeoff roll, where the thrust control learns the
 -- throttle's rate (B747.42.eec_model.lua, M.RAMP_W): the PSEU's ground and
 -- above ROLL_GS (estimate: rolling, not held on the brakes)
@@ -335,15 +348,27 @@ end
 -- files raise X-Plane's maximum thrust a little each frame (the previous
 -- code's remedy, estimate)
 local THRUST_SHORT = {GE = 0.2, PW = 0.005}
+-- (2026-11-11 review) a running engine's only (a shut down or failed engine
+-- at full throttle is short for good); before, any: its throttle at full
+-- raised every engine's maximum for as long
 function B747_eec_thrust_short()
     if eec_out == nil or B747DR_eec_test_open_in > 0.5 then return false end
     local key = eec_inputs.type
     for engine = 0, 3 do
         local actual = B747DR_display_EPR[engine]
         if key == "GE" then actual = B747DR_display_N1[engine] end
-        if simDR_engn_thro_use[engine] >= 0.999 and actual < eec_out.target[engine + 1] - THRUST_SHORT[key] then
+        if simDR_engine_running[engine] == 1 and simDR_engn_thro_use[engine] >= 0.999
+            and actual < eec_out.target[engine + 1] - THRUST_SHORT[key] then
             return true
         end
     end
     return false
+end
+-- (2026-11-11 review) the maximum thrust raised for a short engine (by
+-- BOOST_N a frame), at most BOOST_MAX times the rated (estimate: the
+-- remedy is for small differences of X-Plane's engine). Before, without a
+-- top: 6 kN a second for as long as one stayed short
+local BOOST_N, BOOST_MAX = 200, 1.10
+function B747_eec_boosted_max(current, rated)
+    return math.max(current, math.min(current + BOOST_N, rated * BOOST_MAX))
 end

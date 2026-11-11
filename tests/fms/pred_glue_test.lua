@@ -478,6 +478,28 @@ T.equal(rt:get(VN .. "phase"), 3, "30 NM before the T/D, MCP FL290: the early de
 T.check(rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 4, "VNAV SPD with THR")
 T.equal(rt:get(CRZA), 31000, "CRZ ALT kept")
 T.equal(cons(), n0, "the descent's constraints kept (those after the T/D)")
+-- (2026-11-11 review) past the T/D still level at CRZ ALT in the AFDS's VNAV
+-- ALT (FMA 5: the T/D's hold, the MCP since set below, the phase DES): the
+-- push that ends it is a cruise push (FCOM p.649: it begins the descent),
+-- the descent's constraints kept. Before, it deleted the next one
+do
+    local PITCH = "laminar/B747/autopilot/FMA/active_pitch_mode"
+    local altWas, pitchWas, tdWas = rt:get("sim/cockpit2/gauges/indicators/altitude_ft_pilot"), rt:get(PITCH), fms.ns.B747_fms_vnav_td
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 31000)
+    fms.ns.B747_fms_vnav_td = function() return -3 end
+    rt:set(PITCH, 5)
+    rt:set(MCPA, 2000)
+    frames(0.2)
+    T.equal(rt:get(VN .. "phase"), 3, "past the T/D, the MCP below: the descent phase")
+    local nHold = cons()
+    push()
+    T.equal(cons(), nHold, "level at CRZ ALT in VNAV ALT past the T/D, the push: the descent's constraints kept")
+    rt:set(PITCH, pitchWas)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", altWas)
+    fms.ns.B747_fms_vnav_td = tdWas
+    rt:set(MCPA, 29000)
+    frames(0.2)
+end
 -- (step 12b) the CDU on the CRZ page went to the DES page by itself
 -- (FCOM p.1345)
 T.check(line(1):find("ACT ECON DES"), "the DES page active: " .. line(1))
@@ -749,6 +771,39 @@ do
     T.check(sB.behind and sB.behind.x <= 0 and sB.behind.x > -5 and sB.behind.con and sB.behind.con.a ~= nil,
         string.format("the predictions keep it behind: %s NM, %s", sB.behind and string.format("%.2f", sB.behind.x) or "none",
         sB.behind and sB.behind.con and (sB.behind.con.kind .. " " .. tostring(sB.behind.con.a)) or "-"))
+end
+-- (2026-11-11, s271 after the review's FMC-2) the others passed in the
+-- descent (des_seq: the route model's sequence in DES marks them) kept
+-- behind too, the nearest first, each farther back (behind_list), across
+-- the discontinuity between the STAR and the approach; one passed before
+-- the descent (not marked) ends the list. Before, the last only: the path
+-- bends to keep the constraints behind each point, and one dropped at a
+-- sequencing moved the path ahead (s271: 530 ft under it after MUPTT)
+do
+    local P = st.rte.passed
+    local za, zzv, disc = P[#P], nil, nil
+    for k = #P - 1, 1, -1 do
+        if P[k].disc then disc = P[k] end
+        if P[k].fix and P[k].alt then zzv = P[k] break end
+    end
+    T.check(zzv ~= nil and disc ~= nil, "(the STAR's ZZV AT OR BELOW 10,000 and the discontinuity passed before it)")
+    -- (passed above with the route model's sequence alone: marked here as
+    -- the glue's sequencing in DES would)
+    local s0 = fms.ns.B747_fms_pred_input(35000)
+    T.check(s0.behind_list and #s0.behind_list == 1 and s0.behind_list[1] == s0.behind,
+        "not marked: the last passed only, as before (" .. tostring(s0.behind_list and #s0.behind_list) .. ")")
+    za.des_seq, zzv.des_seq = true, true
+    local sL = fms.ns.B747_fms_pred_input(35000)
+    local bl = sL.behind_list
+    T.check(bl and #bl == 2 and bl[1].con.a == za.alt and bl[2].con.kind == "B" and bl[2].con.a == 10000,
+        string.format("both passed in the descent behind: %s", bl and #bl or "none"))
+    T.check(bl and bl[2] and bl[2].x < bl[1].x - 1 and sL.behind == bl[1],
+        string.format("the nearest first (%.1f NM), ZZV farther back across the discontinuity (%.1f NM); behind the nearest",
+        bl and bl[1] and bl[1].x or 0, bl and bl[2] and bl[2].x or 0))
+    -- the predictions with them: no error, the path from both
+    local okP, rL = pcall(fms.ns.B747_pred_model.predict, sL)
+    T.check(okP and rL and rL.dp ~= nil, "the predictions with the list: " .. (okP and "a path" or tostring(rL)))
+    za.des_seq, zzv.des_seq = nil, nil
 end
 T.check(pass_to(function(l) return l.proc == "APPR" and l.fix ~= nil and l.fix.kind == "RWY" end), "the runway (the E/D) passed")
 frames(0.5)

@@ -640,9 +640,14 @@ function M.update(s, inp)
     if ph == "DES" and kind == "decel" and decelCas and not inp.spd_int and out.cas and decelCas < out.cas then
         local c = decelCas
         local vm = (inp.vmin and inp.vmin > 0) and inp.vmin + M.VMIN_MARGIN or nil
-        if vm and c < vm then c, limited = vm, true end
+        local atMin = false
+        if vm and c < vm then c, atMin = vm, true end
         if c < out.cas then
             out.cas, out.mach, out.mach_mode = c, P.cas_to_mach(c, inp.alt), false
+            -- (2026-11-11 review) the deceleration's speed the target: LIM
+            -- SPD only at the minimum. Before, a flap placard's limit above it
+            -- kept LIM SPD with 210 kt the target (not 210KT)
+            limited = atMin
             wkt = (not limited) and c or nil
         end
     end

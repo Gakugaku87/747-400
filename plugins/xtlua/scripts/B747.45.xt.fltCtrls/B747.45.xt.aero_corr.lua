@@ -31,3 +31,12 @@ function B747_aero_corr()
     end
     simDR_ac_fuse_cd = A.fuse_cd(fuse_cd_acf, gear, mach, weight, q)
 end
+
+-- (2026-11-11 review) the acf's own back as the scripts go (XTLua's
+-- aircraft_unload: B747.45.xt.fltCtrls.lua). XTLua's Reload Scripts keeps
+-- X-Plane's coefficient; the reloaded module took the corrected one for the
+-- acf's own and corrected it again (the cruise's drag less again, the
+-- gear's term added on top)
+function B747_aero_corr_unload()
+    if fuse_cd_acf ~= nil then simDR_ac_fuse_cd = fuse_cd_acf end
+end

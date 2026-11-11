@@ -58,7 +58,7 @@
     { "do": "check", "note": "15 秒後も FL250 の近く", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [24800, 25200] },
     { "do": "wait", "note": "降り始める", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "<", "value": -800, "timeout": 120 },
     { "do": "snapshot", "note": "降り始め", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/fms/vnav/cas", "laminar/B747/fms/vnav/path_dev" ] },
-    { "do": "check", "note": "降下速度の近くまで減速してから（ECON の降下速度の 10 kt 上より遅い）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 310 },
+    { "do": "check", "note": "降下速度の近くまで減速してから（ECON の降下速度の 16 kt 上より遅い。T/D の速さは空中開始の後の加速の行き過ぎで揺れ、アイドルの水平の減速は約 31 kt：11-10 は 339.8 kt から 308.2 kt、2026-11-11 は 341.3 kt から 310.0 kt。11-11 の 1 回目は EEC がスロットルを 25 秒かけて下げ 316 kt：FLAT IDLE で直した）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "<", "value": 312 },
     { "do": "wait", "note": "10,000 ft の手前で目標 240 kt（FCOM p.1264 の 4）", "dref": "laminar/B747/fms/vnav/cas", "op": "==", "value": 240, "timeout": 900 },
     { "do": "mark" },
     { "do": "snapshot", "note": "減速の始め", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/fms/vnav/vs", "laminar/B747/fms/vnav/path_dev", "laminar/B747/fms/vnav/at" ] },

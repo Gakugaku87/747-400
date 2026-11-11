@@ -642,6 +642,10 @@ function B747_init_fuel_temp()
     B747DR_fuel_temperature = fuel_temp_display(fuel_temp_c)
     B747_fuel_temp_init_flag = 1
 end
+-- (2026-11-11 review) a new flight: taken from its TAT again
+function B747_fuel_temp_flight_start()
+    B747_fuel_temp_init_flag = 0
+end
 
 function B747_fuel_temp()
 
@@ -965,6 +969,7 @@ B747DR_fuel_light_nozzle_valve  = find_dataref("laminar/B747/fuel/light/nozzle_v
 B747DR_fuel_syn_pump            = find_dataref("laminar/B747/fuel/synoptic/pump")
 B747DR_fuel_syn_main_amber      = find_dataref("laminar/B747/fuel/synoptic/main_amber")
 B747DR_fuel_syn_suction         = find_dataref("laminar/B747/fuel/synoptic/suction")
+B747DR_fuel_syn_xf_flow         = find_dataref("laminar/B747/fuel/synoptic/xf_flow")
 B747DR_fuel_ftr_state           = find_dataref("laminar/B747/fuel/fuel_to_remain/state")
 B747DR_fuel_ftr_display         = find_dataref("laminar/B747/fuel/fuel_to_remain/display")
 -- (2026-11-04) the failures (notes/ATA-28.md §11): pumps and valves in the
@@ -1210,6 +1215,8 @@ local function write_outputs(out, settling)
     for n = 1, 4 do
         B747DR_fuel_syn_main_amber[n - 1] = flag(syn.main[n])
         B747DR_fuel_syn_suction[n - 1] = flag(syn.suction[n])
+        -- (2026-11-11) the panel's segment through crossfeed valve n
+        B747DR_fuel_syn_xf_flow[n - 1] = flag(syn.xf[n])
     end
     B747DR_fuel_ftr_state = out.ftr_state
     -- (2026-11-09) the crossfeed manifold's flow from the model (FCOM
@@ -1689,6 +1696,11 @@ end
 function B747_flight_start_fuel()
     print("B747_flight_start_fuel")
     B747_fuel_system_start()
+    -- (2026-11-11 review) the fuel temperature from the new flight's TAT
+    -- again (a second after it, B747_fuel_temp). Before, once at the load:
+    -- a new flight elsewhere kept the last one's, creeping toward the new
+    -- TAT for hours
+    B747_fuel_temp_flight_start()
 
     -- ALL MODES ------------------------------------------------------------------------
     B747_set_fuel_all_modes()

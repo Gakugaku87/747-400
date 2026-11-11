@@ -1141,6 +1141,11 @@ end
 function aircraft_load()
 	clear_thrust_targets()  --Set all thrust target bugs to 0
 end
+-- (2026-11-11 review) the acf's own SFC figures back as the scripts go
+-- (B747.42.xt.sfc_corr.lua)
+function aircraft_unload()
+	B747_sfc_corr_unload()
+end
 
 local setSimConfig=false
 function hasSimConfig()

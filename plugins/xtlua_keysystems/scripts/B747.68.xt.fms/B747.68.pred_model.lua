@@ -457,6 +457,9 @@ end
 --   behind      (2026-11-09) nil, or the waypoint passed last in the
 --               descent: {x (NM, 0 or less: behind the airplane), con} (its
 --               constraint kept in the descent path)
+--   behind_list (2026-11-11) nil, or the waypoints passed in the descent
+--               with their constraints, the nearest first, each as behind:
+--               all kept in the descent path (in place of behind)
 --   spd_behind  (FMC-08) nil, or the lowest speed constraint (CAS kt) of
 --               the waypoints passed in the descent: in force on to the E/D
 --   clb_floor   (FMC-08) nil, or the least a climb's waypoint speed
@@ -525,9 +528,21 @@ function M.predict(s)
         -- the first constraint; the path fixed to the ground). Before, the
         -- leg flown became the idle path back from the next constraint at
         -- each sequencing, 229 to 469 ft higher on IRNMN2 (the perf
-        -- session's KSEA-KLAX flight: the A/T's SPD at each waypoint)
+        -- session's KSEA-KLAX flight: the A/T's SPD at each waypoint).
+        -- (2026-11-11) every waypoint passed in the descent with its
+        -- constraint (s.behind_list, the glue's, the nearest first; here
+        -- the farthest first, in route order): with the last one only, the
+        -- path built back past a waypoint without a constraint (nothing
+        -- behind then) or past the one that bent it took another shape (300
+        -- random STARs offline: 126 of 1,178 sequencings moved it over 100
+        -- ft, up to 26,104 ft; with all of them none of 4,658 on 1,200)
         local b = s.behind
-        if b and b.con and b.x and b.x <= 0 then cons[1] = {x = b.x, c = b.con} end
+        if s.behind_list then
+            for j = #s.behind_list, 1, -1 do
+                local e = s.behind_list[j]
+                if e.con and e.x and e.x <= 0 then cons[#cons + 1] = {x = e.x, c = e.con} end
+            end
+        elseif b and b.con and b.x and b.x <= 0 then cons[1] = {x = b.x, c = b.con} end
         for i, l in ipairs(legs) do
             if l.con and i > clbLast and lx[i] > xfrom and lx[i] < xed - 0.01 then cons[#cons + 1] = {x = lx[i], c = l.con} end
         end
@@ -747,7 +762,15 @@ function M.predict(s)
             if dp then lim = math.min(lim, td_x(hcur)) end
             if pnext and phase == "crz" and not desNow then lim = math.min(lim, pnext.x) end
             if x + dx > lim then dx = lim - x; dt = dx * NM / gs end
-            if dx <= 0 then break end
+            if dx <= 0 then
+                -- (2026-11-11 review) the T/D for this altitude at or behind
+                -- x: the descent starts here. Before, "end" without moving,
+                -- and the climb's level segment at an AT OR BELOW repeated
+                -- it forever: the FMC's plugin froze (a SID's FL150 at 55 NM
+                -- on a 92 NM route, CRZ FL250)
+                if dp and x >= td_x(hcur) - 1e-6 then return "des" end
+                break
+            end
             step_state(dx, 0, dt, ff * dt / 3600)
             if dp and x >= td_x(hcur) - 1e-6 then return "des" end
             if pnext and phase == "crz" and not desNow and x >= pnext.x - 1e-6 then return "step", pnext.to end
@@ -841,8 +864,12 @@ function M.predict(s)
                     if r == "unable" then crzAlt = h break end
                     if cap and h >= cap - 1 and h < crzAlt - 1 then
                         -- level at the constraint to its waypoint
+                        local x0 = x
                         local r2 = cruise_until(xcap, h, true)
                         if r2 == "des" then phase = "des" break end
+                        -- (2026-11-11 review) no way forward: out of the
+                        -- climb rather than the same segment again
+                        if x <= x0 + 1e-6 then break end
                     else
                         break
                     end
