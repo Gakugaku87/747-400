@@ -740,6 +740,26 @@ do
     rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 0.84 * math.sqrt(1.4 * 287 * (-49 + 273.15)) * 1.943844)
     frames(1)
 end
+-- (2026-11-11 review) the GE's slope for the thrust control near no thrust
+-- (an idle descent's X-Plane thrust, about -3 to +0.5 kN): the same from
+-- -1 to 2.5 kN (the curve's from 2 to 3 kN), continuous above. Before, it
+-- rose to about 1,500 toward -0.5 kN, nil there and 15 below
+do
+    local THR = "sim/cockpit2/engine/indicators/thrust_dry_n"
+    local F0 = get(THR, 0)
+    local d = get("sim/weather/aircraft/barometer_current_pas") / 101325
+    local s = {}
+    for k, f in ipairs({-1, -0.5, -0.49, 0, 0.5, 2.5, 2.6}) do
+        rt:set(THR, 0, f * 1000)
+        s[k] = ns.B747_eec_plant_slope("GE", 0, d)
+    end
+    rt:set(THR, 0, F0)
+    local flat = s[1] ~= nil and s[7] ~= nil
+    for k = 2, 6 do flat = flat and s[k] == s[1] end
+    T.check(flat and s[1] > 15 and s[1] < 400 and math.abs(s[7] - s[6]) < 0.1 * s[6],
+        string.format("GE: the slope from -1 to 2.5 kN %s, %s, %s, %s, %s, %s; at 2.6 kN %s",
+            tostring(s[1]), tostring(s[2]), tostring(s[3]), tostring(s[4]), tostring(s[5]), tostring(s[6]), tostring(s[7])))
+end
 -- (2026-11-11 review) an engine short of its target at full throttle raises
 -- X-Plane's maximum thrust by 200 N a frame up to 1.1 times the rated
 -- (258,000 N); a shut down one not at all. Before, without a top, and a shut
