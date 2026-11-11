@@ -2572,8 +2572,13 @@ function B747_ap_ias_mach_mode()
 	----- AUTO-SWITCH AUTOPILOT IAS/MACH WINDOW AIRSPEED MODE
 	-- (2026-11-07, step 9i's review, finding 4) with VNAV off or armed (the
 	-- MCP's speed flown: vnav_state under 2); before, off only, and the arm
-	-- waiting for the FMC's data can last
-	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
+	-- waiting for the FMC's data can last. (2026-11-11 review) In VNAV's
+	-- speed intervention too: the window open, its speed flown (FCOM p.643:
+	-- the window changes from IAS to Mach at about M.840 in the climb, back
+	-- at about 310 kt in the descent); before, the window kept IAS climbing
+	-- through M.86
+	local mcpSpd = B747DR_ap_vnav_state < 2 or getVNAVState("manualVNAVspd") == 1
+	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and mcpSpd then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
@@ -2587,7 +2592,7 @@ function B747_ap_ias_mach_mode()
 		end
 	end
     --D6-30151-481 4.10.4/5
-	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
+	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and mcpSpd then
 		if simDR_vvi_fpm_pilot > 250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 0 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
@@ -2599,7 +2604,7 @@ function B747_ap_ias_mach_mode()
 			end
 		end
 	end
-	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and B747DR_ap_vnav_state < 2 then
+	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and mcpSpd then
 		if simDR_vvi_fpm_pilot < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
