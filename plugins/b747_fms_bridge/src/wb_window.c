@@ -281,12 +281,28 @@ static void wb_draw(XPLMWindowID w, void *ref)
     if (cull) glEnable(GL_CULL_FACE);
 }
 
-/* back into X-Plane's window, left of the middle */
+/* (2026-11-11 review) the height (px) of the rows through the one `rows`
+   steps (of fh + 8) under the first, at X-Plane's font, the pads and a row
+   for the last one's descenders (wb_draw_body's layout, the passengers'
+   load: the freighter's has two rows fewer) */
+#define WBW_ROWS_ALL 33.5           /* the last tank's row (8 tanks) */
+#define WBW_ROWS_MIN 25.5           /* the FUEL BY TANK heading */
+static int wb_rows_height(double rows)
+{
+    int fh = 0;
+    XPLMGetFontDimensions(xplmFont_Proportional, NULL, &fh, NULL);
+    int lh = fh + 8, pad = 14;
+    return pad + fh + (int)((rows + 1.0) * lh + 0.5) + pad;
+}
+
+/* back into X-Plane's window, left of the middle; (2026-11-11 review) high
+   enough for every row (before, 760: with the cargo's total row the last
+   two tanks were cut) */
 static void wb_place(XPLMWindowID w)
 {
     int sl = 0, st = 0, sr = 0, sb = 0;
     XPLMGetScreenBoundsGlobal(&sl, &st, &sr, &sb);
-    int ww = 440, wh = 760, cx = (sl + sr) / 2 - 300, cy = (sb + st) / 2;
+    int ww = 440, wh = wb_rows_height(WBW_ROWS_ALL), cx = (sl + sr) / 2 - 300, cy = (sb + st) / 2;
     if (wh > st - sb - 40) wh = st - sb - 40;
     XPLMSetWindowGeometry(w, cx - ww / 2, cy + wh / 2, cx + ww / 2, cy - wh / 2);
 }
@@ -398,10 +414,12 @@ static void wb_show(int on)
         if (!wb_win) return;
         XPLMSetWindowPositioningMode(wb_win, xplm_WindowPositionFree, -1);
         /* (2026-11-06 review) at least LOAD, WEIGHTS and CENTRE OF GRAVITY
-           high (about 25 rows, 550 at X-Plane's font): only the tanks'
-           rows stop at the bottom. Before, 420: shrunk, the rows above the
-           tanks were drawn below the window */
-        XPLMSetWindowResizingLimits(wb_win, 340, 600, 1200, 1600);
+           high: only the tanks' rows stop at the bottom. Before, 420:
+           shrunk, the rows above the tanks were drawn below the window.
+           (2026-11-11 review) through the FUEL BY TANK heading at X-Plane's
+           font (wb_rows_height); before, 600, short of it once the cargo's
+           total row came */
+        XPLMSetWindowResizingLimits(wb_win, 340, wb_rows_height(WBW_ROWS_MIN), 1200, 1600);
         XPLMSetWindowTitle(wb_win, "747-400 Weight and Balance");
         wb_place(wb_win);
     }
