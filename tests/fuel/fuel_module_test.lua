@@ -115,6 +115,11 @@ T.equal(rt:get("laminar/B747/fuel/engine1_status"), 2, "running: engine 1 fed th
 -- (2026-11-09) the manifold's flow from the model (fuel_model_test has its
 -- cases: mains through open crossfeeds too)
 T.equal(rt:get("laminar/B747/fuel/gen_XFmfld_status"), 1, "running: the crossfeed manifold's flow on the synoptic")
+-- (2026-11-11) the flow through each open crossfeed valve (the panel's
+-- segment between the manifold and its engine's line)
+for n = 0, 3 do
+    T.equal(rt:get("laminar/B747/fuel/synoptic/xf_flow", n), 1, "running: the flow through crossfeed " .. (n + 1) .. " on the synoptic")
+end
 local ctr0, used0, all0 = rt:get(FUEL, 0), rt:get("laminar/B747/fuel/totaliser", 0), rt:get("laminar/B747/fuel/totaliser", 4)
 frames(rt, 60)
 T.near(ctr0 - rt:get(FUEL, 0), 4 * 0.6 * 60, 2, "running: the CWT gives 2.4 kg/s")

@@ -969,6 +969,7 @@ B747DR_fuel_light_nozzle_valve  = find_dataref("laminar/B747/fuel/light/nozzle_v
 B747DR_fuel_syn_pump            = find_dataref("laminar/B747/fuel/synoptic/pump")
 B747DR_fuel_syn_main_amber      = find_dataref("laminar/B747/fuel/synoptic/main_amber")
 B747DR_fuel_syn_suction         = find_dataref("laminar/B747/fuel/synoptic/suction")
+B747DR_fuel_syn_xf_flow         = find_dataref("laminar/B747/fuel/synoptic/xf_flow")
 B747DR_fuel_ftr_state           = find_dataref("laminar/B747/fuel/fuel_to_remain/state")
 B747DR_fuel_ftr_display         = find_dataref("laminar/B747/fuel/fuel_to_remain/display")
 -- (2026-11-04) the failures (notes/ATA-28.md §11): pumps and valves in the
@@ -1214,6 +1215,8 @@ local function write_outputs(out, settling)
     for n = 1, 4 do
         B747DR_fuel_syn_main_amber[n - 1] = flag(syn.main[n])
         B747DR_fuel_syn_suction[n - 1] = flag(syn.suction[n])
+        -- (2026-11-11) the panel's segment through crossfeed valve n
+        B747DR_fuel_syn_xf_flow[n - 1] = flag(syn.xf[n])
     end
     B747DR_fuel_ftr_state = out.ftr_state
     -- (2026-11-09) the crossfeed manifold's flow from the model (FCOM

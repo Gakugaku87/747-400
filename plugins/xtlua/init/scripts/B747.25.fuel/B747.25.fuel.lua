@@ -317,6 +317,9 @@ B747DR_fuel_light_nozzle_valve          = deferred_dataref("laminar/B747/fuel/li
 B747DR_fuel_syn_pump                    = deferred_dataref("laminar/B747/fuel/synoptic/pump", "array[16]")
 B747DR_fuel_syn_main_amber              = deferred_dataref("laminar/B747/fuel/synoptic/main_amber", "array[4]")
 B747DR_fuel_syn_suction                 = deferred_dataref("laminar/B747/fuel/synoptic/suction", "array[4]")
+-- (2026-11-11) crossfeed valves 1-4: the flow through each between the
+-- manifold and its engine's line (1)
+B747DR_fuel_syn_xf_flow                 = deferred_dataref("laminar/B747/fuel/synoptic/xf_flow", "array[4]")
 B747DR_fuel_ftr_state                   = deferred_dataref("laminar/B747/fuel/fuel_to_remain/state", "number")
 B747DR_fuel_ftr_display                 = deferred_dataref("laminar/B747/fuel/fuel_to_remain/display", "number")
 

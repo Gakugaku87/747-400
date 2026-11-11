@@ -640,3 +640,9 @@ ND（2026-11-05：PLAN の絵を FCOM の 3 通りに。利用者の依頼「ND�
 | 2026-11-05・ND（PLAN、利用者の写真） | 両 ND の `GROUP Map:Expanded` の `gen_rotary Aircraft Triangle`（機長 334.5, -107、F/O 1021.5, -107：拡大の機体の三角） | 条件なし（拡大の群でいつも原点に） | `SHOW_LESS 2.500000 laminar/B747/nd/mode/<席>/sel_dial_pos`（PLN では出さない） | FCOM p.1147（PLAN の機体の記号は機体の位置）、p.1029（CRT の PLAN の原点は中心の地点） |
 
 上の 1 行は `docs/overhaul/tools/panel_nd_plan_triangle.lua` で書き換えた（2 行を足した）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261105_before_plan_triangle`。
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-11・燃料（利用者の「クロスフィード弁のEICAS表示の件ってインナー側は正常に動作してるんかね」） | FUEL synoptic の `GROUP Xfeed Vlv 1 Closed`〜`Xfeed Vlv 4 Closed`（弁 N を通る区間を白で描く上書き。acf の 161097・161120・161143・161166 行） | `SHOW_LESS 1.000000 laminar/B747/fuel/engineN_status`（エンジン N が自分のタンクから吸うか、吸わない：1 以下） | `SHOW_EQUAL 0.000000 laminar/B747/fuel/synoptic/xf_flow[N-1]`（弁 N を通る流れが無い） | FCOM p.1447、p.1450〜1452、ATA26_28 p.422（notes/ATA-28.md §15） |
+
+上の 1 行は 4 行を書き換えた。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261111_before_xfeed_segments`。
