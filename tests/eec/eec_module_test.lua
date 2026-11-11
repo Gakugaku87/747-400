@@ -612,6 +612,12 @@ rt:set(SFC .. "hicrz", ACF.hicrz * KGNS)
 rt:set("laminar/B747/debug/sfc_corr_off", 0)
 frames(0.2)
 T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "sfc_corr_off 0: corrected again from the acf's own")
+-- (2026-11-11 review) the scripts going (XTLua's aircraft_unload): the
+-- acf's own back (a reloaded module reads them, not the corrected ones)
+rt:callout("aircraft_unload")
+T.near(sfc("hicrz"), ACF.hicrz * KGNS, 1e-12, "aircraft_unload: the acf's own back")
+frames(0.2)
+T.near(sfc("hicrz"), ACF.hicrz * KGNS * SC.factor(42000), 1e-12, "the next frames: corrected again from them")
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 
 -- (2026-11-10, ENG-33) the EGT shown from the engine's state (B747.42.

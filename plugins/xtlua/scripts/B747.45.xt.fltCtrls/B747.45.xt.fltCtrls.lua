@@ -1070,7 +1070,11 @@ dofile("B747.45.xt.aero_corr.lua")
 
 --function aircraft_load() end
 
---function aircraft_unload() end
+-- (2026-11-11 review) the acf's own fuselage drag back as the scripts go
+-- (B747.45.xt.aero_corr.lua)
+function aircraft_unload()
+    B747_aero_corr_unload()
+end
 
 local flightInit=false
 function flight_start()

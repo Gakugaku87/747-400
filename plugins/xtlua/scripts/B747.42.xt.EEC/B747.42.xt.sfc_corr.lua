@@ -69,3 +69,18 @@ function B747_sfc_corr()
     simDR_sc_sfc_hi = acf_hi * f
     written = true
 end
+
+-- (2026-11-11 review) the acf's own back as the scripts go (XTLua's
+-- aircraft_unload: B747.42.xt.EEC.lua). XTLua's Reload Scripts keeps
+-- X-Plane's figures; the reloaded module took the corrected ones for the
+-- acf's own and corrected them again (the fuel flow up by the factor once
+-- more: about 4 % at FL410)
+function B747_sfc_corr_unload()
+    if written and acf_hi ~= nil then
+        simDR_sc_sfc_to = acf_to
+        simDR_sc_sfc_clb = acf_clb
+        simDR_sc_sfc_lo = acf_lo
+        simDR_sc_sfc_hi = acf_hi
+        written = false
+    end
+end
