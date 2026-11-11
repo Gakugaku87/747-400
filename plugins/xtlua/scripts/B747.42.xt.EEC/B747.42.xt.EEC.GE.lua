@@ -276,8 +276,15 @@ function B747_ge_n1_from_xp(engine) return ge_n1_from_xp[engine] ~= false end
 -- the high climbs (its N1 for a thrust: the climbs at the max climb N1 came
 -- out about 9 % slow, s253)
 dofile("B747.42.ge_n1_model.lua")
+-- (2026-11-11 review) the air data as the P&W's EPR model has them
+-- (B747.42.xt.EEC.PW.lua's simDR_epr_*): the static pressure's ratio and
+-- the Mach. Before, atmosphere()'s: the ISA pressure at the captain's
+-- altimeter (with QNH 990 at 3,000 ft, about 635 ft low; frozen with a
+-- static failure) and the captain's TAS over the speed of sound (a pitot
+-- failure took the N1 shown for a thrust with it, and the EEC's control)
 function B747_ge_n1_of_thrust(thrust_N)
-    return B747_ge_n1_model.n1(math.max(0, thrust_N), pressure_ratio, mach, temperature_ratio)
+    local delta = math.max(0.1, simDR_epr_ambient_pa / 101325)
+    return B747_ge_n1_model.n1(math.max(0, thrust_N), delta, simDR_epr_mach, temperature_ratio)
 end
 
 function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
@@ -556,7 +563,7 @@ function GE(altitude_ft_in)
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
     --Boost engine output as necessary: an engine at full throttle still short of the EEC's target
     if B747_eec_thrust_short() then
-            B747_setMaxThrust(simDR_thrust_max + 200)
+            B747_setMaxThrust(B747_eec_boosted_max(simDR_thrust_max, engine_max_thrust_n))  -- (2026-11-11 review) with a top
     elseif simDR_thrust_max > orig_thrust_n and simDR_onGround == 0 and B747DR_radio_altitude > 1500 then  --slowly reset max engine thrust to normal
       if simDR_thrust_max > orig_thrust_n + 10 then
         B747_setMaxThrust(simDR_thrust_max - 10)

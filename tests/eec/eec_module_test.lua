@@ -721,6 +721,42 @@ T.near(n1, ns.B747_ge_n1_of_thrust(get("sim/cockpit2/engine/indicators/thrust_dr
     string.format("GE: the N1 shown (%.1f) the corrected thrust's polynomial at the cruise's Mach", n1))
 T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", n1, -14), 2,
     string.format("EGT: the GE's display_GE_EGT the model's at the N1 shown (%.1f)", n1))
+-- (2026-11-11 review) the GE's N1 for a thrust from the static pressure and
+-- the Mach (as the P&W's EPR), not the captain's altimeter and TAS: those
+-- off (a static and a pitot failure: 10,000 ft and 300 kt TAS) leave it.
+-- Before, 10,000 ft took the pressure ratio from 0.235 to 0.688
+do
+    local F = get("sim/cockpit2/engine/indicators/thrust_dry_n", 0)
+    local GN = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.ge_n1_model.lua")
+    local d35 = (1 - 6.87559e-6 * 35000) ^ 5.25588
+    local want = GN.n1(F, get("sim/weather/aircraft/barometer_current_pas") / 101325, 0.84, (-49 + 273.15) / 288.15)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 10000)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 300)
+    frames(1)
+    T.near(ns.B747_ge_n1_of_thrust(F), want, 0.05,
+        string.format("GE: the captain's altimeter and TAS off: the N1 for the thrust %.1f (the static pressure's, δ %.3f, M.84)", want, d35))
+    T.near(get(ENG .. "display_N1", 0), n1, 0.3, "GE: the N1 shown as before")
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 35000)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 0.84 * math.sqrt(1.4 * 287 * (-49 + 273.15)) * 1.943844)
+    frames(1)
+end
+-- (2026-11-11 review) an engine short of its target at full throttle raises
+-- X-Plane's maximum thrust by 200 N a frame up to 1.1 times the rated
+-- (258,000 N); a shut down one not at all. Before, without a top, and a shut
+-- down engine at full throttle raised it for good
+do
+    local TMAX = "sim/aircraft/engine/acf_tmax"
+    T.near(ns.B747_eec_boosted_max(258000, 258000), 258200, 1e-6, "the raise: 200 N a frame")
+    T.near(ns.B747_eec_boosted_max(283700, 258000), 283800, 1e-6, "up to 1.1 times the rated (283,800 N)")
+    T.near(ns.B747_eec_boosted_max(283800, 258000), 283800, 1e-6, "not past it")
+    T.near(ns.B747_eec_boosted_max(300000, 258000), 300000, 1e-6, "one already above: not lowered here")
+    rt:set("sim/flightmodel/engine/ENGN_running", 3, 0)
+    rt:set("sim/flightmodel/engine/ENGN_thro_use", 3, 1)
+    rt:set(ENG .. "display_N1", 3, 20)
+    T.check(not ns.B747_eec_thrust_short(), "engine 4 shut down at full throttle: not short")
+    rt:set("sim/flightmodel/engine/ENGN_running", 3, 1)
+    frames(1)
+end
 rt:set(XEGT, 0, 1951)
 frames(0.5)
 T.near(get(ENG .. "display_GE_EGT", 0), G.steady("GE", get(ENG .. "display_N1", 0), -14), 3, "EGT: X-Plane's EGT spike does not reach the GE's")

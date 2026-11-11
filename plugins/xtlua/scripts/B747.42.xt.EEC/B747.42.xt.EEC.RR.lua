@@ -818,7 +818,7 @@ function engine_idle_control_RR(altitude_ft_in)
           or B747DR_display_EPR[2] < simDR_EPR_target_bug[2] or B747DR_display_EPR[3] < simDR_EPR_target_bug[3]) --then
       and math.max(simDR_EPR_target_bug[0] - B747DR_display_EPR[0], simDR_EPR_target_bug[1] - B747DR_display_EPR[1], simDR_EPR_target_bug[2] - B747DR_display_EPR[2],
                     simDR_EPR_target_bug[3] - B747DR_display_EPR[3]) > 0.045 then  --set a tolerance to ensure the engines don't overboost unnecessarily
-                      B747_setMaxThrust(simDR_thrust_max + 200)
+                      B747_setMaxThrust(B747_eec_boosted_max(simDR_thrust_max, engine_max_thrust_n))  -- (2026-11-11 review) with a top
     elseif simDR_thrust_max > orig_thrust_n and simDR_onGround == 0 and B747DR_radio_altitude > 1500 then  --slowly reset max engine thrust to normal
       if simDR_thrust_max > orig_thrust_n + 10 then
         B747_setMaxThrust(simDR_thrust_max - 10)

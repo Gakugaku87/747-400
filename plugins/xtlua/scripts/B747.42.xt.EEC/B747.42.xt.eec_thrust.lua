@@ -335,15 +335,27 @@ end
 -- files raise X-Plane's maximum thrust a little each frame (the previous
 -- code's remedy, estimate)
 local THRUST_SHORT = {GE = 0.2, PW = 0.005}
+-- (2026-11-11 review) a running engine's only (a shut down or failed engine
+-- at full throttle is short for good); before, any: its throttle at full
+-- raised every engine's maximum for as long
 function B747_eec_thrust_short()
     if eec_out == nil or B747DR_eec_test_open_in > 0.5 then return false end
     local key = eec_inputs.type
     for engine = 0, 3 do
         local actual = B747DR_display_EPR[engine]
         if key == "GE" then actual = B747DR_display_N1[engine] end
-        if simDR_engn_thro_use[engine] >= 0.999 and actual < eec_out.target[engine + 1] - THRUST_SHORT[key] then
+        if simDR_engine_running[engine] == 1 and simDR_engn_thro_use[engine] >= 0.999
+            and actual < eec_out.target[engine + 1] - THRUST_SHORT[key] then
             return true
         end
     end
     return false
+end
+-- (2026-11-11 review) the maximum thrust raised for a short engine (by
+-- BOOST_N a frame), at most BOOST_MAX times the rated (estimate: the
+-- remedy is for small differences of X-Plane's engine). Before, without a
+-- top: 6 kN a second for as long as one stayed short
+local BOOST_N, BOOST_MAX = 200, 1.10
+function B747_eec_boosted_max(current, rated)
+    return math.max(current, math.min(current + BOOST_N, rated * BOOST_MAX))
 end
