@@ -83,7 +83,14 @@ M.K_VS = 1.2e-5
 -- 5e-5 the V/S went past to 3,300 fpm and back to 200 with the engines'
 -- lag: aero_go_around, 2026-11-02, notes/AERO.md §3.15)
 M.K_VS_GA = 3e-5
-M.K_EPR, M.K_N1 = 0.33, 0.003
+-- (2026-11-11 review) THR REF on the levers' command: the levers set the
+-- reference thrust within some 12 s of TO/GA (FCOM p.667: the A/T advances
+-- them to the reference thrust limit; FCTM p.93: set by 80 kt). The command
+-- has no spool lag, the servo's 0.2 a second limits the travel. Before, 0.33
+-- and 0.003 (a time constant of 5.7 s, P&W, and 4.1 s, GE): HOLD at 65 kt
+-- froze them short, EPR 0.016 to 0.028 under the TO reference to 400 ft
+-- (s142, 2026-11-10 and 11, 270 to 340 t)
+M.K_EPR, M.K_N1 = 1.0, 0.009
 -- FLCH's V/S: the altitude change in 125 s (ATA34_2 p.670); G/A's 2,000
 -- fpm (p.674); the speed protection's margin (FCOM p.675: the FMC's five
 -- knots against the maximum speeds' overshoots and the flaps extended
