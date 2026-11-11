@@ -892,7 +892,9 @@ local function afds_sensors()
 	local r = simDR_hsi_nav2_horizontal_signal == 1
 		and (not gs_used or (simDR_hsi_nav2_vertical_signal == 1 and simDR_nav2_gs_flag == 0))
 	local ils = (l and 2 or 0) + (r and 1 or 0)
-	return math.min(iru, ra, ils)
+	-- (2026-11-11 review) the ILS's count and the others' too: the AFDS
+	-- model confirms the ILS's loss for the autoland status
+	return math.min(iru, ra, ils), ils, math.min(iru, ra)
 end
 -- LOC's inputs to the roll laws (step 2b): NAV 1's deviation (X-Plane's
 -- dots), both receivers' localizer, the course and the track (magnetic),
@@ -1118,7 +1120,7 @@ local function afds_inp()
 	-- the autoland status's redundancy (step 4a), the engage interlocks
 	-- (step 5a: the FCCs' power after afds_power)
 	afdsIn.power = afds_power()
-	afdsIn.sensors = afds_sensors()
+	afdsIn.sensors, afdsIn.ils_n, afdsIn.iru_ra_n = afds_sensors()
 	afds_interlocks(afdsIn)
 	afds_cap(afdsIn)
 	afds_mode_inputs(afdsIn)

@@ -663,6 +663,24 @@ end
 -- (FCOM p.671), FLARE and ROLLOUT until they engage (steps 4b and 4c),
 -- the status kept through the flare, the nose let down and the rollout;
 -- runway align with LAND 3 or 2 in LOC (step 4d: p.361)
+-- (2026-11-11 review) the sensors for the status: the ILS receivers' count
+-- (`inp.ils_n`, with the IRUs' and radio altimeters' `inp.iru_ra_n`) its
+-- loss confirmed over NCD_CONFIRM_S as the mode failures' (below); without
+-- them `inp.sensors` as it is. Before, one frame of NAV 1's glide slope flag
+-- took LAND 3 to NO AUTOLAND for that frame: the flare and rollout arms
+-- dropped and the FMA's box started again
+local function land_sensors(s, inp)
+    if inp.ils_n == nil then return inp.sensors or 3 end
+    local raw = inp.ils_n
+    if s.ils_conf == nil or raw >= s.ils_conf then
+        s.ils_conf, s.ils_low_t = raw, 0
+    else
+        s.ils_low_t = (s.ils_low_t or 0) + (inp.dt or 0)
+        if s.ils_low_t >= M.NCD_CONFIRM_S then s.ils_conf, s.ils_low_t = raw, 0 end
+    end
+    return math.min(inp.iru_ra_n or 3, s.ils_conf)
+end
+
 local function land_status(s, inp)
     local n = M.engaged(s)
     local approach = s.loc_arm or s.gs_arm or s.roll == "LOC" or s.pitch == "GS" or s.pitch == "FLARE"
@@ -671,8 +689,9 @@ local function land_status(s, inp)
     if approach and n >= 2 then s.multi_app = true end
     local ra = inp.ra or 9999
     local land
+    local sensors = land_sensors(s, inp)
     if approach and n >= 2 and ra < M.MULTI_RA then
-        local sensors, power = inp.sensors or 3, inp.power or 3
+        local power = inp.power or 3
         if n >= 3 and sensors >= 3 and power >= 3 and inp.bus_isolated ~= false then
             land = "LAND3"
         elseif sensors >= 2 then

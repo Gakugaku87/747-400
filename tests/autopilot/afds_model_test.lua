@@ -44,7 +44,7 @@ local function inp(o)
         cap = o.cap, loc_rx = o.loc_rx, gs_rx = o.gs_rx, ra_n = o.ra_n, iru_nav = o.iru_nav,
         iru_hdg = o.iru_hdg, adc_sel = o.adc_sel, pitch_att = o.pitch_att, ils_freq = o.ils_freq,
         loc_alive = o.loc_alive, loc_hdg_err = o.loc_hdg_err, gs_kt = o.gs_kt, bus_isolated = o.bus_isolated,
-        fmc_ok = o.fmc_ok}
+        fmc_ok = o.fmc_ok, ils_n = o.ils_n, iru_ra_n = o.iru_ra_n}
 end
 
 -- engage with both F/Ds OFF: V/S and HDG HOLD (FCOM p.640; ATA22 p.266)
@@ -251,6 +251,27 @@ T.check(not md.flare_arm and not md.rollout_arm and not md.rwy_align, "no FLARE 
 T.equal(A.status(md), A.STATUS.FD, "no A/P engaged: FD, not NO AUTOLAND")
 approach(m)
 T.equal(A.status(m), A.STATUS.LAND3, "back: LAND 3")
+-- (2026-11-11 review) the ILS's loss for the status confirmed over
+-- NCD_CONFIRM_S, as the mode failures': one frame of NAV 1's glide slope
+-- flag (two receivers of three: one left) keeps LAND 3 and the arms
+-- (before, NO AUTOLAND for that frame, the arms dropped); lasting, NO
+-- AUTOLAND. The sensors' capability (`cap`) whole: no dual failure
+do
+    local mi = land3()
+    local cap = {iru = 3, ra = 3, ils = 3}
+    approach(mi, {sensors = 3, ils_n = 3, iru_ra_n = 3, cap = cap})
+    T.equal(A.status(mi), A.STATUS.LAND3, "(LAND 3 with the ILS's count)")
+    approach(mi, {sensors = 1, ils_n = 1, iru_ra_n = 3, cap = cap})
+    T.check(A.status(mi) == A.STATUS.LAND3 and mi.flare_arm and mi.rollout_arm,
+        "one frame of NAV 1's glide slope flag: LAND 3, FLARE and ROLLOUT armed")
+    approach(mi, {sensors = 3, ils_n = 3, iru_ra_n = 3, cap = cap})
+    for _ = 1, 9 do approach(mi, {sensors = 1, ils_n = 1, iru_ra_n = 3, cap = cap}) end
+    T.equal(A.status(mi), A.STATUS.LAND3, "0.9 s of it: LAND 3 still")
+    for _ = 1, 3 do approach(mi, {sensors = 1, ils_n = 1, iru_ra_n = 3, cap = cap}) end
+    T.equal(A.status(mi), A.STATUS.NO_AUTOLAND, "1.2 s: NO AUTOLAND")
+    approach(mi, {sensors = 3, ils_n = 3, iru_ra_n = 3, cap = cap})
+    T.equal(A.status(mi), A.STATUS.LAND3, "back at once: LAND 3")
+end
 -- below 200 ft LAND 3 to LAND 2 not shown (FCOM p.662)
 approach(m, {ra = 150, sensors = 2})
 T.equal(A.status(m), A.STATUS.LAND3, "150 ft, a sensor lost: still LAND 3")
