@@ -96,15 +96,19 @@ do
     T.check(out.eng[4].psi > 50, "after the start: engine bleed air")
     T.check(not out.eng[4].off_alert, "after the start: no >BLEED 4 OFF")
     -- what each source gives (X-Plane's bleed loss): the group's flow by
-    -- their capacity (engine 4 at idle 1.5, the APU 3.2, pack 1 takes 1.0)
+    -- their capacity (engine 4 at idle 1.5, the APU 3.2 with no start
+    -- signalled, pack 1 takes 1.0)
     T.near(out.eng[4].flow + out.apu_flow, 1.0, 1e-6, "the sources give what pack 1 takes")
-    T.near(out.eng[4].flow / out.apu_flow, 1.5 / 3.2, 0.01, "engine 4 and the APU share it by capacity")
+    T.near(out.eng[4].flow / out.apu_flow, 1.5 / B.APU_CAP, 0.01, "engine 4 and the APU share it by capacity")
     T.equal(out.eng[1].flow, 0, "engine 1 not running: gives nothing")
 end
 
--- three START switches pulled on APU air (manual start): one start valve
--- opens, the others wait (two starters take more than the APU gives), and
--- nothing flaps around the PRSOV's 10 psi (estimate, notes/ATA-36.md §6)
+-- three START switches pulled on APU air with the packs off (manual start):
+-- two start valves open (FCOM p.123-124: two engines at the same time with
+-- the three packs off; 2026-11-11), the third waits (three starters take
+-- more than the APU gives), and nothing flaps around the PRSOV's 10 psi
+-- (estimate, notes/ATA-36.md §6). Before (the APU 3.2): one, the others
+-- waiting
 do
     local s, inp = apu_air()
     inp.autostart = false
@@ -113,14 +117,101 @@ do
     local out = run(s, inp, 5)
     local open = 0
     for n = 2, 4 do if out.eng[n].start_valve_open then open = open + 1 end end
-    T.equal(open, 1, "three starts on APU air: one start valve open")
-    T.check(out.duct[2] > 30, "three starts on APU air: the duct holds")
+    T.equal(open, 2, "three starts on APU air, packs off: two start valves open, the third waits")
+    T.check(out.duct[2] >= 25, "three starts on APU air: the duct holds the start pressure")
     local changes, last = 0, out.eng[3].prsov_open
     for _ = 1, 90 do
         out = B.update(s, inp, DT)
         if out.eng[3].prsov_open ~= last then changes, last = changes + 1, out.eng[3].prsov_open end
     end
     T.equal(changes, 0, "three starts on APU air: the PRSOVs stay put")
+end
+
+-- (2026-11-11) two engines at once on APU air (FCOM p.123-124: "To start
+-- two engines at the same time, it may be necessary to set three packs
+-- off"): the APU controller's air while a start is signalled (ATA70_80
+-- p.556), by the outside air (delta / sqrt(theta), at most ISA's at that
+-- pressure; estimate). The review: demand pump 1 in AUTO before the start
+-- (FCOM p.119) runs ADP 1 on the APU's air, unloaded (ADP_IDLE_FLOW); three
+-- packs and a start nowhere, the cold elevated airports too (FCOM p.895)
+T.near(B.apu_air_ratio(nil, nil), 1, 1e-12, "the APU's air: no outside air given, ISA's")
+T.near(B.apu_air_ratio(1, 308.15 / 288.15), 1 / math.sqrt(308.15 / 288.15), 1e-12, "35 °C at sea level: 0.967")
+T.near(B.apu_air_ratio(1, 253.15 / 288.15), 1, 1e-12, "-20 °C: no more than ISA's")
+T.near(B.apu_air_ratio(0.8320, 0.9657 - 30 / 288.15), 0.8320 ^ 0.9049, 1e-12,
+    "5,000 ft at ISA - 30: no more than ISA's at that pressure (before: up to 1)")
+local LEAK = 0.5 / 32           -- the hydraulic model's leakage on ADP 1's rated flow
+local function two_starts(delta, theta, alt, packs, adp, nstart)
+    local s, inp = apu_air()
+    inp.autostart = false
+    inp.amb_delta, inp.amb_theta, inp.altitude = delta, theta, alt
+    for p = 1, packs do inp.pack_flow[p] = 1 end
+    inp.adp[1], inp.adp_load[1] = adp or false, LEAK
+    run(s, inp, 10)
+    for n = 5 - (nstart or 2), 4 do inp.start_pulled[n] = true end
+    local out = run(s, inp, 5)
+    local open = 0
+    for n = 1, 4 do if out.eng[n].start_valve_open then open = open + 1 end end
+    return open, out.duct[2]
+end
+local function isa(alt)
+    local theta = 1 - 6.8756e-6 * alt
+    return theta ^ 5.2559, theta
+end
+local d1000, t1000 = isa(1000)
+local d2373, t2373 = isa(2373)
+local d13300, t13300 = isa(13300)
+local cases = {
+    -- name, delta, theta, altitude, packs, ADP 1 unloaded, starts, valves open
+    {"ISA at sea level, one pack on", 1, 1, 0, 1, false, 2, 2},
+    {"ISA at sea level, two packs on", 1, 1, 0, 2, false, 2, 1},
+    {"35 °C at sea level, one pack on", 1, 308.15 / 288.15, 0, 1, false, 2, 1},
+    {"35 °C at sea level, packs off", 1, 308.15 / 288.15, 0, 0, false, 2, 2},
+    {"5,000 ft at ISA, one pack on", 0.8320, 0.9657, 5000, 1, false, 2, 1},
+    {"5,000 ft at ISA, packs off", 0.8320, 0.9657, 5000, 0, false, 2, 2},
+    {"5,000 ft at ISA + 20, packs off", 0.8320, 0.9657 + 20 / 288.15, 5000, 0, false, 2, 2},
+    {"ISA at sea level, three packs on", 1, 1, 0, 3, false, 2, 0},
+    {"-20 °C at sea level, three packs on", 1, 253.15 / 288.15, 0, 3, false, 2, 0},
+    -- the FCOM's configuration: ADP 1 on the APU's air
+    {"ISA at sea level, one pack on, ADP 1", 1, 1, 0, 1, true, 2, 2},
+    {"1013 hPa, 25 °C, one pack on, ADP 1", 1, 298.15 / 288.15, 0, 1, true, 2, 1},
+    {"1000 hPa, 10 °C, one pack on, ADP 1", 1000 / 1013.25, 283.15 / 288.15, 0, 1, true, 2, 1},
+    {"1,000 ft at ISA, one pack on, ADP 1", d1000, t1000, 1000, 1, true, 2, 1},
+    {"ISA at sea level, packs off, ADP 1", 1, 1, 0, 0, true, 2, 2},
+    {"13,300 ft at ISA + 20, packs off, ADP 1", d13300, t13300 + 20 / 288.15, 13300, 0, true, 2, 2},
+    {"ISA at sea level, two packs on, ADP 1, one start", 1, 1, 0, 2, true, 1, 1},
+    {"ISA at sea level, three packs on, ADP 1, one start", 1, 1, 0, 3, true, 1, 0},
+    {"ISA at sea level, three packs on, one start", 1, 1, 0, 3, false, 1, 0},
+    -- the review's cold elevated airports (opened before the ISA cap)
+    {"2,373 ft at -25 °C, three packs on, one start", d2373, 248.15 / 288.15, 2373, 3, false, 1, 0},
+    {"1,487 ft at -15 °C, three packs on, one start", 0.9475, 258.15 / 288.15, 1487, 3, false, 1, 0},
+}
+for _, c in ipairs(cases) do
+    local open, duct = two_starts(c[2], c[3], c[4], c[5], c[6], c[7])
+    T.equal(open, c[8], string.format("starts on APU air, %s: %d start valve(s) open (duct %.1f psi)", c[1], c[8], duct))
+end
+-- the APU's start air only while a start is signalled (ATA70_80 p.556):
+-- without it the packs' air as before (3.2: about 30 psi with three
+-- packs); START pulled, more; the starter's cutout, back. ADP 1 unloaded
+-- takes ADP_IDLE_FLOW, at its rated flow ADP_FLOW
+do
+    local s, inp = apu_air()
+    inp.autostart = false
+    inp.pack_flow = {1, 1, 1}
+    local out = run(s, inp, 10)
+    T.near(out.duct[2], 42 * (1 - 0.3 * 3 / 3.2), 0.05, "three packs on APU air, no start: as before (3.2)")
+    inp.start_pulled[4] = true
+    out = run(s, inp, 5)
+    T.check(not out.eng[4].start_valve_open, "three packs and START 4: no start (FCOM p.895)")
+    T.near(out.duct[2], 42 * (1 - 0.3 * 3 / B.APU_START_CAP), 0.05, "START 4 signalled: the APU's start air")
+    inp.start_pulled[4] = false
+    out = run(s, inp, 5)
+    T.near(out.duct[2], 42 * (1 - 0.3 * 3 / 3.2), 0.05, "START 4 released: the packs' air again")
+    inp.adp[1], inp.adp_load[1] = true, 0
+    out = run(s, inp, 5)
+    T.near(out.duct[2], 42 * (1 - 0.3 * 3.1 / 3.2), 0.05, "ADP 1 unloaded: 0.1 of a pack")
+    inp.adp_load[1] = 1
+    out = run(s, inp, 5)
+    T.near(out.duct[2], 42 * 0.7 * (3.2 / 3.3) ^ 2, 0.05, "ADP 1 at its rated flow: 0.3 of a pack")
 end
 
 -- crossbleed start: a donor at idle (65 % N2) is not enough, at 70 % it is

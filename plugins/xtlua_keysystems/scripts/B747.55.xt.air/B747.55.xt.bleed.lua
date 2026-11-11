@@ -93,6 +93,13 @@ local function flag(v)
     return 0
 end
 
+-- (2026-11-11 review) a demand pump's hydraulic load from its system's
+-- pressure: 3,000 psi with no flow, 2,850 at the pumps' rated flow (the
+-- hydraulic model's law, B747.19.hyd_model.lua: ATA22 p.6, ATA29_32 p.26)
+local function adp_load(psi)
+    return math.max(0, math.min(1, (3000 - psi) / 150))
+end
+
 local function engine(n)
     if n == 1 then return B747bleedAir.engine1
     elseif n == 2 then return B747bleedAir.engine2
@@ -145,7 +152,16 @@ local function read_inputs(inp)
     inp.wai[2] = B747DR_bleed_wing_ai_valve_pos[1] > 0.5
     inp.adp[1] = B747DR_bleed_adp_1_psi > 0
     inp.adp[2] = B747DR_bleed_adp_4_psi > 0
+    inp.adp_load[1] = adp_load(B747DR_bleed_adp_1_psi)
+    inp.adp_load[2] = adp_load(B747DR_bleed_adp_4_psi)
     inp.altitude = simDR_indicated_altitude_pilot
+    -- (2026-11-11) the outside air for the APU's air (the bleed model's
+    -- APU_CAP): the static pressure (B747.55.xt.press.lua's binding) and the
+    -- outside air temperature (B747.55.xt.eqcool.lua's); without a pressure
+    -- yet, ISA (nil)
+    local pa = simDR_press_baro_pas
+    inp.amb_delta = (pa and pa > 1000) and pa / 101325 or nil
+    inp.amb_theta = (simDR_eqcool_oat + 273.15) / 288.15
     -- (2026-11-04) in flight by the PSEU (the pack glue's binding: one
     -- binding of it in this module)
     inp.air = B747DR_pack_pseu_pri_gnd ~= nil and B747DR_pack_pseu_pri_gnd ~= 1
