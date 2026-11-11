@@ -287,6 +287,23 @@ function B747_ge_n1_of_thrust(thrust_N)
     return B747_ge_n1_model.n1(math.max(0, thrust_N), delta, simDR_epr_mach, temperature_ratio)
 end
 
+-- the idle N1 the display is pinned to with the lever's command under it
+-- (engine_idle_control_GE, the upstream's). (2026-11-11 review) In the air,
+-- where the display is the N1 model's, not under the model's N1 at no
+-- thrust (by the Mach and the air: X-Plane's idle thrust is about 0 there):
+-- the display goes on smoothly as the lever leaves idle. Before, the
+-- upstream's idle under it at low altitude (5,000 ft and 250 kt: 31.6 %
+-- against 35.6 %): a 4 to 8 % jump up, and the commands between the two
+-- gave throttle 0 (about 10 % of the lever's travel). High up the
+-- upstream's stays the higher (FL350: 50.5 against 43.9; no source for
+-- the idle N1). Not the model's at the thrust then: the pin's 10 s lag
+-- would come into the EEC's control on every reduction
+function B747_ge_idle_pin(engine, altitude_ft)
+    local idle = engine_idle_control_GE(altitude_ft)
+    if not ge_n1_from_xp[engine] then idle = math.max(idle, B747_ge_n1_of_thrust(0)) end
+    return idle
+end
+
 function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
     local N1_corrected = 0.0
     local N1_actual = 0.0
@@ -338,7 +355,7 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
     end
 
     --Engine Idle Logic (Minimum / Approach)
-    N1_low_idle = engine_idle_control_GE(altitude_ft_in)
+    N1_low_idle = B747_ge_idle_pin(engine_in, altitude_ft_in)
     if simDR_reverser_on[engine_in] ==0 and B747DR_throttle_resolver_angle[engine_in] < tonumber(N1_low_idle) and simDR_engine_running[engine_in] == 1 then
      -- N1_actual = N1_low_idle
       N1_actual = B747_animate_value(last_N1[engine_in],N1_low_idle,0,115,0.1) 

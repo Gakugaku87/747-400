@@ -760,6 +760,29 @@ do
         string.format("GE: the slope from -1 to 2.5 kN %s, %s, %s, %s, %s, %s; at 2.6 kN %s",
             tostring(s[1]), tostring(s[2]), tostring(s[3]), tostring(s[4]), tostring(s[5]), tostring(s[6]), tostring(s[7])))
 end
+-- (2026-11-11 review) the GE's idle pin in the air: not under the N1
+-- model's at no thrust. FL350: the upstream's the higher (50.5 against
+-- 43.9); 5,000 ft at 250 kt (M.413): the model's (about 35.6 against 31.6;
+-- before, the upstream's, and the display jumped 4 % as the lever left idle)
+do
+    local OAT, ALT = "sim/cockpit2/temperature/outside_air_temp_degc", "sim/cockpit2/gauges/indicators/altitude_ft_pilot"
+    local BARO, MACH = "sim/weather/aircraft/barometer_current_pas", "sim/flightmodel/misc/machno"
+    T.near(ns.B747_ge_idle_pin(0, 35000), ns.engine_idle_control_GE(35000), 1e-9, "GE's idle pin at FL350: the upstream's (the higher)")
+    local was = {get(OAT), get(ALT), get(BARO), get(MACH)}
+    rt:set(OAT, 5)
+    rt:set(ALT, 5000)
+    rt:set(BARO, 101325 * (1 - 6.87559e-6 * 5000) ^ 5.25588)
+    rt:set(MACH, 0.413)
+    frames(1)
+    local pin, up = ns.B747_ge_idle_pin(0, 5000), ns.engine_idle_control_GE(5000)
+    T.check(pin > up + 3 and math.abs(pin - ns.B747_ge_n1_of_thrust(0)) < 1e-9,
+        string.format("GE's idle pin at 5,000 ft and M.413: the model's at no thrust %.1f (the upstream's %.1f)", pin, up))
+    rt:set(OAT, was[1])
+    rt:set(ALT, was[2])
+    rt:set(BARO, was[3])
+    rt:set(MACH, was[4])
+    frames(20)                     -- the cruise's N1 and EGT settled again
+end
 -- (2026-11-11 review) an engine short of its target at full throttle raises
 -- X-Plane's maximum thrust by 200 N a frame up to 1.1 times the rated
 -- (258,000 N); a shut down one not at all. Before, without a top, and a shut
