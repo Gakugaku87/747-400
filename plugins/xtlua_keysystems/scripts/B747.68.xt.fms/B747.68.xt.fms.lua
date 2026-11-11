@@ -2137,6 +2137,16 @@ function B747_fms_alt_sel_push()
   local st = B747_fmc_route
   local alt, mcp, ph = simDR_pressureAlt1, B747DR_fms_vnav_mcp_alt, vnavState.phase
   if ph == "CLB" and vnavState.crz_chg == "CLB" then ph = "CRZ" end
+  -- (2026-11-11 review) the push that ends the T/D's VNAV ALT: past the T/D,
+  -- still level at CRZ ALT in VNAV ALT (the AFDS's FMA 5), a cruise push
+  -- (FCOM p.649: in cruise in VNAV PTH or VNAV ALT it begins the descent; the
+  -- AFDS's own handler does that). Before, the MCP set below had already made
+  -- the phase DES, and this push deleted the next descent constraint
+  local crzA = B747BR_cruiseAlt
+  if ph == "DES" and B747DR_fms_afds_pitch == 5 and crzA and crzA > 0 and math.abs(alt - crzA) < 300 then
+    local td = B747_fms_vnav_td()
+    if td and td <= 0 then return end
+  end
   if st.active and ph ~= "CRZ" then
     local up = mcp > alt
     -- the climb's legs in the climb, the others in the descent

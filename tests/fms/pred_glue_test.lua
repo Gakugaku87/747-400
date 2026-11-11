@@ -478,6 +478,28 @@ T.equal(rt:get(VN .. "phase"), 3, "30 NM before the T/D, MCP FL290: the early de
 T.check(rt:get(VN .. "mode") == 1 and rt:get(VN .. "at") == 4, "VNAV SPD with THR")
 T.equal(rt:get(CRZA), 31000, "CRZ ALT kept")
 T.equal(cons(), n0, "the descent's constraints kept (those after the T/D)")
+-- (2026-11-11 review) past the T/D still level at CRZ ALT in the AFDS's VNAV
+-- ALT (FMA 5: the T/D's hold, the MCP since set below, the phase DES): the
+-- push that ends it is a cruise push (FCOM p.649: it begins the descent),
+-- the descent's constraints kept. Before, it deleted the next one
+do
+    local PITCH = "laminar/B747/autopilot/FMA/active_pitch_mode"
+    local altWas, pitchWas, tdWas = rt:get("sim/cockpit2/gauges/indicators/altitude_ft_pilot"), rt:get(PITCH), fms.ns.B747_fms_vnav_td
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 31000)
+    fms.ns.B747_fms_vnav_td = function() return -3 end
+    rt:set(PITCH, 5)
+    rt:set(MCPA, 2000)
+    frames(0.2)
+    T.equal(rt:get(VN .. "phase"), 3, "past the T/D, the MCP below: the descent phase")
+    local nHold = cons()
+    push()
+    T.equal(cons(), nHold, "level at CRZ ALT in VNAV ALT past the T/D, the push: the descent's constraints kept")
+    rt:set(PITCH, pitchWas)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", altWas)
+    fms.ns.B747_fms_vnav_td = tdWas
+    rt:set(MCPA, 29000)
+    frames(0.2)
+end
 -- (step 12b) the CDU on the CRZ page went to the DES page by itself
 -- (FCOM p.1345)
 T.check(line(1):find("ACT ECON DES"), "the DES page active: " .. line(1))
