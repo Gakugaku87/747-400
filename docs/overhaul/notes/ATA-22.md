@@ -1422,7 +1422,7 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 
 1. 取得（作業ツリー `Aircraft/747-400-master`。3D 一式の skip-worktree と未追跡のファイルには触らない。切り替えで衝突したら止まって利用者に聞く：CLAUDE.md）：
    - `git fetch origin claude/trusting-bohr-m25792`、`git status` で作業ツリーがきれいなことを見てから `git switch claude/trusting-bohr-m25792`。
-   - この枝は `c1f2c68c`（master = overhaul）の上で、変わるのは Lua・JSON・Markdown の 18 ファイルだけ（新しい 5 ファイルを含む）。手元の overhaul がそれより進んでいれば、その上にこの枝を merge した一時の枝で試す。
+   - この枝は `c1f2c68c`（master = overhaul）の上で、変わるのは Lua・JSON・Markdown の 19 ファイルだけ（新しい 5 ファイルを含む）。手元の overhaul がそれより進んでいれば、その上にこの枝を merge した一時の枝で試す。
    - インストール済みの Release（`Aircraft/747-400-custom-2026.11.11.3`）で飛んで確かめるなら、`plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/` の 3 ファイル（`B747.70.afds_pitch_model.lua`・`B747.70.vnav_mode_model.lua`・`B747.70.xt.autopilot.lua`）を、元を取っておいて上書きする（Release とこの枝の基点は Lua が同じ）。新しい Release は、利用者が merge を決めた後に `make_release.sh` で作る。
 2. FlyWithLua の記録スクリプト（v12：`pitch_target` の列）：`tests/flight/fwl/B747_flighttest.lua` を `X-Plane 12/Resources/plugins/FlyWithLua/Scripts/` に写し、X-Plane を起動し直す（写さなくてもシナリオの合否は出る。`spd_step.lua` は `tgt` の列で代える）。
 3. X-Plane なしの試験：`bash tests/run.sh autopilot`、`bash tests/syntax_check.sh`。
