@@ -48,7 +48,7 @@ T.near(get(ENG .. "TRA", 0), 1.51, 0.005, "P&W: full forward commands the max EP
 T.near(get(ENG .. "TRA", 3), 1.51, 0.005, "P&W: 48° TLA commands the max EPR")
 -- the idle end the EPR of no net thrust at the Mach (2026-10-31; before
 -- 0.95 at any Mach): standing, 1.00
-T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 0.5, 0.01, "P&W: 24° TLA commands half way from the idle end")
+T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 22 / 46, 0.01, "P&W: 24° TLA commands 22/46 of the way from the idle end (the flat idle to 2°)")
 T.near(get(ENG .. "TRA", 2), 1.0, 0.005, "P&W: idle lever commands the idle end (no net thrust standing: 1.00)")
 rt:set("sim/flightmodel/misc/machno", 0.78)
 frames(0.2)

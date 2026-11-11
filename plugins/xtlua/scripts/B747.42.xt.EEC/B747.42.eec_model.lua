@@ -40,6 +40,18 @@ M.MCT_ALT_TOP, M.CLB_ALT = 22000, 25000
 -- takeoff rating is reached at 48°, the forward stop is 50°; the climb
 -- rating at 35° (ATA70_80 p.208)
 M.TLA_STOP, M.TLA_TO, M.TLA_CLB = 50, 48, 35
+-- (2026-11-11) the flat idle: a forward TLA from 0 to 2° commands idle
+-- (ATA70_80 p.151, the TLA critical points: FLAT IDLE UPPER LIMIT 2°; the
+-- CF6's, the P&W's the same: an estimate), the rating reached at the same
+-- angles as before. Before, the command rose from idle at 0°, so the A/T's
+-- idle (the lever at 0.12°) stood over idle (EPR 0.0013 at sea level, about
+-- 0.003 at FL250) and the thrust
+-- control worked the throttle down with its loop (target <= idle: idle at
+-- once, not taken): with the gains fitted to X-Plane's engines on
+-- 2026-11-10 that took 25 s at FL250, and s202's level deceleration at the
+-- T/D started its descent at 316 kt (before the fit the throttle was at
+-- idle in 2 s: 308 kt)
+M.TLA_FLAT_IDLE = 2
 
 -- idle (FCOM p.877-878): approach idle in the air while the engine's
 -- nacelle anti-ice is on, the flaps are in a landing position or (570 and
@@ -883,7 +895,7 @@ function M.update(s, inp, dt)
         if faulty then degraded = degraded + 1 end
         local idle = math.min(inp.idle[n], max)
         out.max[n] = max
-        out.command[n] = idle + (top - idle) * clamp(tla / tla_full, 0, 1)
+        out.command[n] = idle + (top - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (tla_full - M.TLA_FLAT_IDLE), 0, 1)
         out.altn[n] = altn
         if inp.type == "GE" then
             out.lim_prot[n] = altn and out.command[n] > max

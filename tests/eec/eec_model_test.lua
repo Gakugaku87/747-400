@@ -87,8 +87,27 @@ local out = E.update(s, inp, DT)
 for n = 1, 4 do T.near(out.max[n], 1.51, 1e-9, "PW max EPR at sea level, engine " .. n) end
 T.near(out.command[1], 1.51, 1e-9, "full forward commands the max EPR")
 T.near(out.command[2], 1.51, 1e-9, "48° TLA commands the max EPR")
-T.near(out.command[3], 1.255, 1e-9, "24° TLA commands half way from idle")
+T.near(out.command[3], 1.0 + 0.51 * 22 / 46, 1e-9, "24° TLA commands 22/46 of the way from idle (the flat idle to 2°)")
 T.near(out.command[4], 1.0, 1e-9, "idle lever commands idle")
+-- (2026-11-11) the flat idle: a forward TLA to 2° commands idle (ATA70_80
+-- p.151), the A/T's idle (the lever at 0.12°) too; over it the command
+-- rises from idle at once. The thrust control then gives idle at once
+-- (before, 0.0015 EPR over idle: the loop worked the throttle down, 25 s at
+-- FL250 in s202)
+do
+    local s2 = E.new()
+    local i2 = E.inputs()
+    i2.type, i2.alt, i2.tat, i2.kias = "PW", 0, 15, 0
+    i2.idle = {1.0, 1.0, 1.0, 1.0}
+    i2.lever = {0.0024, 0.02, 0.04, 0.06}
+    local o2 = E.update(s2, i2, DT)
+    T.equal(o2.command[1], 1.0, "the A/T's idle (0.12° TLA): idle")
+    T.equal(o2.command[2], 1.0, "1° TLA: idle (the flat idle)")
+    T.equal(o2.command[3], 1.0, "2° TLA: idle (its upper limit)")
+    T.near(o2.command[4], 1.0 + 0.51 / 46, 1e-9, "3° TLA: 1/46 of the way to the maximum")
+    local th = E.thrust_control(E.new(), "PW", 1, o2.target[1], 1.45, 0.89, 1.0, 0.016, 1.65, 0.37, false)
+    T.equal(th, 0, "at the A/T's idle the thrust control gives idle at once (from 0.89)")
+end
 
 -- bleed: three packs off adds 0.02 to the go-around EPR; engine anti-ice on one
 -- engine changes only that engine's climb EPR
@@ -112,7 +131,7 @@ T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true), E.rating_mc
     "engine anti-ice on engine 1: the maximum continuous's own adjustment")
 T.near(out.command[2], mct30, 1e-9, "35° TLA reaches the maximum EPR above 25,000 ft")
 T.near(out.command[4], mct30, 1e-9, "full forward gives the maximum continuous above 25,000 ft")
-T.near(out.command[3], (1.0 + mct30) / 2, 1e-9, "17.5° TLA commands half way from idle")
+T.near(out.command[3], 1.0 + (mct30 - 1.0) * 15.5 / 33, 1e-9, "17.5° TLA commands 15.5/33 of the way from idle (the flat idle to 2°)")
 inp.wai = true
 out = E.update(s, inp, DT)
 T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true), E.rating_mct(PW.mct, inp, -20, 30000, 280, true)), 1e-9,
