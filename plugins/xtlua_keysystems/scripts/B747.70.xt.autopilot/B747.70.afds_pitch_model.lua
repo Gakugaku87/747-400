@@ -84,12 +84,15 @@
 -- level one, the acceleration what the thrust gives; FCOM p.1268: slowing
 -- to the E/O speed in the driftdown the rate of descent decreases to a
 -- minimum of 300 fpm. The climb's figure is an estimate (the sources give
--- none). Where near level would not leave the speed its gain (the thrust
--- short of level flight at the speed) the speed still comes first: the
--- path goes on past near level, SPD_LEVEL_FPM beyond the path that keeps
--- the speed with its target (ATA22 p.338: FLCH can take the airplane away
--- from the MCP altitude; FCOM p.646: the pitch holds the selected speed;
--- the slow gain an estimate), and as far as the way back within the speed
+-- none). With little thrust to spare (near level would leave the speed
+-- less than SPD_LEVEL_FPM of path for its gain) the path goes on to level
+-- flight at the most: while the thrust holds level flight at the speed,
+-- no altitude is given for a gain of speed. Short of that the speed still
+-- comes first: the path goes past level flight to the one that keeps the
+-- speed in step with its target (ATA22 p.338: FLCH can take the airplane
+-- away from the MCP altitude; FCOM p.646: the pitch holds the selected
+-- speed) and, for a slow gain, as far again as that is past level, at most
+-- SPD_LEVEL_FPM (an estimate); and as far as the way back within the speed
 -- protection's limits asks (FCOM p.675). What the law asks within about a
 -- knot of its target is as before, and so are T/O and G/A (their blend
 -- from the attitude).
@@ -183,9 +186,10 @@ M.SPD_MARGIN = 5
 M.SPD_STEP_KT = 0.5
 -- (2026-11-12) FLCH's and VNAV SPD's near-level path (the header's): this
 -- much climb (fpm) gaining speed in a climb, as much descent slowing in a
--- descent; and as much of path again for the speed's gain where the thrust
--- is short. Estimates: FCTM p.118 has the acceleration segment near level
--- and still a climb, the sources give no figure
+-- descent; and the most of path the speed's gain takes past level flight
+-- where the thrust is short of it. Estimates: FCTM p.118 has the
+-- acceleration segment near level and still a climb, the sources give no
+-- figure
 M.SPD_LEVEL_FPM = 100
 -- the speed laws' K_PATH times the IAS over SPD_K_KT, from SPD_K_MIN to all
 -- of it (150 kt: 0.15, 170 kt: 0.17, 250 kt up: 0.25; estimate)
@@ -549,23 +553,26 @@ function M.update(s, inp, dt)
         local toga = inp.mode == "TO" or inp.mode == "GA"
         -- (2026-11-12) FLCH and VNAV SPD against their way: the path no
         -- further than near level (`level`: the change to it from the path
-        -- flown), or, where that would not leave the speed its gain,
-        -- near level's own angle (`step`) past the path that keeps the
-        -- speed (`hold`: by its target's own rate, and back within the speed
-        -- protection's limit, FCOM p.675)
+        -- flown, `gam`). Where that would leave the speed less than near
+        -- level's own angle (`step`) of path for its gain, on to level
+        -- flight at the most; past level flight only where the thrust is
+        -- short of it: then to the path that keeps the speed (`hold`: in step
+        -- with its target, and back within the speed protection's limit,
+        -- FCOM p.675) and as far again as that is past level, at most `step`
         local way = toga and 0 or (inp.way or 0)
         if way ~= 0 then
             local fpm = inp.way_fpm or M.SPD_LEVEL_FPM
-            local level = path(way * fpm, v) - path(inp.vs, v)
+            local gam = path(inp.vs, v)
+            local level = path(way * fpm, v) - gam
             local step = path(M.SPD_LEVEL_FPM, v)
             if way > 0 then
-                local keep = math.min(want, tr + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S)
-                local hold = math.deg((s.ias_rate - keep) * KT / G)
-                dpath = math.max(dpath, math.min(level, hold - step))
+                local keep = tr + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S
+                local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
+                dpath = math.max(dpath, math.min(level, math.max(hold - step, math.min(0, 2 * hold)) - gam))
             else
-                local keep = math.max(want, tr + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S)
-                local hold = math.deg((s.ias_rate - keep) * KT / G)
-                dpath = math.min(dpath, math.max(level, hold + step))
+                local keep = tr + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S
+                local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
+                dpath = math.min(dpath, math.max(level, math.min(hold + step, math.max(0, 2 * hold)) - gam))
             end
         end
         rate = k * (dpath - lead)

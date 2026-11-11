@@ -339,11 +339,11 @@ T.equal(rt:get(VS_STATUS), 0, "V/S off")
 -- the speed law (step 3b): at the window's 200 kt, then 20 kt slower:
 -- the command down (after the step's rate has gone). (2026-11-12; notes/
 -- ATA-22.md §62) The law's way from the MCP altitude FLCH flies to: up to
--- it, down for the speed while climbing (2,000 fpm here); level, no more
--- than the near-level path lets it (the pitch model's SPD_LEVEL_FPM: the
--- airplane here does not answer, its speed not gaining, so the path goes
--- that one step on for it, a tenth of the law's rate; before, down from
--- level as fast); the MCP altitude below, down from level as before
+-- it, down for the speed while climbing (2,000 fpm here); level, held (no
+-- altitude for the speed while the thrust holds level flight: the pitch
+-- model's near-level path; the airplane here does not answer, its speed
+-- neither gaining nor falling; before, down from level as fast as from a
+-- climb); the MCP altitude below, down from level as before
 T.equal(rt:get(PITCH_LAW), 1, "FLCH: the pitch law (step 3b)")
 T.near(rt:get("laminar/B747/autopilot/pitch_target"), 200, 0.5, "(the FMC's step 9h3b) the speed law's target published: 200 kt")
 rt:set("sim/flightmodel/position/vh_ind_fpm", 2000)
@@ -356,8 +356,8 @@ rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
 frames(200)
 p1 = rt:get(PITCH_CMD)
 frames(30)
-T.check(rt:get(PITCH_CMD) > p1 - 0.06 and rt:get(PITCH_CMD) <= p1,
-    string.format("level and 20 kt slow: the command held near level (%.3f from %.3f in a second)", rt:get(PITCH_CMD), p1))
+T.check(math.abs(rt:get(PITCH_CMD) - p1) < 0.01,
+    string.format("level and 20 kt slow: the command held (%.3f from %.3f in a second)", rt:get(PITCH_CMD), p1))
 rt:set("laminar/B747/autopilot/altitude_dial_ft", 5000)
 p1 = rt:get(PITCH_CMD)
 frames(30)

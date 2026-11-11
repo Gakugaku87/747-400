@@ -8,11 +8,14 @@
 -- kt/s), and the command's way over a second is what is checked:
 --  - VNAV SPD's climb (the FMC's phase 1) 68 kt under its target, the
 --    user's flight (272 kt for 340 at 10,000 ft): climbing 1,500 fpm the
---    command down for the speed; at 100 fpm and gaining 0.5 kt/s held
---    (before, down at the law's rate: the airplane went down 300 ft);
+--    command down for the speed at the law's own rate; at 600 fpm down to
+--    near level, slower; at 100 fpm and gaining 0.5 kt/s held (before, down
+--    at the law's rate: the airplane went down 300 ft); the speed not
+--    gaining there, on down to level flight and held there;
 --  - VNAV SPD in the descent (speed intervention: the FMC's phase 3) 50 kt
 --    over its target: descending 2,000 fpm the command up; at 100 fpm of
---    descent and slowing held (before, up: a climb);
+--    descent and slowing held (before, up: a climb); the early descent's
+--    V/S (-1,250, no driftdown) is not the near-level rate;
 --  - the FMC's driftdown (its dd, its V/S -300: FCOM p.1268, the rate of
 --    descent decreases to a minimum of 300 fpm): at 100 fpm of descent the
 --    command down to its 300 fpm, held there;
@@ -107,15 +110,18 @@ T.near(rt:get(PITCH_TARGET), 340, 0.5, "the speed law's target the FMC's 340 kt"
 -- the law's own rate: 0.1 g at 316 kt of TAS, 0.345 degree a second; near
 -- level's step for the speed's gain: a quarter of 0.18 degree a second
 local d = moved(0)
-T.check(d < -0.2, string.format("VNAV SPD's climb at 1,500 fpm, 68 kt under: the command down (%.3f in a second)", d))
+T.check(d < -0.3, string.format("VNAV SPD's climb at 1,500 fpm, 68 kt under: the command down at the law's own rate (%.3f in a second)", d))
 rt:set(VSI, 100)
 d = moved(0.5)
 T.check(math.abs(d) < 0.01, string.format("at 100 fpm and gaining 0.5 kt/s: held (%.3f; before, down 0.35)", d))
 d = moved(0)
-T.check(d < 0 and d > -0.06, string.format("the speed not gaining there: near level's step more for it (%.3f)", d))
+T.check(d < -0.02 and d > -0.06, string.format("the speed not gaining there: on down to level flight, slowly (%.3f)", d))
+rt:set(VSI, 0)
+d = moved(0)
+T.check(math.abs(d) < 0.01, string.format("level and not gaining: held, no altitude for the speed (%.3f)", d))
 rt:set(VSI, 600)
 d = moved(0.5)
-T.check(d < -0.1, string.format("at 600 fpm: down to near level (%.3f)", d))
+T.check(d < -0.1 and d > -0.3, string.format("at 600 fpm: down to near level, slower than the law's own rate (%.3f)", d))
 
 -- VNAV SPD in the descent (speed intervention): the FMC's 250 kt, the
 -- airplane 50 kt over it
@@ -128,19 +134,28 @@ frames(30)
 T.equal(rt:get(PITCH), 4, "VNAV SPD in the descent")
 T.near(rt:get(PITCH_TARGET), 250, 0.5, "the target the FMC's 250 kt")
 d = moved(0)
-T.check(d > 0.2, string.format("descending 2,000 fpm, 50 kt over: the command up (%.3f)", d))
+T.check(d > 0.3, string.format("descending 2,000 fpm, 50 kt over: the command up at the law's own rate (%.3f)", d))
 rt:set(VSI, -100)
 d = moved(-0.5)
 T.check(math.abs(d) < 0.01, string.format("at 100 fpm of descent and slowing 0.5 kt/s: held (%.3f; before, up 0.35: a climb)", d))
+-- the early descent (VNAV SPD with THR to the FMC's -1,250 fpm, no
+-- driftdown): its V/S is not the near-level rate; at 600 fpm of descent
+-- and slowing, up to near level (with it for the rate, down to 1,250)
+fvn({vs = -1250, at = 4})
+rt:set(VSI, -600)
+d = moved(-0.5)
+T.check(d > 0.1 and d < 0.3, string.format("the early descent at 600 fpm, slowing: up to near level, not down to its 1,250 fpm (%.3f)", d))
+fvn({vs = 0, at = 2})
 
 -- the FMC's driftdown (the cruise phase's VNAV SPD with THR, its dd and
 -- its V/S -300): 100 fpm of descent is under its least rate
 ias = 300
 fvn({phase = 2, mode = 1, cas = 250, alt = 5000, at = 4, vs = -300, dd = 1})
+rt:set(VSI, -100)
 frames(30)
 T.equal(rt:get(PITCH), 4, "the driftdown: VNAV SPD")
 d = moved(-0.5)
-T.check(d < -0.05, string.format("the driftdown at 100 fpm of descent, slowing: down to its 300 fpm (%.3f; FCOM p.1268)", d))
+T.check(d < -0.05 and d > -0.2, string.format("the driftdown at 100 fpm of descent, slowing: down to its 300 fpm (%.3f; FCOM p.1268)", d))
 rt:set(VSI, -300)
 d = moved(-0.5)
 T.check(math.abs(d) < 0.01, string.format("at 300 fpm of descent: held (%.3f)", d))

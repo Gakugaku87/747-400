@@ -8,9 +8,10 @@
 
 - **修正案（2026-11-12 未明。枝 `claude/trusting-bohr-m25792`、draft PR、未マージ、X-Plane 未確認）**：利用者の FAOR→WSSS の飛行（Release `custom-2026.11.11.3`、347.5 t）で、VNAV SPD・THR REF の上昇が 10,000 ft の加速（目標 272 → 340 kt）の間に約 300 ft 降下した（機体の FDR の 30 秒の点で −839 fpm。notes/ATA-22.md §62）。
   - 原因：速度の則（`B747.70.afds_pitch_model.lua`）が、1.5 kt/s までの加速を全部経路から取り、FLCH・VNAV SPD には経路の下限が無かった。この重さの水平の加速は約 1.0 kt/s。
-  - 直し：FLCH・VNAV SPD で向きに逆らって速さを変える間（上昇中の加速、降下中の減速）、経路を「ほぼ水平」（上昇中 +100 fpm、降下中 −100 fpm：推定。driftdown は FCOM p.1268 の 300 fpm）より先へ行かせない。加速はその経路で推力が出す分（FCTM p.118：片発の加速は near-level climb segment）。推力が水平飛行に足りないときは、前と同じく高度を払って速さを保つ（ATA22 p.338、FCOM p.675。取り戻しは経路の 100 fpm 分でゆっくり：推定）。T/O・G/A、向きに沿う変更、目標の約 1 kt 以内は前と同じ。
+  - 直し：FLCH・VNAV SPD で向きに逆らって速さを変える間（上昇中の加速、降下中の減速）、経路を「ほぼ水平」（上昇中 +100 fpm、降下中 −100 fpm：推定。driftdown は FCOM p.1268 の 300 fpm）より先へ行かせない。加速はその経路で推力が出す分（FCTM p.118：片発の加速は near-level climb segment）。推力の余りが小さいときは水平飛行まで（推力が水平飛行を保てる間は、速さのために高度を払わない：推定）。推力が水平飛行に足りないときだけ、前と同じく高度を払って速さを保つ（ATA22 p.338、FCOM p.675。取り戻しはゆっくり、多くて経路の 100 fpm 分：推定）。T/O・G/A、向きに沿う変更、目標の約 1 kt 以内は前と同じ。
   - 資料：利用者から FCTM・ATA22・FCOM の PDF を受け取って読んだ。上昇率の数値は無い（FCTM p.118 は near level とだけ）。
-  - 試験（X-Plane なし）：全 250 本・構文 588 本が合格。遅れのある機体の模型で、前は −968 fpm・514 ft の損、今は +101 fpm・損なし、340 kt まで 85 秒（前は 62 秒）。軽い機体（水平で 2 kt/s）は前と同じ。降下中の 300 → 250 kt は −102 fpm まで（前は +513 fpm で 152 ft 上昇）。直す前のコードに新しい試験を当てると 26 件が落ちる（5 本の合計）。
+  - 試験（X-Plane なし）：全 251 本・構文 589 本が合格。遅れのある機体の模型で、前は −968 fpm・514 ft の損、今は +101 fpm・損なし、340 kt まで 85 秒（前は 62 秒）。軽い機体（水平で 2 kt/s）は前と同じ。余りが小さい上昇（水平で 0.05 kt/s）は水平飛行まで（0 fpm）。降下中の 300 → 250 kt は −102 fpm まで（前は +513 fpm で 152 ft 上昇）。直す前のコードに新しい試験を当てると 44 件が落ちる（5 本の合計）。
+  - レビュー（結論を渡さずに別のエージェントに読ませた）と変異試験で、則 1 件（余りが小さい上昇で −18〜−68 fpm の降下）、記録の解析の道具の判定 4 件、試験の穴を直した。則・VNAV のモデル・グルーを 1 か所ずつ壊した 64 通りのうち 63 通りが試験で落ち、残る 1 通りは挙動が同じ（notes/ATA-22.md §62 の「レビュー」）。
   - 基点は master（= overhaul）`c1f2c68c`。機体の Lua は Release のタグ `custom-2026.11.11.3` と同じ。
   - **次**：X-Plane のある PC で notes/ATA-22.md §62.1 の手順（新しい `s285_vnav_spd_trans_accel_heavy`・`s286_flch_descent_decel`・`s287_vnav_spd_trans_accel_light` と回帰、記録の解析 `tests/flight/tools/spd_step.lua`）。合格なら、merge するかは利用者が決める（その後 overhaul・master・custom と Release）。
 - **機体の修正（2026-11-09 夜遅く）**：利用者の依頼「他に本家の古いシステムが噛み合わせ悪くしてないか」で、Fable のエージェント 3 つに本家の古いコードを読ませ（読むだけ）、見つかった食い違いを直した。
@@ -697,7 +698,7 @@ PLAN.md §3 に書いた。要点：
   - LOC のコースのずれの積分（6-3、`B747.70.afds_roll_model.lua` の `LOC_KY`・`LOC_BIAS`、2026-11-02、notes/ATA-22.md §47）：LOC TRACK の間、ビームからの距離を望む航跡に毎秒 1/60 で積分（±2°）。値は推定（ATA22 p.359 は積分器が LOC の信号を入れることだけ）。
   - FLARE の 5 ft の下の指令の上限（6-3、`B747.70.afds_pitch_model.lua` の `HOLD_LEAD`、2026-11-02、notes/ATA-22.md §48）：主脚 5 ft の下で指令を姿勢 + 0.2° まで（推定）。
   - FLARE の着陸の姿勢（6-3、`B747.70.afds_pitch_model.lua` の `FLARE_FLOOR`、2026-11-02、notes/ATA-22.md §46）：FLARE は始めの姿勢 + 2° より機首を下げない（FCTM p.222–223 の進入 2° と接地 4〜5° から：推定）。
-  - 速度の則の「ほぼ水平」（6-3、`B747.70.afds_pitch_model.lua` の `SPD_LEVEL_FPM`、2026-11-12、notes/ATA-22.md §62。修正案の枝）：FLCH・VNAV SPD で向きに逆らって速さを変える間の経路の限りを 100 fpm（上昇中の加速は +100 fpm、降下中の減速は −100 fpm）にしたこと（FCTM p.118 は near-level climb segment と書くだけで、数値は無い）。推力が水平飛行に足りないときに速さを取り戻す分を経路の 100 fpm 分にしたこと（資料に無い）。driftdown の 300 fpm は FCOM p.1268 の値で、推定ではない。X-Plane の合否の幅（水平から 50 fpm、高度 20 ft）も推定。
+  - 速度の則の「ほぼ水平」（6-3、`B747.70.afds_pitch_model.lua` の `SPD_LEVEL_FPM`、2026-11-12、notes/ATA-22.md §62。修正案の枝）：FLCH・VNAV SPD で向きに逆らって速さを変える間の経路の限りを 100 fpm（上昇中の加速は +100 fpm、降下中の減速は −100 fpm）にしたこと（FCTM p.118 は near-level climb segment と書くだけで、数値は無い）。推力が水平飛行を保てる間は速さのために高度を払わない（余りが小さければ水平飛行まで）としたこと、推力が水平飛行に足りないときに速さを取り戻す分を、速さを保つ経路が水平を越えた分と同じだけ・多くて経路の 100 fpm 分にしたこと（どちらも資料に無い）。driftdown の 300 fpm は FCOM p.1268 の値で、推定ではない。X-Plane の合否の幅（水平から 50 fpm、高度 20 ft）も推定。
   - LOC・G/S の受信機の喪失の確かめの時間（6-3 段 5c、`B747.70.afds_model.lua` の `NCD_CONFIRM_S` 1 秒、2026-11-10、notes/ATA-22.md §59）：受信機が 2 台を切った状態が 1 秒続いたらモード故障（ATA22 p.382 に時間は無い。X-Plane の NAV 1 の G/S の旗の一瞬を故障にしないため）。
 - トランスポンダと TCAS（5-1 段 5、`B747.34.tcas_model.lua`・`B747.34.xt.tcas.lua`・`B747.61.xt.nd.lua`・`fltMgmt` に「estimate」と書いてある）：
   - X-Plane の `rel_xpndr` をトランスポンダ L の故障に。>TRANSPONDER L・R を電源なしでも出す。TCAS の故障に、選んだトランスポンダが働かないことと、L・R の RA が両方働かないことを入れた。
@@ -2399,5 +2400,6 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
   - 基点：master（= overhaul）`c1f2c68c`。Lua は Release のタグ `custom-2026.11.11.3`（`f9a166e4`）と同じことを確かめた。枝は `claude/trusting-bohr-m25792`、`Gakugaku87/747-400` の master 向けの draft PR（merge はしていない。本家には push も PR もしていない）。
   - 資料：途中で利用者から FCTM・ATA22・FCOM の PDF を受け取り（リポジトリには入れていない）、FCTM p.118、FCOM p.645–646・p.675・p.1255・p.1268、ATA22 p.276・p.284・p.332・p.338・p.344 と図 p.345 を読んだ。
   - コード：`B747.70.afds_pitch_model.lua`（`way`・`way_fpm`・`SPD_LEVEL_FPM`）、`B747.70.vnav_mode_model.lua`（出力 `way`）、`B747.70.xt.autopilot.lua`（グルー）。
-  - 試験：全 250 本（`spd_way_glue_test.lua` を新設）と構文 588 本。LuaJIT は apt の 2.1（2023-12-23 の版）。X-Plane の `DataRefs.txt` が無いので、公開の一覧（XPlane2Blender の 12.08 の写しに、developer.x-plane.com の一覧から新しい 904 件を足した）で代えた：その状態で、直す前も 249 本が全部合格。
+  - 試験：全 251 本（`spd_way_glue_test.lua`・`spd_step_tool_test.lua` を新設）と構文 589 本。LuaJIT は apt の 2.1（2023-12-23 の版）。X-Plane の `DataRefs.txt` が無いので、公開の一覧（XPlane2Blender の 12.08 の写しに、developer.x-plane.com の一覧から新しい 904 件を足した）で代えた：その状態で、直す前も 249 本が全部合格。
   - 飛行試験：シナリオ `s285`・`s286`・`s287`（新設）、`s108` に待ちを 1 つ、記録スクリプト v12（`pitch_target` の列）、解析 `tests/flight/tools/spd_step.lua`。**どれも X-Plane では回していない**（FlyWithLua のフォルダーにも置いていない）。
+  - レビューと直し（同じ日）：別のエージェントに、結論を渡さずにコードと試験を読ませた。則（余りが小さくても水平飛行は保てる推力で −18〜−68 fpm の降下になった → 水平飛行まで、に直した）、`spd_step.lua` の判定の穴 4 件（直して `spd_step_tool_test.lua` にした）、試験の穴（変異 5 件が通った → 試験を足し、64 通り中 63 通りが落ちる。残る 1 通りは挙動が同じ）。直す前の則と乱数の入力で比べ、向き無し・T/O・G/A は 24 万回、向きに沿う変更は 174 万回の更新で差なし。
