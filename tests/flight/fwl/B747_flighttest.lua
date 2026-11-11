@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "11"
+local VERSION = "12"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -129,6 +129,11 @@ local COLUMNS = {
     {"pitch_cmd", "laminar/B747/autopilot/pitch_cmd"}, {"vs_i", "sim/flightmodel/position/vh_ind_fpm"},
     {"sb_ratio", "sim/flightmodel2/controls/speedbrake_ratio"}, {"pri_gnd", "laminar/B747/gear/air_ground/pri_gnd"},
     {"fnrml_gear", "sim/flightmodel/forces/fnrml_gear"},
+    -- the speed law's target (2026-11-12: v12; kt, 0 without the speed law):
+    -- FLCH's, VNAV SPD's, T/O's and G/A's speed within the speed protection
+    -- (the acceleration against the way: notes/ATA-22.md §62,
+    -- tests/flight/tools/spd_step.lua)
+    {"pitch_target", "laminar/B747/autopilot/pitch_target"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},

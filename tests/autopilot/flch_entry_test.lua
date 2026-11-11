@@ -15,6 +15,10 @@
 -- A speed selected higher (250 to 340 kt): the thrust to the limit as
 -- before (the acceleration is wanted: the energy's rate does not count
 -- under the target); a descent entry: the levers to the aft stop as before.
+-- (2026-11-12; notes/ATA-22.md §62) The speed law's way as the glue gives
+-- it (to the MCP altitude): the climb and descent entries as before to the
+-- last digit; 250 to 340 kt from level no more down for the speed (-542
+-- fpm before: the near-level path), 340 kt 2.5 s later.
 local T = dofile("tests/lib/check.lua")("flch_entry")
 local P = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_pitch_model.lua")
 local A = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.at_model.lua")
@@ -58,6 +62,8 @@ local function run(opt)
         local want_t = math.max(T0 + (lever - LEVER0) * T_PER_LEVER, 8e3) * 4
         thrust = thrust + (want_t - thrust) * DT / tau_e
         pi.ias, pi.tas, pi.alt, pi.pitch, pi.vs = ias, ias * tas_ratio, alt, pitch, vs
+        -- FLCH's way: to the MCP altitude (the glue's; opt.no_way: none)
+        pi.way = opt.no_way and 0 or (mcp > alt and 1 or (mcp < alt and -1 or 0))
         local cmd = P.update(ps, pi, DT)
         if cmd then pitch = pitch + (cmd - pitch) * DT / tau_t end
         gam = gam + ((pitch - alpha) - gam) * DT / tau_g
@@ -68,6 +74,8 @@ local function run(opt)
         r.vmax, r.vmin = math.max(r.vmax, ias), math.min(r.vmin, ias)
         r.vsmax, r.tmax = math.max(r.vsmax, vs), math.max(r.tmax, thrust)
         r.g = math.max(r.g, math.abs(vs - last_vs) / 60 / DT / (G / FT))
+        r.vsmin = math.min(r.vsmin or vs, vs)
+        if not r.t339 and ias >= 339 then r.t339 = n * DT end
         last_vs = vs
     end
     r.ias_end, r.vs_end, r.thr_end, r.lever_end, r.fma = ias, vs, thrust / 4, lever, A.fma(as)
@@ -84,6 +92,10 @@ for _, vs0 in ipairs({0, -192}) do
     T.near(r.vs_end, want, 400, string.format("  the V/S settling on the 125 s rate (%.0f for %.0f; on the V/S alone: 3,080)", r.vs_end, want))
     T.check(r.g <= P.SPD_G * 1.1, string.format("  within SPD_G (%.2f)", r.g))
     T.near(r.ias_end, 250, 2, string.format("  on the speed at 90 s (%.1f)", r.ias_end))
+    -- (2026-11-12) the way changes nothing in the entry
+    local r0 = run({vs0 = vs0, no_way = true})
+    T.check(r.vmax == r0.vmax and r.vmin == r0.vmin and r.tmax == r0.tmax and r.vs_end == r0.vs_end,
+        string.format("  as without the way (%.2f..%.2f kt)", r0.vmin, r0.vmax))
 end
 -- 340 kt selected at the push (the climb 250/340: PERF's phase 2): the
 -- thrust to the limit, the speed up without an overshoot
@@ -92,9 +104,16 @@ T.check(r.lever_end > 0.8, string.format("250 to 340 kt: the levers at the limit
 T.check(r.vmax < 343, string.format("  no overshoot over 3 kt (%.1f)", r.vmax))
 T.near(r.ias_end, 340, 2, string.format("  at 340 kt (%.1f)", r.ias_end))
 T.check(r.vs_end > 500, string.format("  still climbing (%.0f fpm)", r.vs_end))
+-- (2026-11-12) from level, not down for the speed (the near-level path)
+local r0 = run({target = 340, mcp = 35000, seconds = 150, no_way = true})
+T.check(r.vsmin > -50, string.format("  not down for the speed (%.0f fpm at the least; %.0f without the way)", r.vsmin, r0.vsmin))
+T.check(r0.vsmin < -300, string.format("  (without the way, as before: down to %.0f fpm)", r0.vsmin))
+T.check(r.t339 and r.t339 < r0.t339 + 10, string.format("  339 kt after %.1f s (%.1f)", r.t339 or -1, r0.t339 or -1))
 -- a descent entry: the levers back to the aft stop, HOLD, the speed held
 r = run({mcp = 5000, seconds = 60})
 T.equal(r.fma, A.HOLD, "FLCH 5,000 ft down: HOLD at the aft stop")
 T.check(r.vmin > 244 and r.vmax < 253, string.format("  the speed within -6/+3 kt (%.1f..%.1f)", r.vmin, r.vmax))
 T.check(r.vs_end < -800, string.format("  descending (%.0f fpm; the model's idle gives about -1,100)", r.vs_end))
+r0 = run({mcp = 5000, seconds = 60, no_way = true})
+T.check(r.vmin == r0.vmin and r.vmax == r0.vmax and r.vs_end == r0.vs_end, "  as without the way")
 T.done()

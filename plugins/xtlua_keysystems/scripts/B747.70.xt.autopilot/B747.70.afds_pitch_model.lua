@@ -74,6 +74,33 @@
 -- (s109) the A/P's attitude loop, less damped there, and the full K_PATH
 -- swung the pitch 3.6 degrees every 12 s; on an attitude loop as damped
 -- (zeta 0.3) 0.17 left 0.6 degrees.
+-- (2026-11-12; notes/ATA-22.md §62) FLCH's and VNAV SPD's flight path while
+-- the speed is changed against their way (`way`: 1 a climb, -1 a descent)
+-- goes no further than near level: gaining on the target in a climb the
+-- path is not under SPD_LEVEL_FPM of climb, slowing to it in a descent not
+-- over as much of descent (`way_fpm` another rate: the driftdown's 300
+-- fpm). FCTM p.118 (3.30): with an engine inoperative VNAV commands a
+-- near-level climb segment for the acceleration and FLCH's F/D a near
+-- level one, the acceleration what the thrust gives; FCOM p.1268: slowing
+-- to the E/O speed in the driftdown the rate of descent decreases to a
+-- minimum of 300 fpm. The climb's figure is an estimate (the sources give
+-- none). Where near level would not leave the speed its gain (the thrust
+-- short of level flight at the speed) the speed still comes first: the
+-- path goes on past near level, SPD_LEVEL_FPM beyond the path that keeps
+-- the speed with its target (ATA22 p.338: FLCH can take the airplane away
+-- from the MCP altitude; FCOM p.646: the pitch holds the selected speed;
+-- the slow gain an estimate), and as far as the way back within the speed
+-- protection's limits asks (FCOM p.675). What the law asks within about a
+-- knot of its target is as before, and so are T/O and G/A (their blend
+-- from the attitude).
+-- Before, the law took all the acceleration asked for (up to SPD_ACCEL)
+-- from the path: at 347.5 t VNAV SPD's step to the ECON climb speed at
+-- 10,000 ft (272 to 340 kt, THR REF) asked for 1.5 kt/s where the climb
+-- thrust's excess, about 2,100 fpm, gives 0.93 to 1.07 kt/s in level
+-- flight, and the airplane went down some 300 ft in 35 s (-839 fpm in the
+-- record: the user's flight, 2026-11-12). On the lagged airplane with that
+-- excess (1.0 kt/s): down to -968 fpm and 514 ft lost before, not under
+-- 100 fpm since, within a knot of 340 kt after 85 s (62 s before).
 -- Pure: the airplane's state in, the command out.
 --   local P = B747_afds_pitch_model                       -- in XTLua, after dofile
 --   local P = dofile(".../B747.70.afds_pitch_model.lua")  -- in the tests
@@ -154,6 +181,12 @@ M.SPD_MARGIN = 5
 -- change of more than SPD_STEP_KT in a frame (a new speed selected, the
 -- protection's limit) is a step, no rate (estimate)
 M.SPD_STEP_KT = 0.5
+-- (2026-11-12) FLCH's and VNAV SPD's near-level path (the header's): this
+-- much climb (fpm) gaining speed in a climb, as much descent slowing in a
+-- descent; and as much of path again for the speed's gain where the thrust
+-- is short. Estimates: FCTM p.118 has the acceleration segment near level
+-- and still a climb, the sources give no figure
+M.SPD_LEVEL_FPM = 100
 -- the speed laws' K_PATH times the IAS over SPD_K_KT, from SPD_K_MIN to all
 -- of it (150 kt: 0.15, 170 kt: 0.17, 250 kt up: 0.25; estimate)
 M.SPD_K_KT = 250
@@ -297,6 +330,9 @@ function M.inputs()
         q = nil,            -- the dynamic pressure, Pa (ALT's gain; nil: all of K_PATH)
         weight = nil,       -- the gross weight, kg (the same)
         spd_sel = 0,        -- FLCH's and the old VNAV's speed, kt
+        way = 0,            -- FLCH's and VNAV SPD's way: 1 a climb, -1 a descent
+                            -- (the near-level path), 0 none
+        way_fpm = nil,      -- that path's rate, fpm (nil: SPD_LEVEL_FPM)
         mcp_ias = 0,        -- the IAS/MACH window (T/O's V2, G/A's), kt
         v_min = 0,          -- the minimum maneuvering speed (0: none)
         v_max = 0,          -- the maximum speed (0: none)
@@ -508,8 +544,31 @@ function M.update(s, inp, dt)
         local want = clamp((target - inp.ias) / M.SPD_TAU_S + tr, -M.SPD_ACCEL, M.SPD_ACCEL)
         local lead = path(inp.vs + (s.vs_rate or 0) * M.LEAD_S, v) - path(inp.vs, v)
         local k = M.K_PATH * clamp(inp.ias / M.SPD_K_KT, M.SPD_K_MIN, 1)
-        rate = k * (math.deg((s.ias_rate - want) * KT / G) - lead)
+        -- the flight path's change that makes that acceleration
+        local dpath = math.deg((s.ias_rate - want) * KT / G)
         local toga = inp.mode == "TO" or inp.mode == "GA"
+        -- (2026-11-12) FLCH and VNAV SPD against their way: the path no
+        -- further than near level (`level`: the change to it from the path
+        -- flown), or, where that would not leave the speed its gain,
+        -- near level's own angle (`step`) past the path that keeps the
+        -- speed (`hold`: by its target's own rate, and back within the speed
+        -- protection's limit, FCOM p.675)
+        local way = toga and 0 or (inp.way or 0)
+        if way ~= 0 then
+            local fpm = inp.way_fpm or M.SPD_LEVEL_FPM
+            local level = path(way * fpm, v) - path(inp.vs, v)
+            local step = path(M.SPD_LEVEL_FPM, v)
+            if way > 0 then
+                local keep = math.min(want, tr + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S)
+                local hold = math.deg((s.ias_rate - keep) * KT / G)
+                dpath = math.max(dpath, math.min(level, hold - step))
+            else
+                local keep = math.max(want, tr + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S)
+                local hold = math.deg((s.ias_rate - keep) * KT / G)
+                dpath = math.min(dpath, math.max(level, hold + step))
+            end
+        end
+        rate = k * (dpath - lead)
         if blend then
             -- from the attitude to the speed between 600 and 1,200 fpm
             local att = M.ATT_DEG

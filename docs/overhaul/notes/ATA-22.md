@@ -1346,3 +1346,95 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - 直したこと：K_EPR 1.0、K_N1 0.009（3 倍）。時定数は P&W 約 1.9 秒、GE 約 1.4 秒で、TO/GA から約 12 秒で基準に届く。指令にエンジンの遅れが無いので、利得を上げても揺れない（サーボの 0.2/秒が上限）。同じ利得で、SPD と THR の基準を越えた分の戻しも速くなる（サーボの速さの内）。
 - 試験：`at_model_test` に 2 件（担当の当てはめの指令：P&W はレバー 1 あたり 0.54 EPR、GE は 81 % N1。アイドルから 15 秒で基準の 0.005 EPR・0.5 % N1 の内。前の利得では落ちる）。`s142` に、80 kt で EPR が基準の ±0.01 の内の確認を足した。
 - X-Plane（カスタム acf、2026-11-11、直した後）：`s142` 33/33。TO/GA から 15.9 秒（69 kt）で HOLD、レバー 0.9598（47.99°：定格の 48°）。80 kt で EPR 1.5100、基準 1.5128（0.0028 下。エンジンの遅れの分。前は 0.016〜0.028 下）。XTLua の誤りなし。
+
+## 62. 上昇中の加速で降下した：速度の則の「ほぼ水平」の制限（2026-11-12：利用者の FAOR→WSSS の飛行）
+
+- 起きたこと（利用者の報告。インストールした Release `custom-2026.11.11.3`、機体の FDR は 30 秒間隔、時刻は現地時刻）：
+  - 347.5 t、フラップ上げ、LNAV、CMD。9,000 ft の水平（VNAV PTH・A/T SPD）から VNAV SPD・THR REF で上がり、10,000 ft（00:25:40 ごろ）で FMC の目標が約 272 kt から 340 kt へ一段で変わった（上昇の SPD TRANS は 250 kt と VREF30 + 100 の高い方で、この重さでは約 272 kt。上は ECON の上昇の速さ）。
+
+    | 時刻 | 高度 ft | 昇降率 fpm | IAS kt | ピッチ ° |
+    |---|---|---|---|---|
+    | 00:25:19 | 9,301 | +2,246 | 276.3 | 9.06 |
+    | 00:25:49 | 10,261 | +1,088 | 274.8 | 5.83 |
+    | 00:26:20 | 10,112 | −839 | 310.0 | 2.01 |
+    | 00:26:50 | 10,191 | +1,332 | 336.1 | 4.41 |
+    | 00:27:20 | 10,948 | +2,006 | 340.0 | 4.95 |
+
+  - 利用者の側のセッションの推定（昇降率と高度の両方に合う 2 次式）：頂点は約 10,340 ft（00:25:58 ごろ）、底は約 10,015 ft（00:26:33 ごろ）。約 35 秒で約 300 ft 降下した。最小の昇降率は記録に無い。
+  - エネルギーの収支（同じセッション）：推力の余りは 1,975〜2,226 fpm 相当で、加速の間も一定。全部を加速に回した水平飛行の加速は 0.93〜1.07 kt/s（IAS）。対地速度と TAS の差は 25〜28 kt で一定。推力の低下でもウインドシアでもない。AFDS のモード異常と Lua の誤りの記録は無い。
+- 基点：master（= overhaul）の `c1f2c68c`。機体の Lua は Release のタグ `custom-2026.11.11.3`（`f9a166e4`）と同じ（`git diff custom-2026.11.11.3 c1f2c68c -- '*.lua'` で変わったファイルは無い。タグに無いのは試験と道具だけ）。枝は `claude/trusting-bohr-m25792`。
+- 原因（`B747.70.afds_pitch_model.lua` の速度の則：§19）：
+  - 則は、速度の差を 15 秒で詰める加速（1.5 kt/s まで）を求め、今の加速との差を経路角に換えて（Δγ = Δa/g）、その分だけ機首を動かす。FLCH・VNAV SPD には、経路角にも昇降率にも下限が無かった（T/O・G/A には上昇率 600〜1,200 fpm の混合がある）。
+  - 68 kt の段では、差が 22.5 kt を切る（317.5 kt）まで 1.5 kt/s を求め続ける。この重さの水平の加速は約 1.0 kt/s なので、足りない分を高度で払った。
+  - 軽い機体は 1.5 kt/s を上昇したまま出せる（238 t で水平の加速は約 2 kt/s：FDR の余りを重さと抗力で換算した見積り）ので、これまでの試験（多くは 270 t 以下）では出なかった。同じ則を使う `s268`（270 t、水平から FLCH で 340 kt）は、模型では −542 fpm まで下がっていた（速さだけを見るシナリオで、昇降率は見ていなかった）。
+  - 則は IAS の変化率をそのまま慣性の加速度として経路角に換える。10,000 ft では TAS/IAS が約 1.16 なので、1.5 kt/s（IAS）は実際には約 1.75 kt/s（TAS）の分を経路から取る。今回は変えていない（利得の合わせ込みが全部これの上に載っている）。
+- 資料（2026-11-12 に利用者から FCTM・ATA22・FCOM の PDF を受け取り、該当ページを読んだ。ページ数と版の日付は REFERENCE_INDEX.md のものと同じ。リポジトリには入れていない）：
+  - FCTM p.118 (3.30)：片発のフラップ上げ。VNAV なら加速のために "a near-level climb segment" が指令される。VNAV でなければ FLCH と flaps up 機動速度 + 20 で、F/D は "a near level flap retraction segment" を指令する。加速と上昇の能力は推力重量比で決まる。上昇率の数値は無い。
+  - FCOM p.1268 (11.31.34)：driftdown。条件 3：ECON の速さ・約 1,250 fpm の降下の途中で ENG OUT を実行すると、目標は E/O LRC SPD（遅い）になり、降下率は最小 300 fpm まで減る。条件 2：速さが E/O LRC SPD を下回っていれば、取り戻すために降下率が増える。
+  - ATA22 p.344（§19 と同じ）：speed-through-elevator（T/O・G/A・FLCH）は速度の基準と ADC の速度の差が昇降舵への指令。上昇率 600〜1,200 fpm の混合は G/A（常に）と T/O（windshear・エンジン故障）だけ。
+  - ATA22 p.345（図）：SPEED SIGNAL の入力は MODE・SPD/MACH SEL・AIRSPEED/MACH・INERTIAL V/S・WINDSHEAR・ENGINE OUT。FLCH で慣性の昇降率をどう使うかは本文に無い。
+  - ATA22 p.338：ALT HOLD の既定の 1 つは「FLCH で、MCP 高度を捕まえる経路から 8,000 ft 離れた」。FLCH は MCP 高度から離れていくことがある（速さが先、と読んだ）。
+  - FCOM p.645–646：VNAV SPD・FLCH SPD はピッチで速さを保つ。p.675：AFDS の速度の保護は VNAV SPD・FLCH SPD・TO/GA で昇降舵による。
+  - 探して無かったもの：上昇中の加速の上昇率・経路角の数値、FLCH・VNAV SPD の加速度の上限（FCTM の near level・rate of climb・accelerat、ATA22 の FLCH の全箇所、FCOM の accelerat を検索した）。FCTM p.209（2 発不作動の進入復行）は、手で飛ぶ技法として「速さを増やすのに必要なら降下する」と書く。
+- 直したこと（`B747.70.afds_pitch_model.lua`）：
+  - 入力 `way`（1：上昇、−1：降下、0：無し）を足した。FLCH・VNAV SPD で、向きに逆らって速さを変える間（上昇中の加速、降下中の減速）、則が求める経路を「ほぼ水平」（`SPD_LEVEL_FPM` = 100 fpm：上昇中は +100 fpm、降下中は −100 fpm）より先へ行かせない。加速は、その経路で推力が出す分になる（FCTM p.118 の書き方と同じ）。
+  - 入力 `way_fpm` で、その経路の率を変えられる。driftdown は FMC の最小の降下率 300 fpm（FCOM p.1268）。
+  - 速さが先の場合は前と同じ向きに動く。ほぼ水平では速さが目標に近づかない（推力が水平飛行に足りない）ときは、速さを目標と同じ率で保つ経路より `SPD_LEVEL_FPM` 分だけ先まで行き、ゆっくり取り戻す（FCOM p.646、ATA22 p.338）。最小機動速度を割っていれば（降下では最大速度 − 5 kt を超えていれば）、そこまでは則の元の速さで戻す（FCOM p.675）。
+  - 則の求めが小さい間（目標の約 1 kt 以内：経路の 100 fpm 分より小さい）は前と同じ。向きに沿う変更（上昇中の減速、降下中の加速）も、T/O・G/A（自分の混合がある）も前と同じ。
+  - 向きの出どころ（グルー `afds_pitch_inputs`）：VNAV は VNAV のモードのモデルの新しい出力 `way`（FMC の上昇の段階は上、それ以外の VNAV SPD：driftdown・早期降下・速度介入・speed reversion は下、水平の間は 0）。FLCH は、FLCH が捕まえる MCP 高度（捕捉と同じ `autopilot/altitude_dial_ft`：ノブの 3 秒後）と今の高度。
+- 捨てた案：
+  - 加速の求めを推力の余りの一定の割合に抑える（エネルギーの配分）：余りの見積り（昇降率と加速度から）が要り、軽い機体の挙動も変わる。割合の根拠も資料に無い。FCTM の書き方（ほぼ水平の区間、加速は推力重量比しだい）にも合わない。
+  - `SPD_ACCEL`（1.5 kt/s）を下げる：FLCH の入りの行き過ぎ（§19・notes/ATA-34-61-FMC.md §152）や s108 の合わせ込みが全部変わる。重い機体ではそれでも足りない場合が残る。
+  - 降下しないだけの固定の下限（速さを落としても守る）：推力が足りないとき速さが落ち続ける。資料（ATA22 p.338、FCOM p.675）は速さが先。
+- 値（推定）：
+  - 100 fpm：資料は "near-level climb segment" と書くだけ。上昇が続き、ほぼ水平、という 2 点から決めた。
+  - 推力が足りないときの取り戻しの速さ（経路の 100 fpm 分：10,000 ft・272 kt で約 0.06 kt/s）：資料に無い。大きくすると、推力の余りが小さい上昇（上昇限度の近く）でまた降下して加速する。
+  - driftdown の 300 fpm だけは FCOM p.1268 の値。
+- 試験（X-Plane なし、LuaJIT）：全 250 本（前は 249 本）と構文 588 本が合格。
+  - `afds_pitch_model_test.lua` 211 件（前は 173 件）。遅れのある機体（姿勢が指令に 2 秒、経路角が姿勢に 3 秒）に、今回の条件（VNAV SPD の上昇、推力の余りは水平で 1.0 kt/s、目標を 272 → 340 kt）：
+
+    | | 最小の昇降率 | 失った高度 | 340 kt の 1 kt 以内まで | 最大の IAS |
+    |---|---|---|---|---|
+    | 前の則（`way` 無し） | −968 fpm | 514 ft | 62 秒 | 340.5 kt |
+    | 今の則 | +101 fpm | 0 ft | 85 秒 | 340.3 kt |
+    | 今の則、余り 0.93 kt/s | +101 fpm | 0 ft | 90 秒 | 340.3 kt |
+    | 今の則、余り 1.07 kt/s | +101 fpm | 0 ft | 81 秒 | 340.3 kt |
+    | 今の則、機体の遅れ 1.5 倍 | +15 fpm | 0 ft | 84 秒 | 340.2 kt |
+
+    前の則は余り 1.07 kt/s で −832 fpm・429 ft（飛行の記録は −839 fpm・約 300 ft）。
+  - 軽い機体（水平で 2.0 kt/s）：`way` の有無で同じ（最小 +882 fpm、61 秒、340.6 kt）。FLCH の 250 → 280 kt（1.2 kt/s）：最小 +161 fpm（前は −384 fpm）、41 秒（前は 37 秒）。
+  - 降下（アイドルで水平なら 1.2 kt/s 減る）、300 → 250 kt：最大 −102 fpm・上がった高度 0 ft・60 秒（前は +513 fpm・152 ft・51 秒）。遅れ 1.5 倍で最大 −29 fpm。driftdown の率（300 fpm）では最大 −298 fpm（前は +1,078 fpm）。
+  - 推力が足りない上昇（余りが 1.0 から −0.4 kt/s へ 5 秒で）：速さは 286.0 kt で下げ止まり（前は 286.3 kt）、−837 fpm までで降りながら、推力が落ちてから 259 秒で 300 kt の 1 kt 以内に戻る（前は −2,116 fpm まで下げて 45 秒）。落ち着けばどちらも −739 fpm。最小機動速度（296 kt）を割っていれば 41 秒でそこまで戻る。
+  - Mach の保持（§56）と T/O は `way` を付けても同じ。
+  - `flch_entry_test.lua` 25 件（前は 19 件。A/T の THR と閉じた模型）：グルーと同じ `way` を付けた。上昇・降下の入りは最後の桁まで同じ。水平から 340 kt は最小 −4 fpm（前は −542 fpm）、339 kt まで 64.9 秒（前は 62.4 秒）。
+  - `spd_way_glue_test.lua`（新設、18 件）：モジュールを XTLua の形で読み、VNAV SPD の上昇・降下（速度介入）・driftdown と FLCH で、グルーが向きと率を渡すことを指令の動きで見る。`afds_glue_test.lua` 283 件（前は 280 件）、`vnav_mode_model_test.lua` 96 件（前は 91 件）。
+  - 直す前のコード（`c1f2c68c`）に新しい試験を当てると落ちる：`afds_pitch_model_test.lua` は 11 件（下限の定数だけ足して回した場合。足さなければ実行時の誤り）、`spd_way_glue_test.lua` は 6 件、`afds_glue_test.lua` は 3 件、`vnav_mode_model_test.lua` は 5 件、`flch_entry_test.lua` は 1 件。
+  - `afds_glue_test.lua` の「FLCH の上昇・水平で 20 kt 遅いと指令が下がる」は、直す前の挙動だったので、「上昇中は下がる・水平ではほぼ水平の 1 段分まで・MCP 高度が下なら下がる」に書き直した。
+- X-Plane：**未実施**（このセッションはクラウドで、X-Plane が無い）。手順は §62.1。記録の解析は `tests/flight/tools/spd_step.lua`（模型から作った記録で、前の則は FAIL・今の則は PASS になることを見た）。
+- 残り：
+  - X-Plane での確認（§62.1）。機体の遅れが模型の 2 倍あると、下限の捕捉で −200 fpm 近くまで割る（模型。1.5 倍までは割らない）。割るようなら、下限への寄せ方を見直す。
+  - driftdown の減速（目標より速い所から）は X-Plane で確かめていない（`s157` は目標より遅い所から始まる）。
+  - `s108` の降下中の MCP 200 kt は、減速がほぼ水平までになるので遅くなりうる。60 秒の後に待ちを足した（warn）。
+- 同じ飛行の観測（今回は直していない）：水平への移行の行き過ぎ。FL310 で 31,167 ft（00:39:20、+167 ft、−484 fpm）、FL330 で 33,150 ft（01:46:20、+150 ft、−480 fpm）。どちらも 30 秒の点で、頂点はもう少し高いかもしれない。
+
+### 62.1 X-Plane での確認の手順（別の PC のセッション用、未実施）
+
+1. 取得（作業ツリー `Aircraft/747-400-master`。3D 一式の skip-worktree と未追跡のファイルには触らない。切り替えで衝突したら止まって利用者に聞く：CLAUDE.md）：
+   - `git fetch origin claude/trusting-bohr-m25792`、`git status` で作業ツリーがきれいなことを見てから `git switch claude/trusting-bohr-m25792`。
+   - この枝は `c1f2c68c`（master = overhaul）の上で、変わるのは Lua・JSON・Markdown の 18 ファイルだけ（新しい 5 ファイルを含む）。手元の overhaul がそれより進んでいれば、その上にこの枝を merge した一時の枝で試す。
+   - インストール済みの Release（`Aircraft/747-400-custom-2026.11.11.3`）で飛んで確かめるなら、`plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/` の 3 ファイル（`B747.70.afds_pitch_model.lua`・`B747.70.vnav_mode_model.lua`・`B747.70.xt.autopilot.lua`）を、元を取っておいて上書きする（Release とこの枝の基点は Lua が同じ）。新しい Release は、利用者が merge を決めた後に `make_release.sh` で作る。
+2. FlyWithLua の記録スクリプト（v12：`pitch_target` の列）：`tests/flight/fwl/B747_flighttest.lua` を `X-Plane 12/Resources/plugins/FlyWithLua/Scripts/` に写し、X-Plane を起動し直す（写さなくてもシナリオの合否は出る。`spd_step.lua` は `tgt` の列で代える）。
+3. X-Plane なしの試験：`bash tests/run.sh autopilot`、`bash tests/syntax_check.sh`。
+4. シナリオ（カスタム acf、P&W の既定のリバリー。1 本 8〜10 分）：
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\run_scenario.ps1 -Scenario tests\flight\scenarios\s285_vnav_spd_trans_accel_heavy.json -Acf custom`：今回の飛行の再現。約 347.5 t、SPD TRANS 250/10000（この重さでは VREF30 + 100 の約 272 kt）、CI 200 で ECON の上昇 340 kt、VNAV SPD・THR REF で 10,000 ft を通る。
+   - 同じく `s286_flch_descent_decel.json`：FLCH の降下（FL250 から、約 310 t）の途中で 300 → 260 kt。
+   - 同じく `s287_vnav_spd_trans_accel_light.json`：約 238 t の VNAV SPD（250 → 約 342 kt）。前の版でも同じ結果のはず。
+   - 回帰：`s108_afds_flch`、`s268_flch_climb_accel`（水平から FLCH で 340 kt：昇降率が負にならなくなる）、`s139_vnav_climb_crz`、`s147_vnav_spd_intervention`、`s157_eo_driftdown`、`s270_flch_mach_climb_descent`、`s109_afds_takeoff`、`s104_afds_ga`。
+5. 記録する値（FlyWithLua が毎フレーム `session.csv` に書く。判定には機体の FDR の 30 秒の点は使わない）：高度（`alt`）、昇降率（`vs_i` = `sim/flightmodel/position/vh_ind_fpm`。`vs` は VSI で遅れる）、IAS（`ias`）、ピッチ（`pitch`）、ピッチの指令（`pitch_cmd` = `laminar/B747/autopilot/pitch_cmd`）、速度の則の目標（`pitch_target` = `laminar/B747/autopilot/pitch_target`、v12）、FMC の目標（`fvn_cas`）、FMA（`fma`・`fma_at`）、重さ（`weight`）。
+   - 解析：`luajit tests/flight/tools/spd_step.lua tests/flight/runs/<その回>/session.csv`。目標の段ごとに、昇降率の最小と最大、失った・得た高度、5 kt・1 kt 以内までの秒数、行き過ぎと、下の合否を出す。
+6. 合否：
+   - 向きに逆らう変更の間（目標が変わってから IAS が目標の 5 kt 以内まで）：昇降率が水平から 50 fpm より先へ行かない（上昇中は −50 fpm 以上、降下中は +50 fpm 以下。則の「ほぼ水平」の 100 fpm から、捕捉と大気の分の 150 fpm を引いた：推定）。高度が、上昇中は 20 ft より多く下がらない、降下中は 20 ft より多く上がらない。前の版はこの飛行で約 −850 fpm・約 300 ft。
+   - 速さの捕捉は今までの幅：行き過ぎ 5 kt 以内、その後 60 秒は ±5 kt（`s268` と同じ）。FMA は VNAV SPD／FLCH SPD のまま、A/T は THR REF のまま（s285）。
+   - 加速にかかる時間は目安（模型：347.5 t で 85〜90 秒、前は 62 秒。軽い機体は前と同じ約 60 秒）。合否にはしない。
+   - `Output/B747_xtlua_errors.txt` に新しい行が無い（キットが見る）。`Log.txt` の誤りが開発のフォルダーの読み込みと同じ種類だけ。
+7. 結果は、この節の「X-Plane」の行と PROGRESS.md に書く（何本中何本、昇降率の最小、失った高度、時間）。割った場合は記録（`session.csv`）を残して、下限への寄せ方（`SPD_LEVEL_FPM`、先読み）を見直す。
