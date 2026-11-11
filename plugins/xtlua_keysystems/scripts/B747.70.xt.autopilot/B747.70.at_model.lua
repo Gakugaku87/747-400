@@ -374,8 +374,13 @@ end
 -- that acceleration, in IAS by the IAS/TAS ratio, its rate through the
 -- glue's half second; within GUST_FADE_KT of the speed limits back to the
 -- IAS. Each frame (it runs on in every mode); else the IAS and inp.accel
+-- (2026-11-11 review) none under the time acceleration (`inp.time_accel`):
+-- the acceleration is per X-Plane's second, the frames' dt real time (XTLua's
+-- SIM_PERIOD), and the complement fell short of the TAS's change (at 4 x in
+-- a 2,000 fpm descent at a constant IAS about 9 kt IAS: the A/T's SPD that
+-- slow)
 local function gust_speed(s, inp)
-    if not (inp.flaps_up and inp.accel_in and inp.tas and inp.tas > 50 and inp.ias > 30 and inp.dt > 0) then
+    if inp.time_accel or not (inp.flaps_up and inp.accel_in and inp.tas and inp.tas > 50 and inp.ias > 30 and inp.dt > 0) then
         s.gust_v = nil
         return inp.ias, inp.accel
     end

@@ -655,6 +655,26 @@ for n = 1, 100 do
     A.servo(y, v)
 end
 T.near(pf.g.cmd, pf.i.cmd, 1e-12, "no TAS or inertial acceleration given: the IAS law")
+-- (2026-11-11 review) under the time acceleration (X-Plane's time faster
+-- than the frames' dt): the IAS law in the gust (before, the complement
+-- fell short of the TAS's change)
+local pt = gust_pair{}
+for n = 1, 400 do
+    local t = n * DTG
+    local tas = TAS0 + 2 * math.max(0, math.min(1, t - 2, 7 - t))
+    pt.tl = tas
+    local ias = tas * 0.55
+    if pt.last then pt.accel = pt.accel + ((ias - pt.last) / DTG - pt.accel) * math.min(1, DTG / 0.5) end
+    pt.last = ias
+    for _, k in ipairs({"g", "i"}) do
+        local x = pt[k]
+        local v = sv{dt = DTG, ias = ias, accel = pt.accel, target = 270, v_max = 365, v_min = 200, flaps_up = true,
+            thrust = 1.4, thrust_ref = 1.6, lever = x.servo and x.cmd or 0.45, time_accel = true}
+        if k == "g" then v.tas, v.accel_in = tas, 0 end
+        A.servo(x, v)
+    end
+end
+T.near(pt.g.cmd, pt.i.cmd, 1e-12, "the time acceleration: the IAS law in the gust")
 -- the complement runs on outside SPD (HOLD), ready when SPD comes
 local sg = A.new()
 A.update(sg, inp{pitch = "FLCH"})

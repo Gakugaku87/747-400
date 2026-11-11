@@ -958,6 +958,7 @@ simDR_at_vel_z = find_dataref("sim/flightmodel/position/local_vz")
 simDR_at_wind_x = find_dataref("sim/weather/aircraft/wind_now_x_msc")
 simDR_at_wind_y = find_dataref("sim/weather/aircraft/wind_now_y_msc")
 simDR_at_wind_z = find_dataref("sim/weather/aircraft/wind_now_z_msc")
+simDR_at_sim_speed = find_dataref("sim/time/sim_speed")     -- (2026-11-11 review) the time acceleration
 -- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
 -- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
 -- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
@@ -1060,6 +1061,9 @@ local function afds_at()
 	i.tas = simDR_at_tas * 3600 / 1852
 	i.accel_in = B747_at_model.path_accel(simDR_at_acc_x, simDR_at_acc_y, simDR_at_acc_z,
 		simDR_at_vel_x, simDR_at_vel_y, simDR_at_vel_z, simDR_at_wind_x, simDR_at_wind_y, simDR_at_wind_z)
+	-- (2026-11-11 review) X-Plane's time faster than XTLua's frames (the
+	-- time acceleration): no gust complement (B747.70.at_model.lua)
+	i.time_accel = simDR_at_sim_speed > 1
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
 	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
 	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
