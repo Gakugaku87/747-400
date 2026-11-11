@@ -259,7 +259,14 @@ function M.update(s, inp, dt)
         out.start_limit[n] = inp.cutoff[n] or inp.starting[n]
         local egt = inp.egt[n]
         local red_at = lim.red
-        if out.start_limit[n] then red_at = lim.start end
+        -- (2026-11-11 review) red at the start limit while starting (ATA70_80
+        -- p.356, 77-21: the readout and the bar red when the start limit is
+        -- exceeded during starting); at CUTOFF the line shows (FCOM p.879) but
+        -- an engine just shut down is not red by it. Before, red there too:
+        -- the fire checklist's cutoff from high power kept the EGT, cooling
+        -- (B747.42.egt_model.lua), above the start limit for 1 to 10 s, red,
+        -- and its exceedance stored
+        if inp.starting[n] then red_at = lim.start end
         out.red[n] = egt >= red_at
         out.amber[n] = not out.red[n] and egt >= lim.amber and not out.inhibit
         out.white[n] = not out.red[n] and not out.amber[n]

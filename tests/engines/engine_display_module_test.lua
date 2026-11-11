@@ -34,7 +34,9 @@ frames(1)
 local f = flags(0)
 T.equal(f.line, 1, "CUTOFF: start limit line")
 T.equal(f.white, 1, "CUTOFF, EGT 300: white")
-T.equal(flags(1).red, 1, "CUTOFF, EGT 540: red at the P&W start limit")
+-- (2026-11-11 review) not starting: white (ATA70_80 p.356: red at the
+-- start limit during starting)
+T.equal(flags(1).white, 1, "CUTOFF, EGT 540, not starting: white (before: red at the start limit)")
 T.equal(rt:get(EGT .. "amber_inhibit", 0), 0, "the amber band is always shown")
 
 -- running at RUN: no line; amber in the band, white after a TO/GA push, red at the red line
