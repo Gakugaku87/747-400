@@ -362,4 +362,18 @@ do
     end
 end
 
+-- (2026-11-11 review) a new flight takes the fuel temperature from its TAT
+-- again (a second after it); before, the last flight's stayed, creeping
+-- toward the new TAT
+do
+    local rtN = aircraft({20000, 11000, 25000, 25000, 11000, 3000, 3000, 0})
+    rtN:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 30)
+    frames(rtN, 2)
+    T.equal(rtN:get("laminar/B747/fuel/temperature"), 30, "the first flight at TAT 30: 30")
+    rtN:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", -20)
+    rtN:callout("flight_start")
+    frames(rtN, 2)
+    T.equal(rtN:get("laminar/B747/fuel/temperature"), -20, "a new flight at TAT -20: -20 (before: about 30)")
+end
+
 T.done()

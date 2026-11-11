@@ -642,6 +642,10 @@ function B747_init_fuel_temp()
     B747DR_fuel_temperature = fuel_temp_display(fuel_temp_c)
     B747_fuel_temp_init_flag = 1
 end
+-- (2026-11-11 review) a new flight: taken from its TAT again
+function B747_fuel_temp_flight_start()
+    B747_fuel_temp_init_flag = 0
+end
 
 function B747_fuel_temp()
 
@@ -1689,6 +1693,11 @@ end
 function B747_flight_start_fuel()
     print("B747_flight_start_fuel")
     B747_fuel_system_start()
+    -- (2026-11-11 review) the fuel temperature from the new flight's TAT
+    -- again (a second after it, B747_fuel_temp). Before, once at the load:
+    -- a new flight elsewhere kept the last one's, creeping toward the new
+    -- TAT for hours
+    B747_fuel_temp_flight_start()
 
     -- ALL MODES ------------------------------------------------------------------------
     B747_set_fuel_all_modes()
