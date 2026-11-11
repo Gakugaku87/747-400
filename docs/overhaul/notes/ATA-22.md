@@ -1318,3 +1318,18 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - X-Plane（カスタム acf、2026-11-10 17:08〜17:51、起動し直して）：`s120_afds_mode_fail` 28/28（NAV 1 を故障にすると、受信機の変化の 1.05 秒後に LOC と G/S が故障）、`s281` 11/11、`s114` 4 回とも 20/20（注意 1 は前からの接地の後の跳ね）、`s116_autoland_xwind` 30/30、`s127_afds_land2_autoland` 30/30（それぞれ前からの注意 1）。XTLua の誤りは無い。
   - 受信機の書き残し：4 回の `s114` の進入では、FLARE の前に NAV 1 の G/S の旗は点かなかった（16:52 の一瞬は出ず、その長さはまだ分からない）。FLARE（電波高度 6〜8 ft）で両方の旗が点き、NAV 1 が NAV 2 より 1 フレーム（0.02 秒）早い。X-Plane は最後の数 ft で G/S の旗を出す（FLARE は G/S を使わないので関係ない）。
 - 残り：16:52 の NAV 1 の旗が何秒続いたか（1 秒より長ければ、まだ故障になる）。書き残しは続けるので、次に出たら長さが分かる。
+
+## 60. Opus のレビューの AFDS・A/T の指摘（2026-11-11：利用者の「Opusでレビューしよう」、[REVIEW_2026-11-11.md](../REVIEW_2026-11-11.md)）
+
+- AP-1：T/D を過ぎた VNAV ALT から押すと、次の降下の制限が消えた。FMC の側で直した（notes/ATA-34-61-FMC.md §165）。
+- AP-2：経路が FMC の高度で水平な所で、MCP をその高度に合わせると VNAV ALT になっていた（`B747.70.vnav_mode_model.lua`）。
+  - 場面：FCTM p.187 の VNAV 進入。FAF の制限（2,000 ft）まで経路が水平、MCP を 2,000 ft、FAF の約 2 NM 手前で DA（600 ft）を入れる。経路の 4 ft 上だと、DA を入れても押しが要り、FAF を過ぎて水平のままだった（4 ft 下なら下りた）。
+  - 直したこと（`fmc_holds`）：降下の経路が水平（FMC の V/S が 100 fpm より浅い）、その高さが FMC の高度、MCP が同じ高度（どれも 50 ft の内）なら、FMC が自分で保つ高度なので、MCP の捕捉は FMC の水平（"fmc"、VNAV PTH）。下りの途中で捕まえた VNAV ALT も、経路がその高度で水平になれば VNAV PTH に変わる。FMC の高度が次へ移れば終わる（FAF を過ぎれば、DA が入っていれば経路を下り、MCP が 2,000 ft のままなら VNAV ALT）。
+  - 根拠：FCOM p.1256（VNAV ALT は FMC に無い MCP 高度で水平になったとき）、p.645（VNAV PTH は FMC の高度か経路を保つ）、FCTM p.187。
+  - 前の決め（§42、LF2：経路が制限を通って下り続けるなら、同じ高度の MCP の捕捉も VNAV ALT）はそのまま。最初は経路の下りの所も VNAV PTH にしたが、LF2 の試験 11 件が落ち、決めの理由（経路は制限を通って続く）に反するので、水平の所だけにした。
+  - 試験：`vnav_mode_model_test` に 6 件（±4 ft で FAF を過ぎて下りる、下りで捕まえて水平で VNAV PTH、MCP を残せば VNAV ALT、FMC の高度でない水平は VNAV ALT）。
+- AP-3：速度介入（VNAV で窓が開いている）のとき、IAS/MACH の窓が単位を変えなかった（`B747.70.xt.autopilot.lua` の `B747_ap_ias_mach_mode`）。窓が開いていれば変える（FCOM p.643：上昇で約 .840 で Mach、降下で約 310 kt で IAS）。新しい `ias_mach_intervention_test`（9 件）。
+- AP-4：自動着陸の状態（LAND 3・LAND 2・NO AUTOLAND）が、ILS の受信機の数を 1 フレームで使っていた（§59 の確認はモード故障だけ）。NAV 1 の G/S の旗が 1 フレーム立つと、その間 NO AUTOLAND、FLARE・ROLLOUT の arm が落ち、FMA の枠が始まり直した。
+  - 直したこと（`B747.70.afds_model.lua` の `land_sensors`）：グルーが ILS の数（`ils_n`）と IRU・電波高度計の数（`iru_ra_n`）を別に渡し、ILS の減りは `NCD_CONFIRM_S`（1 秒）続いてから使う。増えればすぐ。`afds_model_test` に 5 件。
+- AP-5：IAS/MACH SEL の換算で、窓が MCP の範囲の外になった（M.80 at 15,000 ft → 410 kt、320 kt at FL370 → .96）。換算の結果を 100〜399 kt、.40〜.95 に収める（FCOM p.643）。`ias_mach_changeover_test` に 3 件。
+- AP-6：時間加速のとき、A/T の突風の補償（§162 の後の `gust_speed`）が TAS の変化を少なく数えた。慣性の加速は X-Plane の 1 秒あたり、フレームの時間（SIM_PERIOD）は実時間なので、4 倍・2,000 fpm の降下で約 9 kt ずれる（担当の見積もり）。時間加速（`sim/time/sim_speed` > 1）の間は補償を使わない（前の IAS の則）。`at_model_test` に 1 件。
