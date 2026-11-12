@@ -23,6 +23,23 @@ M.OJ = {"oj2_fwd", "oj2_aft", "oj3_fwd", "oj3_aft"}
 
 -- values from the sources (kg, airplane 109)
 M.STANDPIPE_OJ = 3200            -- override/jettison pumps 2 and 3 (FCOM p.1454)
+-- (2026-11-12 review FA-2) once a tank is down to the standpipe in the
+-- jettison its override/jettison pumps start again only this far above it:
+-- mains 1 and 4 and the reserves flow into mains 2 and 3 and the pumps
+-- went on and off 3 to 8 times a second for up to an hour (estimate: the
+-- sources give no figure)
+M.STANDPIPE_OJ_RESTART = 150
+-- (2026-11-12 review FA-2) the jettison time's actual rate over the last
+-- this many seconds (FCOM p.1468: from 90 s by the actual rate of change;
+-- before, the mean since the start, a seventh of the real time at the
+-- end of a long jettison: estimate of the span)
+M.JETT_RATE_TAU_S = 60
+-- (2026-11-12 review FA-4) the climb or the cruise (pitch 5 degrees: FCOM
+-- NP p.133-135) changes when the pitch has stayed on the other side this
+-- long: the climb's pitch crosses 5 degrees tens of times and the CWT's
+-- messages and the automatic management followed each crossing
+-- (estimate)
+M.CLIMB_HOLD_S = 30
 M.CTR_PUMP_MIN = 1185            -- CWT pumps, about 390 gal (ATA26_28 p.335, p.443)
 M.OUTBD_XFER_MIN = 3200          -- main 1 and 4 transfer down to (FCOM p.1464)
 M.RES_XFER_AT = 18200            -- main 2 or 3 (FCOM p.1464, p.1467)
@@ -139,6 +156,8 @@ function M.new()
         stab_low_t = {stab_l = 0, stab_r = 0}, stab_tripped = {stab_l = false, stab_r = false},
         ctr_low_t = {0, 0}, imbal = {}, tank_eng_reached = false,
         jett_active = false, jett_done = false, jett_done_t = 0, jett_t = 0, jett_start_qty = 0,
+        standpipe = {m2 = false, m3 = false}, jett_rate = nil, jett_last_qty = nil,   -- (2026-11-12 review FA-2)
+        climb = nil, climb_t = 0,                                                   -- (2026-11-12 review FA-4)
         ovrd_after_jett = flags(M.OJ, false), xf_main = {false, false, false, false}}
     for _, t in ipairs(M.TANKS) do s.qty[t] = 0 end
     for _, v in ipairs(M.VALVES) do s.valve[v], s.disagree_t[v] = 0, 0 end
@@ -216,7 +235,13 @@ function M.update(s, inp, dt)
     if jett then s.jett_t = s.jett_t + dt else s.jett_t, s.jett_start_qty = 0, total end
     -- the override/jettison pumps of main 2 and 3 run in the tanks with fuel,
     -- and the low tank's stop until they balance (FCOM p.1469, ATA26_28 p.540)
-    local jett_oj = {m2 = jett and q.m2 > M.STANDPIPE_OJ, m3 = jett and q.m3 > M.STANDPIPE_OJ}
+    -- (2026-11-12 review FA-2) down to the standpipe: off until well above it
+    for _, t in ipairs({"m2", "m3"}) do
+        if not jett or q[t] > M.STANDPIPE_OJ + M.STANDPIPE_OJ_RESTART then s.standpipe[t] = false
+        elseif q[t] <= M.STANDPIPE_OJ then s.standpipe[t] = true end
+    end
+    local jett_oj = {m2 = jett and q.m2 > M.STANDPIPE_OJ and not s.standpipe.m2,
+        m3 = jett and q.m3 > M.STANDPIPE_OJ and not s.standpipe.m3}
     if jett_oj.m2 and jett_oj.m3 then
         if q.m2 - q.m3 >= M.JETT_BALANCE then jett_oj.m3 = false
         elseif q.m3 - q.m2 >= M.JETT_BALANCE then jett_oj.m2 = false end
@@ -412,9 +437,27 @@ function M.update(s, inp, dt)
 
     -- ======== EICAS (FCOM p.1473-1479)
     local c = out.cas
-    local climb = inp.pitch >= M.CLIMB_PITCH
+    -- (2026-11-12 review FA-4) held for M.CLIMB_HOLD_S before it changes
+    local pitch_climb = inp.pitch >= M.CLIMB_PITCH
+    if s.climb == nil or inp.on_ground then s.climb, s.climb_t = pitch_climb, 0
+    elseif pitch_climb ~= s.climb then
+        s.climb_t = s.climb_t + dt
+        if s.climb_t >= M.CLIMB_HOLD_S then s.climb, s.climb_t = pitch_climb, 0 end
+    else
+        s.climb_t = 0
+    end
+    local climb = s.climb
+    out.climb = climb
     local any_running = inp.running[1] or inp.running[2] or inp.running[3] or inp.running[4]
     local tank_eng_q = q.m2 <= q.m1 or q.m3 <= q.m4
+    -- (2026-11-12 review FA-1) the tank-to-engine condition latched once
+    -- reached (as FUEL IMBALANCE's below), reset on the ground (estimate):
+    -- after the procedure mains 2 and 3 can again hold a few kg more than 1
+    -- and 4 (the CWT's scavenge, an inboard engine shut down), and FUEL
+    -- OVRD x4 and >X FEED CONFIG came back for the rest of the flight
+    -- (FCOM p.1474, p.1479: shown before the tank-to-engine configuration)
+    if tank_eng_q then s.tank_eng_reached = true elseif inp.on_ground then s.tank_eng_reached = false end
+    local tank_eng_done = tank_eng_q or s.tank_eng_reached
     for n = 1, 4 do c["press_eng" .. n] = out.suction[n] and inp.running[n] end
     for _, p in ipairs(M.PUMPS) do
         if p.kind == "main" then c[p.id] = low[p.id] and not c["press_eng" .. p.tank:sub(2)] end
@@ -422,7 +465,7 @@ function M.update(s, inp, dt)
     -- FUEL OVRD: low pressure while the logic runs the pump, or the switch
     -- OFF before the tank-to-engine configuration; after a jettison
     for _, id in ipairs(M.OJ) do
-        c[id] = (s.cmd[id] and low[id]) or (not sw[id] and not tank_eng_q) or s.ovrd_after_jett[id]
+        c[id] = (s.cmd[id] and low[id]) or (not sw[id] and not tank_eng_done) or s.ovrd_after_jett[id]
     end
     -- the CWT: low before start, in climb and in cruise; on with fuel left;
     -- the pressure caution 60 s after the low message or a low pump
@@ -482,7 +525,7 @@ function M.update(s, inp, dt)
     -- where it was sent (FCOM p.902; the 10 s of the crossfeed valves: estimate)
     c.apu_fuel = (s.cmd.apu_dc and low.apu_dc) or s.disagree_t.apu >= M.DISAGREE_S
     c.xfer14 = inp.xfer_main14 and (inp.on_ground or (q.m2 + q.m3) > (q.m1 + q.m4))
-    c.xfeed_config = ((not s.cmd.x1 or not s.cmd.x4) and not tank_eng_q)
+    c.xfeed_config = ((not s.cmd.x1 or not s.cmd.x4) and not tank_eng_done)
         or ((not s.cmd.x2 or not s.cmd.x3) and not flaps_to)
     -- jettison
     c.jett_noz = s.valve.noz_l > 0.5 and s.valve.noz_r > 0.5
@@ -604,10 +647,18 @@ function M.update(s, inp, dt)
     out.stab_enable, out.oj_cmd = stab_enable, oj_cmd
     -- the jettison time: the preprogrammed rate, then the actual one from
     -- 90 s (FCOM p.1468)
-    local rate = M.JETT_EST_KGH
-    if s.jett_t >= M.JETT_UPDATE_S and s.jett_start_qty > total then
-        rate = (s.jett_start_qty - total) / s.jett_t * 3600
+    -- (2026-11-12 review FA-2) the actual rate over the last
+    -- M.JETT_RATE_TAU_S (a first-order filter of the quantity's rate of
+    -- change); before, the mean since the start
+    if jett and s.jett_last_qty and dt > 0 then
+        local r = (s.jett_last_qty - total) / dt * 3600
+        s.jett_rate = s.jett_rate and (s.jett_rate + (r - s.jett_rate) * math.min(1, dt / M.JETT_RATE_TAU_S)) or r
+    elseif not jett then
+        s.jett_rate = nil
     end
+    s.jett_last_qty = jett and total or nil
+    local rate = M.JETT_EST_KGH
+    if s.jett_t >= M.JETT_UPDATE_S and s.jett_rate and s.jett_rate > 0 then rate = s.jett_rate end
     out.jett_min = (armed and total > inp.ftr) and (total - inp.ftr) / rate * 60 or 0
     return out
 end
