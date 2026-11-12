@@ -34,6 +34,7 @@ function M.inputs()
         selector = 0,              -- 0 OFF, 1 ON, 2 START
         start_pushed = false,      -- the selector was turned to START (one frame is enough)
         battery = true,            -- BATTERY switch ON (FCOM p.897: OFF stops the APU)
+        on_ground = true,          -- (2026-11-12 review FA-3) the PSEU's ground
         n1 = 0,                    -- X-Plane's APU N1, %
         running = false,           -- X-Plane's APU running
         fire = false,              -- APU fire detected (X-Plane failure)
@@ -85,7 +86,13 @@ function M.update(s, inp, dt)
         s.fault, s.start_latch = false, false
         if not inp.duct_leak then s.leak_fault = false end
     elseif inp.start_pushed or inp.selector == 2 then
-        if not s.fault and not s.leak_fault and s.state ~= M.RUNNING then s.start_latch = true end
+        -- (2026-11-12 review FA-3, the user's choice of 11-12) on the ground
+        -- only: FCOM p.895 (7.30.1): the APU can be started on the ground,
+        -- and run after takeoff up to 20,000 ft when it was running; a START
+        -- in the air does nothing (how it is prevented: estimate; no
+        -- automatic shutdown above 20,000 ft, the sources give none).
+        -- Before, it started at any altitude
+        if not s.fault and not s.leak_fault and s.state ~= M.RUNNING and inp.on_ground then s.start_latch = true end
     end
 
     -- a flight that starts with the APU running, or a start X-Plane made

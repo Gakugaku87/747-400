@@ -294,4 +294,25 @@ do
     out = run(s, inp, 13)
     T.check(not out.adv_door and out.door == 0, "freed: closed, no APU DOOR")
 end
+-- (2026-11-12 review FA-3, the user's choice) the APU starts on the ground
+-- only (FCOM p.895: started on the ground, run after takeoff up to 20,000
+-- ft); a START in the air does nothing, one running from the ground runs on
+do
+    local s, inp = fresh()
+    inp.on_ground = false
+    start(inp)
+    local out = run(s, inp, 1)
+    inp.start_pushed = false
+    out = run(s, inp, 90)
+    T.equal(out.state, A.OFF, "START in the air: no start (before: RUNNING after some 76 s)")
+    inp.on_ground = true
+    start(inp)
+    out = run(s, inp, 1)
+    inp.start_pushed = false
+    out = run(s, inp, 90)
+    T.equal(out.state, A.RUNNING, "on the ground: starts")
+    inp.on_ground = false
+    out = run(s, inp, 60)
+    T.equal(out.state, A.RUNNING, "after takeoff: still running")
+end
 T.done()
