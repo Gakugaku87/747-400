@@ -78,8 +78,14 @@ function M.update(s, inp, dt)
     -- relief or leak: estimate). The accumulator keeps the parking brake;
     -- it cannot stop the airplane (FCOM p.1516)
     if inp.bat_bus and not inp.fail_valve then s.valve = toward(s.valve, set and 1 or 0, dt / M.VALVE_S) end
+    -- (2026-11-12 review FG-3) a system pressurized after the parking brake
+    -- was set fills the brakes: FCOM p.1516 (14.20.6: the first system
+    -- pressurized after setting the parking brake sends its fluid to the
+    -- brake lines); the trapped pressure rises with it, it does not fall.
+    -- Before, what was there when the valve closed: set cold and dark,
+    -- nothing held when the chocks went (PARK BRAKE SET shown, moving)
     if s.valve >= 1 then
-        if s.trapped == nil then s.trapped = inp.psi end
+        s.trapped = math.max(s.trapped or 0, inp.psi)
     else
         s.trapped = nil
     end
@@ -88,7 +94,14 @@ function M.update(s, inp, dt)
     out.park = s.trapped and clamp(s.trapped / M.FULL_PSI, 0, 1) or 0
     if inp.chocked then out.park = 1 end
     out.valve = s.valve
-    out.release_lever = set and inp.pedal[1] >= M.PEDAL_RELEASE and inp.pedal[2] >= M.PEDAL_RELEASE
+    -- (2026-11-12 review FG-2) FCOM p.1516: set by depressing both pedals
+    -- fully, pulling the lever up, then releasing the pedals; released when
+    -- both pedals are depressed again: a release needs the pedals let go
+    -- since the set. Before, the pedals held at the set released the lever
+    -- within 0.1 s (toe brake axes, brakes_max held)
+    local both = inp.pedal[1] >= M.PEDAL_RELEASE and inp.pedal[2] >= M.PEDAL_RELEASE
+    if not set then s.pedals_let_go = false elseif not both then s.pedals_let_go = true end
+    out.release_lever = set and s.pedals_let_go and both
     -- PARK BRAKE SET: the lever set and the valve closed (ATA29_32 p.420)
     out.park_brake_set = set and s.valve >= 1
 

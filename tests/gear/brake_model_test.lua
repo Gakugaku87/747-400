@@ -68,6 +68,38 @@ do
     T.equal(out.park, 0, "the pressure let go")
     T.check(not out.park_brake_set and not out.brake_limiter, "no memo, no BRAKE LIMITER")
 end
+-- (2026-11-12 review FG-2) set as FCOM p.1516 says: both pedals fully
+-- depressed, the lever pulled, the pedals released; depressed again: released
+do
+    local s, inp = M.new(), M.inputs()
+    inp.pedal = {1, 1}
+    local out = run(s, inp, 0.5)
+    inp.lever = 1
+    out = run(s, inp, 1.5)
+    T.check(not out.release_lever, "the lever pulled with both pedals held: it stays (before: released within 0.1 s)")
+    T.check(out.park_brake_set, "PARK BRAKE SET")
+    inp.pedal = {0, 0}
+    out = run(s, inp, 0.5)
+    T.check(not out.release_lever and out.park == 1, "the pedals released: set, the pressure held")
+    inp.pedal = {1, 1}
+    out = run(s, inp, 0.1)
+    T.check(out.release_lever, "both pedals depressed again: the lever released")
+end
+-- (2026-11-12 review FG-3) set cold and dark, then a system pressurized:
+-- its pressure into the brakes (FCOM p.1516)
+do
+    local s, inp = M.new(), M.inputs()
+    inp.source, inp.psi = 0, 0
+    inp.lever = 1
+    local out = run(s, inp, 2)
+    T.check(out.park_brake_set and out.park == 0, "set with no pressure: PARK BRAKE SET, nothing held")
+    inp.source, inp.psi = 4, 3000
+    out = run(s, inp, 1)
+    T.equal(out.park, 1, "system 4 pressurized after the set: full hold (before: none)")
+    inp.source, inp.psi = 0, 0
+    out = run(s, inp, 5)
+    T.equal(out.park, 1, "the system gone again: the pressure still held")
+end
 
 -- set with only the accumulator at its precharge: a weak hold; no battery
 -- bus: the valve does not move
