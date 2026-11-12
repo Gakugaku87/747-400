@@ -337,16 +337,32 @@ end
 
 -- the point with this identifier, region and kind (a waypoint, a VOR, an
 -- NDB: as airways and holds name them); a terminal waypoint of `airport`
--- when there is no enroute one
-function M.point(db, ident, region, kind, airport)
+-- when there is no enroute one. (2026-11-12 review FMC-5) For a procedure
+-- (`airport` given): a terminal waypoint of the airport first when
+-- `terminal` (the CIFP's section P, subsection C), and of several with the
+-- identifier and region the nearest to the airport. Before, the first in
+-- the data: RJTT SULP1D's D097V (TTE R-097, 21 NM out) was Hokkaido's
+-- enroute D097V 444 NM away; NDBs and localizers of other airports with
+-- the same identifier (Russian NDBs, ZSPD ILS34L's IDD)
+function M.point(db, ident, region, kind, airport, terminal)
+    if airport and terminal then
+        for _, r in ipairs(M.terminal(db, airport, ident) or {}) do
+            if r.region == region then return r end
+        end
+    end
+    local apt = airport and db.apt[airport]
+    local best, bestd = nil, nil
     local i = db.first[ident]
     while i do
         if db.region[i] == region and (not kind or db.kind[i] == kind
             or (kind == M.VOR and db.kind[i] == M.DME)) then
-            return record(db, i)
+            if not apt then return record(db, i) end
+            local d = M.distance(apt.lat, apt.lon, db.lat[i], db.lon[i])
+            if not bestd or d < bestd then best, bestd = i, d end
         end
         i = db.nxt[i]
     end
+    if best then return record(db, best) end
     if airport then
         for _, r in ipairs(M.terminal(db, airport, ident) or {}) do
             if r.region == region then return r end
