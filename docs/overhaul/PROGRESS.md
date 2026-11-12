@@ -20,6 +20,7 @@
     - 案 5（FMC-1）：滑走路の点の無い進入は、滑走路を進入の名前から取り、E/D を MAP にする（`proc_model.approach_legs`、`xt.fms.lua`。FCOM p.1258・p.1261・p.1306–1307。LOC・LDA・RNAV の MAP は VOR 進入からの類推：推定）。試験 `appr_no_rwy_test`（試験用の航法データ `navdb_map`）。X-Plane（2026-11-13）：新しい `s295_fmc_lda22w_star_rwy` 11/11、`s296_fmc_loc16r_ed` 10/10。
     - 案 8（FMC-4）：RTE の RUNWAY の変更で SID の滑走路別の脚を入れ直す。滑走路に無い SID は SID を入れて滑走路を外し RUNWAY N/A FOR SID（文言は推定）。FCOM p.1301、FMSPG p.90・p.79。試験 `rte_runway_sid_test`。X-Plane（2026-11-13）：新しい `s298_fmc_rte_runway_sid` 10/10。
     - 案 9（FMC-5・6）：手続きの点はその空港のターミナルの点を先に、同じ識別子が複数なら空港に近いもの（`navdb.point`）。ILS は進入の脚の推奨の施設の LOC（`dest_ils`。FCOM p.1306）。試験 `proc_terminal_fix_test`。X-Plane（2026-11-13）：新しい `s300_fmc_ils_appr_navaid` 7/7。`s299_fmc_terminal_fix` は 4/5（シナリオが ARRIVALS を開けずに止まった：直して次の一覧で）。
+    - 案 10（FMC-8・9・10 の一部）：RTE HOLD の SPD/TGT ALT は CRZ ALT と同じ高度を受ける（FMSPG p.127）、有効な経路の先にある点は SELECT DESIRED WPT を出さずに使う（FCOM p.1249。RTE・LEGS の入力だけ）、周回進入の名前はそのまま。試験 `route_model_test`・`legs_downtrack_dup_test`・`proc_model_test`。X-Plane（2026-11-13）：s86・s87・s88・s90 合格。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。

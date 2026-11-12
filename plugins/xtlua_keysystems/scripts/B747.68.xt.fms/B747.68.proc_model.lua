@@ -74,6 +74,10 @@ end
 
 -- an approach's name as the CDU shows it ("I34L" -> "ILS34L")
 function M.approach_name(id)
+    -- (2026-11-12 review FMC-10) a circling approach (no runway number:
+    -- VORA, RNVA, NDBA) as it is; before, its first letter read as the
+    -- type ("VORORA")
+    if not id:match("^%u%d%d") then return id end
     local t, rest = id:match("^(%u)(.+)$")
     return t and (APPROACH_NAME[t] or t) .. rest or id
 end

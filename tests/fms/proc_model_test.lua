@@ -41,6 +41,14 @@ T.equal(table.concat(P.transitions(N, db, "ZZAA", P.STAR, "ALPHA1").trans, " "),
 T.equal(table.concat(P.list(N, db, "ZZAA", P.APPCH), " "), "I16R", "the approaches")
 T.equal(P.approach_name("I16R"), "ILS16R", "I16R shown ILS16R (FCOM p.1401)")
 T.equal(P.approach_name("R34LY"), "RNV34LY", "an RNAV approach RNV")
+-- (2026-11-12 review FMC-10) a circling approach, no runway number in its
+-- identifier (1,383 in the AIRAC 2611 data): its name as it is; before,
+-- the kind's three letters and the rest after the first letter (VORA
+-- shown VORORA, NDBA NDBDBA, VDMA VORDMA)
+T.equal(P.approach_name("VORA"), "VORA", "VORA, not VORORA")
+T.equal(P.approach_name("NDBA"), "NDBA", "NDBA, not NDBDBA")
+T.equal(P.approach_name("VDMA"), "VDMA", "VDMA, not VORDMA")
+T.equal(P.approach_name("X22-W"), "LDA22-W", "an LDA with a runway: LDA as before")
 T.equal(table.concat(P.transitions(N, db, "ZZAA", P.APPCH, "I16R").trans, " "), "ZZV", "I16R's transition")
 
 -- a SID: the runway transition, the enroute transition, the point they

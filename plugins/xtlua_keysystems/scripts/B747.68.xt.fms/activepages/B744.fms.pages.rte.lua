@@ -276,6 +276,17 @@ function B747_fmc_with_point(fmsO, ident, near, done, list, st)
   list = list or R.candidates(st or B747_fmc_route, ident, lat, lon)
   if #list == 0 then fmsO["notify"] = "NOT IN DATA BASE" return end
   if #list == 1 then done(list[1]) return end
+  -- (2026-11-12 review FMC-9) one of them downtrack in the active route:
+  -- that one, no SELECT DESIRED WPT (FCOM p.1249 (11.31.15)); before, the
+  -- page, and another one picked made an insertion and a discontinuity
+  -- in place of the direct-to
+  -- (the RTE and LEGS pages' entries: their route given; FIX INFO, REF NAV
+  -- DATA, OFFPATH and HOLD AT as before)
+  if st and st.active then
+    for _, l in ipairs(R.shown(st).legs) do
+      if l.fix and l.fix.ident == ident and not l.disc then done(l.fix) return end
+    end
+  end
   selwpt[fmsO.id] = {list = list, done = done, page = fmsO.currentPage, pgNo = fmsO.pgNo, sp = fmsO["scratchpad"]}
   fmsO.targetCustomFMC = true
   fmsO.targetPage = "SELWPT"
