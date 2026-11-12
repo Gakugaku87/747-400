@@ -1501,19 +1501,32 @@ function B747_CAS_canx_recall_display()
     B747DR_CAS_recall_ind = 0
 end
 
+-- the RCL switch let go: its position back, RECALL out 1 s later
+function B747_dsp_rcl_release()
+    B747DR_dsp_rcl_switch_pos = 0
+    if is_timer_scheduled(B747_CAS_canx_recall_display) == false then
+        run_after_time(B747_CAS_canx_recall_display, 1.0)
+    else
+        stop_timer(B747_CAS_canx_recall_display)
+        run_after_time(B747_CAS_canx_recall_display, 1.0)
+    end
+end
 function B747_dsp_rcl_switch_CMDhandler(phase, duration)
     if phase == 0 then
         B747DR_dsp_rcl_switch_pos = 1
         B747DR_CAS_rcl_count = B747DR_CAS_rcl_count + 1
         B747DR_CAS_recall_ind = 1
-    elseif phase == 2 then
-        B747DR_dsp_rcl_switch_pos = 0
-        if is_timer_scheduled(B747_CAS_canx_recall_display) == false then
-            run_after_time(B747_CAS_canx_recall_display, 1.0)
-        else
-            stop_timer(B747_CAS_canx_recall_display)
-            run_after_time(B747_CAS_canx_recall_display, 1.0)
-        end
+    end
+    -- (2026-11-12 review DSP-6) let go by itself 0.3 s after the last event
+    -- when the release never comes (a one-shot press: the CDU's EICAS
+    -- MODES RCL, a hardware button; FCOM p.1528: RCL is a momentary
+    -- switch); before, RECALL stayed on
+    if phase <= 1 then
+        if is_timer_scheduled(B747_dsp_rcl_release) then stop_timer(B747_dsp_rcl_release) end
+        run_after_time(B747_dsp_rcl_release, 0.3)
+    else
+        if is_timer_scheduled(B747_dsp_rcl_release) then stop_timer(B747_dsp_rcl_release) end
+        B747_dsp_rcl_release()
     end
 end
 
