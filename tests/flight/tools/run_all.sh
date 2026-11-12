@@ -22,8 +22,12 @@
 # TESTING.md §4.6). So X-Plane is started again (xp_restart.ps1:
 # stopped, started, the Web API waited for, the 747 loaded once as a
 # throwaway) before a scenario when its private memory is over MEM_LIMIT_GB,
-# after RESTART_EVERY scenarios, and when it is not running; a scenario with
-# no result is run once more after a restart. Restarts are "#" lines in the result file.
+# after RESTART_EVERY scenarios, when it is not running, and (2026-11-12)
+# when the system's commit left is under what a scenario needs to start
+# (xp.ps1: XP_MIN_COMMIT_FREE_GB, 8 GB; XP_FLIGHT_GB) - the same value by
+# which run_scenario.ps1 refuses to start; still under it after the start,
+# the list stops. A scenario with no result is run once more after a
+# restart. Restarts are "#" lines in the result file.
 set -u
 cd "$(dirname "$0")/../../.." || exit 2     # the aircraft folder
 OUT="tests/flight/runs/run_all_$(date +%Y%m%d_%H%M%S).txt"
@@ -85,7 +89,17 @@ esac
 # (tests/flight/kit_offline_test.ps1)
 if [ -n "${RUN_ALL_DRY:-}" ]; then printf '%s\n' "${files[@]}"; exit 0; fi
 
+# X-Plane's private memory, the commit left and the commit a scenario
+# needs, GB: "private free need"
 xp_mem() { powershell -NoProfile -ExecutionPolicy Bypass -File "$RESTART_PS" -Mem 2>/dev/null | tr -d '\r' | tail -1; }
+read_mem() {
+  local m
+  m=$(xp_mem)
+  mem=${m%% *}; m=${m#* }; free=${m%% *}; need=${m#* }
+  case "$mem" in ''|*[!0-9-]*) mem=-1 ;; esac
+  case "$free" in ''|*[!0-9]*) free=9999 ;; esac
+  case "$need" in ''|*[!0-9]*) need=0 ;; esac
+}
 
 # (up to three starts: X-Plane sometimes stays on its menus after the load,
 # paused at time 0; a new start got past it)
@@ -114,12 +128,19 @@ stop_list() {
 since=0
 for f in "${files[@]}"; do
   name=$(basename "$f" .json)
-  mem=$(xp_mem)
-  case "$mem" in ''|*[!0-9-]*) mem=-1 ;; esac
+  read_mem
   if [ "$mem" -lt 0 ]; then
     restart "not running" || stop_list "X-Plane did not come up: stopped before $name"
+    read_mem
   elif [ "$mem" -gt "$MEM_LIMIT_GB" ] || [ "$since" -ge "$RESTART_EVERY" ]; then
     restart "${mem} GB, $since scenarios" || stop_list "X-Plane did not come up: stopped before $name"
+    read_mem
+  elif [ "$free" -lt "$need" ]; then
+    restart "${free} GB of commit left, ${need} GB needed" || stop_list "X-Plane did not come up: stopped before $name"
+    read_mem
+  fi
+  if [ "$free" -lt "$need" ]; then
+    stop_list "${free} GB of commit left with X-Plane just started, ${need} GB needed: stopped before $name (close other programs or enlarge the page file)"
   fi
   t0=$SECONDS
   res=$(run_one "$f")

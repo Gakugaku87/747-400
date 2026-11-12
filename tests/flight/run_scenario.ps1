@@ -16,7 +16,10 @@
 # For the run the user's hardware is taken off (sim/joystick/has_joystick 0)
 # and sim/operation/prefs/startup_running is 1; both are put back at the
 # end, also when the run fails or is interrupted (xp.ps1; a run that was
-# killed: "xp.ps1 restore").
+# killed: "xp.ps1 restore"). X-Plane's memory and the system's commit charge
+# go into the result; with less commit left than XP_MIN_COMMIT_FREE_GB (8;
+# 0: no check; XP_FLIGHT_GB: xp.ps1) the scenario does not start (exit
+# status 3).
 #
 # Scenario file (JSON): { "name", "description", "flight": {init without
 # "aircraft"}, ["reload": true], ["livery": "<folder>"], "steps": [ ... ] }.
@@ -265,6 +268,20 @@ function Complete-Run {
     }
     $md | Out-File -Encoding utf8 (Join-Path $out 'result.md')
     return $summary
+}
+
+# (2026-11-12, TESTING.md 4.6) X-Plane's memory and the system's commit
+# charge: a flight's load that reaches the commit limit ends X-Plane (the
+# user's PC with much scenery, twice). With too little left the scenario
+# does not start
+$mem0 = Get-XPMemory
+Add-Result @{ do = 'memory' } 'info' (Format-XPMemory $mem0)
+$memWhy = Test-XPMemory $mem0
+if ($memWhy -and -not $NoFlight) {
+    Add-Result @{ do = 'memory' } 'fail' "the scenario not started: $memWhy"
+    $summary = Complete-Run
+    Write-Host "result: $out  (pass $($summary.pass), fail $($summary.fail), warn $($summary.warn))"
+    exit 3
 }
 
 # (2026-11-12, TESTING.md 4.6) the user's hardware off and X-Plane's "start
@@ -648,6 +665,8 @@ if ($xtErrors.Count -gt 0) {
 } finally {
     $back = @(Exit-XPTestSettings)
     Add-SettingNotes $back
+    $mem1 = Get-XPMemory
+    Add-Result @{ do = 'memory' } 'info' (Format-XPMemory $mem1)
     $summary = Complete-Run
 }
 if ($fatal) {

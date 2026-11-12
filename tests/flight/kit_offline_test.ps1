@@ -194,7 +194,40 @@ Check ($t -gt 100) "then the sim running ($t s)"
 [void](Exit-XPTestSettings $state)
 Equal $sim['sim/operation/prefs/startup_running'] 0 'put back at the end'
 
-# --- run_all.sh's scenarios (RUN_ALL_DRY) --
+# --- the memory ------------------------------------------------------------
+$savedMin = $env:XP_MIN_COMMIT_FREE_GB; $savedFlight = $env:XP_FLIGHT_GB
+$env:XP_MIN_COMMIT_FREE_GB = $null; $env:XP_FLIGHT_GB = $null
+$m = [ordered]@{ private_gb = 14.2; commit_used_gb = 40.0; commit_limit_gb = 51.9; commit_free_gb = 11.9 }
+Equal (Get-XPMemoryNeed $m) 8.0 'the least commit left: 8 GB'
+Check ($null -eq (Test-XPMemory $m)) '11.9 GB left: a scenario starts'
+$m.commit_free_gb = 7.9
+$why = Test-XPMemory $m
+Check ($why -match '^7\.9 GB of commit left, under the 8 GB a scenario needs' -and $why -match 'X-Plane private 14\.2 GB; commit 40 of 51\.9 GB, 7\.9 GB left') "7.9 GB left: it does not, with the numbers ($why)"
+Check ($null -eq (Test-XPMemory $m 0)) 'a least of 0: no check'
+Check ($null -eq (Test-XPMemory $m 4)) 'a least given'
+$env:XP_MIN_COMMIT_FREE_GB = '12'
+Equal (Get-XPMemoryNeed $m) 12.0 'XP_MIN_COMMIT_FREE_GB'
+$env:XP_MIN_COMMIT_FREE_GB = '0'
+Equal (Get-XPMemoryNeed $m) 0.0 'XP_MIN_COMMIT_FREE_GB 0: no check'
+$env:XP_MIN_COMMIT_FREE_GB = $null
+# with what X-Plane with a flight takes on this PC: an X-Plane still under it needs that growth too
+$env:XP_FLIGHT_GB = '28'
+$m.private_gb = 5.0; $m.commit_free_gb = 25.0
+Equal (Get-XPMemoryNeed $m) 31.0 'XP_FLIGHT_GB 28, X-Plane at 5 GB: 8 and 23 GB of growth'
+Check ((Test-XPMemory $m) -match 'under the 31 GB') 'a fresh X-Plane before a 28 GB flight with 25 GB left: not started'
+$m.private_gb = 27.0
+Equal (Get-XPMemoryNeed $m) 9.0 'X-Plane at 27 GB: 1 GB of growth'
+$m.private_gb = 30.0
+Equal (Get-XPMemoryNeed $m) 8.0 'X-Plane over it: the least alone'
+$m.private_gb = -1
+Equal (Get-XPMemoryNeed $m) 36.0 'no X-Plane yet: all of it'
+$env:XP_MIN_COMMIT_FREE_GB = $savedMin; $env:XP_FLIGHT_GB = $savedFlight
+$m.private_gb = -1; $m.commit_free_gb = 11.9
+Check ((Format-XPMemory $m) -match '^X-Plane private - GB; ') 'no X-Plane: a dash'
+$real = Get-XPMemory
+Check ($real.commit_limit_gb -gt 1 -and $real.commit_used_gb -gt 0 -and [math]::Abs($real.commit_limit_gb - $real.commit_used_gb - $real.commit_free_gb) -lt 0.2) "this PC's commit charge: used and left make the limit ($(Format-XPMemory $real))"
+
+# --- run_all.sh's scenarios (RUN_ALL_DRY) and xp_restart.ps1's memory line --
 # (Git for Windows' bash: on the PATH, or beside git's cmd folder)
 $bash = (Get-Command bash -ErrorAction SilentlyContinue).Source
 if (-not $bash) {
@@ -230,6 +263,22 @@ if ($bash) {
 } else {
     Write-Host 'no bash: run_all.sh not checked'
 }
+$memLine = (& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'tools\xp_restart.ps1') -Mem | Select-Object -Last 1)
+Check ($memLine -match '^-?\d+ \d+ \d+$') "xp_restart.ps1 -Mem: private, commit left and needed, whole GB ($memLine)"
+
+# --- a scenario that does not start: too little commit left -----------------
+$runs = Join-Path $tmp 'runs2'
+$env:XP_MIN_COMMIT_FREE_GB = '100000'
+$out = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'run_scenario.ps1') `
+    -Scenario (Join-Path $PSScriptRoot 'scenarios\s172_proc_msgs.json') -Acf custom -RunsDir $runs 2>&1
+$code = $LASTEXITCODE
+$env:XP_MIN_COMMIT_FREE_GB = $savedMin
+Equal $code 3 'too little commit left: exit status 3'
+Check ((@($out) -join "`n") -match 'FAIL memory the scenario not started: .* GB of commit left, under the 100000 GB') 'and says why'
+Check ((@($out) -join "`n") -match 'result: .*\(pass 0, fail 1, warn 0\)') 'the result line: one failure'
+$dir = @(Get-ChildItem $runs -Directory)
+Check ($dir.Count -eq 1 -and (Test-Path (Join-Path $dir[0].FullName 'result.json')) -and (Test-Path (Join-Path $dir[0].FullName 'result.md'))) 'its result files written'
+Check (-not (Test-Path -LiteralPath (Join-Path $tmp 'out\kit_settings.txt'))) 'no setting touched'
 
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

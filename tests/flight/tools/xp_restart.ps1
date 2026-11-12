@@ -1,7 +1,9 @@
 param([switch]$Mem, [int]$TimeoutSec = 300)
 # For tests/flight/tools/run_all.sh (docs/overhaul/TESTING.md 4.6):
-#   -Mem   prints X-Plane's private memory in GB (an integer), -1 when it is
-#          not running
+#   -Mem   prints three whole numbers of GB: X-Plane's private memory (-1
+#          when it is not running), the system's commit left, and the commit
+#          a scenario needs to start (xp.ps1: XP_MIN_COMMIT_FREE_GB, 8; with
+#          XP_FLIGHT_GB the growth of an X-Plane still under it as well)
 #   (none) starts X-Plane again: its processes stopped (a crash report's too),
 #          X-Plane.exe started, the Web API waited for, then a flight on RJAA
 #          34L with the engines running loads the 747 once (the first load
@@ -15,8 +17,9 @@ $ErrorActionPreference = 'Stop'
 $root = $script:XPRoot   # X-Plane's folder
 
 if ($Mem) {
-    $p = Get-Process -Name X-Plane -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($p) { [int]($p.PrivateMemorySize64 / 1GB) } else { -1 }
+    $m = Get-XPMemory
+    '{0} {1} {2}' -f [int][math]::Floor([double]$m.private_gb), [int][math]::Floor([double]$m.commit_free_gb),
+        [int][math]::Ceiling((Get-XPMemoryNeed $m))
     return
 }
 

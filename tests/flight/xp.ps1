@@ -12,6 +12,7 @@
 #   verbs: caps | get <name[index]> | set <name[index]> <value> | cmd <name> [seconds]
 #          flight <init.json> | shot [file.png] | find <text>
 #          acf [custom|stock]   the acf's path from X-Plane's folder
+#          mem                  X-Plane's memory and the system's commit charge
 #          restore              the user's X-Plane settings back after a run that died
 param([string]$Verb, [string]$Arg1, [string]$Arg2)
 
@@ -356,6 +357,49 @@ function Exit-XPTestSettings([string]$File = (Get-XPSettingsFile)) {
     return $notes
 }
 
+# --- memory (2026-11-12, TESTING.md 4.6) ----------------------------------
+# On a PC with much scenery X-Plane with a flight takes 23-28 GB; a flight's
+# load that reaches the system's commit limit ends X-Plane (twice on the
+# user's PC, 2026-11-12). X-Plane's private memory and the system's commit
+# charge, in GB (private -1 without X-Plane)
+function Get-XPMemory {
+    $p = Get-Process -Name X-Plane -ErrorAction SilentlyContinue | Select-Object -First 1
+    $os = Get-CimInstance Win32_OperatingSystem
+    $limit = [double]$os.TotalVirtualMemorySize / 1MB       # KB to GB
+    $free = [double]$os.FreeVirtualMemory / 1MB
+    return [ordered]@{
+        private_gb = $(if ($p) { [math]::Round($p.PrivateMemorySize64 / 1GB, 1) } else { -1 })
+        commit_used_gb = [math]::Round($limit - $free, 1)
+        commit_limit_gb = [math]::Round($limit, 1)
+        commit_free_gb = [math]::Round($free, 1)
+    }
+}
+# The least commit left for a scenario to start: XP_MIN_COMMIT_FREE_GB (8;
+# 0 for no check). With XP_FLIGHT_GB (what X-Plane with a flight takes on
+# this PC, e.g. 28 with much scenery; 0, not known) an X-Plane still under
+# it needs that growth as well.
+function Get-XPMemoryNeed($Mem, [double]$MinFreeGb = -1, [double]$FlightGb = -1) {
+    if ($MinFreeGb -lt 0) { $MinFreeGb = if ($env:XP_MIN_COMMIT_FREE_GB) { [double]$env:XP_MIN_COMMIT_FREE_GB } else { 8 } }
+    if ($FlightGb -lt 0) { $FlightGb = if ($env:XP_FLIGHT_GB) { [double]$env:XP_FLIGHT_GB } else { 0 } }
+    if ($MinFreeGb -le 0) { return 0.0 }
+    $grow = 0.0
+    if ($FlightGb -gt 0) { $grow = [math]::Max(0.0, $FlightGb - [math]::Max(0.0, [double]$Mem.private_gb)) }
+    return $MinFreeGb + $grow
+}
+function Format-XPMemory($Mem) {
+    "X-Plane private {0} GB; commit {1} of {2} GB, {3} GB left" -f $(if ($Mem.private_gb -lt 0) { '-' } else { $Mem.private_gb }),
+        $Mem.commit_used_gb, $Mem.commit_limit_gb, $Mem.commit_free_gb
+}
+# $null when the commit left is enough, else why not
+function Test-XPMemory($Mem, [double]$MinFreeGb = -1, [double]$FlightGb = -1) {
+    $need = Get-XPMemoryNeed $Mem $MinFreeGb $FlightGb
+    if ($need -gt 0 -and [double]$Mem.commit_free_gb -lt $need) {
+        return "{0} GB of commit left, under the {1} GB a scenario needs ({2}): close other programs, enlarge the page file or start X-Plane again" -f `
+            $Mem.commit_free_gb, $need, (Format-XPMemory $Mem)
+    }
+    return $null
+}
+
 if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
     switch ($Verb) {
         'caps'   { Get-XPCapabilities | ConvertTo-Json -Depth 5 }
@@ -366,6 +410,7 @@ if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
         'shot'   { Save-XPScreenshot $Arg1 }
         'find'   { Find-XPDataref $Arg1 }
         'acf'    { Get-XPAircraftRel $(if ($Arg1) { $Arg1 } else { 'custom' }) }
+        'mem'    { Format-XPMemory (Get-XPMemory) }
         'restore' {
             $notes = @(Exit-XPTestSettings)
             if ($notes.Count -eq 0) { "nothing to put back (no $(Get-XPSettingsFile))" } else { $notes }
