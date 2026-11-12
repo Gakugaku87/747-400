@@ -126,6 +126,7 @@ function M.new(opts)
         types = {},
         values = {},      -- name -> number, string, or table indexed from 0
         written = {},     -- names a module wrote (set/array write), for snapshots
+        bound = {},       -- names the modules looked up (find_dataref): tests/static/sim_datarefs_test.lua
         modules = {},
         commands = {},    -- name -> {handler, before, after} from replace/wrap
         command_log = {}, -- {name, phase} for every start/stop/once from a module
@@ -217,7 +218,7 @@ end
 -- The C functions XTLua's init.lua expects, bound to this runtime.
 local function c_functions(rt, module)
     local c = {}
-    c.XTLuaFindDataRef = function(name) return name end
+    c.XTLuaFindDataRef = function(name) rt.bound[name] = true return name end
     c.XTLuaGetDataRefType = function(name) return rt:type_of(name) end
     c.XTLuaGetNumber = function(name)
         if rt.lagged[name] then

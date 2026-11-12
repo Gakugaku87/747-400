@@ -75,8 +75,10 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\xp.ps1')
 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
-$acfRel = 'Aircraft/747-400-master/747-400_custom.acf'
-$acfFile = Join-Path $repo '747-400_custom.acf'
+# (2026-11-12) the aircraft folder this kit is in, whatever its name (xp.ps1);
+# before, Aircraft/747-400-master by name
+$acfRel = Get-XPAircraftRel 'custom'
+$acfFile = Join-Path $repo (Split-Path -Leaf $acfRel)
 $LB = 0.45359237
 $inv = [Globalization.CultureInfo]::InvariantCulture
 $utf8 = New-Object Text.UTF8Encoding($false)

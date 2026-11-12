@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "12"
+local VERSION = "13"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -134,6 +134,13 @@ local COLUMNS = {
     -- (the acceleration against the way: notes/ATA-22.md §62,
     -- tests/flight/tools/spd_step.lua)
     {"pitch_target", "laminar/B747/autopilot/pitch_target"},
+    -- the real time (2026-11-12: v13; seconds since the recording began, the
+    -- process's clock: os.clock is the elapsed time on Windows). X-Plane does
+    -- not let the sim's time move more than about 1/19.9 s a frame, so a frame
+    -- that took seconds shows only as frame_rate at that floor: with this
+    -- column its length (tests/flight/tools/frame_jumps.lua; the jumps right
+    -- after X-Plane stood still, PROGRESS.md)
+    {"wall"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},
@@ -190,6 +197,7 @@ end
 local session, events = nil, nil
 local buffer, buffered = {}, 0
 local t0 = 0
+local wall0 = 0
 local last = {}
 local ext = {}
 local function track(col, v)
@@ -236,6 +244,7 @@ function B747FT_start()
     session:write(table.concat(names, ",") .. "\n")
     events:write("sim_t,t,state,from,to\n")
     t0 = sim_time()
+    wall0 = os.clock()
     last, ext = {}, {}
     events:write(string.format("%s,0,start,,%s\n", fmt(t0), AIRCRAFT_FILENAME or ""))
     events:flush()
@@ -279,6 +288,8 @@ function B747FT_frame()
         local v
         if c[1] == "t" then
             v = now - t0
+        elseif c[1] == "wall" then
+            v = os.clock() - wall0
         elseif c[1] == "thrust" then
             if #thrust_vars > 0 then
                 local sum = 0
@@ -289,7 +300,7 @@ function B747FT_frame()
             v = value(c[1])
         end
         row[i] = fmt(v)
-        if c[1] ~= "t" and c[1] ~= "sim_t" then track(c[1], v) end
+        if c[1] ~= "t" and c[1] ~= "sim_t" and c[1] ~= "wall" then track(c[1], v) end
     end
     buffer[#buffer + 1] = table.concat(row, ",") .. "\n"
     buffered = buffered + 1
