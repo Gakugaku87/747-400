@@ -1395,8 +1395,16 @@ function B747_fms_pred_input(crz)
   -- after a missed approach the same, its runway ahead no E/D either
   local missed = vnavMissed ~= nil
   for _, l in ipairs(r.passed) do
-    if l.proc == "APPR" and l.fix and l.fix.kind == "RWY" then missed = true end
+    if l.proc == "APPR" and ((l.fix and l.fix.kind == "RWY") or l.missed) then missed = true end
   end
+  -- (2026-11-12 review FMC-1) an approach with no runway waypoint (LOC,
+  -- LDA, VOR, NDB and some RNAV: its MAP before the threshold): its missed
+  -- approach's legs give no E/D, the last constraint before them (the
+  -- MAP's) is it. Before, the missed approach's last constraint was (RJAA
+  -- LOC16R: BINKS 6000A, the T/D 49 NM late). FCOM p.1258: a VOR
+  -- approach's E/D is its missed approach point; the others without a
+  -- runway waypoint the same: estimate
+  local mapPassed = false
   -- the distances: great circles from the point before (the airplane's
   -- for the first), across a conditional leg or a discontinuity too (an
   -- estimate; a conditional leg itself none)
@@ -1430,7 +1438,8 @@ function B747_fms_pred_input(crz)
     legs[i] = {name = l.fix and l.fix.ident or "", dist = d, con = con, p0 = p0, p1 = l.fix,
       gp = (l.vangle and l.vangle < 0) and -l.vangle or nil, step = l.step, proc = l.proc,
       spd = (l.spd and not missed_leg(l)) and l.spd or nil}
-    if con and not rwy and not (missed and l.proc == "APPR") then lastCon = i end
+    if l.missed and l.proc == "APPR" then mapPassed = true end
+    if con and not rwy and not mapPassed and not (missed and l.proc == "APPR") then lastCon = i end
   end
   -- (step LF2; notes/ATA-34-61-FMC.md §127) each leg the longer (a turn
   -- flown over its fix) or shorter (a fly-by turn) by the turn into it as
