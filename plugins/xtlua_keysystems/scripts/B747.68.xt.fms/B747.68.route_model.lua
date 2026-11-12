@@ -241,6 +241,18 @@ function M.set_origin(st, icao)
     r.sid, r.star, r.appr, r.windAlts = nil, nil, nil, nil
 end
 
+-- (2026-11-12 review FMC-2) two fixes the same (identifier and place)
+local function same_fix(a, b)
+    return a and b and a.ident == b.ident and math.abs(a.lat - b.lat) < 1e-4 and math.abs(a.lon - b.lon) < 1e-4
+end
+-- the active route's active leg (its first) when a STAR's or an approach's
+-- with a waypoint, else nil
+local function active_proc_leg(st, r)
+    local l = st.active and r.legs[1]
+    if l and not l.disc and l.fix and (l.proc == "STAR" or l.proc == "APPR") then return l end
+    return nil
+end
+
 -- DEST (FCOM p.1289): an airport of the database; a new destination
 -- deletes the arrival procedures of the one before (FMSPG p.79), the
 -- discontinuity before them with them (estimate)
@@ -249,10 +261,20 @@ function M.set_dest(st, icao)
     if not apt then return M.NOT_IN_DATA_BASE end
     local r = M.edit(st)
     if r.dest and r.dest.ident ~= apt.ident and (r.star or r.appr) then
+        -- (2026-11-12 review FMC-2) the active leg kept when it is the
+        -- procedures' (FMSPG p.79 (3.2-19): the legs of the procedure after
+        -- the active leg are cleared); before, every leg went (no route
+        -- left, LNAV invalid)
+        local act = active_proc_leg(st, r)
+        if act then table.remove(r.legs, 1) end
         strip(r, "STAR")
         strip(r, "APPR")
         r.star, r.appr = nil, nil
         while r.legs[#r.legs] and r.legs[#r.legs].disc do r.legs[#r.legs] = nil end
+        if act then
+            act.proc = nil
+            table.insert(r.legs, 1, act)
+        end
     end
     r.dest = apt
 end
@@ -1196,9 +1218,37 @@ function M.set_arrival(st, star, appr)
     for _, l in ipairs(r.legs) do if (l.proc == "STAR" or l.proc == "APPR") and (l.fix or l.name) then old = old + 1 end end
     if count(r) - old + count_new(new) > M.MAX_WPTS then return M.ROUTE_FULL end
     r = M.edit(st)
+    -- (2026-11-12 review FMC-2) the active leg in the arrival kept: a new
+    -- approach or STAR selected while flying the STAR or the approach took
+    -- out every leg of the procedures and put the whole new arrival back
+    -- from its start (the passed waypoints again, 45 NM behind at WSSS;
+    -- LNAV off its path). The active leg stays and the new arrival goes on
+    -- from its waypoint, or after a discontinuity when the new arrival does
+    -- not pass it (FMSPG p.79 (3.2-19) for a new DEST: the legs of the
+    -- procedure after the active leg go, the active leg stays; ARRIVALS by
+    -- the same rule: estimate)
+    local act = active_proc_leg(st, r)
+    if act then table.remove(r.legs, 1) end
     strip(r, "STAR")
     strip(r, "APPR")
     while r.legs[#r.legs] and r.legs[#r.legs].disc do r.legs[#r.legs] = nil end
+    if act then
+        table.insert(r.legs, 1, act)
+        local k = nil
+        for i, l in ipairs(new) do
+            if l.fix and same_fix(l.fix, act.fix) then k = i break end
+        end
+        if k then
+            act.proc = new[k].proc
+            for i = k + 1, #new do r.legs[#r.legs + 1] = new[i] end
+        else
+            act.proc = nil
+            r.legs[#r.legs + 1] = {disc = true}
+            for _, l in ipairs(new) do r.legs[#r.legs + 1] = l end
+        end
+        r.star, r.appr = sel.star, sel.appr
+        return
+    end
     local first = new[1]
     if first and #r.legs > 0 then
         local j = first.fix and find_leg(r, first.fix, 1)
