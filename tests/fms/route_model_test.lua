@@ -387,6 +387,17 @@ T.check(select(2, R.hold_at(st, 3, nil)) == R.INVALID_ENTRY and select(2, R.hold
     "not at a hold, nor twice")
 T.equal(R.find_fix(R.shown(st), fix("BRAVO")), 2, "BRAVO's leg, not its hold")
 T.equal(table.concat(R.holds(R.shown(st)), " "), "3", "the holds")
+-- (2026-11-12 review FMC-8) the hold's SPD/TGT ALT at the cruise altitude
+-- (FMSPG p.127 (3.3-18): a holding pattern at the cruise altitude takes
+-- it; before, INVALID ENTRY as for any waypoint, so a hold at the cruise
+-- altitude took no speed), not above it, not as a block's top; a waypoint
+-- not a hold still not at the cruise altitude
+T.equal(R.set_constraint(st, 3, {spd = 230, alt = 35000}, 35000), nil, "the hold at the cruise altitude: 230/FL350")
+T.equal(R.shown(st).legs[3].spd, 230, "its speed")
+T.equal(R.set_constraint(st, 3, {alt = 37000}, 35000), R.INVALID_ENTRY, "the hold above the cruise altitude")
+T.equal(R.set_constraint(st, 3, {alt = 33000, alt2 = 35000, akind = "AB"}, 35000), R.INVALID_ENTRY, "a block up to the cruise altitude at the hold")
+T.equal(R.set_constraint(st, 2, {alt = 35000}, 35000), R.INVALID_ENTRY, "BRAVO, not a hold, at the cruise altitude")
+R.delete_constraint(st, 3)
 -- the default leg time (FMSPG p.222-223)
 R.set_constraint(st, 2, {alt = 15000, akind = "A"}, nil)
 R.hold_at(st, 4, nil)

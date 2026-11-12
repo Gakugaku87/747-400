@@ -876,7 +876,11 @@ function M.set_constraint(st, i, c, crz_alt)
         if not (c.spd and l.alt) then return M.INVALID_ENTRY end
     else
         local top = math.max(c.alt, c.alt2 or c.alt)
-        if crz_alt and top >= crz_alt then return M.INVALID_ENTRY end
+        -- (2026-11-12 review FMC-8) at the cruise altitude only on a
+        -- holding pattern's leg and not a block (FMSPG p.127 (3.3-18));
+        -- before, never: a hold at the cruise altitude took no speed
+        local hold_at_crz = top == crz_alt and M.is_hold(l) and c.akind ~= "AB"
+        if crz_alt and top >= crz_alt and not hold_at_crz then return M.INVALID_ENTRY end
     end
     l = M.edit(st).legs[i]
     l.spd = c.spd
