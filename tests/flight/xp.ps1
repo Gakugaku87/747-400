@@ -12,6 +12,7 @@
 #   verbs: caps | get <name[index]> | set <name[index]> <value> | cmd <name> [seconds]
 #          flight <init.json> | shot [file.png] | find <text>
 #          acf [custom|stock]   the acf's path from X-Plane's folder
+#          restore              the user's X-Plane settings back after a run that died
 param([string]$Verb, [string]$Arg1, [string]$Arg2)
 
 $ErrorActionPreference = 'Stop'
@@ -218,6 +219,143 @@ function Find-XPDataref([string]$Text) {
     $r.data | Where-Object { $_.name -like "*$Text*" } | ForEach-Object { $_.name }
 }
 
+# --- the user's X-Plane settings a test changes, and puts back ------------
+# (2026-11-12, docs/overhaul/TESTING.md 4.6)
+#   sim/joystick/has_joystick 0: with the user's hardware connected the
+#     levers follow its levers and its yoke axis overwrites the pitch a
+#     scenario writes every frame (s109's first run on the user's PC).
+#     X-Plane 12.4.4 does not take the write (the dataref is read-only: the
+#     Web API answers 403): then the result says so, as a warning, and the
+#     hardware is to be unplugged for the run;
+#   sim/operation/prefs/startup_running 1: at 0 (the user's last flight began
+#     cold and dark) a loaded or reloaded aircraft comes up with its electrics
+#     as on a cold airplane even when the flight starts with the engines
+#     running (2026-11-11: s01, s101, s142 and s00 failed on it).
+# Enter-XPTestSettings writes the test's values and keeps the user's in a
+# file; Exit-XPTestSettings writes the user's back and removes the file. A
+# run that died leaves the file: the next Enter takes the user's values from
+# it (what X-Plane holds then is the test's), and "xp.ps1 restore" puts them
+# back by hand. Both return lines for the result; a line that begins with
+# "!" is a warning. A value is written only where X-Plane's differs.
+$script:XPTestSettings = @(
+    @{ dref = 'sim/joystick/has_joystick'; value = 0
+        refused = "the user's hardware is connected and its levers and yoke axis may overwrite what the scenario writes: unplug it for the run" },
+    @{ dref = 'sim/operation/prefs/startup_running'; value = 1
+        refused = 'a loaded or reloaded aircraft comes up as on a cold airplane' }
+)
+# (the file is X-Plane's, not a run folder's: one X-Plane, whichever copy of
+# the kit runs on it)
+function Get-XPSettingsFile { Join-Path $script:XPRoot 'Output\B747_flighttest\kit_settings.txt' }
+# name -> the user's value, or 'refused' (X-Plane did not take the test's:
+# nothing to put back)
+function Read-XPSettingsFile([string]$File) {
+    $saved = [ordered]@{}
+    if (Test-Path -LiteralPath $File) {
+        foreach ($line in [IO.File]::ReadAllLines($File)) {
+            if ($line -match '^(\S+) (-?\d+)$') { $saved[$Matches[1]] = [int]$Matches[2] }
+            elseif ($line -match '^(\S+) refused$') { $saved[$Matches[1]] = 'refused' }
+        }
+    }
+    return $saved
+}
+function Write-XPSettingsFile([string]$File, $Saved) {
+    if ($Saved.Count -eq 0) {
+        if (Test-Path -LiteralPath $File) { Remove-Item -LiteralPath $File -Force }
+        return
+    }
+    $dir = Split-Path -Parent $File
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    [IO.File]::WriteAllLines($File, [string[]]@($Saved.Keys | ForEach-Object { "$_ $($Saved[$_])" }))
+}
+# $Only: these datarefs alone (Confirm-XPTestSettings: those not reached before)
+function Enter-XPTestSettings([string]$File = (Get-XPSettingsFile), [string[]]$Only = @()) {
+    $notes = @()
+    $saved = Read-XPSettingsFile $File
+    foreach ($s in $script:XPTestSettings) {
+        if ($Only.Count -gt 0 -and $Only -notcontains $s.dref) { continue }
+        $now = $null
+        try { $now = [int](Get-XPDataref $s.dref) } catch {
+            $notes += "$($s.dref): not set ($($_.Exception.Message))"
+            continue
+        }
+        $left = $saved.Contains($s.dref) -and $saved[$s.dref] -ne 'refused'
+        $user = if ($left) { $saved[$s.dref] } else { $now }
+        if ($now -ne $s.value) {
+            try { Set-XPDataref $s.dref $s.value } catch {
+                $saved[$s.dref] = 'refused'
+                $notes += "!$($s.dref) is $now and X-Plane does not take $($s.value) ($($_.Exception.Message)): $($s.refused)"
+                continue
+            }
+        }
+        $saved[$s.dref] = $user
+        $notes += "$($s.dref): the user's $user, $($s.value) for the test" + $(if ($left) { ' (the user''s value from a run that did not put it back)' } else { '' })
+    }
+    Write-XPSettingsFile $File $saved
+    return $notes
+}
+# after a flight's start or the aircraft's reload: the test's values again
+# where X-Plane changed them, the settings not reached before a first flight
+# loaded (the Web API has no datarefs until then) taken now
+function Confirm-XPTestSettings([string]$File = (Get-XPSettingsFile)) {
+    $saved = Read-XPSettingsFile $File
+    $notes = @()
+    $missing = @()
+    foreach ($s in $script:XPTestSettings) {
+        if (-not $saved.Contains($s.dref)) { $missing += $s.dref; continue }
+        if ($saved[$s.dref] -eq 'refused') { continue }
+        try {
+            $now = [int](Get-XPDataref $s.dref)
+            if ($now -ne $s.value) {
+                Set-XPDataref $s.dref $s.value
+                $notes += "$($s.dref): $now after the flight's start, $($s.value) again"
+            }
+        } catch { }
+    }
+    if ($missing.Count -gt 0) { $notes += @(Enter-XPTestSettings $File $missing) }
+    return $notes
+}
+# A flight's start on an X-Plane that has no flight yet (just started): the
+# Web API has no datarefs until one loads (404), so Enter-XPTestSettings
+# could not reach them, and an aircraft loaded at the user's "start with the
+# engines running" 0 comes up as on a cold airplane. The load is begun (the
+# request left after 5 s: X-Plane goes on loading) and the test's settings
+# are written as soon as the datarefs are there, while it loads - before
+# the aircraft's scripts read them at the flight's start (2026-11-12: a
+# write 50 s into the load was in time). Returns the sim's time; the
+# settings' notes in $script:XPLateNotes (none: not reached)
+function Start-XPFlightLate($Init, [int]$TimeoutSec = 600, [string]$File = (Get-XPSettingsFile)) {
+    if ($Init -is [string] -and (Test-Path $Init)) { $Init = Get-Content -Raw -Encoding UTF8 $Init }
+    $script:XPDrefs = @{}
+    $script:XPCmds = @{}
+    $script:XPLateNotes = @()
+    try { [void](Invoke-XPApi POST '/flight' $Init 5) } catch { }
+    $deadline = (Get-Date).AddSeconds([math]::Min($TimeoutSec, 300))
+    while ((Get-Date) -lt $deadline) {
+        $script:XPDrefs = @{}
+        $notes = @(Confirm-XPTestSettings $File)
+        if (@($notes | Where-Object { $_ -match ': not set \(' }).Count -eq 0) { $script:XPLateNotes = $notes; break }
+        Start-Sleep -Milliseconds 500
+    }
+    Wait-XPSimRunning -TimeoutSec $TimeoutSec
+}
+function Exit-XPTestSettings([string]$File = (Get-XPSettingsFile)) {
+    $notes = @()
+    $saved = Read-XPSettingsFile $File
+    $kept = [ordered]@{}
+    foreach ($name in @($saved.Keys)) {
+        if ($saved[$name] -eq 'refused') { continue }
+        try {
+            if ([int](Get-XPDataref $name) -ne $saved[$name]) { Set-XPDataref $name $saved[$name] }
+            $notes += "$name`: the user's $($saved[$name]) again"
+        } catch {
+            $kept[$name] = $saved[$name]
+            $notes += "!$name`: NOT put back to the user's $($saved[$name]) ($($_.Exception.Message)); 'xp.ps1 restore' once X-Plane answers"
+        }
+    }
+    Write-XPSettingsFile $File $kept
+    return $notes
+}
+
 if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
     switch ($Verb) {
         'caps'   { Get-XPCapabilities | ConvertTo-Json -Depth 5 }
@@ -228,6 +366,10 @@ if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
         'shot'   { Save-XPScreenshot $Arg1 }
         'find'   { Find-XPDataref $Arg1 }
         'acf'    { Get-XPAircraftRel $(if ($Arg1) { $Arg1 } else { 'custom' }) }
+        'restore' {
+            $notes = @(Exit-XPTestSettings)
+            if ($notes.Count -eq 0) { "nothing to put back (no $(Get-XPSettingsFile))" } else { $notes }
+        }
         default  { throw "unknown verb: $Verb" }
     }
 }

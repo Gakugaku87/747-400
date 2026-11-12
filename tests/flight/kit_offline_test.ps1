@@ -58,6 +58,142 @@ $env:XPLANE_ROOT = $saved
 # this kit's own folder
 Check ($script:XPAircraftDir -eq (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path.TrimEnd('\')) 'the kit''s aircraft folder: two above tests\flight'
 
+# --- the user's settings for a run -----------------------------------------
+# a stand-in X-Plane: datarefs in a table; a write to a name in $refuse fails
+# (as the Web API's 403 for a read-only dataref), any write is counted
+$sim = @{ 'sim/joystick/has_joystick' = 1; 'sim/operation/prefs/startup_running' = 0 }
+$refuse = @{}
+$writes = New-Object System.Collections.ArrayList
+function Get-XPDataref([string]$Name, [int]$Index = -1) {
+    if (-not $sim.ContainsKey($Name)) { throw "dataref not found: $Name (is a flight loaded?)" }
+    return $sim[$Name]
+}
+function Set-XPDataref([string]$Name, $Value, [int]$Index = -1) {
+    [void]$writes.Add("$Name=$Value")
+    if ($refuse.ContainsKey($Name)) { throw "The remote server returned an error: (403) Forbidden." }
+    if (-not $sim.ContainsKey($Name)) { throw "dataref not found: $Name (is a flight loaded?)" }
+    $sim[$Name] = [int]$Value
+}
+$state = Join-Path $tmp 'out\kit_settings.txt'
+$notes = @(Enter-XPTestSettings $state)
+Equal $sim['sim/joystick/has_joystick'] 0 'the run: the user''s hardware off (an X-Plane that takes the write)'
+Equal $sim['sim/operation/prefs/startup_running'] 1 'the run: start with the engines running'
+Check (Test-Path -LiteralPath $state) 'the user''s values kept in the file (its folder made)'
+Equal ((Get-Content -LiteralPath $state) -join '|') 'sim/joystick/has_joystick 1|sim/operation/prefs/startup_running 0' 'the file: the user''s values'
+Check ($notes.Count -eq 2 -and $notes[0] -match "has_joystick: the user's 1, 0 for the test" -and $notes[1] -match "startup_running: the user's 0, 1 for the test") "the notes for the result ($($notes -join ' / '))"
+# X-Plane finds the hardware again with a flight's start: off again
+$sim['sim/joystick/has_joystick'] = 1
+$notes = @(Confirm-XPTestSettings $state)
+Equal $sim['sim/joystick/has_joystick'] 0 'after a flight''s start: off again'
+Check ($notes.Count -eq 1 -and $notes[0] -match 'has_joystick: 1 after the flight''s start, 0 again') "its note ($($notes -join ' / '))"
+Equal (@(Confirm-XPTestSettings $state)).Count 0 'nothing changed: no note'
+$notes = @(Exit-XPTestSettings $state)
+Equal $sim['sim/joystick/has_joystick'] 1 'the end: the user''s hardware back'
+Equal $sim['sim/operation/prefs/startup_running'] 0 'the end: the user''s start setting back'
+Check (-not (Test-Path -LiteralPath $state)) 'the file removed'
+Check ($notes.Count -eq 2 -and $notes[1] -match "startup_running: the user's 0 again") "the notes ($($notes -join ' / '))"
+Equal (@(Exit-XPTestSettings $state)).Count 0 'nothing to put back: no note, no error'
+
+# a run that died: X-Plane holds the test's values, the file the user's
+[void](Enter-XPTestSettings $state)
+$notes = @(Enter-XPTestSettings $state)       # the next run
+Equal ((Get-Content -LiteralPath $state) -join '|') 'sim/joystick/has_joystick 1|sim/operation/prefs/startup_running 0' 'the next run keeps the user''s values, not the test''s'
+Check ($notes[0] -match 'from a run that did not put it back') "and says so ($($notes[0]))"
+[void](Exit-XPTestSettings $state)
+Equal ("$($sim['sim/joystick/has_joystick'])$($sim['sim/operation/prefs/startup_running'])") '10' 'put back to the user''s after it'
+
+# X-Plane 12.4.4: has_joystick is read-only (the Web API's 403). With the
+# hardware connected: a warning, nothing to put back; the other setting as before
+$refuse['sim/joystick/has_joystick'] = $true
+$notes = @(Enter-XPTestSettings $state)
+Equal $sim['sim/joystick/has_joystick'] 1 'a read-only has_joystick: the hardware stays'
+Check ($notes[0] -match '^!sim/joystick/has_joystick is 1 and X-Plane does not take 0 \(.*403.*\): the user''s hardware is connected .* unplug it') "a warning for the result ($($notes[0]))"
+Equal $sim['sim/operation/prefs/startup_running'] 1 'the start setting taken all the same'
+Equal ((Get-Content -LiteralPath $state) -join '|') 'sim/joystick/has_joystick refused|sim/operation/prefs/startup_running 0' 'the file: refused, and the user''s start setting'
+$writes.Clear()
+Equal (@(Confirm-XPTestSettings $state)).Count 0 'after a flight''s start: no second warning'
+Equal $writes.Count 0 'and no write tried again'
+$notes = @(Exit-XPTestSettings $state)
+Check ($notes.Count -eq 1 -and $notes[0] -match "startup_running: the user's 0 again") "the end: the start setting back, nothing said of the hardware ($($notes -join ' / '))"
+Check (-not (Test-Path -LiteralPath $state)) 'the file removed'
+Check (@($writes | Where-Object { $_ -match 'has_joystick' }).Count -eq 0) 'no write to has_joystick at the end'
+# without hardware (0 already): no write to the read-only dataref at all, no warning
+$sim['sim/joystick/has_joystick'] = 0
+$writes.Clear()
+$notes = @(Enter-XPTestSettings $state)
+Check (@($notes | Where-Object { $_.StartsWith('!') }).Count -eq 0) "no hardware: no warning ($($notes -join ' / '))"
+$notes = @(Exit-XPTestSettings $state)
+Check (@($writes | Where-Object { $_ -match 'has_joystick' }).Count -eq 0) 'no hardware: has_joystick never written'
+Check (@($notes | Where-Object { $_.StartsWith('!') }).Count -eq 0 -and -not (Test-Path -LiteralPath $state)) 'and the end without a warning, the file removed'
+$refuse = @{}
+
+# the user's values already the test's: nothing written, still as they were at the end
+$sim['sim/joystick/has_joystick'] = 0; $sim['sim/operation/prefs/startup_running'] = 1
+$writes.Clear()
+[void](Enter-XPTestSettings $state)
+[void](Exit-XPTestSettings $state)
+Equal $writes.Count 0 'the user''s values already the test''s: no write'
+Equal ("$($sim['sim/joystick/has_joystick'])$($sim['sim/operation/prefs/startup_running'])") '01' 'and as they were at the end'
+
+# before a first flight the Web API has no datarefs: a note, no file; taken after the flight's start
+$sim = @{}
+$notes = @(Enter-XPTestSettings $state)
+Check ($notes.Count -eq 2 -and $notes[1] -match 'startup_running: not set \(dataref not found') "no datarefs yet: not set, said ($($notes[1]))"
+Check (-not (Test-Path -LiteralPath $state)) 'no file for nothing kept'
+$sim = @{ 'sim/joystick/has_joystick' = 1; 'sim/operation/prefs/startup_running' = 0 }
+$notes = @(Confirm-XPTestSettings $state)
+Equal ("$($sim['sim/joystick/has_joystick'])$($sim['sim/operation/prefs/startup_running'])") '01' 'after the flight''s start: taken then'
+Check ($notes.Count -eq 2 -and ($notes -join ' ') -match "startup_running: the user's 0, 1 for the test") "with its notes ($($notes -join ' / '))"
+# one setting reached, the other not: the next Confirm takes the other alone
+[void](Exit-XPTestSettings $state)
+$sim = @{ 'sim/joystick/has_joystick' = 1 }
+[void](Enter-XPTestSettings $state)
+$sim['sim/operation/prefs/startup_running'] = 0
+$notes = @(Confirm-XPTestSettings $state)
+Check ($notes.Count -eq 1 -and $notes[0] -match "startup_running: the user's 0, 1 for the test$") "a setting reached later: its note alone ($($notes -join ' / '))"
+# X-Plane does not answer at the end (gone): the file stays for "xp.ps1 restore"
+$refuse['sim/operation/prefs/startup_running'] = $true
+$notes = @(Exit-XPTestSettings $state)
+Equal $sim['sim/joystick/has_joystick'] 1 'the one X-Plane took is back'
+Check (($notes -join ' ') -match '!sim/operation/prefs/startup_running: NOT put back') "the other said, as a warning ($($notes -join ' / '))"
+Equal ((Get-Content -LiteralPath $state) -join '|') 'sim/operation/prefs/startup_running 0' 'and kept in the file'
+$refuse = @{}
+[void](Exit-XPTestSettings $state)
+Equal $sim['sim/operation/prefs/startup_running'] 0 'put back by the next restore'
+Check (-not (Test-Path -LiteralPath $state)) 'the file removed then'
+
+# an X-Plane just started, no flight yet: no datarefs (the Web API's 404)
+# until the flight loads. The load is begun and left after 5 s, the settings
+# written when the datarefs are there (here at the 5th read), then the sim
+# waited for
+$sim = @{}
+$posts = New-Object System.Collections.ArrayList
+$script:gets = 0
+function Invoke-XPApi([string]$Method, [string]$Path, $Body = $null, [int]$TimeoutSec = 30) {
+    [void]$posts.Add("$Method $Path $TimeoutSec")
+    if ($Method -eq 'POST') { throw 'The operation has timed out.' }
+}
+function Get-XPDataref([string]$Name, [int]$Index = -1) {
+    $script:gets++
+    if ($script:gets -eq 5) {
+        $sim['sim/joystick/has_joystick'] = 0; $sim['sim/operation/prefs/startup_running'] = 0
+        $sim['sim/time/paused'] = 0; $sim['sim/time/total_running_time_sec'] = 100.0
+    }
+    if (-not $sim.ContainsKey($Name)) { throw "The remote server returned an error: (404) Not Found." }
+    if ($Name -eq 'sim/time/total_running_time_sec') { $sim[$Name] += 5.0 }
+    return $sim[$Name]
+}
+$notes = @(Enter-XPTestSettings $state)
+Check (@($notes | Where-Object { $_ -match ': not set \(.*404' }).Count -eq 2 -and -not (Test-Path -LiteralPath $state)) "before the first flight: neither setting reached ($($notes -join ' / '))"
+$t = Start-XPFlightLate '{"aircraft":{"path":"x"}}' 30 $state
+Equal $posts[0] 'POST /flight 5' 'the load begun, its request left after 5 s'
+Equal $sim['sim/operation/prefs/startup_running'] 1 'the start setting written while the flight loads'
+Check (($script:XPLateNotes -join ' ') -match "startup_running: the user's 0, 1 for the test") "its notes ($($script:XPLateNotes -join ' / '))"
+Equal ((Get-Content -LiteralPath $state) -join '|') 'sim/joystick/has_joystick 0|sim/operation/prefs/startup_running 0' 'the user''s values kept'
+Check ($t -gt 100) "then the sim running ($t s)"
+[void](Exit-XPTestSettings $state)
+Equal $sim['sim/operation/prefs/startup_running'] 0 'put back at the end'
+
 # --- run_all.sh's scenarios (RUN_ALL_DRY) --
 # (Git for Windows' bash: on the PATH, or beside git's cmd folder)
 $bash = (Get-Command bash -ErrorAction SilentlyContinue).Source

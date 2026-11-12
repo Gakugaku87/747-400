@@ -13,6 +13,11 @@
 # when a new flight uses the same aircraft, so use -Reload for a clean start.
 # Output goes to tests\flight\runs\<time>_<scenario>_<acf>\.
 #
+# For the run the user's hardware is taken off (sim/joystick/has_joystick 0)
+# and sim/operation/prefs/startup_running is 1; both are put back at the
+# end, also when the run fails or is interrupted (xp.ps1; a run that was
+# killed: "xp.ps1 restore").
+#
 # Scenario file (JSON): { "name", "description", "flight": {init without
 # "aircraft"}, ["reload": true], ["livery": "<folder>"], "steps": [ ... ] }.
 # "reload" asks for -Reload (the scenario needs the aircraft's systems
@@ -239,6 +244,45 @@ function Confirm-AirStartEngines($init) {
 # the first Log.txt line of this run, for the excerpt at the end
 $logStart = if (Test-Path $logPath) { (Get-Content $logPath).Count } else { 0 }
 
+# the result files (result.json, result.md) from the results so far; also
+# for a scenario that did not start and a run that ended on an error
+$loaded = ''
+function Complete-Run {
+    $summary = [ordered]@{
+        scenario = $spec.name; description = $spec.description; acf = $acfPath; loaded = $loaded
+        started = $stamp; wall_s = [math]::Round($wall.Elapsed.TotalSeconds, 1)
+        pass = @($results | Where-Object { $_.status -eq 'pass' }).Count
+        fail = @($results | Where-Object { $_.status -eq 'fail' }).Count
+        warn = @($results | Where-Object { $_.status -eq 'warn' }).Count
+        steps = $results
+    }
+    $summary | ConvertTo-Json -Depth 10 | Out-File -Encoding utf8 (Join-Path $out 'result.json')
+    $md = @("# $($spec.name) ($acfTag)", '', "$($spec.description)", '',
+        "- 開始: $stamp、所要 $($summary.wall_s) s、PASS $($summary.pass) / FAIL $($summary.fail) / WARN $($summary.warn)", '',
+        '| # | 種類 | 結果 | 内容 | メモ | 出典 | sim 時刻 |', '|---|---|---|---|---|---|---|')
+    foreach ($r in $results) {
+        $md += "| $($r.n) | $($r.do) | $($r.status) | $(($r.detail -replace '\|', '\|')) | $($r.note) | $($r.cite) | $($r.sim_t) |"
+    }
+    $md | Out-File -Encoding utf8 (Join-Path $out 'result.md')
+    return $summary
+}
+
+# (2026-11-12, TESTING.md 4.6) the user's hardware off and X-Plane's "start
+# with the engines running" on for the run; put back in the finally below
+# (xp.ps1), also when the run fails or is interrupted
+# a line that begins with "!" is a warning (X-Plane did not take a setting)
+function Add-SettingNotes($Notes) {
+    foreach ($n in @($Notes)) {
+        if (-not $n) { continue }      # (no note: @($null) is one empty item)
+        if ($n.StartsWith('!')) { Add-Result @{ do = 'settings' } 'warn' $n.Substring(1) } else { Add-Result @{ do = 'settings' } 'info' $n }
+    }
+}
+$settingsNotes = @(Enter-XPTestSettings)
+Add-SettingNotes $settingsNotes
+$settingsLate = @($settingsNotes | Where-Object { $_ -match 'startup_running: not set' }).Count -gt 0
+$fatal = $null
+try {
+
 $freshLoad = $false
 if (-not $NoFlight) {
     $init = $spec.flight | ConvertTo-Json -Depth 30 | ConvertFrom-Json
@@ -264,7 +308,15 @@ if (-not $NoFlight) {
     } catch { $markWas = $null }
     $loadsBefore = Get-XPAircraftLoads
     $startWatch = [Diagnostics.Stopwatch]::StartNew()
-    $t = Start-XPFlight $init
+    if ($settingsLate) {
+        # X-Plane without a flight yet (no datarefs before): the settings
+        # written while the flight loads (xp.ps1)
+        $t = Start-XPFlightLate $init
+        Add-SettingNotes $script:XPLateNotes
+        $settingsLate = @($script:XPLateNotes).Count -eq 0
+    } else {
+        $t = Start-XPFlight $init
+    }
     if ($null -ne $markWas) {
         $script:XPDrefs.Remove($markRef)
         $now = $null
@@ -279,6 +331,13 @@ if (-not $NoFlight) {
         $freshLoad = ((Get-XPAircraftLoads) -gt $loadsBefore) -or ($startWatch.Elapsed.TotalSeconds -gt 45)
     }
     Add-Result @{ do = 'flight' } 'info' ("flight running (sim time {0} s){1}" -f [math]::Round($t, 1), $(if ($freshLoad) { ', aircraft loaded' } else { '' }))
+    # the test's settings again where X-Plane changed them with the start;
+    # those the Web API did not have before a first flight (no datarefs
+    # until one is loaded) taken now
+    Add-SettingNotes (Confirm-XPTestSettings)
+    if ($settingsLate -and $freshLoad) {
+        Add-Result @{ do = 'settings' } 'warn' 'sim/operation/prefs/startup_running could not be set before the aircraft loaded: at the user''s 0 the aircraft came up as on a cold airplane (run the scenario again)'
+    }
 }
 if ($spec.reload -eq $true -and -not $NoFlight) { $Reload = $true }
 # Reloading right after X-Plane has loaded the aircraft hung X-Plane twice
@@ -326,6 +385,8 @@ if ($Reload) {
 }
 $loaded = Get-XPDataref 'sim/aircraft/view/acf_relative_path'
 Add-Result @{ do = 'aircraft' } 'info' $loaded
+# (after the reload and the air starts)
+Add-SettingNotes (Confirm-XPTestSettings)
 # The aircraft's native plugin's sim options (Plugins > 747-400), read from
 # the user's preferences at each load: off for the scenario, not saved (a
 # write does not save them). 2026-11-08: the user's "Auto step climb", on
@@ -578,20 +639,19 @@ if ($xtErrors.Count -gt 0) {
     if ($null -eq $script:xtluaError) { Add-Result @{ do = 'xtlua' } 'fail' ("XTLua error: " + $xtErrors[0]) }
 }
 
-$summary = [ordered]@{
-    scenario = $spec.name; description = $spec.description; acf = $acfPath; loaded = $loaded
-    started = $stamp; wall_s = [math]::Round($wall.Elapsed.TotalSeconds, 1)
-    pass = @($results | Where-Object { $_.status -eq 'pass' }).Count
-    fail = @($results | Where-Object { $_.status -eq 'fail' }).Count
-    warn = @($results | Where-Object { $_.status -eq 'warn' }).Count
-    steps = $results
+} catch {
+    # (2026-11-12) an error outside the steps (the sim did not start, the
+    # aircraft did not reload): the result files all the same; no "result:"
+    # line, as before, so run_all.sh starts X-Plane again and runs it once more
+    $fatal = $_.Exception.Message
+    Add-Result @{ do = 'run' } 'fail' "the run ended on an error: $fatal"
+} finally {
+    $back = @(Exit-XPTestSettings)
+    Add-SettingNotes $back
+    $summary = Complete-Run
 }
-$summary | ConvertTo-Json -Depth 10 | Out-File -Encoding utf8 (Join-Path $out 'result.json')
-$md = @("# $($spec.name) ($acfTag)", '', "$($spec.description)", '',
-    "- 開始: $stamp、所要 $($summary.wall_s) s、PASS $($summary.pass) / FAIL $($summary.fail) / WARN $($summary.warn)", '',
-    '| # | 種類 | 結果 | 内容 | メモ | 出典 | sim 時刻 |', '|---|---|---|---|---|---|---|')
-foreach ($r in $results) {
-    $md += "| $($r.n) | $($r.do) | $($r.status) | $(($r.detail -replace '\|', '\|')) | $($r.note) | $($r.cite) | $($r.sim_t) |"
+if ($fatal) {
+    Write-Host "error: $fatal  (the result files: $out)"
+    exit 1
 }
-$md | Out-File -Encoding utf8 (Join-Path $out 'result.md')
 Write-Host "result: $out  (pass $($summary.pass), fail $($summary.fail), warn $($summary.warn))"

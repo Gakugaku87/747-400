@@ -7,7 +7,9 @@ param([switch]$Mem, [int]$TimeoutSec = 300)
 #          34L with the engines running loads the 747 once (the first load
 #          after a start differs: a throwaway); prints "up" or "down"
 # The aircraft is the folder this kit is in, whatever its name (2026-11-12;
-# before, Aircraft/747-400-master by name).
+# before, Aircraft/747-400-master by name). The throwaway load is made with
+# the test's X-Plane settings (the user's hardware off, "start with the
+# engines running" on), put back at its end (xp.ps1).
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\xp.ps1')
 $root = $script:XPRoot   # X-Plane's folder
@@ -42,8 +44,27 @@ $init = @{
 # Flight Configuration screen and main menu, paused at time 0: neither
 # pause_off, close_windows, toggle_main_menu nor a second load moved it, only
 # a click on Resume. "down" then: run_all.sh starts X-Plane again)
+$state = 'down'
+$notes = @()
 try {
-    [void](Start-XPFlight $init 300)
+    # (2026-11-12) "start with the engines running" before the aircraft's
+    # scripts start: at the user's 0 it comes up as on a cold airplane. An
+    # X-Plane just started has no datarefs until a flight loads, so they
+    # are written while this one loads (xp.ps1's Start-XPFlightLate)
+    $notes = @(Enter-XPTestSettings)
+    if (@($notes | Where-Object { $_ -match ': not set \(' }).Count -gt 0) {
+        [void](Start-XPFlightLate $init 300)
+        $notes = @($script:XPLateNotes)
+        if ($notes.Count -eq 0) { $notes = @('!the settings were not reached while the flight loaded: the aircraft came up at the user''s') }
+    } else {
+        [void](Start-XPFlight $init 300)
+    }
+    $notes += @(Confirm-XPTestSettings)
     Start-Sleep -Seconds 20
-    'up'
-} catch { 'down' }
+    $state = 'up'
+} catch {
+    $notes += "the throwaway flight: $($_.Exception.Message)"
+} finally {
+    $notes += @(Exit-XPTestSettings)
+}
+$state
