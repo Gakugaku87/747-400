@@ -297,6 +297,12 @@ function M.set_runway(st, text)
             if sr == "RW" .. id then ok = true break end
         end
         if not ok then return M.RUNWAY_NA_SID end
+        -- (2026-11-12 review FMC-4) the SID's legs for the new runway (its
+        -- runway transition), as DEPARTURES puts them: the RTE page's
+        -- RUNWAY is the same field (FMSPG p.79). Before, the runway alone
+        -- changed: the SID's legs stayed the old runway's (16R's ZA001 ZZV
+        -- with 34L), or none when the SID was selected before a runway
+        return M.set_departure(st, r.sid.name, "RW" .. id, r.sid.trans)
     end
     M.edit(st).runway = rw
 end
