@@ -299,6 +299,18 @@ function M.approach_legs(N, db, icao, id, trans)
         end
     end
     join(out, final)
+    -- (2026-11-12 review FMC-1) no runway waypoint in the legs (LOC, LDA,
+    -- VOR... with the MAP before the threshold: 7,349 of the 31,090
+    -- approaches of AIRAC 2611): the runway from the approach's name
+    -- ("X22-W" the LDA to 22, "L16R" a localizer to 16R), as the ARRIVALS
+    -- page's STAR check took it; a circling approach none. Before, nil: the
+    -- STAR's runway transition left out (RJTT AKSE1B with LDA22-W: AKSEL
+    -- alone) and the ILS not autotuned (FCOM p.1306-1307: the ILS of a LOC,
+    -- VOR, runway approach to an ILS/LOC runway)
+    if not rwy then
+        local d = id:match("^%u(%d%d[LCR]?)")
+        if d then rwy = "RW" .. d end
+    end
     return out, rwy
 end
 
