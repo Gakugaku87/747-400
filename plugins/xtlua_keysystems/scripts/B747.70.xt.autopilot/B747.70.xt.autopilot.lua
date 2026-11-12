@@ -599,6 +599,7 @@ simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_
 -- show; without a law there (G/S, FLARE) the old law
 dofile("B747.70.afds_pitch_model.lua")
 local afdsPitch = B747_afds_pitch_model.new()
+local afdsPitchEngaged = false   -- (2026-11-12 review AFDS-5) an A/P channel engaged at the last pitch law
 local afdsPitchIn = B747_afds_pitch_model.inputs()
 B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
 B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
@@ -1447,6 +1448,12 @@ local function afds_pitch_law()
 	-- a failed pitch mode holds the pitch of then (step 5c)
 	p.att_pitch = afds.pitch_fail and afds.fail_pitch or nil
 	afds_pitch_inputs(p)
+	-- (2026-11-12 review AFDS-5) an A/P engaged (no channel before): the law
+	-- starts from the attitude (ATA22 p.332; B747.70.afds_pitch_model.lua's
+	-- sync); a second channel engaging does not sync again
+	local engaged = (afds.L or afds.C or afds.R) and true or false
+	if engaged and not afdsPitchEngaged then B747_afds_pitch_model.sync(afdsPitch) end
+	afdsPitchEngaged = engaged
 	local cmd = B747_afds_pitch_model.update(afdsPitch, p, afds_dt())
 	local law = cmd and 1 or 0
 	if B747DR_ap_pitch_law ~= law then B747DR_ap_pitch_law = law end
@@ -1629,6 +1636,7 @@ function B747_afds_reset()
 	afds = B747_afds_model.new()
 	afdsRoll = B747_afds_roll_model.new()
 	afdsPitch = B747_afds_pitch_model.new()
+	afdsPitchEngaged = false
 	vnavMode = B747_vnav_mode_model.new()
 	vnavMcpDial, vnavMcpAge, vnavMcpPushes, vnavMcpSettled = nil, 0, nil, false
 end

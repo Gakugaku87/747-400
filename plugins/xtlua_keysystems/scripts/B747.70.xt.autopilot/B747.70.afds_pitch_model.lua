@@ -492,6 +492,17 @@ local function law_of(s, inp, dt)
 end
 
 -- the command (degrees of pitch), or nil without a law here
+-- (2026-11-12 review AFDS-5) an A/P's engagement: the pitch attitude
+-- integrator synchronizes to the pitch attitude while the A/P is
+-- disengaged and takes the command inputs once it is engaged (ATA22 p.332),
+-- so the law's command starts again from the attitude (the next update
+-- takes it: the laws' start). Before, the command an F/D-only flight had
+-- wound up with nobody following the bars stayed (30 s of V/S +1,000: 6
+-- degrees above the attitude; the engagement pitched up at 1.8 g)
+function M.sync(s)
+    s.cmd = nil
+end
+
 function M.update(s, inp, dt)
     dt = dt or 0
     local law, target, blend
