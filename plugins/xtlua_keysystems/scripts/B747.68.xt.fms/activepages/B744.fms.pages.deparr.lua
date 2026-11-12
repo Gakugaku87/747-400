@@ -292,23 +292,40 @@ function fmsFunctions.arrsel(fmsO, value)
   local r = route()
   local a = item.act
   local err
-  -- (step 11c4) a STAR and an approach that do not go together: rejected
-  -- with ARR N/A FOR RUNWAY (FCOM p.1435)
+  -- (step 11c4; 2026-11-12, notes/ATA-34-61-FMC.md §166) a STAR and an
+  -- approach that do not go together: the one selected goes in and the
+  -- other out of the route (`other` false), with ARR N/A FOR RUNWAY (FCOM
+  -- p.1435: runway/approach selected not compatible with arrival selected;
+  -- FMSPG p.260: selected arrival and runway not compatible). The sources
+  -- write of no rejection here (FMSPG p.79 does for the RTE page's RUNWAY
+  -- with RUNWAY N/A FOR SID); a selection is one of all the items the page
+  -- shows again (FMSPG p.194) and deletes a previously selected procedure
+  -- (FCOM p.1403; FMSPG p.195). That the other goes out of the route is an
+  -- estimate: as on DEPARTURES (FCOM p.1302: a subsequent change of a
+  -- runway deletes the departure procedures previously selected), and
+  -- PSX's forum (no source of the airplane's) has the 744's FMC take a
+  -- runway that does not go with the procedure selected, the procedure
+  -- going. Before (step 11c4) the selection was rejected: where every STAR
+  -- is for one end's runways alone (WSSS: the A's for 02, the B's for 20)
+  -- neither a STAR nor an approach of the other end could be selected once
+  -- both were in the route (the user's flight, 2026-11-12)
+  local other = nil
   if a[1] == "star" or a[1] == "appr" then
     local star = a[1] == "star" and a[2] or (r.star and r.star.name)
     local appr = a[1] == "appr" and a[2] or (r.appr and r.appr.id)
-    if star and appr and not star_serves(r.dest.ident, star, appr) then fmsO["notify"] = "ARR N/A FOR RUNWAY" return end
+    if star and appr and not star_serves(r.dest.ident, star, appr) then other = false end
   end
   if a[1] == "star" then
-    err = R.set_arrival(st, {name = a[2]}, nil)
+    err = R.set_arrival(st, {name = a[2]}, other)
   elseif a[1] == "startrans" then
     err = R.set_arrival(st, {name = r.star.name, trans = a[2]}, nil)
   elseif a[1] == "appr" then
-    err = R.set_arrival(st, nil, {id = a[2]})
+    err = R.set_arrival(st, other, {id = a[2]})
   else
     err = R.set_arrival(st, nil, {id = r.appr.id, trans = a[2]})
   end
   if err then fmsO["notify"] = err return end
+  if other == false then fmsO["notify"] = "ARR N/A FOR RUNWAY" end
   v_of(fmsO.id).narrow = true
   B747_fmc_route_changed()
 end
