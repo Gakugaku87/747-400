@@ -1046,4 +1046,41 @@ local function flch_rate(c)
     return (st.cmd - c0) / DT
 end
 T.near(flch_rate(LO), flch_rate(HI), 0.05, "FLCH: the same rate at both")
+-- (2026-11-12 review AFDS-4, B1) T/O with an engine failing 5 s after the
+-- lift-off at 178 kt (V2 170), 0.5 kt/s of level acceleration left (482 fpm
+-- at the target): the blend from 0 to 600 fpm (ATA22 p.264) keeps the
+-- climb (before: -354 fpm, 65 ft lost)
+do
+    local KT2, G2, FT2 = 1852 / 3600, 9.80665, 0.3048
+    local function to_eo(excess_eo)
+        local s2 = P.new()
+        local i2 = P.inputs()
+        i2.active, i2.tas, i2.alt, i2.pitch = true, 160, 0, 3
+        i2.mode, i2.ground, i2.mcp_ias, i2.ias, i2.vs = "TO", true, 170, 160, 0
+        P.update(s2, i2, 0.05)
+        i2.ground, i2.ias, i2.pitch, i2.pli = false, 178, 10, 6
+        local gam, alpha, t, lo, top, lost = 3, 7, 0, 1e9, 0, 0
+        for _ = 1, math.floor(90 / 0.05) do
+            if t >= 5 then i2.eo = true end
+            local thr = t < 5 and 2.4 or excess_eo
+            local c = P.update(s2, i2, 0.05)
+            i2.pitch = i2.pitch + (c - i2.pitch) * 0.05 / 2
+            gam = gam + ((i2.pitch - alpha) - gam) * 0.05 / 3
+            i2.ias = i2.ias + (thr - G2 * math.sin(math.rad(gam)) / KT2) * 0.05
+            i2.tas = i2.ias * 1.02
+            i2.vs = i2.tas * KT2 * math.sin(math.rad(gam)) / FT2 * 60
+            i2.alt = i2.alt + i2.vs / 60 * 0.05
+            i2.pli = math.max(0.5, 6 - (178 - i2.ias) * 0.25)
+            t = t + 0.05
+            if t > 5 then
+                lo, top = math.min(lo, i2.vs), math.max(top, i2.alt)
+                lost = math.max(lost, top - i2.alt)
+            end
+        end
+        return lo, lost
+    end
+    local lo, lost = to_eo(0.5)
+    T.check(lo >= 0, "T/O, an engine out with 482 fpm to spare: the V/S stays at 0 or above (ATA22 p.264's blend): " .. string.format("%.0f", lo))
+    T.check(lost < 1, "and no height lost: " .. string.format("%.1f ft", lost))
+end
 T.done()

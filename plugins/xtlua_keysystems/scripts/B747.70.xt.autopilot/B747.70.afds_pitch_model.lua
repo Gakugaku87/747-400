@@ -477,7 +477,13 @@ local function law_of(s, inp, dt)
         else
             s.to_target = ratchet(s, inp, s.to_target, s.v2 + M.TO_MAX_ADD, dt)
         end
-        return "SPD", M.protect(s.to_target, inp), inp.windshear
+        -- (2026-11-12 review AFDS-4, B1) the blend from the attitude to the
+        -- speed with an engine out too, from 0 to 600 fpm (ATA22 p.264: the
+        -- engine-out takeoff is the same with the blend from 0 to 600 fpm;
+        -- p.344; FCOM p.674), as this file's head says; before, in a
+        -- windshear only: with little excess thrust the speed law paid
+        -- height for the speed (482 fpm of excess: -354 fpm, 65 ft lost)
+        return "SPD", M.protect(s.to_target, inp), inp.windshear or s.to_eo ~= nil
     end
     if mode == "GA" then
         -- (step 9h3b) an engine out: up to MCP + 10 (ATA22 p.298)
