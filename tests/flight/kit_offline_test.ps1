@@ -58,6 +58,43 @@ $env:XPLANE_ROOT = $saved
 # this kit's own folder
 Check ($script:XPAircraftDir -eq (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path.TrimEnd('\')) 'the kit''s aircraft folder: two above tests\flight'
 
+# --- run_all.sh's scenarios (RUN_ALL_DRY) --
+# (Git for Windows' bash: on the PATH, or beside git's cmd folder)
+$bash = (Get-Command bash -ErrorAction SilentlyContinue).Source
+if (-not $bash) {
+    $git = (Get-Command git -ErrorAction SilentlyContinue).Source
+    if ($git) {
+        $beside = Join-Path (Split-Path -Parent (Split-Path -Parent $git)) 'bin\bash.exe'
+        if (Test-Path -LiteralPath $beside) { $bash = $beside }
+    }
+}
+if ($bash) {
+    Set-Alias -Name bash -Value $bash -Scope Script
+    $sh = (Join-Path $PSScriptRoot 'tools\run_all.sh') -replace '\\', '/'
+    $env:RUN_ALL_DRY = '1'
+    $ErrorActionPreference = 'Continue'
+    $got = @(& bash $sh --only s285 s172_proc_msgs tests/flight/scenarios/s01_ap_basic.json 2>$null)
+    Equal ($got -join '|') 'tests/flight/scenarios/s285_vnav_spd_trans_accel_heavy.json|tests/flight/scenarios/s172_proc_msgs.json|tests/flight/scenarios/s01_ap_basic.json' '--only: by number, by name, by file, in the order given'
+    $got = @(& bash $sh --only s28 2>$null)
+    Equal ($got -join '|') 'tests/flight/scenarios/s28_stab_trim.json' 'a number is the whole number (s28 is not s285)'
+    $list = Join-Path $tmp 'list.txt'
+    [IO.File]::WriteAllText($list, "s286   # the descent`r`n# a comment`r`n`r`ns287 s109`n")
+    $got = @(& bash $sh --list ($list -replace '\\', '/') 2>$null)
+    Equal ($got -join '|') 'tests/flight/scenarios/s286_flch_descent_decel.json|tests/flight/scenarios/s287_vnav_spd_trans_accel_light.json|tests/flight/scenarios/s109_afds_takeoff.json' '--list: a file''s names, comments and CRLF'
+    $all = @(& bash $sh 2>$null)
+    $n = @(Get-ChildItem (Join-Path $PSScriptRoot 'scenarios') -Filter *.json).Count
+    Equal $all.Count $n 'no argument: every scenario'
+    $from = @(& bash $sh s99_afds_engage 2>$null)
+    Check ($from.Count -ge 1 -and $from[0] -eq 'tests/flight/scenarios/s99_afds_engage.json' -and $from.Count -lt $all.Count) 'a name: from that scenario on'
+    [void](& bash $sh --only s285 s99999 2>$null); Equal $LASTEXITCODE 2 'a scenario not there: nothing runs (exit status 2)'
+    [void](& bash $sh --only 2>$null); Equal $LASTEXITCODE 2 '--only without a name: exit status 2'
+    [void](& bash $sh --list (($list -replace '\\', '/') + '.none') 2>$null); Equal $LASTEXITCODE 2 '--list without its file: exit status 2'
+    $ErrorActionPreference = 'Stop'
+    $env:RUN_ALL_DRY = $null
+} else {
+    Write-Host 'no bash: run_all.sh not checked'
+}
+
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
