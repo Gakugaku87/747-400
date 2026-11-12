@@ -976,6 +976,7 @@ simDR_at_wind_x = find_dataref("sim/weather/aircraft/wind_now_x_msc")
 simDR_at_wind_y = find_dataref("sim/weather/aircraft/wind_now_y_msc")
 simDR_at_wind_z = find_dataref("sim/weather/aircraft/wind_now_z_msc")
 simDR_at_sim_speed = find_dataref("sim/time/sim_speed")     -- (2026-11-11 review) the time acceleration
+simDR_at_burning = find_dataref("sim/flightmodel2/engines/engine_is_burning_fuel")   -- (2026-11-12 review AT-7)
 -- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
 -- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
 -- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
@@ -1067,13 +1068,19 @@ local function afds_at()
 	end
 	atIas = ias
 	local n1 = B747DR_ap_engine_type == 1
-	local thr, lev, tmax = 0, 0, 0
+	-- (2026-11-12 review AT-7) the levers as the A/T sees them: those of the
+	-- engines running (estimate: the sources do not say how one lever is
+	-- taken; before, the four's mean, so a stopped engine's lever closed
+	-- read as the hand 8 degrees off)
+	local thr, lev, tmax, levAll, nRun = 0, 0, 0, 0, 0
 	for e = 0, 3 do
 		thr = math.max(thr, B747DR_at_TRA[e])
-		lev = lev + B747DR_throttle[e] / 4
+		levAll = levAll + B747DR_throttle[e] / 4
+		if simDR_at_burning[e] == 1 then lev, nRun = lev + B747DR_throttle[e], nRun + 1 end
 		-- (step 9h4b) the full-forward rating, the highest EEC's
 		tmax = math.max(tmax, n1 and B747DR_at_N1_max[e] or B747DR_at_EPR_max[e])
 	end
+	lev = nRun > 0 and lev / nRun or levAll
 	i.thrust_max = tmax > (n1 and 10 or 0.5) and tmax or nil
 	i.dt, i.ias, i.accel, i.target = dt, ias, atAccel, afds_speed_ref()
 	-- (2026-11-10) SPD in the air's gusts: the TAS (kt) and the inertial

@@ -508,9 +508,14 @@ function M.servo(s, inp)
         -- least 300 fpm with CON the most (FCOM p.1268)
         local reached = s.reach_t >= M.REACH_S and not inp.vnav_dd
         -- the descent at the aft stop, or the hand 8 degrees off: HOLD
-        -- (p.648, p.670); VNAV's at its V/S too, latched
-        if not s.ga and ((want < 0 and s.cmd <= 0 and rate < 0)
-            or math.abs(inp.lever - s.cmd) > M.OVERRIDE or reached) then
+        -- (p.648, p.670); VNAV's at its V/S too, latched. (2026-11-12
+        -- review AT-7) The hand's HOLD in FLCH only: ATA34_2 p.648's Pilot
+        -- Override Logic is FL CH's; in the other modes the levers go back
+        -- to the servo's position when let go, the mode unchanged (before,
+        -- VNAV's THR too: a stopped engine's lever closed in a driftdown put
+        -- the A/T in HOLD for good)
+        local hand = not vnav and math.abs(inp.lever - s.cmd) > M.OVERRIDE
+        if not s.ga and ((want < 0 and s.cmd <= 0 and rate < 0) or hand or reached) then
             s.mode, s.servo, s.cmd, s.reach_t = M.HOLD, false, inp.lever, 0
             if vnav then s.thr_hold = true end
             return s

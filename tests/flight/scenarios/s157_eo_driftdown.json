@@ -1,11 +1,15 @@
 {
   "name": "s157_eo_driftdown",
-  "description": "6-1/6-2 段 9h4b（E/O の driftdown、LEVEL AT、E/O の予測）の X-Plane での確認。空中、FL370 の巡航（機体を読み直す）、RJAA→RJBB の経路、PERF INIT で ZFW 200・CRZ ALT FL370・COST INDEX 100、VNAV PTH。FUEL CONTROL 2 を CUTOFF にしてエンジン 2 を止め、VNAV の CRZ のページの ENG OUT>（5R）で MOD E/O LRC D/D。MCP 高度を E/O の最大高度の下（FL300）にして EXEC（FCOM p.1268 の条件 1）：CRZ ALT は E/O の最大高度、推力制限は CON、題は ACT E/O LRC D/D、laminar/B747/fms/vnav/dd、VNAV SPD と A/T の THR（目標に達しても HOLD にならない）、降下率は最小 300 fpm、目標は CRZ ALT での E/O LRC の Mach。CRZ のページの 2R は AT（水平になる時刻と距離）、PROGRESS は E/O SPD と LEVEL AT（FCOM p.1353、p.1372–1373、FMSPG p.3.4-19）。E/O の最大高度で水平（VNAV PTH、A/T SPD、ACT E/O LRC CRZ、LEVEL AT なし）。CDU を撮る。Lua の誤りも確かめる",
+  "description": "6-1/6-2 段 9h4b（E/O の driftdown、LEVEL AT、E/O の予測）の X-Plane での確認。空中、FL370 の巡航（機体を読み直す）、RJAA→RJBB の経路、PERF INIT で ZFW 200・CRZ ALT FL370・COST INDEX 100、VNAV PTH。FUEL CONTROL 2 を CUTOFF にしてエンジン 2 を止め、VNAV の CRZ のページの ENG OUT>（5R）で MOD E/O LRC D/D。MCP 高度を E/O の最大高度の下（FL300）にして EXEC（FCOM p.1268 の条件 1）：CRZ ALT は E/O の最大高度、推力制限は CON、題は ACT E/O LRC D/D、laminar/B747/fms/vnav/dd、VNAV SPD と A/T の THR（目標に達しても HOLD にならない）、降下率は最小 300 fpm、目標は CRZ ALT での E/O LRC の Mach。CRZ のページの 2R は AT（水平になる時刻と距離）、PROGRESS は E/O SPD と LEVEL AT（FCOM p.1353、p.1372–1373、FMSPG p.3.4-19）。E/O の最大高度で水平（VNAV PTH、A/T SPD、ACT E/O LRC CRZ、LEVEL AT なし）。CDU を撮る。Lua の誤りも確かめる。重さは 270 t（2026-11-13：前は前のシナリオの重さを引き継ぎ、310 t の回では E/O LRC の Mach の確かめが合わなかった。2026-11-12 のフルレビュー T-5）",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 11278, "heading_true": 340, "speed_in_meters_per_second": 245 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0]
+    },
     "weather": {
       "definition": "vfr_few_clouds",
       "vertical_speed_in_thermal_in_feet_per_minute": 0,

@@ -399,11 +399,17 @@ local s20 = A.new()
 A.update(s20, inp{pitch = "VNAV", vnav_at = A.THR})
 A.servo(s20, sv{vs = -200, vnav_vs = -1250, lever = 0})
 T.equal(A.fma(s20), A.HOLD, "THR at the aft stop with less asked: HOLD")
+-- (2026-11-12 review AT-7) the hand 8 degrees off in VNAV's THR: THR kept,
+-- the servo on (ATA34_2 p.648, Pilot Override Logic: the HOLD is FL CH's;
+-- in the other modes the levers go back to the servo's position when let
+-- go, the mode unchanged). Before, HOLD: a stopped engine's lever closed in
+-- a driftdown put the A/T in HOLD for good
 local s21 = A.new()
 A.update(s21, inp{pitch = "VNAV", vnav_at = A.THR})
 A.servo(s21, sv{vs = -200, vnav_vs = -1250, lever = 0.6})
 A.servo(s21, sv{vs = -200, vnav_vs = -1250, lever = 0.6 + A.OVERRIDE + 0.01})
-T.equal(A.fma(s21), A.HOLD, "THR, the levers 8 degrees off: HOLD")
+T.equal(A.fma(s21), A.THR, "VNAV's THR, the levers 8 degrees off: THR kept (p.648)")
+T.check(s21.servo, "VNAV's THR, the levers 8 degrees off: the servo on")
 -- levelled (VNAV ALT, PTH): SPD, the HOLDs' latches gone with it (the
 -- descent on after a level-off: IDLE again; before, HOLD at once)
 local s22 = A.new()
@@ -451,7 +457,12 @@ local c0 = s24d.cmd
 A.servo(s24d, sv{vs = -300, vnav_vs = -300, lever = c0, thrust = 1.6, thrust_ref = 1.5, vnav_dd = true})
 T.check(s24d.cmd < c0 and A.fma(s24d) == A.THR, "over the reference thrust (CON): back to it, THR")
 A.update(s24d, inp{pitch = "VNAV", vnav_at = A.THR, vnav_phase = 2, vnav_dd = true})
-A.servo(s24d, sv{vs = -100, vnav_vs = -300, lever = 0, vnav_dd = true})
+-- (2026-11-12 review AT-7: the levers' command driven to its aft stop; before,
+-- the levers 0 against a command of 0.5 read as the hand)
+for _ = 1, 2000 do
+    A.servo(s24d, sv{vs = -100, vnav_vs = -300, lever = s24d.cmd, vnav_dd = true})
+    if A.fma(s24d) == A.HOLD then break end
+end
 T.equal(A.fma(s24d), A.HOLD, "the aft stop with less asked: HOLD still")
 -- (the FMC's step 9h4b) the EEC's full-forward rating under the reference
 -- (above 25,000 ft the maximum climb, under CON's: s157 wound the levers to
