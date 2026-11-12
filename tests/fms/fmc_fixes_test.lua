@@ -91,6 +91,18 @@ key("func_key/index")
 key("ls_key/L6")  -- <INDEX: INIT/REF INDEX (the INIT REF key goes by context: step 3a)
 key("ls_key/L4")
 T.check(line(5):find("<GA"), "THRUST LIM in the air: <GA: " .. line(5))
+-- (2026-11-12 review C-1) EPR or N1 by the engine type, whatever the
+-- livery file's thrust_ref says (here EPR): GE in N1
+T.check(small(2):find("EPR") ~= nil or line(3):find("EPR") ~= nil or line(1):find("EPR") ~= nil,
+    "P&W (type 0): THRUST LIM in EPR: " .. line(1) .. "|" .. small(2) .. "|" .. line(3))
+rt:set("laminar/B747/engines/type", 1)
+frames(0.2)
+key("func_key/index") key("ls_key/L6") key("ls_key/L4")
+T.check(small(2):find("N1") ~= nil or line(3):find("N1") ~= nil or line(1):find("N1") ~= nil,
+    "GE (type 1), the file's thrust_ref EPR: THRUST LIM in N1: " .. line(1) .. "|" .. small(2) .. "|" .. line(3))
+rt:set("laminar/B747/engines/type", 0)
+frames(0.2)
+key("func_key/index") key("ls_key/L6") key("ls_key/L4")
 key("ls_key/L2")
 T.check(fms.ns.B747_fms_thrlim().mode == "GA" and line(14):gsub("%s+$", "") == "" and line(5):find("^<GA   <SEL>"),
     "<GA in the air: GA selected (step 9g2; FCOM p.1339): " .. line(5))

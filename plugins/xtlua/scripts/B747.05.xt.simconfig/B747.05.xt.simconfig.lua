@@ -202,9 +202,11 @@ function check_pfd_nd_style()
 end
 
 function check_thrust_ref()
-	if string.match(simConfigData["data"].PLANE.engines, "PW") or string.match(simConfigData["data"].PLANE.engines, "RB") then --  simConfigData["data"].PLANE.thrust_ref == "EPR" then
+	-- (2026-11-12 review C-2) the engines' name in any case
+	local engines = string.upper(tostring(simConfigData["data"].PLANE.engines or ""))
+	if string.match(engines, "PW") or string.match(engines, "RB") then --  simConfigData["data"].PLANE.thrust_ref == "EPR" then
 		B747DR_thrust_ref = 0
-	elseif string.match(simConfigData["data"].PLANE.engines, "CF6") then --simConfigData["data"].PLANE.thrust_ref == "N1" then
+	elseif string.match(engines, "CF6") then --simConfigData["data"].PLANE.thrust_ref == "N1" then
 		B747DR_thrust_ref = 1
 	else --Asssume EPR if all else fails
 		B747DR_thrust_ref = 0
@@ -213,17 +215,19 @@ end
 
 -- crazytimtimtim
 function checkEngineType()
-	if string.match(simConfigData["data"].PLANE.engines, "PW") then
+	-- (2026-11-12 review C-2) the engines' name in any case ("cf6-80c2-b1f")
+	local engines = string.upper(tostring(simConfigData["data"].PLANE.engines or ""))
+	if string.match(engines, "PW") then
 		B747DR_engineType = 0
 		B747DR_hideGE=0
 		B747DR_hideRR=1
 		B747DR_hidePW=1
-	elseif string.match(simConfigData["data"].PLANE.engines, "CF") then
+	elseif string.match(engines, "CF") then
 		B747DR_engineType = 1
 		B747DR_hideGE=0
 		B747DR_hideRR=1
 		B747DR_hidePW=1
-	elseif string.match(simConfigData["data"].PLANE.engines, "RB") then
+	elseif string.match(engines, "RB") then
 		B747DR_engineType = 2
 		B747DR_hideGE=1
 		B747DR_hideRR=0
@@ -359,20 +363,37 @@ function set_loaded_configs()
 	B747DR_newsimconfig_data=0
 end
 
+-- (2026-11-12 review C-2) the sections and keys a livery's file lacks,
+-- from the defaults
+local function merge_defaults(t, d)
+	for k, v in pairs(d) do
+		if t[k] == nil then t[k] = v
+		elseif type(v) == "table" and type(t[k]) == "table" then merge_defaults(t[k], v) end
+	end
+	return t
+end
+-- (2026-11-12 review C-2) the livery's B747-400_simconfig.dat read whole
+-- (one line as the CDU writes it, or set out over several by an editor), a
+-- BOM dropped, decoded in a pcall, the sections and keys it lacks from the
+-- defaults; a file that does not decode: the defaults (a line in the log).
+-- Before, its first line only, decoded unguarded: a set-out, cut or empty
+-- file, or one without the FMC section, stopped every module of this
+-- XTLua plugin on a Lua error
 function aircraft_simConfig()
 	local file_location = simDR_livery_path.."B747-400_simconfig.dat"
 	print("File = "..file_location)
-	local file = io.open(file_location, "r")
+	local file = io.open(file_location, "rb")
 
 	if file ~= nil then
-		io.input(file)
-		local tmpDataS = io.read()
-		io.close(file)
-		--print("read "..tmpDataS)
-		local tmpData=json.decode(tmpDataS)
-		if (tmpData["SOUND"]==nil) then
-			tmpData["SOUND"]=simconfig_values()["SOUND"]
+		local tmpDataS = file:read("*a") or ""
+		file:close()
+		tmpDataS = tmpDataS:gsub("^\239\187\191", "")
+		local ok, tmpData = pcall(json.decode, tmpDataS)
+		if not ok or type(tmpData) ~= "table" then
+			print("simconfig: " .. file_location .. " not read (" .. tostring(tmpData) .. "): the defaults")
+			tmpData = simconfig_values()
 		end
+		merge_defaults(tmpData, simconfig_values())
 		tmpData.FMC.INIT.op_program = fmcVersion
 		--print("encoding "..tmpDataS)
 		B747DR_simconfig_data = json.encode(tmpData)
