@@ -427,6 +427,23 @@ B747_acp_bind(B747_ap_button_switch_position_target)
 function clear_PTT()
     B747_ap_toggle_switch_position_target[0] = 0
 end
+-- (2026-11-12 review SM-2) the C and R seats' PTT switches back to the
+-- centre as the L seat's when the release never comes (FCOM p.683-684:
+-- spring-loaded); before, a one-shot press left them keyed
+function clear_PTT_C()
+    B747_ap_toggle_switch_position_target[1] = 0
+end
+function clear_PTT_R()
+    B747_ap_toggle_switch_position_target[2] = 0
+end
+local function ptt_spring(phase, clear)
+    if phase <= 1 then
+        if is_timer_scheduled(clear) then stop_timer(clear) end
+        run_after_time(clear, 0.5)
+    elseif is_timer_scheduled(clear) then
+        stop_timer(clear)
+    end
+end
 
 function B747_ap_L_ptt_sel_switch_up_CMDhandler(phase, duration)
     -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
@@ -465,6 +482,7 @@ end
 function B747_ap_C_ptt_sel_switch_up_CMDhandler(phase, duration)
     -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
     if phase == 0 then B747_acp_ptt("C", "rt") end
+    ptt_spring(phase, clear_PTT_C)
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[1] == 0 then
             B747_ap_toggle_switch_position_target[1] = 1
@@ -477,6 +495,7 @@ end
 function B747_ap_C_ptt_sel_switch_dn_CMDhandler(phase, duration)
     -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
     if phase == 0 then B747_acp_ptt("C", "int") end
+    ptt_spring(phase, clear_PTT_C)
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[1] == 0 then
             B747_ap_toggle_switch_position_target[1] = -1
@@ -489,6 +508,7 @@ end
 function B747_ap_R_ptt_sel_switch_up_CMDhandler(phase, duration)
     -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
     if phase == 0 then B747_acp_ptt("R", "rt") end
+    ptt_spring(phase, clear_PTT_R)
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[2] == 0 then
             B747_ap_toggle_switch_position_target[2] = 1
@@ -501,6 +521,7 @@ end
 function B747_ap_R_ptt_sel_switch_dn_CMDhandler(phase, duration)
     -- (7-1c) R/T or INT keyed: a call reset (notes/ATA-23.md §13)
     if phase == 0 then B747_acp_ptt("R", "int") end
+    ptt_spring(phase, clear_PTT_R)
     if phase == 0 then
         if B747_ap_toggle_switch_position_target[2] == 0 then
             B747_ap_toggle_switch_position_target[2] = -1

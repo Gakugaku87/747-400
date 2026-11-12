@@ -788,6 +788,33 @@ function B747_press_outflow_vlv_R_CMDhandler(phase, duration)
     if phase == 0 then B747_button_switch_position_target[35] = 1.0 - B747_button_switch_position_target[35] end
 end
 
+-- (2026-11-12 review SM-2) a spring-loaded position comes back by itself
+-- SPRING_S after the command's last event when the release never comes (a
+-- press shorter than a frame: XTLua passes X-Plane's "once" without its
+-- end, as from a hardware button, the Web API or the CDU's EICAS MODES); a
+-- press held (its events every frame) keeps it. FCOM p.441 (IND LTS TEST),
+-- p.574 (OUTFLOW VALVE MANUAL), p.683-684, p.1528: each spring-loaded. The
+-- time: estimate (the oxygen switches' 0.3 s). Before, such a press left
+-- TEST, OPEN, CLOSE and the reset and discharge buttons held
+local SPRING_S = 0.3
+local springs = {}      -- key -> {t = seconds left, back = function}
+local function spring(key, phase, back)
+    if phase < 2 then springs[key] = {t = SPRING_S, back = back} else springs[key] = nil end
+end
+local function run_springs(dt)
+    for key, s in pairs(springs) do
+        s.t = s.t - dt
+        if s.t <= 0 then
+            springs[key] = nil
+            s.back()
+        end
+    end
+end
+local function ind_test_back()
+    if B747_toggle_switch_position_target[13] == 1 then B747_toggle_switch_position_target[13] = 0 end
+end
+local function outflow_back() B747_toggle_switch_position_target[22] = 0 end
+
 function B747_temp_zone_rst_CMDhandler(phase, duration)
     if phase == 0 then
         B747_button_switch_position_target[36] = 1
@@ -796,6 +823,7 @@ function B747_temp_zone_rst_CMDhandler(phase, duration)
     elseif phase == 2 then
         B747_button_switch_position_target[36] = 0
     end
+    spring("temp_zone_rst", phase, function() B747_button_switch_position_target[36] = 0 end)
 end
 
 function B747_temp_trim_air_CMDhandler(phase, duration)
@@ -826,6 +854,7 @@ function B747_temp_pack_rst_CMDhandler(phase, duration)
     elseif phase == 2 then
         B747_button_switch_position_target[42] = 0
     end
+    spring("temp_pack_rst", phase, function() B747_button_switch_position_target[42] = 0 end)
 end
 
 function B747_misc_fuel_xfr_1_4_CMDhandler(phase, duration)
@@ -1008,6 +1037,7 @@ function B747_cargo_fire_disch_CMDhandler(phase, duration)
     elseif phase == 2 then
         B747_button_switch_position_target[86] = 0
     end
+    spring("cargo_fire_disch", phase, function() B747_button_switch_position_target[86] = 0 end)
 end
 
 function B747_warning_caution_captain_CMDhandler(phase, duration)
@@ -1114,6 +1144,7 @@ function B747_logo_light_switch_CMDhandler(phase, duration)
 end
 
 function B747_ind_light_switch_up_CMDhandler(phase, duration)
+    spring("ind_test", phase, ind_test_back)
     if phase == 0 then
         if B747_toggle_switch_position_target[13] == -1 then
             B747_toggle_switch_position_target[13] = 0
@@ -1243,18 +1274,20 @@ function B747_outflow_valve_switch_open_CMDhandler(phase, duration)
     elseif phase == 2 then
         B747_toggle_switch_position_target[22] = 0
     end
+    spring("outflow", phase, outflow_back)
 end
 
 function B747_outflow_valve_switch_close_CMDhandler(phase, duration)
+    -- (2026-11-12 review SM-2) CLOSE from OPEN too (the switch springs to
+    -- the centre: a CLOSE pressed while OPEN stuck would else do nothing)
     if phase == 0 then
-        if B747_toggle_switch_position_target[22] == 0 then
-            B747_toggle_switch_position_target[22] = -1
-        end
+        B747_toggle_switch_position_target[22] = -1
     elseif phase == 2 then
         if B747_toggle_switch_position_target[22] == -1 then
             B747_toggle_switch_position_target[22] = 0
         end
     end
+    spring("outflow", phase, outflow_back)
 end
 
 -- the F/D switch: the switch only (its modes: the AFDS model in the
@@ -2342,6 +2375,7 @@ function after_physics()
     end
     flightInit=true
 
+    run_springs(SIM_PERIOD)
     B747_button_switch_cover_animation()
     B747_button_switch_animation()
     B747_toggle_switch_animation()
