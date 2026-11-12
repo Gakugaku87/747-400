@@ -6,7 +6,8 @@
 
 ## いまどこか
 
-- **修正案（2026-11-12 未明。枝 `claude/trusting-bohr-m25792`、draft PR、未マージ。同じ日に利用者の PC の X-Plane で確認）**：利用者の FAOR→WSSS の飛行（Release `custom-2026.11.11.3`、347.5 t）で、VNAV SPD・THR REF の上昇が 10,000 ft の加速（目標 272 → 340 kt）の間に約 300 ft 降下した（機体の FDR の 30 秒の点で −839 fpm。notes/ATA-22.md §62）。
+- **PR #34〜#37 を入れた（2026-11-12 午後、利用者の「PR #34〜37 をマージして Release 更新して」）**：`overhaul`・`master`・`custom` にマージし、Release を `custom-2026.11.12` に更新した（下の 3 つの項目と「日誌」）。PR #34 だけが X-Plane で確かめてあり、#35〜#37 は未確認（開発 PC の残り：#37 は `s172_proc_msgs` と WSSS、#35・#36 は手元の `747-400.snd` と雨の音）。
+- **速度の則の「ほぼ水平」（2026-11-12。PR #34、同じ日に `overhaul` に入れた。利用者の PC の X-Plane で確認）**：利用者の FAOR→WSSS の飛行（Release `custom-2026.11.11.3`、347.5 t）で、VNAV SPD・THR REF の上昇が 10,000 ft の加速（目標 272 → 340 kt）の間に約 300 ft 降下した（機体の FDR の 30 秒の点で −839 fpm。notes/ATA-22.md §62）。
   - 原因：速度の則（`B747.70.afds_pitch_model.lua`）が、1.5 kt/s までの加速を全部経路から取り、FLCH・VNAV SPD には経路の下限が無かった。この重さの水平の加速は約 1.0 kt/s。
   - 直し：FLCH・VNAV SPD で向きに逆らって速さを変える間（上昇中の加速、降下中の減速）、経路を「ほぼ水平」（上昇中 +100 fpm、降下中 −100 fpm：推定。driftdown は FCOM p.1268 の 300 fpm）より先へ行かせない。加速はその経路で推力が出す分（FCTM p.118：片発の加速は near-level climb segment）。推力の余りが小さいときは水平飛行まで（推力が水平飛行を保てる間は、速さのために高度を払わない：推定）。推力が水平飛行に足りないときだけ、前と同じく高度を払って速さを保つ（ATA22 p.338、FCOM p.675。取り戻しはゆっくり、多くて経路の 100 fpm 分：推定）。T/O・G/A、向きに沿う変更、目標の約 1 kt 以内は前と同じ。
   - 資料：利用者から FCTM・ATA22・FCOM の PDF を受け取って読んだ。上昇率の数値は無い（FCTM p.118 は near level とだけ）。
@@ -14,23 +15,14 @@
   - レビュー（結論を渡さずに別のエージェントに読ませた）と変異試験で、則 1 件（余りが小さい上昇で −18〜−68 fpm の降下）、記録の解析の道具の判定 4 件、試験の穴を直した。則・VNAV のモデル・グルーを 1 か所ずつ壊した 64 通りのうち 63 通りが試験で落ち、残る 1 通りは挙動が同じ（notes/ATA-22.md §62 の「レビュー」）。
   - 基点は master（= overhaul）`c1f2c68c`。機体の Lua は Release のタグ `custom-2026.11.11.3` と同じ。
   - X-Plane（2026-11-12、利用者の PC のセッションが Release の写しに則の 3 ファイルを入れて回した）：新しい 4 本は合格。`s285`（347.5 t）は 340 kt への加速の間 V/S 最小 +160 fpm・高度の損 0、気温を上げて余りを利用者の飛行に近づけた `s288` は +181 fpm・0 ft、`s286` の降下中の減速は −183 fpm まで、`s287`（238 t）は +1,483 fpm。回帰は `s109`（T/O の幅を IAS が 0.3 kt 以下だけ越えた。T/O の則は前と同じ）と `s157`（driftdown の 60 秒後が −154 fpm で基準の −200 に届かない。前の則の方が浅くなる所）の各 1〜2 件のほかは合格。Lua の誤りなし。観察（降下中に上昇へ入る時の一時の降下など）は notes/ATA-22.md §62。
-  - **次**：merge するかは利用者が決める（その後 overhaul・master・custom と Release）。
-- **機体の修正（2026-11-09 夜遅く）**：利用者の依頼「他に本家の古いシステムが噛み合わせ悪くしてないか」で、Fable のエージェント 3 つに本家の古いコードを読ませ（読むだけ）、見つかった食い違いを直した。
-  - X-Plane 標準の V/S・FLCH のコマンドが、MCP のボタンを押す形で AFDS のモデルを通る（notes/ATA-22.md §57）。発電機のコマンドが GEN CONT を動かし、BATTERY がミニマムを消さない（ATA-24 §13）。
-  - 整備パネルの FIELD OFF・SSB OPEN の灯をモデルから点ける（前は常に消灯。3D の頭上パネルにある）。CDU の画面の明かりをその CDU の電源で（ATA-24 §14）。
-  - APU が燃料弁を見る（閉のまま 6 秒で燃料なし：推定。ATA-49 §13）。地上でも VREF の着陸のフラップが残る（ATA-31 §47）。
-  - 古いピッチの関数がモードの印を書かない（ATA-22 §58）。油圧系統 1 の幻のステアリングの消費を消した（ATA-29 §12）。
-  - PROGRESS の予測の無い道の T/C を FMC の段階で（ATA-34-61-FMC §158）。予測の上昇の水平の区間を上昇の速さで（§159、X-Plane はまだ）。燃料の synoptic の同じ形の 2 件は先に入れた（ATA-28 §12）。
-  - X-Plane（20:53〜22:27）：新しい `s275`（地上：ミニマム、発電機のコマンドと FIELD OFF、SSB OPEN、VREF、APU の燃料弁）は 21/21、`s276`（V/S・FLCH のコマンド）は 6/6。回帰の `s101` は 32/33（V/S の入りの待ちがぎりぎりの、シナリオの間の取り方の問題）。整備パネルの灯と地上の PFD の REF のバグは写真に写らず、利用者の目視に回す。
-  - 残り（直さない・後で）：EEC の地上の門（表示の N2 < 60）と古い MCP の速さの上下限（見える誤りが無い。表示の EGT・AFDS の作業のときに見直す）。X-Plane の地上の電源車の後に EXT PWR が残る件（X-Plane で確かめてから）。`autopilot/flightPhase` の 13 の書き手の整理（読み手は RR の EPR の印だけ）。表示の EGT が低い（別の項目）。`s101` の V/S の前に空中開始の落ち着きを待つ。
-- **修正案（2026-11-12。枝 `claude/arrivals-change-runway`、draft PR、未マージ、master とは別、X-Plane 未確認）**：ARRIVALS で、STAR と進入を一度選ぶと反対向きの滑走路の組へ変えられなかった（利用者の FAOR→WSSS の飛行。WSSS の STAR はどれも 02 側だけか 20 側だけで、どちらを選んでも ARR N/A FOR RUNWAY で拒否された。notes/ATA-34-61-FMC.md §166）。
+- **ARRIVALS の合わない組（2026-11-12。PR #37、同じ日に `overhaul` に入れた。X-Plane 未確認）**：ARRIVALS で、STAR と進入を一度選ぶと反対向きの滑走路の組へ変えられなかった（利用者の FAOR→WSSS の飛行。WSSS の STAR はどれも 02 側だけか 20 側だけで、どちらを選んでも ARR N/A FOR RUNWAY で拒否された。notes/ATA-34-61-FMC.md §166）。
   - 直し：選んだ方は必ず通し、経路に今ある相手と合わなければ相手を経路から外して ARR N/A FOR RUNWAY を出す（`activepages/B744.fms.pages.deparr.lua` の `arrsel`）。合う組はそのまま。有効な経路では MOD になり、ERASE で戻る。
   - 資料：FCOM p.1403・p.1435、FMSPG p.194–195・p.260（利用者から FMS Pilot's Guide の PDF を受け取った）。資料は拒否とは書いていない。合わない相手が外れることは推定（DEPARTURES の FCOM p.1302 からの類推と、PSX のフォーラム：PSX 由来（実機資料なし））。
   - 試験（X-Plane なし）：全 250 本・構文 587 本が合格。新しい `arr_change_test.lua`（53 件。WSSS と同じ形の試験用の空港 ZZSS）は、直す前のコードでは 28 件が落ちる。
   - **次**：X-Plane で `s172_proc_msgs`（新しい挙動に合わせた）と、WSSS で 20 側の組から 02 側の組へ。合わない相手を外す挙動は、利用者が選んだ（2026-11-12。資料に無いので推定のまま）。
-- **雨の音の定義の誤記の直し（2026-11-12。枝 `claude/intelligent-ritchie-l1iset`、draft PR、X-Plane 未確認）**：`fmod/747-400_custom.snd` の雨の音の `EVENT_START_END`（X-Plane の `.snd` の仕様に無い行。機体を読み込むたびに `E/SOUN: Warning: unknown line`）を `EVENT_END_COND` に直した（利用者の Log.txt と回答。LCF・XP11 の `.snd` は触らない）。詳しくは「気づいたこと」の、手元の `747-400.snd` の項目。
-  - **次**（X-Plane のある開発 PC で）：手元の `fmod/747-400.snd`（skip-worktree）を同じに直す（直すまで、下の `snd_format_test.lua` が落ちる）。X-Plane で Log.txt と雨の音を確かめる。`overhaul`・`master` に入れて `custom` を更新する。
-- **`.snd` の静的試験（2026-11-12。同じ枝、同じ draft PR）**：利用者の依頼（提案のカード「カスタムの .snd の静的試験を足す」をこのセッションで）。`tests/static/snd_format_test.lua` を足した（TESTING.md の `.snd` の注意）。
+- **雨の音の定義の誤記の直し（2026-11-12。PR #35 と #36（同じ直し）、同じ日に `overhaul` に入れた。X-Plane 未確認）**：`fmod/747-400_custom.snd` の雨の音の `EVENT_START_END`（X-Plane の `.snd` の仕様に無い行。機体を読み込むたびに `E/SOUN: Warning: unknown line`）を `EVENT_END_COND` に直した（利用者の Log.txt と回答。LCF・XP11 の `.snd` は触らない）。詳しくは「気づいたこと」の、手元の `747-400.snd` の項目。
+  - **次**（X-Plane のある開発 PC で）：手元の `fmod/747-400.snd`（skip-worktree）を同じに直す（直すまで、下の `snd_format_test.lua` が落ちる）。X-Plane で Log.txt と雨の音を確かめる。
+- **`.snd` の静的試験（2026-11-12。PR #35）**：利用者の依頼（提案のカード「カスタムの .snd の静的試験を足す」をこのセッションで）。`tests/static/snd_format_test.lua` を足した（TESTING.md の `.snd` の注意）。
   - `fmod/747-400_custom.snd` を X-Plane なしで調べる。照らすのは X-Plane の `.snd` の仕様（頭の 3 行、指示語とその置き場所、BEGIN と END の対、attachment ごとに名前 1 つ）、`fmod/GUIDs.txt`（名前が `#` で始まらない行にあるか）、`REQUIRES_BANK` のバンク。
   - 今のファイルは合格。直す前のファイル（`c1f2c68`）は「line 7533: not a directive of the .snd format: EVENT_START_END」で落ちる。
   - 開発 PC では、`fmod/747-400.snd` が skip-worktree の手元の写しなら、`747-400_custom.snd` と行ごとに比べる（CLAUDE.md：両方を同じにする）。**この枝を入れた後、手元の写しを直すまでは、この試験が 7,533 行目の違いで落ちる。**
@@ -43,6 +35,14 @@
     - X-Plane の `DataRefs.txt` の代わりに、XPlane2Blender の 12.08 の写しに、developer.x-plane.com の一覧（`datarefs.json`）から新しい 904 件を足したものを使った（作業用のフォルダーだけ。リポジトリには入れない）。
     - 試験を足す前は 249 本、足した後は 250 本が全部合格。ほかの 249 本はチェックの数まで同じ。`tests/run.sh static` は 8 本が合格。構文は 586 本 → 587 本で、誤りなし。
   - 見つけたこと（直していない。音は対象外）：「気づいたこと」の `.snd` の項目。
+- **機体の修正（2026-11-09 夜遅く）**：利用者の依頼「他に本家の古いシステムが噛み合わせ悪くしてないか」で、Fable のエージェント 3 つに本家の古いコードを読ませ（読むだけ）、見つかった食い違いを直した。
+  - X-Plane 標準の V/S・FLCH のコマンドが、MCP のボタンを押す形で AFDS のモデルを通る（notes/ATA-22.md §57）。発電機のコマンドが GEN CONT を動かし、BATTERY がミニマムを消さない（ATA-24 §13）。
+  - 整備パネルの FIELD OFF・SSB OPEN の灯をモデルから点ける（前は常に消灯。3D の頭上パネルにある）。CDU の画面の明かりをその CDU の電源で（ATA-24 §14）。
+  - APU が燃料弁を見る（閉のまま 6 秒で燃料なし：推定。ATA-49 §13）。地上でも VREF の着陸のフラップが残る（ATA-31 §47）。
+  - 古いピッチの関数がモードの印を書かない（ATA-22 §58）。油圧系統 1 の幻のステアリングの消費を消した（ATA-29 §12）。
+  - PROGRESS の予測の無い道の T/C を FMC の段階で（ATA-34-61-FMC §158）。予測の上昇の水平の区間を上昇の速さで（§159、X-Plane はまだ）。燃料の synoptic の同じ形の 2 件は先に入れた（ATA-28 §12）。
+  - X-Plane（20:53〜22:27）：新しい `s275`（地上：ミニマム、発電機のコマンドと FIELD OFF、SSB OPEN、VREF、APU の燃料弁）は 21/21、`s276`（V/S・FLCH のコマンド）は 6/6。回帰の `s101` は 32/33（V/S の入りの待ちがぎりぎりの、シナリオの間の取り方の問題）。整備パネルの灯と地上の PFD の REF のバグは写真に写らず、利用者の目視に回す。
+  - 残り（直さない・後で）：EEC の地上の門（表示の N2 < 60）と古い MCP の速さの上下限（見える誤りが無い。表示の EGT・AFDS の作業のときに見直す）。X-Plane の地上の電源車の後に EXT PWR が残る件（X-Plane で確かめてから）。`autopilot/flightPhase` の 13 の書き手の整理（読み手は RR の EPR の印だけ）。表示の EGT が低い（別の項目）。`s101` の V/S の前に空中開始の落ち着きを待つ。
 - **燃料の自動管理のオプション（2026-11-09 午後〜夜）**：利用者の依頼「燃料タンクのマネジメントを自動化するオプションもPluginに追加できる？」で、Plugins → 747-400 に「Auto fuel management」を足した（既定 OFF。notes/ATA-28.md §13）。
   - 空中でフラップレバーが UP のとき、Climb and Cruise Procedure の燃料の操作（FCOM p.133–136）を、スイッチのコマンドで代わりにする。FUEL LOW CTR で CTR OFF、FUEL OVD CTR で CTR ON、FUEL PMP STB で STAB ON、FUEL PRES STB（900 kg 以下）で STAB OFF、FUEL TANK/ENG で OVRD 2・3 と X FEED 1・4 OFF。メッセージの 5 秒後に、1 秒に 1 スイッチ。
   - 飛行中に操縦士が動かしたスイッチは、着陸まで触らない。地上の操作・均衡・ジェティソン・非常時の処置はしない。
