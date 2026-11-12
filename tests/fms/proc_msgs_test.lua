@@ -4,8 +4,11 @@
 -- lib/xtlua.lua), on the synthetic ZZAA (its YANKE1 serves 16R only, its
 -- STAR BRAVO1 34L only): RUNWAY N/A FOR SID for the RTE page's RUNWAY 34L
 -- with YANKE1 (the entry rejected), 16R taken; ARR N/A FOR RUNWAY for
--- BRAVO1 with the ILS16R selected and for the ILS16R with BRAVO1 (rejected),
--- ALPHA1 (all runways) taken.
+-- BRAVO1 with the ILS16R selected and for the ILS16R with BRAVO1: the one
+-- selected goes in and the other out of the route (2026-11-12, §166:
+-- before, the selection was rejected; FCOM p.1403; FMSPG p.195, p.260),
+-- ALPHA1 (all runways) taken with the ILS16R without the message. The
+-- arrival changed to the other end's runways: arr_change_test.lua.
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("proc_msgs")
 local xtlua = dofile("tests/lib/xtlua.lua")
@@ -72,32 +75,44 @@ enter("16R", "L2")
 T.equal(pad(), "", "16R: taken")
 T.equal(rte().runway and rte().runway.ident, "RW16R", "the runway 16R")
 
--- ARRIVALS: the ILS16R, then BRAVO1 (34L only): ARR N/A FOR RUNWAY (FCOM p.1435)
-clear()
-key("func_key/clb")              -- DEP/ARR INDEX
-key("ls_key/R2")                 -- ZZAA ARRIVALS
+-- ARRIVALS: the ILS16R, then BRAVO1 (34L only): BRAVO1 goes in and the
+-- ILS16R out, with ARR N/A FOR RUNWAY (FCOM p.1435; FMSPG p.260)
+local function arrivals()
+    clear()
+    key("func_key/clb")              -- DEP/ARR INDEX
+    key("ls_key/R2")                 -- ZZAA ARRIVALS (all the options again)
+end
+arrivals()
 T.check(line(1):find("ZZAA ARRIVALS"), "ZZAA ARRIVALS: " .. line(1))
 key("ls_key/R1")                 -- ILS16R
 T.equal(rte().appr and rte().appr.id, "I16R", "ILS16R selected")
 T.check(line(5):find("^BRAVO1"), "BRAVO1 the second STAR: " .. line(5))
 key("ls_key/L2")
 T.equal(pad(), "ARR N/A FOR RUNWAY", "BRAVO1 with the ILS16R: ARR N/A FOR RUNWAY")
-T.check(rte().star == nil and rte().appr.id == "I16R", "rejected: no STAR, the ILS16R kept")
+T.check(rte().star and rte().star.name == "BRAVO1" and rte().appr == nil, "BRAVO1 selected, the ILS16R out of the route (before, BRAVO1 rejected)")
+T.check(line(3):find("^BRAVO1<SEL>") and line(3):find("ILS16R$") and not line(3):find("<SEL>ILS16R", 1, true),
+    "BRAVO1 <SEL>, the ILS16R not selected: " .. line(3))
+
+-- the other way: the ILS16R with BRAVO1 in the route
+arrivals()
+key("ls_key/R1")
+T.equal(pad(), "ARR N/A FOR RUNWAY", "the ILS16R with BRAVO1: ARR N/A FOR RUNWAY")
+T.check(rte().appr and rte().appr.id == "I16R" and rte().star == nil, "the ILS16R selected, BRAVO1 out of the route (before, the ILS16R rejected)")
 clear()
 key("ls_key/L1")                 -- ALPHA1 (all runways)
 T.equal(rte().star and rte().star.name, "ALPHA1", "ALPHA1 with the ILS16R: taken")
+T.equal(rte().appr and rte().appr.id, "I16R", "the ILS16R stays")
+T.equal(pad(), "", "no message")
+-- a STAR that goes with the approach replaced by one that does not
+arrivals()
+key("ls_key/L2")
+T.equal(pad(), "ARR N/A FOR RUNWAY", "BRAVO1 for ALPHA1 with the ILS16R: ARR N/A FOR RUNWAY")
+T.check(rte().star.name == "BRAVO1" and rte().appr == nil, "BRAVO1 selected, the ILS16R out")
 
--- the other way: BRAVO1 first, then the ILS16R
+-- a new destination: no arrival (the way round before: the destination
+-- entered anew took the STAR and the approach out)
 key("func_key/fpln")
 enter("ZZBB", "R1")
 enter("ZZAA", "R1")
 T.check(rte().star == nil and rte().appr == nil, "a new destination: no arrival")
-key("func_key/clb")
-key("ls_key/R2")
-key("ls_key/L2")                 -- BRAVO1
-T.equal(rte().star and rte().star.name, "BRAVO1", "BRAVO1 selected")
-T.check(line(3):find("ILS16R$"), "the ILS16R at 1R: " .. line(3))
-key("ls_key/R1")
-T.equal(pad(), "ARR N/A FOR RUNWAY", "the ILS16R with BRAVO1: ARR N/A FOR RUNWAY")
-T.check(rte().appr == nil, "rejected: no approach")
 T.done()

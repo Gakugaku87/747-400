@@ -14,6 +14,11 @@
   - PROGRESS の予測の無い道の T/C を FMC の段階で（ATA-34-61-FMC §158）。予測の上昇の水平の区間を上昇の速さで（§159、X-Plane はまだ）。燃料の synoptic の同じ形の 2 件は先に入れた（ATA-28 §12）。
   - X-Plane（20:53〜22:27）：新しい `s275`（地上：ミニマム、発電機のコマンドと FIELD OFF、SSB OPEN、VREF、APU の燃料弁）は 21/21、`s276`（V/S・FLCH のコマンド）は 6/6。回帰の `s101` は 32/33（V/S の入りの待ちがぎりぎりの、シナリオの間の取り方の問題）。整備パネルの灯と地上の PFD の REF のバグは写真に写らず、利用者の目視に回す。
   - 残り（直さない・後で）：EEC の地上の門（表示の N2 < 60）と古い MCP の速さの上下限（見える誤りが無い。表示の EGT・AFDS の作業のときに見直す）。X-Plane の地上の電源車の後に EXT PWR が残る件（X-Plane で確かめてから）。`autopilot/flightPhase` の 13 の書き手の整理（読み手は RR の EPR の印だけ）。表示の EGT が低い（別の項目）。`s101` の V/S の前に空中開始の落ち着きを待つ。
+- **修正案（2026-11-12。枝 `claude/arrivals-change-runway`、draft PR、未マージ、master とは別、X-Plane 未確認）**：ARRIVALS で、STAR と進入を一度選ぶと反対向きの滑走路の組へ変えられなかった（利用者の FAOR→WSSS の飛行。WSSS の STAR はどれも 02 側だけか 20 側だけで、どちらを選んでも ARR N/A FOR RUNWAY で拒否された。notes/ATA-34-61-FMC.md §166）。
+  - 直し：選んだ方は必ず通し、経路に今ある相手と合わなければ相手を経路から外して ARR N/A FOR RUNWAY を出す（`activepages/B744.fms.pages.deparr.lua` の `arrsel`）。合う組はそのまま。有効な経路では MOD になり、ERASE で戻る。
+  - 資料：FCOM p.1403・p.1435、FMSPG p.194–195・p.260（利用者から FMS Pilot's Guide の PDF を受け取った）。資料は拒否とは書いていない。合わない相手が外れることは推定（DEPARTURES の FCOM p.1302 からの類推と、PSX のフォーラム：PSX 由来（実機資料なし））。
+  - 試験（X-Plane なし）：全 250 本・構文 587 本が合格。新しい `arr_change_test.lua`（53 件。WSSS と同じ形の試験用の空港 ZZSS）は、直す前のコードでは 28 件が落ちる。
+  - **次**：X-Plane で `s172_proc_msgs`（新しい挙動に合わせた）と、WSSS で 20 側の組から 02 側の組へ。合わない相手を外す挙動は、利用者が選んだ（2026-11-12。資料に無いので推定のまま）。
 - **燃料の自動管理のオプション（2026-11-09 午後〜夜）**：利用者の依頼「燃料タンクのマネジメントを自動化するオプションもPluginに追加できる？」で、Plugins → 747-400 に「Auto fuel management」を足した（既定 OFF。notes/ATA-28.md §13）。
   - 空中でフラップレバーが UP のとき、Climb and Cruise Procedure の燃料の操作（FCOM p.133–136）を、スイッチのコマンドで代わりにする。FUEL LOW CTR で CTR OFF、FUEL OVD CTR で CTR ON、FUEL PMP STB で STAB ON、FUEL PRES STB（900 kg 以下）で STAB OFF、FUEL TANK/ENG で OVRD 2・3 と X FEED 1・4 OFF。メッセージの 5 秒後に、1 秒に 1 スイッチ。
   - 飛行中に操縦士が動かしたスイッチは、着陸まで触らない。地上の操作・均衡・ジェティソン・非常時の処置はしない。
@@ -698,6 +703,7 @@ PLAN.md §3 に書いた。要点：
   - X-Plane の LEVEL OFF（7.1）を 7.0 の ADJUST VERTICAL SPEED, ADJUST に。CLEAR OF CONFLICT は X-Plane の advisory が終わってから 2 秒以内に message が 5 になったとき。
   - GPWS の声の間は TCAS の声を出さない（捨てる）。声の 0.5 秒の保持。
   - PFD の RA のピッチの境：機体シンボルから、限界の昇降率と今の昇降率の経路角の差（asin(昇降率 / 真対気速度) の差。資料は「RA のデータの関数」とだけ）。X-Plane の vs_bands が 1 つの RA で上下両方に赤を出せば、赤枠も 2 つ出る（FCOM p.1537 は 1 つの RA では片方だけ）。
+  - ARRIVALS の合わない組（6-1・6-2、`activepages/B744.fms.pages.deparr.lua` の `arrsel`、2026-11-12、notes/ATA-34-61-FMC.md §166。修正案の枝）：STAR と進入が合わないとき、選んだ方を通して相手を経路から外すこと（資料はメッセージ ARR N/A FOR RUNWAY の意味を書くだけ。DEPARTURES の FCOM p.1302 からの類推と、PSX のフォーラム：PSX 由来（実機資料なし））。STAR を選んで進入が外れる向きにも同じメッセージを出すこと。外す挙動は利用者が選んだ（2026-11-12）。
   - 速度テープ（5-2 段 3a、`B747.60.speedtape_model.lua` に「estimate」）：空中で始めたフライトは最小機動速度の帯を出す。帯の判定で地上とみなすのは 100 kt 未満が 5 秒続いたときだけ（段 3b：空中開始や空中での機体の読み直しの直後に空地判定が一瞬地上に、速度も 0 になり、帯と AIRSPEED LOW が出なかった）。CDU で選んだ着陸フラップのバグは出さない（純正のパネルの決まり）。
   - カスタム acf の失速（2026-10-25、ACF_DIFF.md §5）：翼型の失速の部分のずらし 2.8° と前縁スラットの失速迎角の増し分 4.8・3.6 は、FCTM の失速速度に合うように測定で選んだ値（実機の翼型やスラットの値ではない）。
   - エンジンのアイドル（2026-10-30、`B747.42.eec_model.lua` の `M.IDLE` と ACF_DIFF.md §5 に「estimate」・推定）：空中の最小アイドルは、FCOM の降下（PI.10.39）の（抵抗 − アイドル推力）にカスタム acf の抵抗のまま合わせた値（抵抗と推力の分け方は資料に無い。正味の推力は 1 発ほぼ 0）。35,000 ft より上は延ばしただけ。地上の最小アイドルは前のコードの 15 °C の値 1.07（定格の約 4 %。ICAO の基準のアイドルは 7 %）。approach idle は空中の最小アイドル＋0.5（P&W の値は資料に無い）。アイドルの燃料流量（`_ff_rat_idle_JET` 0.054）は ICAO の 30 % と 7 % の燃料流量を 4 % まで延ばした値。CF6 も同じ値（X-Plane のエンジンは型式によらず同じ）。
@@ -2386,3 +2392,8 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
   - GitHub の Release「747-400 custom 2026-11-11.3（飛行用）」（Latest）：https://github.com/Gakugaku87/747-400/releases/tag/custom-2026.11.11.3 。アプリ内のブラウザの GitHub のサインインが切れていて、利用者は PC の前にいなかった（「今PCの前にいない、、、」。Chrome の拡張機能もつながっていなかった）。手順とノート（前の版と同じ形、この日の変更の一覧）を渡し、利用者が出先から公開した（「教えてくれたら僕が自分で出先からRelease作る」）。ページで題・Latest・ノート・Source code を確かめた。前の版（.2）のノートの先頭の案内は、まだ書いていない（任意）。
   - X-Plane（22:34〜22:41）：展開して 3D 一式と利用者の JAL（GE）のリバリーを重ね、エンジン運転で読み込んだ。エンジンの型式は GE（1）、CDU は MENU → L1 で IDENT（AIRAC 2611）、`synoptic/xf_flow` あり。chase の視点の外観は変わらない（クロスフィードの acf の変更の手順）。XTLua の誤りは無く、Log.txt の誤りは開発のフォルダーの読み込みと同じ種類だけ（6 種）。テスト用のフォルダーは消し、開発の機体を読み込み直した。
   - X-Plane の `startup_running` は、試験の後に利用者の値（0）に戻した。利用者の `Aircraft/747-400-custom-2026.11.11.2` は前の版のまま（入れ替えは利用者）。
+- 2026-11-12（クラウドのセッション。X-Plane の無い所で）：ARRIVALS で反対向きの滑走路の組へ変えられなかった件の修正案（notes/ATA-34-61-FMC.md §166）。利用者の PC のセッションが原因（段 11c4 の拒否）を調べて引き継いだ。
+  - 基点：master `c1f2c68c`。枝は `claude/arrivals-change-runway`（速度の則の修正案の枝とは別）。
+  - 資料：FCOM p.1302・p.1403–1404・p.1435。利用者から FMS Pilot's Guide の PDF を受け取り（リポジトリには入れていない）、p.79・p.89–90・p.194–195・p.260 を読んだ。PSX のフォーラム（実機資料なし）も参考にした。
+  - コード：`activepages/B744.fms.pages.deparr.lua` の `arrsel`（選んだ方を通し、合わない相手を外して ARR N/A FOR RUNWAY）。
+  - 試験：新しい `arr_change_test.lua`（53 件）、`proc_msgs_test.lua` の期待の書き直し（20 件）、試験の航法データに ZZSS。全 250 本・構文 587 本。シナリオ `s172_proc_msgs` を新しい挙動に合わせた（**X-Plane では回していない**）。
