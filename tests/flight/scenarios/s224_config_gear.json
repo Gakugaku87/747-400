@@ -1,6 +1,6 @@
 {
   "name": "s224_config_gear",
-  "description": "GEAR-17（CONFIG GEAR の条件と保持）の X-Plane での確認。成田 34L の南東 2,000 ft で空中開始（脚上げ、A/P の ALT HOLD、170 kt）。フラップ 25 で CONFIG GEAR（FCOM p.1557-1558）、GND PROX GEAR OVRD を押すと消え、戻すとまた出る。フラップを 20 に戻しても残る（脚が下りるまで）。脚を下ろすと消える。スラストレバーを閉じて 800 ft 未満の場合は s43 と単体試験で見る。Lua の誤りも確かめる",
+  "description": "GEAR-17（CONFIG GEAR の条件と保持）の X-Plane での確認。成田 34L の南東 2,000 ft で空中開始（脚上げ、A/P の ALT HOLD、170 kt）。フラップ 25 で CONFIG GEAR（FCOM p.1557-1558）、GND PROX GEAR OVRD を押すと消え、戻すとまた出る。フラップを 20 に戻すと消える（2026-11-13 から：ATA31 p.212。前は脚が下りるまで残した）。脚を下ろしても出ない。スラストレバーを閉じて 800 ft 未満の場合は s43 と単体試験で見る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.52765, "longitude": 140.54647, "elevation_in_meters": 650, "heading_true": 329.6, "speed_in_meters_per_second": 90 },
@@ -47,13 +47,13 @@
     { "do": "wait", "note": "フラップは 25 のまま：また出る", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 1, "timeout": 3 },
     { "do": "set", "note": "フラップ 20", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.666667 },
     { "do": "sleep", "seconds": 8 },
-    { "do": "check", "note": "フラップを 20 に戻しても、脚が下りるまで残る（FCOM p.1558）", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 1 },
+    { "do": "check", "note": "フラップを 20 に戻すと、後縁が着陸の範囲を出て消える（ATA31 p.212。2026-11-12 のフルレビュー SF-2 の前は、脚が下りるまで残った：FCOM p.1558 の読み）", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 0 },
     { "do": "check", "note": "後縁は 25 より下", "dref": "laminar/B747/flt_ctrls/fcu/te_deg[1]", "op": "<", "value": 21 },
 
     { "do": "mark", "note": "脚を下ろす" },
     { "do": "cmd", "note": "脚レバー DN", "name": "sim/flight_controls/landing_gear_down" },
     { "do": "wait", "note": "全脚ダウンロック（PSEU の ALL GR DN）", "dref": "laminar/B747/gear/air_ground/all_gear_down", "op": "==", "value": 1, "timeout": 40 },
-    { "do": "check", "note": "CONFIG GEAR が消える", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 0 },
+    { "do": "check", "note": "CONFIG GEAR は出ていない", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 0 },
     { "do": "cas", "note": "脚下げ" },
     { "do": "view", "name": "forward" },
     { "do": "record_stop" }
