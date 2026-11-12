@@ -23,6 +23,7 @@
     - 案 10（FMC-8・9・10 の一部）：RTE HOLD の SPD/TGT ALT は CRZ ALT と同じ高度を受ける（FMSPG p.127）、有効な経路の先にある点は SELECT DESIRED WPT を出さずに使う（FCOM p.1249。RTE・LEGS の入力だけ）、周回進入の名前はそのまま。試験 `route_model_test`・`legs_downtrack_dup_test`・`proc_model_test`。X-Plane（2026-11-13）：s86・s87・s88・s90 合格。
     - 案 16（SF-1・SF-6）：離陸の抑止は地上で 30 kt 以下で武装（PFD の速さは 30 kt が下限で「30 未満」が来ず、抑止が武装しなかった。武装の速さは推定）。抑止の間の master リセットは前から点いている灯を消さず、待っている警報は抑止の終わりに鳴る（FCOM p.1594–1595）。試験 `takeoff_inhibit_glue_test`（HEAD 8 落ち）。X-Plane（2026-11-13）：新しい `s303_takeoff_caution` 3/5（100 kt の caution で beeper なし。2 つの落ちは読み直しの始めから点いていた灯：滑走の前に master リセットを入れて次の一覧で）。
     - 案 17（SF-3・SF-4・SF-5）：>ENG n SHUTDOWN を地上でも出す（master CAUTION と音なし。FCOM p.902・p.1586、ATA70_80 p.230）。始動前から隠れていたメッセージは RUN の後も始動が終わるまで出さない（FCOM p.1587）。表の例外は ENG FUEL VLV。試験 `engine_start_model_test`・`alert_model_test`。X-Plane（2026-11-13）：新しい `s301_start_messages` 15/16（落ちは始めからの FUEL PRESS CTR の灯：CUTOFF の前に master リセットを入れて次の一覧で）、s00 69/69、s03 29/29。
+    - 案 18（SF-2＝FG-1、利用者の決め）：フラップで出た CONFIG GEAR は、フラップが着陸の範囲を出たら消える（ATA31 p.212。FCOM p.1558 は残ると書く：内部の論理は整備マニュアルを優先）。フラップは前と同じく後縁で見る。notes/ATA-32.md §15 を直した。試験 `fltctrls_module_test`。X-Plane（2026-11-13）：新しい `s302_goaround_config_gear` 8/8、s224 11/11。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。

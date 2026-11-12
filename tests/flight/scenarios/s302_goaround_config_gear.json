@@ -1,0 +1,62 @@
+{
+  "name": "s302_goaround_config_gear",
+  "description": "フラップ 30 からの復行の CONFIG GEAR（2026-11-12 のフルレビュー SF-2：REVIEW_2026-11-12.md 案 18）の X-Plane での確認。成田の近くの 2,000 ft の空中開始（270 t）、A/P の ALT HOLD・165 kt。脚下げ、フラップ 30。復行の形：フラップ 20、4 秒後に脚上げ（FCTM p.205）。前：フラップで出た CONFIG GEAR が、脚を下ろすか GEAR OVRD を押すまでサイレンと共に残った（FCOM p.1558 の読み）。直した後（ATA31 p.212：フラップが着陸の範囲、かつ脚がダウンロックでないのが原因で、成り立たなくなれば消える。利用者の決め）：後縁が着陸の範囲を出た後は CONFIG GEAR もサイレンも無い。後縁で見るので、脚上げから後縁が 21 を切るまでの数秒は鳴る",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "elevation_in_meters": 650, "heading_true": 329.6, "latitude": 35.52765, "longitude": 140.54647, "speed_in_meters_per_second": 90 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "fueltank_weight_in_kilograms": [ 0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0 ],
+      "payload_weight_in_kilograms": [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "evolution_over_time_enum": "static",
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_direction_in_degrees": 0,
+      "wave_height_in_meters": 0.5
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "set", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 2000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/heading/degrees", "value": 337 },
+    { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 165 },
+    { "do": "cmd", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "cmd", "note": "脚下げ", "name": "sim/flight_controls/landing_gear_down" },
+    { "do": "set", "note": "フラップ 20", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.666667 },
+    { "do": "wait", "note": "全脚ダウンロック", "dref": "laminar/B747/gear/air_ground/all_gear_down", "op": "==", "value": 1, "timeout": 40, "stop": true },
+    { "do": "set", "note": "フラップ 30", "dref": "sim/cockpit2/controls/flap_ratio", "value": 1 },
+    { "do": "wait", "note": "後縁が 30 に着く", "dref": "laminar/B747/flt_ctrls/fcu/te_deg[0]", "op": ">", "value": 29.5, "timeout": 80, "stop": true },
+    { "do": "sleep", "seconds": 5 },
+    { "do": "snapshot", "note": "着陸の形", "drefs": [ "laminar/B747/CAS/warning_status[3]", "laminar/B747/warning/warning_siren", "laminar/B747/warning/master_warning", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "laminar/B747/gear/air_ground/all_gear_down", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/controls/flap_ratio" ] },
+    { "do": "check", "note": "脚が下りていれば CONFIG GEAR なし", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 0 },
+    { "do": "mark", "note": "復行：フラップ 20、4 秒後に脚上げ（FCTM p.205）" },
+    { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 180 },
+    { "do": "set", "note": "フラップ 20", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.666667 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "cmd", "note": "脚上げ", "name": "sim/flight_controls/landing_gear_up" },
+    { "do": "sleep", "seconds": 3 },
+    { "do": "snapshot", "note": "脚上げの 3 秒後", "drefs": [ "laminar/B747/CAS/warning_status[3]", "laminar/B747/warning/warning_siren", "laminar/B747/warning/master_warning", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "laminar/B747/gear/air_ground/all_gear_down", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/controls/flap_ratio" ] },
+    { "do": "wait", "note": "後縁が着陸の範囲（21 以上）を出る", "dref": "laminar/B747/flt_ctrls/fcu/te_deg[0]", "op": "<", "value": 20.9, "timeout": 40 },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "snapshot", "note": "フラップが着陸の範囲を出て 10 秒後", "drefs": [ "laminar/B747/CAS/warning_status[3]", "laminar/B747/warning/warning_siren", "laminar/B747/warning/master_warning", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "laminar/B747/gear/air_ground/all_gear_down", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/controls/flap_ratio" ] },
+    { "do": "check", "note": "フラップ 20 では CONFIG GEAR なし（ATA31 p.212。前はサイレンが脚を下ろすか GEAR OVRD まで続いた）", "dref": "laminar/B747/CAS/warning_status[3]", "op": "==", "value": 0 },
+    { "do": "check", "note": "サイレンなし", "dref": "laminar/B747/warning/warning_siren", "op": "==", "value": 0 },
+    { "do": "cmd", "note": "master WARNING のリセット", "name": "laminar/B747/button_switch/warn_caut_capt", "duration": 0.2 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "snapshot", "note": "master リセットの後", "drefs": [ "laminar/B747/CAS/warning_status[3]", "laminar/B747/warning/warning_siren", "laminar/B747/warning/master_warning", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "laminar/B747/gear/air_ground/all_gear_down", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/controls/flap_ratio" ] },
+    { "do": "check", "note": "リセットの後もサイレンなし", "dref": "laminar/B747/warning/warning_siren", "op": "==", "value": 0 },
+    { "do": "cas", "note": "リセットの後" },
+    { "do": "record_stop" }
+  ]
+}

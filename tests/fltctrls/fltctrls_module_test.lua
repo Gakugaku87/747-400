@@ -561,7 +561,9 @@ frames(0.2)
 T.equal(get(WARNING, 3), 1, "the switch back with the flaps still at 25: CONFIG GEAR again")
 rt:set(LEVER, F20)
 frames(20)
-T.equal(get(WARNING, 3), 1, "flaps back to 20: still (until the gear is down)")
+-- (2026-11-12 review SF-2) the flaps out of the landing range: gone
+-- (ATA31 p.212); before, kept until the gear was down
+T.equal(get(WARNING, 3), 0, "flaps back to 20: the flaps' CONFIG GEAR gone (ATA31 p.212)")
 rt:set("laminar/B747/gear/air_ground/all_gear_down", 1)
 frames(0.2)
 T.equal(get(WARNING, 3), 0, "gear down: gone")

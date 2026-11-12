@@ -879,9 +879,17 @@ function B747_fltCtrols_EICAS_msg()
     -- any thrust lever closed below 800 ft radio altitude, or the flaps in a
     -- landing position (25 or more: 22 degrees). Shown for a closed thrust
     -- lever it stays until the thrust levers are advanced or the gear is
-    -- down; shown for the flaps, until the gear is down or the GND PROX GEAR
-    -- OVRD switch is pushed. (Before: on the ground too, by X-Plane's gear
-    -- ratios, no latch, and the switch took both away.) From the liftoff
+    -- down; shown for the flaps, while the flaps are in the landing range,
+    -- until the gear is down or the GND PROX GEAR OVRD switch is pushed.
+    -- (2026-11-12 review SF-2, the user's choice of 11-12: ATA31 p.212
+    -- (31-51 p.130) makes the flaps in the landing range and the gear not
+    -- down and locked the cause, and the light, the siren and the message
+    -- clear when that no longer holds; the flaps by their trailing edges as
+    -- before. Before, kept until the gear was down or GEAR OVRD, by FCOM
+    -- p.1558: in a go-around from flaps 30 (flaps 20, positive rate, gear
+    -- up: FCTM p.205) the siren went on until the gear came down again.)
+    -- (Before 2026-11-04: on the ground too, by X-Plane's gear ratios, no
+    -- latch, and the switch took both away.) From the liftoff
     -- the message is inhibited until 800 ft radio altitude or 140 s, the
     -- earlier (FCOM p.1594-1595; an air start has none).
     local landing_flaps = math.min(B747DR_fcu_te_deg[0], B747DR_fcu_te_deg[1],
@@ -903,8 +911,8 @@ function B747_fltCtrols_EICAS_msg()
         end
         if B747DR_button_switch_position[5] > 0.5 then
             config_gear_flaps = false
-        elseif landing_flaps then
-            config_gear_flaps = true
+        else
+            config_gear_flaps = landing_flaps
         end
     end
     if card_ok and (config_gear_thrust or config_gear_flaps) then
