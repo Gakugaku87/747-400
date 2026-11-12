@@ -32,6 +32,7 @@
     - 案 11（C-1・C-2）：THRUST LIM の EPR／N1 はエンジン型式から（KLM PH-BFV の `thrust_ref` を N1 に）。リバリーの simconfig は全体を読み、BOM を落とし、`pcall` で読み、欠けた節と鍵は既定で補う（読めなければ既定：CDU のメッセージは作っていない）。試験 `livery_simconfig_test`（19 本）・`simconfig_read_test`・`fmc_fixes_test`。X-Plane（2026-11-13）：s152 12/12、s307 3/3。
     - 案 19（FA-1・FA-2・FA-4）：tank to engine の条件を到達でラッチ、投棄の O/J ポンプに標準管での幅、JETTISON TIME は直近の変化率で、上昇と巡航の区別に幅と時間（FCOM p.1474・p.1479・p.1468・p.133–135。幅・ラッチ・時間は推定）。試験 `fuel_model_test`。X-Plane（2026-11-13）：新しい `s310_fuel_tte_latch` 7/7、s06・s222 合格。
     - APU（FA-3、4 の勧めどおり）：空中では始動しない（FCOM p.895）。地上から回したものは回り続ける。20,000 ft より上の自動停止は作らない。試験 `apu_model_test`。X-Plane（2026-11-13）：新しい `s311_apu_air_start` 1/1。
+    - FDR（利用者「FDRは欲しい」）：出来事の記録。毎秒の短い標本を 20 秒分持ち、FMA のモードの変化・A/P の外れ・5 秒で 500 fpm の V/S の変化・荷重倍数の 1 から 0.15 以上の離れ・0.25 秒より長いフレームで、その前 20 秒と後 60 秒を飛行のファイル（リバリーの `flight_data.jdat`）へ（しきい値は推定）。試験 `fdr_model_test`。X-Plane（2026-11-13）：s307 のリバリーの読み込みで出来事が書かれた。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。
