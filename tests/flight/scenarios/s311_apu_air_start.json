@@ -1,0 +1,36 @@
+{
+  "name": "s311_apu_air_start",
+  "description": "APU の空中始動（2026-11-12 のフルレビュー FA-3：案 19、利用者の決め）の X-Plane での確認。空中で APU セレクターを ON・START：始動しない（FCOM p.895：地上で始動、離陸で回したままなら 20,000 ft まで。前は空中のどの高度でも始動した）",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "elevation_in_meters": 3048, "heading_true": 0, "latitude": 35.4, "longitude": 141.3, "speed_in_meters_per_second": 149 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "fueltank_weight_in_kilograms": [ 0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0 ],
+      "payload_weight_in_kilograms": [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "evolution_over_time_enum": "static",
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_direction_in_degrees": 0,
+      "wave_height_in_meters": 0.5
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 15 },
+    { "do": "snapshot", "note": "前", "drefs": [ "sim/cockpit2/electrical/APU_N1_percent", "sim/cockpit2/electrical/APU_starter_switch", "laminar/B747/gear/air_ground/pri_gnd", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
+    { "do": "cmd", "note": "APU セレクター ON", "name": "laminar/B747/electrical/apu/sel_dial_up", "duration": 0.2 },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "cmd", "note": "APU セレクター START", "name": "laminar/B747/electrical/apu/sel_dial_up", "duration": 0.2 },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "snapshot", "note": "40 秒", "drefs": [ "sim/cockpit2/electrical/APU_N1_percent", "sim/cockpit2/electrical/APU_starter_switch" ] },
+    { "do": "sleep", "seconds": 50 },
+    { "do": "snapshot", "note": "90 秒", "drefs": [ "sim/cockpit2/electrical/APU_N1_percent", "sim/cockpit2/electrical/APU_starter_switch", "sim/cockpit2/electrical/APU_running" ] },
+    { "do": "cas", "note": "90 秒" },
+    { "do": "check", "note": "空中では APU は始動しない（N1 5 % 未満。FCOM p.895。前は始動した）", "dref": "sim/cockpit2/electrical/APU_N1_percent", "op": "<", "value": 5 }
+  ]
+}

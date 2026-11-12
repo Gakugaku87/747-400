@@ -31,6 +31,7 @@
     - 案 25（FG-5・FG-6・HA-7）：SRM と FCU は左右の ADC を別々に受け、片側の故障では生きている側（ATA27 p.104・p.288・p.337）。オートブレーキは機長の IRS セレクターの IRU（FCOM p.1044）。APU の火災スイッチを抽気へ（LH36 p.88–89）。試験 `fltctrls_module_test`・`srm_lag_test`・`autobrake_irs_test`・`bleed_module_test`。X-Plane（2026-11-13）：新しい `s309_adc_irs` 5/5、s41 20/20。
     - 案 11（C-1・C-2）：THRUST LIM の EPR／N1 はエンジン型式から（KLM PH-BFV の `thrust_ref` を N1 に）。リバリーの simconfig は全体を読み、BOM を落とし、`pcall` で読み、欠けた節と鍵は既定で補う（読めなければ既定：CDU のメッセージは作っていない）。試験 `livery_simconfig_test`（19 本）・`simconfig_read_test`・`fmc_fixes_test`。X-Plane（2026-11-13）：s152 12/12、s307 3/3。
     - 案 19（FA-1・FA-2・FA-4）：tank to engine の条件を到達でラッチ、投棄の O/J ポンプに標準管での幅、JETTISON TIME は直近の変化率で、上昇と巡航の区別に幅と時間（FCOM p.1474・p.1479・p.1468・p.133–135。幅・ラッチ・時間は推定）。試験 `fuel_model_test`。X-Plane（2026-11-13）：新しい `s310_fuel_tte_latch` 7/7、s06・s222 合格。
+    - APU（FA-3、4 の勧めどおり）：空中では始動しない（FCOM p.895）。地上から回したものは回り続ける。20,000 ft より上の自動停止は作らない。試験 `apu_model_test`。X-Plane（2026-11-13）：新しい `s311_apu_air_start` 1/1。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。

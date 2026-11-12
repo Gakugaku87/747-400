@@ -79,6 +79,7 @@ function B747_apu()
     local inp = apu_inputs
     local dt = apu_frame_dt()
     inp.selector = B747DR_elec_apu_sel_pos
+    inp.on_ground = B747DR_elec_pseu_air == 0      -- (2026-11-12 review FA-3)
     inp.start_pushed = B747_apu_start_pushed
     B747_apu_start_pushed = false
     inp.battery = B747DR_button_switch_position[BATTERY_SWITCH] > 0.5
