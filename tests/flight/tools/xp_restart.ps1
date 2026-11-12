@@ -33,7 +33,7 @@ while (-not $up -and (Get-Date) -lt $deadline) {
     Start-Sleep -Seconds 3
     try { Invoke-RestMethod -Uri 'http://localhost:8086/api/capabilities' -TimeoutSec 3 | Out-Null; $up = $true } catch { }
 }
-if (-not $up) { 'down'; return }
+if (-not $up) { Add-XPStatus 'restart: X-Plane down (the Web API did not answer)'; 'down'; return }
 # X-Plane loads its last flight behind the main menu at its start; a load
 # sent right as the Web API answers sometimes left the menus up (below):
 # some time for that first (estimate)
@@ -70,4 +70,6 @@ try {
 } finally {
     $notes += @(Exit-XPTestSettings)
 }
+Add-XPStatus ("restart: X-Plane {0}, {1}; {2}" -f $state, (Format-XPMemory (Get-XPMemory)),
+    (@($notes | Where-Object { $_ } | ForEach-Object { $_ -replace '^!', 'WARNING: ' }) -join '; '))
 $state

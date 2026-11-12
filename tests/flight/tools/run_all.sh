@@ -27,15 +27,30 @@
 # (xp.ps1: XP_MIN_COMMIT_FREE_GB, 8 GB; XP_FLIGHT_GB) - the same value by
 # which run_scenario.ps1 refuses to start; still under it after the start,
 # the list stops. A scenario with no result is run once more after a
-# restart. Restarts are "#" lines in the result file.
+# restart. Restarts are "#" lines in the result file. The list's start and
+# end go to tests/flight/runs/STATUS.md, beside each run's own lines.
 set -u
 cd "$(dirname "$0")/../../.." || exit 2     # the aircraft folder
 OUT="tests/flight/runs/run_all_$(date +%Y%m%d_%H%M%S).txt"
+STATUS="tests/flight/runs/STATUS.md"
 # (X-Plane with the 747 just loaded already uses 13-15 GB of private memory)
 MEM_LIMIT_GB=${MEM_LIMIT_GB:-24}
 RESTART_EVERY=${RESTART_EVERY:-8}
 RESTART_PS=$(cygpath -w tests/flight/tools/xp_restart.ps1)
 mkdir -p tests/flight/runs
+
+status() {
+  # (the same first lines as xp.ps1's Add-XPStatus writes)
+  if [ ! -f "$STATUS" ]; then
+    {
+      echo '# Flight tests: the state (the kit adds a line a run; the newest last)'
+      echo
+      echo 'If a run died: `powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\xp.ps1 restore` puts the user'"'"'s X-Plane settings back (X-Plane'"'"'s Output\B747_flighttest\kit_settings.txt holds them).'
+      echo
+    } > "$STATUS"
+  fi
+  echo "- $(date '+%Y-%m-%d %H:%M:%S') $*" >> "$STATUS"
+}
 
 # a scenario's file by its name, its number or its path
 find_scenario() {
@@ -122,10 +137,15 @@ run_one() {
 
 stop_list() {
   echo "# $1" | tee -a "$OUT"
+  status "list $(basename "$OUT") stopped: $1"
   exit 1
 }
 
+names=""
+for f in "${files[@]}"; do names="$names $(basename "$f" .json)"; done
+status "list $(basename "$OUT"): ${#files[@]} scenario(s):$names"
 since=0
+count=0
 for f in "${files[@]}"; do
   name=$(basename "$f" .json)
   read_mem
@@ -155,5 +175,7 @@ for f in "${files[@]}"; do
   else
     echo "$name $res $((SECONDS - t0)) s" | tee -a "$OUT"
   fi
+  count=$((count + 1))
 done
 echo "done: $OUT"
+status "list $(basename "$OUT") done: $count of ${#files[@]} run, $(grep -c ' pass [0-9]*, fail 0,' "$OUT") without a failure"

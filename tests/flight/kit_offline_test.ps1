@@ -227,6 +227,16 @@ Check ((Format-XPMemory $m) -match '^X-Plane private - GB; ') 'no X-Plane: a das
 $real = Get-XPMemory
 Check ($real.commit_limit_gb -gt 1 -and $real.commit_used_gb -gt 0 -and [math]::Abs($real.commit_limit_gb - $real.commit_used_gb - $real.commit_free_gb) -lt 0.2) "this PC's commit charge: used and left make the limit ($(Format-XPMemory $real))"
 
+# --- the state file --------------------------------------------------------
+$status = Join-Path $tmp 'runs\STATUS.md'
+Add-XPStatus 'start s000_test (747-400_custom): the first' $status
+Add-XPStatus 'end s000_test (747-400_custom): pass 3, fail 0, warn 0' $status
+$lines = @(Get-Content -LiteralPath $status)
+Equal $lines.Count 6 'the file: four first lines and a line a call'
+Check ($lines[0] -match '^# Flight tests: the state' -and $lines[2] -match 'xp\.ps1 restore') 'its first lines: what it is, how to put the settings back'
+Check ($lines[4] -match '^- \d{4}-\d\d-\d\d \d\d:\d\d:\d\d start s000_test \(747-400_custom\): the first$') "a line: the time and the text ($($lines[4]))"
+Check ($lines[5] -match ' end s000_test ') 'the newest last'
+
 # --- run_all.sh's scenarios (RUN_ALL_DRY) and xp_restart.ps1's memory line --
 # (Git for Windows' bash: on the PATH, or beside git's cmd folder)
 $bash = (Get-Command bash -ErrorAction SilentlyContinue).Source
@@ -278,6 +288,8 @@ Check ((@($out) -join "`n") -match 'FAIL memory the scenario not started: .* GB 
 Check ((@($out) -join "`n") -match 'result: .*\(pass 0, fail 1, warn 0\)') 'the result line: one failure'
 $dir = @(Get-ChildItem $runs -Directory)
 Check ($dir.Count -eq 1 -and (Test-Path (Join-Path $dir[0].FullName 'result.json')) -and (Test-Path (Join-Path $dir[0].FullName 'result.md'))) 'its result files written'
+$st = @(Get-Content -LiteralPath (Join-Path $runs 'STATUS.md'))
+Check ($st[-1] -match 'not started s172_proc_msgs \(747-400_custom\): ') "the state file: not started, why ($($st[-1]))"
 Check (-not (Test-Path -LiteralPath (Join-Path $tmp 'out\kit_settings.txt'))) 'no setting touched'
 
 } finally {

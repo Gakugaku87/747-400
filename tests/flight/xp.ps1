@@ -400,6 +400,29 @@ function Test-XPMemory($Mem, [double]$MinFreeGb = -1, [double]$FlightGb = -1) {
     return $null
 }
 
+# --- the state of a long test (2026-11-12, TESTING.md 4.6) ----------------
+# A line a run in the runs folder's STATUS.md (tests\flight\runs): what ran
+# and how it ended, what the kit changed in X-Plane and put back, the
+# memory. A session that takes over (X-Plane gone, another model) reads
+# where the work stands.
+$script:XPRunsDir = Join-Path $PSScriptRoot 'runs'
+function Add-XPStatus([string]$Text, [string]$File = (Join-Path $script:XPRunsDir 'STATUS.md')) {
+    try {
+        $dir = Split-Path -Parent $File
+        if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+        $new = -not (Test-Path -LiteralPath $File)
+        $lines = @()
+        if ($new) {
+            $lines += '# Flight tests: the state (the kit adds a line a run; the newest last)'
+            $lines += ''
+            $lines += 'If a run died: `powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\xp.ps1 restore` puts the user''s X-Plane settings back (X-Plane''s Output\B747_flighttest\kit_settings.txt holds them).'
+            $lines += ''
+        }
+        $lines += ('- {0} {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Text)
+        [IO.File]::AppendAllLines($File, [string[]]$lines)
+    } catch { }
+}
+
 if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
     switch ($Verb) {
         'caps'   { Get-XPCapabilities | ConvertTo-Json -Depth 5 }
@@ -414,6 +437,7 @@ if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
         'restore' {
             $notes = @(Exit-XPTestSettings)
             if ($notes.Count -eq 0) { "nothing to put back (no $(Get-XPSettingsFile))" } else { $notes }
+            Add-XPStatus ("restore by hand: " + $(if ($notes.Count) { $notes -join '; ' } else { 'nothing to put back' }))
         }
         default  { throw "unknown verb: $Verb" }
     }

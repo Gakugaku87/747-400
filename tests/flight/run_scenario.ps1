@@ -19,7 +19,7 @@
 # killed: "xp.ps1 restore"). X-Plane's memory and the system's commit charge
 # go into the result; with less commit left than XP_MIN_COMMIT_FREE_GB (8;
 # 0: no check; XP_FLIGHT_GB: xp.ps1) the scenario does not start (exit
-# status 3).
+# status 3). Each run adds its lines to tests\flight\runs\STATUS.md.
 #
 # Scenario file (JSON): { "name", "description", "flight": {init without
 # "aircraft"}, ["reload": true], ["livery": "<folder>"], "steps": [ ... ] }.
@@ -100,6 +100,7 @@ $spec = Get-Content -Raw -Encoding UTF8 $Scenario | ConvertFrom-Json
 $acfPath = Get-XPAircraftRel $Acf
 $acfTag = [IO.Path]::GetFileNameWithoutExtension($acfPath)
 if (-not $RunsDir) { $RunsDir = Join-Path $PSScriptRoot 'runs' }
+$script:XPRunsDir = $RunsDir   # STATUS.md beside the runs (xp.ps1)
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $out = Join-Path $RunsDir "${stamp}_$($spec.name)_$acfTag"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
@@ -280,6 +281,7 @@ $memWhy = Test-XPMemory $mem0
 if ($memWhy -and -not $NoFlight) {
     Add-Result @{ do = 'memory' } 'fail' "the scenario not started: $memWhy"
     $summary = Complete-Run
+    Add-XPStatus ("not started {0} ({1}): {2}" -f $spec.name, $acfTag, $memWhy)
     Write-Host "result: $out  (pass $($summary.pass), fail $($summary.fail), warn $($summary.warn))"
     exit 3
 }
@@ -297,6 +299,8 @@ function Add-SettingNotes($Notes) {
 $settingsNotes = @(Enter-XPTestSettings)
 Add-SettingNotes $settingsNotes
 $settingsLate = @($settingsNotes | Where-Object { $_ -match 'startup_running: not set' }).Count -gt 0
+Add-XPStatus ("start {0} ({1}): {2}; {3}" -f $spec.name, $acfTag, (Format-XPMemory $mem0),
+    (@($settingsNotes | Where-Object { $_ } | ForEach-Object { $_ -replace '^!', 'WARNING: ' }) -join '; '))
 $fatal = $null
 try {
 
@@ -668,6 +672,10 @@ if ($xtErrors.Count -gt 0) {
     $mem1 = Get-XPMemory
     Add-Result @{ do = 'memory' } 'info' (Format-XPMemory $mem1)
     $summary = Complete-Run
+    Add-XPStatus ("end {0} ({1}): pass {2}, fail {3}, warn {4}, {5} s{6}, {7}; {8}; {9}" -f $spec.name, $acfTag, $summary.pass,
+        $summary.fail, $summary.warn, [math]::Round($wall.Elapsed.TotalSeconds), $(if ($fatal) { ", ended on an error: $fatal" } else { '' }),
+        (Split-Path -Leaf $out), (Format-XPMemory $mem1),
+        $(if ($back.Count) { @($back | Where-Object { $_ } | ForEach-Object { $_ -replace '^!', 'WARNING: ' }) -join '; ' } else { 'no setting to put back' }))
 }
 if ($fatal) {
     Write-Host "error: $fatal  (the result files: $out)"
