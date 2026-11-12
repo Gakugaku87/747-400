@@ -1427,25 +1427,49 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   2. `spd_step.lua` の判定の穴 4 件 → 直して試験にした：降下中に始まった変更（FLCH を降下中に押す）は、昇降率が水平から 50 fpm 以内に戻ってから見る（戻らなければ判定しない）。次の変更やモードの終わりで切れた変更も、昇降率と高度で判定する。前のモードの目標を段の始まりにしない。FMC の段階の列が無い記録は MCP 高度で向きを決め、どちらも無ければ判定しない。
   3. 試験の穴（則の一部を壊しても通る）5 件と、片側だけの判定 → 試験を足した。その後、則・VNAV のモデル・グルーの 64 通りの変異（1 か所ずつ壊す）を当て、63 通りが試験で落ちる。残る 1 通り（グルーが FLCH・VNAV 以外でも向きを渡す）は挙動が変わらない（則は FLCH・VNAV SPD でしか向きを使わず、T/O・G/A では捨てる）。変異の道具は使い捨てで、リポジトリには入れていない。
   4. 変異で分かった要らない項（保つ速さを則の求めで抑える `min`・`max`：下限が効くのは保つ速さが求めより小さいときだけなので、あっても無くても同じ）を外した。
-- X-Plane：**未実施**（このセッションはクラウドで、X-Plane が無い）。手順は §62.1。記録の解析は `tests/flight/tools/spd_step.lua`（模型から作った記録で、前の則は FAIL・今の則は PASS になることを見た）。
+- X-Plane（2026-11-12、利用者の PC。そこのセッションが回し、結果をこのクラウドのセッションへ送った）：
+  - 条件：作業ツリーの無い PC なので、インストール済みの Release を `Aircraft/747-400-test-pr34` に写し、この枝（`5553eae`）の則の 3 ファイルと `tests`・`docs` だけを入れた（Release の Lua は基点と同じ）。acf は Release の `747-400.acf`（`747-400_custom.acf` と同じ blob）、P&W（`engines/type` 0）。試験の間だけ `startup_running` を 1 に。13:18 からは利用者の操縦装置を外した（`has_joystick` 0：s109 の 1 回目で、レバーと操縦輪の軸が上書きした）。記録の解析は `spd_step.lua` を Python に写したもの（`spd_step_tool_test.lua` の 32 件で一致を確かめた）。
+  - 新しいシナリオ：
+
+    | シナリオ | 結果 | 逆向きの変更の間 |
+    |---|---|---|
+    | `s285`（347.5 t、ISA、270 → 340 kt） | 25/25 | V/S 最小 +160 fpm、高度の損 0、5 kt 以内まで 63.8 s、行き過ぎ 0 |
+    | `s288`（`s285` を 35 ℃ に。余りは水平で約 1.0 kt/s） | 25/25（2 回目） | +181 fpm、0 ft、65.5 s、行き過ぎ 0 |
+    | `s286`（FLCH の降下、300 → 260 kt） | 19/19 | V/S 最大 −183 fpm、高度の得 0 |
+    | `s287`（238 t、250 → 342 kt） | 21/21（MCP 35,000 ft に直した版） | +1,483 fpm、0 ft、78.8 s |
+
+  - 回帰：`s108` 25/25、`s268` 13/13、`s147` 30/30、`s270` 16/16、`s104` 34/34、`s139` 28/28（2 回目）は合格。
+    - `s109` は 18/20：T/O の目標の幅を IAS が 0.27 kt と 0.83 kt 越えた。T/O の則は `way` を使わず、出力は前と同じ。
+    - `s157` は 33/34：driftdown の 60 秒後の V/S が −154 fpm（基準は −200 より深い）。入りで目標より 12.6 kt 遅く、−2,580 fpm まで降りて速さを取り戻した後、目標を 1.2 kt 越えた分を落とす約 50 秒、−135〜−230 fpm だった。その後は目標の ±0.1 kt で −275〜−290 fpm。
+      - 前の則でもここは浅くなるはず：速さを落とす間の今回の制限は経路の上限で、前の則より浅くはしない。A/T の THR を入れた模型では、60 秒後に前の則が −15〜+123 fpm、今の則が −158〜−205 fpm。
+      - 落ち着いた後の −300 より 10〜25 fpm 浅い分は、A/T が推力をゆっくり絞る遅れ。5 分後の確認は合格。
+  - Lua の誤り（`B747_xtlua_errors.txt`）と AFDS のモード故障の記録は、どの回にも無い。
+  - 観察（直していない）：
+    - 降下中に VNAV SPD・FLCH の上昇へ入ると、推力が THR REF まで上がる 6〜10 秒、降下が深まる（`s285` 76 ft、`s288` 97 ft、`s139` 105 ft、`s268` 16 ft）。空中開始の後の FMS の初期化（A/T の SPD で推力を絞った ALT の捕捉）から入る、試験の作りの形。下限は、入りの減速を「推力が水平飛行に足りない」と読んで、速さを先にする。前の則なら経路の変化の指令が倍ほど急（`s285` の入りで −4.9°。今は −2.45°）。速さが目標で釣り合った所から入る巡航上昇（`s139` の 2 回目）では、V/S は +4 fpm より下がらなかった。
+    - 下限に当たる間、V/S が約 9 秒周期で揺れる（`s285` +161〜+414 fpm、`s288` +181〜+344 fpm）。下限より下へは行かない。
+    - 軽い機体（`s287`）が −1,250 fpm の降下から VNAV SPD に入ると、目標を 25 kt 越えた（0.1 g の上限で機首上げが追いつかない）。模型では前の則の方が大きい（+52〜+60 kt。今は +36〜+48 kt）。FLCH の入りの調整は変えない（利用者の指示）。
+    - X-Plane が 30 秒ほど止まった直後の 1 フレーム（19.9 fps の床）で、F/D のピッチと水平安定板のトリムが一度に跳ぶことがある（4 回。最大で −0.82 g、約 1,400 ft の降下。VNAV PTH でも起きた）。速度の則の外。§45 の `AFDS_DT_MAX` の件と同じ形に見え、まだ調べていない。
+    - 景色の多いこの PC では、フライトを置いた X-Plane が 23〜28 GB を使う。ページファイルを広げる前は、フライトの読み込みで 2 回落ちた（コミットの上限）。
 - 残り：
-  - X-Plane での確認（§62.1）。機体の遅れが模型の 2 倍あると、下限の捕捉で −200 fpm 近くまで割り、24〜25 ft 下がる（今回の条件のエネルギーの模型。試験の模型では −119〜−139 fpm・13〜16 ft。1.5 倍までは割らない：+12〜+15 fpm）。これは §62.1 の合否（−50 fpm・20 ft）では不合格になる。割るようなら、下限への寄せ方を見直す。
-  - driftdown の減速（目標より速い所から）は X-Plane で確かめていない（`s157` は目標より遅い所から始まる）。
-  - `s108` の降下中の MCP 200 kt は、減速がほぼ水平までになるので遅くなりうる。60 秒の後に待ちを足した（warn）。
+  - 機体の遅れが模型の 2 倍あると、下限の捕捉で −200 fpm 近くまで割る見込みだったが、X-Plane では下限より下へ行かなかった（最小 +160〜+181 fpm）。
+  - driftdown の減速（目標より速い所から：FCOM p.1268 の条件 3）は X-Plane で確かめていない（`s157` は目標より遅い所から始まる。入りの後の 1.2 kt の行き過ぎを落とす所だけ通った）。
+  - `s108` の降下中の MCP 200 kt（減速がほぼ水平までになるので遅くなりうるとして、待ちを足した）は、X-Plane で 25/25、warn も無かった。
 - 同じ飛行の観測（今回は直していない）：水平への移行の行き過ぎ。FL310 で 31,167 ft（00:39:20、+167 ft、−484 fpm）、FL330 で 33,150 ft（01:46:20、+150 ft、−480 fpm）。どちらも 30 秒の点で、頂点はもう少し高いかもしれない。
 
-### 62.1 X-Plane での確認の手順（別の PC のセッション用、未実施）
+### 62.1 X-Plane での確認の手順（別の PC のセッション用。2026-11-12 に利用者の PC で実施：§62 の「X-Plane」）
 
 1. 取得（作業ツリー `Aircraft/747-400-master`。3D 一式の skip-worktree と未追跡のファイルには触らない。切り替えで衝突したら止まって利用者に聞く：CLAUDE.md）：
    - `git fetch origin claude/trusting-bohr-m25792`、`git status` で作業ツリーがきれいなことを見てから `git switch claude/trusting-bohr-m25792`。
-   - この枝は `c1f2c68c`（master = overhaul）の上で、変わるのは Lua・JSON・Markdown の 20 ファイルだけ（新しい 6 ファイルを含む）。手元の overhaul がそれより進んでいれば、その上にこの枝を merge した一時の枝で試す。
+   - 作業ツリーの無い PC（2026-11-12 の利用者の PC）：インストール済みの Release を `Aircraft/747-400-test-...` のように別名に写し、この枝の則の 3 ファイルと `tests`・`docs` だけを入れる（キットは X-Plane のフォルダーを `tests/flight` の 4 つ上とみる）。`run_scenario.ps1` には `-Acf "Aircraft/<写したフォルダー>/747-400.acf"` を渡す。利用者の操縦装置は外す（`sim/joystick/has_joystick` 0）。
+   - この枝は `c1f2c68c`（master = overhaul）の上で、変わるのは Lua・JSON・Markdown の 21 ファイルだけ（新しい 7 ファイルを含む）。手元の overhaul がそれより進んでいれば、その上にこの枝を merge した一時の枝で試す。
    - インストール済みの Release（`Aircraft/747-400-custom-2026.11.11.3`）で飛んで確かめるなら、`plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/` の 3 ファイル（`B747.70.afds_pitch_model.lua`・`B747.70.vnav_mode_model.lua`・`B747.70.xt.autopilot.lua`）を、元を取っておいて上書きする（Release とこの枝の基点は Lua が同じ）。新しい Release は、利用者が merge を決めた後に `make_release.sh` で作る。
 2. FlyWithLua の記録スクリプト（v12：`pitch_target` の列）：`tests/flight/fwl/B747_flighttest.lua` を `X-Plane 12/Resources/plugins/FlyWithLua/Scripts/` に写し、X-Plane を起動し直す（写さなくてもシナリオの合否は出る。`spd_step.lua` は `tgt` の列で代える）。
 3. X-Plane なしの試験：`bash tests/run.sh autopilot`、`bash tests/syntax_check.sh`。
 4. シナリオ（カスタム acf、P&W の既定のリバリー。1 本 8〜10 分）：
    - `powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\run_scenario.ps1 -Scenario tests\flight\scenarios\s285_vnav_spd_trans_accel_heavy.json -Acf custom`：今回の飛行の再現。約 347.5 t、SPD TRANS 250/10000（この重さでは VREF30 + 100 の約 272 kt）、CI 200 で ECON の上昇 340 kt、VNAV SPD・THR REF で 10,000 ft を通る。
    - 同じく `s286_flch_descent_decel.json`：FLCH の降下（FL250 から、約 310 t）の途中で 300 → 260 kt。
-   - 同じく `s287_vnav_spd_trans_accel_light.json`：約 238 t の VNAV SPD（250 → 約 342 kt）。前の版でも同じ結果のはず。
+   - 同じく `s287_vnav_spd_trans_accel_light.json`：約 238 t の VNAV SPD（250 → 約 342 kt）。前の版でも同じ結果のはず。MCP 高度は 35,000 ft（1 回目の 20,000 ft では、最後の確認の途中で捕捉に入った）。
+   - 同じく `s288_vnav_spd_trans_accel_heavy_hot.json`：`s285` を海面 35 ℃ にしたもの。推力の余りが利用者の飛行に近い（約 1.0 kt/s）。
    - 回帰：`s108_afds_flch`、`s268_flch_climb_accel`（水平から FLCH で 340 kt：昇降率が負にならなくなる）、`s139_vnav_climb_crz`、`s147_vnav_spd_intervention`、`s157_eo_driftdown`、`s270_flch_mach_climb_descent`、`s109_afds_takeoff`、`s104_afds_ga`。
 5. 記録する値（FlyWithLua が毎フレーム `session.csv` に書く。判定には機体の FDR の 30 秒の点は使わない）：高度（`alt`）、昇降率（`vs_i` = `sim/flightmodel/position/vh_ind_fpm`。`vs` は VSI で遅れる）、IAS（`ias`）、ピッチ（`pitch`）、ピッチの指令（`pitch_cmd` = `laminar/B747/autopilot/pitch_cmd`）、速度の則の目標（`pitch_target` = `laminar/B747/autopilot/pitch_target`、v12）、FMC の目標（`fvn_cas`）、FMA（`fma`・`fma_at`）、重さ（`weight`）。
    - 解析：`luajit tests/flight/tools/spd_step.lua tests/flight/runs/<その回>/session.csv`。目標の段ごとに、昇降率の最小と最大、失った・得た高度、5 kt・1 kt 以内までの秒数、行き過ぎと、下の合否（PASS・FAIL）を出す。向きに沿う変更には合否を付けない。向きが分からない記録（FMC の段階も MCP 高度も列に無い）と、変更が水平から 50 fpm より先で始まって戻らなかった場合は、判定しない（no check）と出る。判定の試験は `tests/autopilot/spd_step_tool_test.lua`。
