@@ -21,8 +21,8 @@ local RA, GP = "laminar/B747/ra/", "laminar/B747/gpws/"
 local ADV = "laminar/B747/CAS/advisory_status"
 local function ra(ft)
     -- X-Plane's radio altimeters read 8 ft more than the PFD shows
-    rt:set(I .. "radio_altimeter_height_ft_pilot", ft + 8)
-    rt:set(I .. "radio_altimeter_height_ft_copilot", ft + 8)
+    rt:set(I .. "radio_altimeter_height_ft_pilot", ft + 3.3)
+    rt:set(I .. "radio_altimeter_height_ft_copilot", ft + 3.3)
 end
 for i = 0, 3 do
     rt:set("laminar/B747/electrical/bus/ac", i, 1)
@@ -64,7 +64,7 @@ T.near(rt:get(RA .. "capt/value"), 1234, 0.01, "the radio altitude (X-Plane less
 ra(87)
 frames(0.2)
 T.equal(rt:get("laminar/B747/efis/radio_altitude"), 88, "below 100 ft: 2 ft steps")
-rt:set(I .. "radio_altimeter_height_ft_copilot", 300 + 8)
+rt:set(I .. "radio_altimeter_height_ft_copilot", 300 + 3.3)
 frames(0.2)
 T.equal(rt:get("laminar/B747/efis/radio_altitude_fo"), 300, "the F/O's from R (X-Plane's copilot side)")
 T.equal(rt:get("laminar/B747/efis/radio_altitude"), 88, "the Captain's from L")
