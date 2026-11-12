@@ -34,9 +34,14 @@ B747DR_ra_gpwc_valid            = find_dataref("laminar/B747/ra/gpwc_valid")
 B747DR_ra_CAS_advisory          = find_dataref("laminar/B747/CAS/advisory_status")
 local ADV_SNGL_SOURCE_RA = 266                  -- >SNGL SOURCE RA
 
--- X-Plane's radio altimeters read about 8 ft with the wheels on the ground;
--- the PFD has shown them less 8 ft (estimate: kept as the calibration)
-local XP_OFFSET_FT = 8
+-- X-Plane's radio altimeter with the custom acf reads 3.2 to 3.3 ft at the
+-- main gear's touchdown (nine landing records of 2026-11-10 and 11, 279 to
+-- 309 t) and 0.5 to 0.7 ft stopped; the readout is zero at touchdown
+-- (ATA34_2 p.78: the AID set by the 57 ft pin). (2026-11-12 review FG-4,
+-- B7) Before, 8 ft off (an estimate from X-Plane's ground reading): the
+-- PFD, the GPWC and the TCAS read -4.7 ft at touchdown, the callouts and
+-- the minimums some 4.7 ft high
+local XP_OFFSET_FT = 3.3
 local XP_FAILED = 6
 -- the EIU selectors' positions: Captain L, AUTO, C, R; F/O L, C, AUTO, R
 -- (estimate from their default positions, AUTO on both: fltInst02)

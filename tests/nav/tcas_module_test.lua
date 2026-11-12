@@ -21,8 +21,8 @@ local TC, TG, TI = "laminar/B747/tcas/", "sim/cockpit2/tcas/targets/", "sim/cock
 local ADV = "laminar/B747/CAS/advisory_status"
 local XPDR_MODE = "sim/cockpit2/radios/actuators/transponder_mode"
 local function ra(ft)
-    rt:set(I .. "radio_altimeter_height_ft_pilot", ft + 8)
-    rt:set(I .. "radio_altimeter_height_ft_copilot", ft + 8)
+    rt:set(I .. "radio_altimeter_height_ft_pilot", ft + 3.3)
+    rt:set(I .. "radio_altimeter_height_ft_copilot", ft + 3.3)
 end
 for i = 0, 3 do
     rt:set("laminar/B747/electrical/bus/ac", i, 1)
