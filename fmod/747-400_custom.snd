@@ -7530,5 +7530,5 @@ BEGIN_SOUND_ATTACHMENT
         EVENT_NAME /Boeing/747/-400/Ambience/Weather/rain
         VEH_XYZ 0 0 0
 	EVENT_START_COND sim/weather/precipitation_on_aircraft_ratio > 0
-	EVENT_START_END sim/weather/precipitation_on_aircraft_ratio == 0
+	EVENT_END_COND sim/weather/precipitation_on_aircraft_ratio == 0
 END_SOUND_ATTACHMENT
