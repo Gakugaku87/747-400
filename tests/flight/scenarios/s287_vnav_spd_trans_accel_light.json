@@ -52,7 +52,7 @@
     { "do": "sleep", "seconds": 3 },
     { "do": "cdu", "note": "INIT REF、<INDEX、PERF：ZFW 200、CRZ ALT FL350、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "200", "L3", "350", "R1", "100", "L5"] },
     { "do": "check", "note": "FMC の巡航高度 35,000 ft", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 35000, "stop": true },
-    { "do": "set", "note": "MCP 高度 20,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 20000 },
+    { "do": "set", "note": "MCP 高度 35,000 ft（CRZ ALT と同じ。2026-11-12 の X-Plane の 1 回目は 20,000 ft で、軽い機体は約 4,000 fpm で上がり、最後の 60 秒の確認の途中で MCP 高度の捕捉に入って、速さの幅と上昇率の確認を外した）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
     { "do": "sleep", "note": "MCP の高度が中へ写るのを待つ（3 秒）と FMC の VNAV", "seconds": 5 },
     { "do": "check", "note": "FMC の VNAV は有効", "dref": "laminar/B747/fms/vnav/valid", "op": "==", "value": 1, "stop": true },
     { "do": "check", "note": "FMC は上昇（1）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 1, "stop": true },
