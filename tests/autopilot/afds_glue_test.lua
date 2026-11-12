@@ -587,7 +587,11 @@ for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, rt:get(LEVER_CMD)) end
 -- the speed stays 0, a jump of it would read as a dive)
 for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, rt:get(LEVER_CMD) + 0.2) end
 frames()
-T.equal(rt:get(AT_FMA_ST), 1, "the levers 8 degrees off: HOLD")
+-- (2026-11-12 review AT-7) VNAV's THR: the hand's HOLD is FL CH's only
+-- (ATA34_2 p.648); the levers go back to the command when let go
+T.equal(rt:get(AT_FMA_ST), 4, "VNAV's THR, the levers 8 degrees off: THR kept (p.648)")
+for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, rt:get(LEVER_CMD)) end
+frames()
 rt:set(VSI, -1200)
 
 fvn({alt = a0 - 60})
