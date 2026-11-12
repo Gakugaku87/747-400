@@ -190,6 +190,12 @@ T.equal(rt:get("laminar/B747/fuel/jett/OJctrL_status"), 1, "jettison: CTR L in t
 T.equal(rt:get("laminar/B747/fuel/jett/mXmfld_status"), 1, "jettison: its cross manifold with flow")
 T.equal(rt:get("laminar/B747/fuel/fuel_to_remain/state"), 0, "jettison: fuel to remain magenta")
 
+-- (2026-11-12 review FA-10) the APU selector ON opens the APU fuel valve
+-- before the APU model starts X-Plane's APU (FCOM p.867); before, the valve
+-- waited for X-Plane's APU starter
+rt:set("laminar/B747/electrical/apu/sel_dial_pos", 1)
+frames(rt, 6)
+T.equal(rt:get("laminar/B747/fuel/main2_tank/apu_vlv_pos"), 1, "APU selector ON, X-Plane's APU not started yet: fuel valve open (FCOM p.867)")
 -- the APU: fuel valve open, main 2 AFT runs on the ground service bus (FCOM p.1465)
 rt:set("sim/cockpit2/electrical/APU_starter_switch", 2)
 frames(rt, 6)

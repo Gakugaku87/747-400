@@ -67,7 +67,10 @@ B747_duct_pressure_R                = deferred_dataref("laminar/B747/air/duct_pr
 --B747DR_engine4psi    = deferred_dataref("laminar/B747/air/engine4/bleed_air_psi", "number")
 simDR_startup_running           = find_dataref("sim/operation/prefs/startup_running")
 simDRTime=find_dataref("sim/time/total_running_time_sec")
-B747DR_hyd_temp = find_dataref("sim/physics/earth_temp_c")
+-- (2026-11-12 review HA-2) the air at the airplane; before,
+-- sim/physics/earth_temp_c, the planet's mean sea-level temperature (15 C
+-- always): the fluid's temperature 45.0 C in any weather
+B747DR_hyd_temp = find_dataref("sim/weather/aircraft/temperature_ambient_deg_c")
 B747DR_hyd_sys_pressure_1      = deferred_dataref("laminar/B747/hydraulics/pressure_1", "number")
 B747DR_hyd_sys_pressure_2      = deferred_dataref("laminar/B747/hydraulics/pressure_2", "number")
 B747DR_hyd_sys_pressure_3      = deferred_dataref("laminar/B747/hydraulics/pressure_3", "number")

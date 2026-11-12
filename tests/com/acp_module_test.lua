@@ -47,6 +47,14 @@ cmd("laminar/B747/ap_L/vhf_R/audio_sel_switch")
 T.check(get(XA .. "audio_selection_com2") == 1 and ap("L", "vhf_R", "audio_status") == 1, "L's VHF R receiver on: heard, its light")
 cmd("laminar/B747/ap_L/vhf_R/audio_sel_switch")
 T.check(get(XA .. "audio_selection_com2") == 0 and ap("L", "vhf_R", "audio_status") == 0, "pushed again: off")
+-- (2026-11-12 review SM-4) the SAT R receiver's light, each seat (before,
+-- its dataref bound under a misspelt name: never lit)
+for _, seat in ipairs({"L", "C", "R"}) do
+    cmd("laminar/B747/ap_" .. seat .. "/sat_R/audio_sel_switch")
+    T.equal(ap(seat, "sat_R", "audio_status"), 1, seat .. "'s SAT R receiver on: its light")
+    cmd("laminar/B747/ap_" .. seat .. "/sat_R/audio_sel_switch")
+    T.equal(ap(seat, "sat_R", "audio_status"), 0, seat .. "'s SAT R receiver off: out")
+end
 cmd("laminar/B747/ap_L/vhf_L/audio_sel_switch")
 cmd("laminar/B747/ap_L/vhf_L/audio_sel_switch")
 T.check(ap("L", "vhf_L", "audio_status") == 1 and get(XA .. "audio_selection_com1") == 1, "L's VHF L (its transmitter): not off")

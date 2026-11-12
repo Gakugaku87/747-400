@@ -457,15 +457,27 @@ function M.update(s, inp, dt)
     end
     c.imbal14 = imbal("14", math.abs(q.m1 - q.m4), M.IMBAL14)
     c.imbal23 = imbal("23", math.abs(q.m2 - q.m3), M.IMBAL23)
-    local margin = inp.on_ground and M.TANK_ENG_GROUND or 0
-    local tank_eng = (q.m2 <= q.m1 + margin or q.m3 <= q.m4 + margin) and (open[1] or open[4])
+    -- (2026-11-12 review FA-7) FCOM p.1478: in the air main 2 at or below
+    -- main 1 OR main 3 at or below main 4; on the ground (after fueling)
+    -- main 2 at or below main 1 + 500 kg AND main 3 at or below main 4 +
+    -- 500 kg. Before, OR on the ground too
+    local tank_eng
+    if inp.on_ground then
+        tank_eng = q.m2 <= q.m1 + M.TANK_ENG_GROUND and q.m3 <= q.m4 + M.TANK_ENG_GROUND
+    else
+        tank_eng = q.m2 <= q.m1 or q.m3 <= q.m4
+    end
+    tank_eng = tank_eng and (open[1] or open[4])
     c.tank_eng = tank_eng and not armed
     if tank_eng_q then s.tank_eng_reached = true elseif inp.on_ground then s.tank_eng_reached = false end
     c.imbalance = s.tank_eng_reached and imbal("inout", math.abs((q.m2 + q.m3) - (q.m1 + q.m4)), M.IMBAL23)
     -- valves not where they were sent
     for n = 1, 4 do c["xfeed" .. n] = s.disagree_t["x" .. n] >= M.DISAGREE_S end
-    c.res_xfr2 = s.disagree_t.res2a >= M.DISAGREE_S or s.disagree_t.res2b >= M.DISAGREE_S
-    c.res_xfr3 = s.disagree_t.res3a >= M.DISAGREE_S or s.disagree_t.res3b >= M.DISAGREE_S
+    -- (2026-11-12 review FA-6) FUEL RES XFR n: both of the tank's reserve
+    -- transfer valves not where sent (ATA26_28 p.498 (28-16): one valve
+    -- alone makes the status message only; FCOM p.1477). Before, either
+    c.res_xfr2 = s.disagree_t.res2a >= M.DISAGREE_S and s.disagree_t.res2b >= M.DISAGREE_S
+    c.res_xfr3 = s.disagree_t.res3a >= M.DISAGREE_S and s.disagree_t.res3b >= M.DISAGREE_S
     -- APU FUEL: the DC pump low while commanded, or the APU fuel valve not
     -- where it was sent (FCOM p.902; the 10 s of the crossfeed valves: estimate)
     c.apu_fuel = (s.cmd.apu_dc and low.apu_dc) or s.disagree_t.apu >= M.DISAGREE_S

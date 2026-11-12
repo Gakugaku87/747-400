@@ -591,7 +591,6 @@ sim/operation/override/override_toe_brakes	int number
 sim/operation/override/override_wheel_steer	int number
 sim/operation/prefs/ai_flies_aircraft	int number
 sim/operation/prefs/startup_running	int number
-sim/physics/earth_temp_c	number
 sim/private/controls/photometric/ev100	-
 sim/private/controls/photometric/ev100_bias	-
 sim/private/controls/photometric/light_storage_scale	-

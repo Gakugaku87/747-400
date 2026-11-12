@@ -950,6 +950,7 @@ simDR_pitch                     = find_dataref("sim/flightmodel/position/theta")
 simDR_tank_ratio                = find_dataref("sim/aircraft/overflow/acf_tank_rat")
 simDR_fuel_capacity_kg          = find_dataref("sim/aircraft/weight/acf_m_fuel_tot")
 simDR_apu_starter_switch        = find_dataref("sim/cockpit2/electrical/APU_starter_switch")
+B747DR_fuel_apu_selector        = find_dataref("laminar/B747/electrical/apu/sel_dial_pos")   -- (2026-11-12 review FA-10)
 B747DR_elec_bus_ac              = find_dataref("laminar/B747/electrical/bus/ac")
 B747DR_elec_bus_dc              = find_dataref("laminar/B747/electrical/bus/dc")
 B747DR_elec_bus_utility         = find_dataref("laminar/B747/electrical/bus/utility")
@@ -1142,7 +1143,11 @@ local function read_inputs(inp)
     inp.on_ground = B747DR_pseu_pri_air == 0
     inp.flap_lever = simDR_flap_deploy_ratio
     inp.pitch = simDR_pitch
-    inp.apu_fuel = simDR_apu_starter_switch >= 1          -- the APU model starts or runs X-Plane's APU
+    -- (2026-11-12 review FA-10) the APU selector ON (or START) opens the APU
+    -- fuel valve and runs its pumps (FCOM p.867); after OFF, while the APU
+    -- still runs its shutdown, as before. Before, the APU model's start of
+    -- X-Plane's APU alone (some seconds later)
+    inp.apu_fuel = B747DR_fuel_apu_selector >= 1 or simDR_apu_starter_switch >= 1
     inp.temp = fuel_temp_c                     -- (2026-11-09) the kept value, not the display's
     -- the stabilizer tank: airplane 109, the passenger airplane (FCOM p.1453, p.1456)
     inp.has_stab = simDR_tank_ratio[7] > 0 and B747DR_is_freighter == 0
