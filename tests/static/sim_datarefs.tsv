@@ -474,6 +474,7 @@ sim/flightmodel2/misc/auto_board_in_progress	int number
 sim/flightmodel2/misc/auto_start_in_progress	int number
 sim/flightmodel2/misc/cg_offset_z_mac	number
 sim/flightmodel2/misc/door_open_ratio	array[20]
+sim/flightmodel2/misc/gforce_normal	number
 sim/flightmodel2/position/groundspeed	number
 sim/flightmodel2/position/pressure_altitude	number
 sim/flightmodel2/wing/elements/element_is_stalled	array[480]

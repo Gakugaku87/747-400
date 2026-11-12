@@ -56,6 +56,10 @@ B747BR_vnavProfile 			= find_dataref("laminar/B747/autopilot/dist/vnavProfile")
 fmsJson = find_dataref("xtlua/fms")
 
 B747DR_fdr_log_json     = find_dataref("laminar/B747/fdr/json")
+-- (2026-11-13) the event recording's inputs (B747.01.fdr_model.lua)
+simDR_fdr_g             = find_dataref("sim/flightmodel2/misc/gforce_normal")
+B747DR_fdr_servos_on    = find_dataref("laminar/B747/autopilot/servos_on")
+dofile("B747.01.fdr_model.lua")
 local fmsTable={}
 
 
@@ -242,6 +246,9 @@ end
 function updateFlightdata()
   if fdr_data_file==nil then return end
   if simDR_aircraft_on_ground>0 then return end
+  -- (2026-11-13, the 2026-11-12 review) the record built only when it is
+  -- written (every 30 s); before, every frame
+  if simDRTime-lastUpdate<=30 then return end
   local flightData={}
   flightData["time"]=os.date("%Y/%m/%d %X")
   flightData["flightData"]={}
@@ -479,6 +486,38 @@ function updateJSONData()
   end
 end
 
+-- (2026-11-13; the 2026-11-12 review's FDR, the user's "FDRは欲しい") the
+-- events: the 20 s before and the 60 s after a change of an FMA mode, an
+-- A/P disconnect, a vertical speed change of 500 fpm in 5 s, a load factor
+-- 0.15 g off 1 or a frame of more than 0.25 s of real time, one sample a
+-- second (B747.01.fdr_model.lua); some 9 KB an event
+local fdrEvents = B747_fdr_model.new()
+local fdrIn = {fma = {0, 0, 0}}
+local function r1(v) return math.floor((v or 0) * 10 + 0.5) / 10 end
+local function fdr_sample()
+  return {t = r1(simDRTime), alt = math.floor(simDR_pressureAlt1 + 0.5), ias = r1(simDR_ind_airspeed_kts_pilot),
+    vs = math.floor(simDR_vvi_fpm_pilot + 0.5), pitch = r1(simDR_AHARS_pitch_heading_deg_pilot),
+    roll = r1(simDR_AHARS_roll_heading_deg_pilot), g = math.floor(simDR_fdr_g * 100 + 0.5) / 100,
+    gs = r1(simDR_groundspeed * 1.94384), hdg = r1(simDR_true_heading),
+    fma = {B747DR_ap_FMA_active_pitch_mode, B747DR_ap_FMA_active_roll_mode, B747DR_ap_FMA_autothrottle_mode},
+    ap = B747DR_fdr_servos_on, flap = math.floor(simDR_flap_deploy_ratio * 100 + 0.5) / 100,
+    lat = math.floor(simDR_latitude * 100000 + 0.5) / 100000, lon = math.floor(simDR_longitude * 100000 + 0.5) / 100000}
+end
+fdrIn.sample = fdr_sample
+function updateEvents()
+  if fdr_data_file==nil then return end
+  fdrIn.t, fdrIn.clock = simDRTime, os.clock()
+  fdrIn.fma[1], fdrIn.fma[2], fdrIn.fma[3] = B747DR_ap_FMA_active_pitch_mode, B747DR_ap_FMA_active_roll_mode, B747DR_ap_FMA_autothrottle_mode
+  fdrIn.ap = B747DR_fdr_servos_on == 1
+  fdrIn.vs, fdrIn.g = simDR_vvi_fpm_pilot, simDR_fdr_g
+  local lines = B747_fdr_model.update(fdrEvents, fdrIn)
+  if lines then
+    local now = os.date("%Y/%m/%d %X")
+    for _, l in ipairs(lines) do fdr_data_file:write(json.encode({time = now, fdr = l}) .. "\n") end
+    fdr_data_file:flush()
+  end
+end
+
 function after_physics()
   -- (2026-11-05 review) no full garbage collection every frame: it marked
   -- and swept this plugin's whole Lua state (every module's tables) each
@@ -490,5 +529,6 @@ function after_physics()
   updateAPdata()
   updateFlightdata()
   updateFMSdata()
+  updateEvents()
   
 end 
