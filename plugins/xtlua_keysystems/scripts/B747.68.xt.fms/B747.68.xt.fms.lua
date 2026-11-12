@@ -3598,9 +3598,24 @@ local ilsKey,ilsSt=nil,nil
 local ilsLiftoff,ilsLiftoffKey,ilsWasGround=nil,nil,nil
 local ilsIn={}
 local ilsShown={}
+-- (2026-11-12 review FMC-6) the approach's own localizer: the recommended
+-- navaid of its legs that is a localizer (FCOM p.1306: the ILS of the
+-- selected approach). Before, the runway's first localizer in the data: a
+-- runway with two (EDDF 07L: IFEL and the approach's IFNE; KDTW, KORD) had
+-- the other one tuned
+local function appr_loc_ident(r)
+  local N=B747_navdb
+  for _,list in ipairs({r.passed or {},r.legs or {}}) do
+    for _,l in ipairs(list) do
+      if l.proc=="APPR" and l.navaid and l.navaid.kind==N.LOC then return l.navaid.ident end
+    end
+  end
+  return nil
+end
 local function dest_ils(db,r)
   if not (r and r.dest and r.dest.lat and r.appr and r.appr.rwy) then return nil,nil end
-  local key=r.dest.ident.." "..r.appr.rwy
+  local want=appr_loc_ident(r)
+  local key=r.dest.ident.." "..r.appr.rwy.." "..(want or "")
   if key~=ilsKey then
     ilsKey,ilsSt=key,nil
     local N=B747_navdb
@@ -3608,8 +3623,9 @@ local function dest_ils(db,r)
       local i=e.i
       local rec=db.nav[i]
       if db.kind[i]==N.LOC and rec.terminal==r.dest.ident and "RW"..(rec.runway or "")==r.appr.rwy and rec.freq then
-        ilsSt={ident=db.ident[i],freq=rec.freq,crs=(rec.crs_mag or 0)%360,lat=db.lat[i],lon=db.lon[i]}
-        break
+        local st={ident=db.ident[i],freq=rec.freq,crs=(rec.crs_mag or 0)%360,lat=db.lat[i],lon=db.lon[i]}
+        if not ilsSt then ilsSt=st end
+        if want==nil or db.ident[i]==want then ilsSt=st break end
       end
     end
   end

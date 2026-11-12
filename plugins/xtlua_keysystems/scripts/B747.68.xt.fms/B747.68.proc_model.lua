@@ -145,7 +145,7 @@ local function leg_of(N, db, c, icao, f, via)
         elseif sec == "P" and sub == "N" or sec == "D" and sub == "B" then
             point = N.point(db, id, region, "NDB", icao)
         else
-            point = N.point(db, id, region, KIND[sec], icao)
+            point = N.point(db, id, region, KIND[sec], icao, sec == "P" and sub == "C")
         end
     end
     local navaid = f[14] ~= "" and N.point(db, f[14], f[15], nil, icao) or nil
