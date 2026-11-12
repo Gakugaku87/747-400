@@ -40,6 +40,12 @@ M.xplane_root = os.getenv("XPLANE_ROOT") or "../.."
 -- ("array[" .. NUM_BTN_SW .. "]"). A script that fails is reported in
 -- M.init_errors.
 M.init_errors = {}
+-- (2026-11-13) what the init scripts create besides the types: the
+-- commands (name -> the script) and whether a dataref takes writes from
+-- other plugins (name -> "yes" or "no": create_dataref with a notifier);
+-- tests/static/snd_names_test.lua and failures_txt_test.lua. Filled with
+-- the types (M.created())
+M.init_commands, M.init_writable = {}, {}
 local function init_script_types()
     local types = {}
     local function noop() end
@@ -49,13 +55,13 @@ local function init_script_types()
             local dir = instance .. "/init/scripts/" .. mod
             local env = setmetatable({}, {__index = _G})
             env._G = env  -- the script state's globals: namespaces fall back to them
-            env.XLuaCreateDataRef = function(name, t) types[name] = t return name end
+            env.XLuaCreateDataRef = function(name, t, w) types[name] = t; M.init_writable[name] = w return name end
             env.XLuaFindDataRef = function(name) return name end
             env.XLuaGetDataRefType = function(name) return types[name] or "unknown" end
             env.XLuaGetNumber = function() return 0 end
             env.XLuaGetString = function() return "" end
             env.XLuaGetArray = function() return 0 end
-            env.XLuaCreateCommand = function(name) return {name = name} end
+            env.XLuaCreateCommand = function(name) M.init_commands[name] = path return {name = name} end
             env.XLuaFindCommand = function(name) return {name = name} end
             -- XlLuaReplaceCommand is spelled so in the XTLua binary and init/init.lua
             for _, f in ipairs({"XLuaSetNumber", "XLuaSetString", "XLuaSetArray", "XlLuaReplaceCommand",
@@ -104,6 +110,14 @@ local function dataref_types()
     for name, t in pairs(init_script_types()) do types[name] = {type = t} end
     types_cache = types
     return types
+end
+
+-- (2026-11-13) the datarefs (X-Plane's DataRefs.txt and the init scripts':
+-- name -> {type = "number"|"string"|"array[n]", int = true for int}), the
+-- commands the init scripts create (name -> the script) and whether their
+-- datarefs take other plugins' writes (name -> "yes"|"no")
+function M.created()
+    return dataref_types(), M.init_commands, M.init_writable
 end
 
 local function truncate(v)
