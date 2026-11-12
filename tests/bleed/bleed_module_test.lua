@@ -53,6 +53,15 @@ T.equal(get(AIR .. "apu/bleed_valve_pos"), 1, "APU air failed: valve stays open"
 rt:set(AIR .. "fail/apu_air", 0)
 frames(4)
 T.check(get(AIR .. "duct_pressure_C") > 25, "APU air back")
+-- (2026-11-12 review HA-7) the APU fire switch pulled closes the APU bleed
+-- valve with the APU still at speed (LH36 p.88-89); before, not passed:
+-- the valve stayed open until the APU's N1 fell
+rt:set("laminar/B747/fire/apu/ext_switch/pos_arm", 1)
+frames(3)
+T.equal(get(AIR .. "apu/bleed_valve_pos"), 0, "APU fire switch pulled, N1 still 100 %: APU bleed valve closed")
+rt:set("laminar/B747/fire/apu/ext_switch/pos_arm", 0)
+frames(6)
+T.equal(get(AIR .. "apu/bleed_valve_pos"), 1, "the switch back in: open again")
 
 -- (2026-11-11 review) the wiring of the APU's air: the packs' alone without
 -- a start signalled; with START 4 pulled the APU controller's start air

@@ -132,6 +132,10 @@ local function read_inputs(inp)
     inp.apu_bleed_on = B747DR_button_switch_position[81] > 0.95
     inp.apu_selector = B747DR_bleed_apu_sel_pos
     inp.apu_n1 = simDR_apu_N1_pct
+    -- (2026-11-12 review HA-7) the APU fire switch pulled closes the APU
+    -- bleed valve (LH36 p.88-89); before, never passed (the valve closed
+    -- only when the APU's N1 fell)
+    inp.apu_fire_out = B747DR_bleed_apu_fire_arm > 0.5
     -- the APU's air: X-Plane's failure (inoperative) or the aircraft's
     -- (2026-11-04); the engines' failures
     inp.apu_air_failed = simDR_bleed_fail_apu_press == 6 or B747DR_bleed_fail_apu_air > 0.5

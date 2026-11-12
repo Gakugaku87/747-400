@@ -49,6 +49,7 @@ simDR_brk_gs                    = find_dataref("sim/flightmodel/position/grounds
 B747DR_brk_throttle             = find_dataref("laminar/B747/engine/throttle")
 B747DR_brk_iru_status           = find_dataref("laminar/B747/flt_mgmt/iru/status")
 B747DR_brk_iru_dial             = find_dataref("laminar/B747/flt_mgmt/iru/mode_sel_dial_pos")
+B747DR_brk_irs_src_capt         = find_dataref("laminar/B747/flt_inst/irs_src/capt/sel_dial_pos")   -- (2026-11-12 review FG-6)
 B747DR_brk_speedbrake           = find_dataref("laminar/B747/flt_ctrls/speedbrake_lever")
 B747DR_brk_fail_autobrake       = find_dataref("laminar/B747/gear/fail/autobrake")
 
@@ -167,7 +168,11 @@ function B747_brakes()
         ai.gnd = B747DR_pseu_pri_gnd == 1 or B747DR_pseu_alt_gnd == 1
         ai.gnd_both = B747DR_pseu_pri_gnd == 1 and B747DR_pseu_alt_gnd == 1
         for i = 1, 4 do ai.levers[i] = B747DR_brk_throttle[i - 1] end
-        ai.irs = B747DR_brk_iru_status[0] == 2 and B747DR_brk_iru_dial[0] >= 2
+        -- (2026-11-12 review FG-6) the IRU the captain selects (FCOM p.1044:
+        -- "IRU selected by Captain provides autobrake reference"; the IRS
+        -- source selector 0 L, 1 C, 2 R); before, IRU L always
+        local iru = math.max(0, math.min(2, math.floor(B747DR_brk_irs_src_capt + 0.5)))
+        ai.irs = B747DR_brk_iru_status[iru] == 2 and B747DR_brk_iru_dial[iru] >= 2
         ai.gs_kt = simDR_brk_gs * 1.94384
         ai.pedal[1], ai.pedal[2] = pedal[1], pedal[2]
         ai.speedbrake = B747DR_brk_speedbrake

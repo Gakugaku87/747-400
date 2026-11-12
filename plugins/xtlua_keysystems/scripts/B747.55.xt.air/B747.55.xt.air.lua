@@ -412,6 +412,7 @@ B747DR_engine01_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fir
 B747DR_engine02_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine02/ext_switch/pos_arm", "number")
 B747DR_engine03_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine03/ext_switch/pos_arm", "number")
 B747DR_engine04_fire_ext_switch_pos_arm     = deferred_dataref("laminar/B747/fire/engine04/ext_switch/pos_arm", "number") 
+B747DR_bleed_apu_fire_arm                   = deferred_dataref("laminar/B747/fire/apu/ext_switch/pos_arm", "number")   -- (2026-11-12 review HA-7)
 
 
 -- the bleed air: the model and its glue (notes/ATA-36.md), after the bindings

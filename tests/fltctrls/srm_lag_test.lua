@@ -11,6 +11,7 @@ local xtlua = dofile("tests/lib/xtlua.lua")
 
 local rt = xtlua.new()
 rt:load("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.xt.fltCtrls.lua")
+for i = 0, 2 do rt:set("laminar/B747/airdata/valid", i, 1) end   -- (2026-11-12 review FG-5) the ADCs valid
 rt:set("sim/operation/prefs/startup_running", 1)
 rt:callout("flight_start")
 local TRIM = "sim/flightmodel2/controls/elevator_trim"
