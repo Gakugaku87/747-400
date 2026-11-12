@@ -2913,8 +2913,14 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - `arr_change_test.lua`（新設、53 件）：WSSS と同じ形の試験用の空港 ZZSS で、20 側の組（KILO2B と RNV20C）から 02 側の進入、02 側の STAR をそれぞれ選べる。有効でない経路、有効な経路の EXEC の後（ERASE で元の組に戻る）と EXEC の前、RTE 2（RTE 1 は変わらない）。合う組（KILO2A のまま RNV02L → RNV02C）は残り、メッセージは出ない。経路の脚が新しい側のものになる。直す前のコード（`c1f2c68c`）では 28 件が落ちる（20 側の組のまま動かない）。
   - `proc_msgs_test.lua` 20 件（前は 17 件）：ZZAA の BRAVO1（34L だけ）と ILS16R で、選んだ方が入り相手が外れることと、ALPHA1（全部の滑走路）は ILS16R と残ること。前の「拒否される」の期待を書き直した。
   - 試験の航法データに ZZSS を足した（`tests/fms/data/navdb/CIFP/ZZSS.dat`、空港と点）：滑走路 02L/20R・02C/20C、STAR は KILO2A（`RW02B`）と KILO2B（`RW20B`）、進入は RNV の 4 本。ZZAA・ZZBB の一覧は変えていない。
-- X-Plane：**未実施**（クラウドのセッションで、X-Plane が無い）。`s172_proc_msgs` を新しい挙動に合わせた：RJAA の ARRIVALS で VOR16R の後に BINKSA（34L だけ）を選ぶと、メッセージが出て BINKSA が入り VOR16R が外れる。続けて VOR16R を選ぶと、メッセージが出て VOR16R が入り BINKSA が外れる。
+- X-Plane（2026-11-12 夜、開発 PC。カスタム acf、AIRAC 2611）：`s172_proc_msgs` 11/11、新しい `s289_arr_change_wsss` 55/55（下）。その前（クラウドのセッション）は未実施で、`s172_proc_msgs` を新しい挙動に合わせた：RJAA の ARRIVALS で VOR16R の後に BINKSA（34L だけ）を選ぶと、メッセージが出て BINKSA が入り VOR16R が外れる。続けて VOR16R を選ぶと、メッセージが出て VOR16R が入り BINKSA が外れる。
+  - `s289_arr_change_wsss`（FL300 の空中開始、RTE 1 に RJAA→WSSS。WSSS の ARRIVALS は 4 ページ：STAR 19 本、進入 12 本）：
+    - 有効でない経路：20 側の組（ARAM1B と ILS20C）から、進入を先に（ILS02L：ARAM1B が外れて ARR N/A FOR RUNWAY、STAR は全部が選べる。続けて ARAM1A で 02 側の組、メッセージなし）、STAR を先に（ARAM1B：ILS02L が外れる。続けて ILS20C）。
+    - ACTIVATE と EXEC の後：どちらにも <ACT>。ILS02L を選ぶと変更（6L が <ERASE、EXEC の灯）、ERASE で元の組（<ACT>、6L が <INDEX、灯が消える）。ARAM1A を先に選んで ILS02L、EXEC で 02 側の組が有効（RTE の VIA が ARAM1A・ILS02L）。
+    - EXEC の前の組（ILS02C：ARAM1A は残り、メッセージなし）から ILS20C（ARAM1A が外れる）、ARAM1B、EXEC で 20 側の組が有効（VIA が ARAM1B・ILS20C）。
+    - 1 回目は 49/52：その空港の進入を初めて選ぶと、合うかどうかの判定（`star_serves` が進入の脚を読む）で FMC のモジュールの 1 フレームが 0.4〜0.7 秒かかり（`Output/B747_hitches.txt`）、キーの 0.5 秒後の確認が先に走った。選択は通っていた。シナリオの確認を待つ形にした。この遅れは直していない（PROGRESS.md「気づいたこと」）。
+    - Release `custom-2026.11.12` を展開したフォルダーでも 55/55。
 - 残り：
-  - X-Plane での確認：`s172_proc_msgs` と、WSSS で 20 側の組から 02 側の組へ（進入が先、STAR が先の両方）。
+  - （済：2026-11-12 夜）X-Plane での確認：`s172_proc_msgs` と、WSSS で 20 側の組から 02 側の組へ（進入が先、STAR が先の両方）。
   - 実機で合わない相手が残るのか外れるのか（上の推定。利用者の選択は「外す」）。資料が見つかれば合わせる。
   - ARRIVALS の一覧を、選んだ STAR の滑走路の進入だけに絞る（FCOM p.1403 の図はそう見える）のは作っていない。
