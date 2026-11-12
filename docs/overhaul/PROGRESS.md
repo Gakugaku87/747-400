@@ -474,7 +474,7 @@
 28. レバーが 2° の少し上（2〜3.4°）にあると、高い所でスロットルの下がりが遅い（2026-11-11 の Fable のレビューの FLAT IDLE、notes/ATA-70-80.md §21。d250e305 の残り）：P&W・FL250 で 2.005° は 29 秒、3° は下がりきらない。下げの途中で `plant_slope` が遅れて残る推力から傾きを小さく見積もる。A/T のモードは 2° 以下なので当たらない。逆推力のレバーの FLAT IDLE（p.151：48.5° まで）も無い。
 29. 燃料の synoptic のエンジンの線の描き方（2026-11-11 の Fable のレビューのクロスフィード、notes/ATA-28.md §15。前から）：FCOM p.1450〜1452 の絵は、主ポンプ ON でポンプからエンジンまでの線が全部緑。シムは実際の送りで描くので、CWT や override のポンプが送るとき（状態 2）は、緑の主ポンプの下の線が空になる。「Main N to Eng N」を主ポンプの圧から、「XF to Eng N」を `xf_flow` から描くのが絵に合う。ほかに、投棄のときの override のポンプの区間（絵は流れなし、シムは緑）、tank to engine で main 2 のポンプ 1 台の故障でエンジン 2 の送りが全部 main 3 に移る（FCOM p.1454 は 1 台でエンジンを賄う）、マスク 4 の 1 px。
 30. APU の空気の残り（2026-11-11 の Fable のレビューの APU、notes/ATA-36.md §13）：空気を待つ始動弁に ENG n START VLV が出る（前から。実機は待たずに両方開き、両方ゆっくり回る：始動弁の作りを直す）。高い空港（MMMX・SKBO など）で 2 発同時に回るかは X-Plane で未確認。X-Plane の APU の抽気の損失（`APU_loss_from_bleed_air_ratio`）が始動の間に 64.5 まで上がる（前は 48）：暑い日の APU の EGT は未確認。
-31. 雨の音の `.snd` の残り（2026-11-12。クラウドのセッションで `fmod/747-400_custom.snd` の `EVENT_START_END` を `EVENT_END_COND` に直した。X-Plane が要る）：手元の `fmod/747-400.snd` の同じ行の直し、Log.txt の `E/SOUN: Warning: unknown line` が消えたことと雨の音の確かめ、`custom` の更新（下の「気づいたこと」の `EVENT_START_END` の項目の「残り」）。
+31. 雨の音の `.snd` の残り（2026-11-12。クラウドのセッションで `fmod/747-400_custom.snd` の `EVENT_START_END` を `EVENT_END_COND` に直した。枝 `claude/determined-rubin-e9hwn3` の draft PR、未マージ。X-Plane が要る）：手元の `fmod/747-400.snd` の同じ行の直し、Log.txt の `E/SOUN: Warning: unknown line` が消えたことと雨の音の確かめ、その後に PR を入れて `overhaul` をそろえ、`custom` の更新（下の「気づいたこと」の `EVENT_START_END` の項目の「残り」）。
 
 ## 段階 T の状態
 
@@ -545,6 +545,9 @@
   - サウンドは対象外（CLAUDE.md）で、承認済みの `.snd` の変更は警報音の結線だけ（PLAN.md §3）。この行は下の「気づいたこと」に「触っていない」と書いてあったので、変える前に聞いた。
   - 承認はこの 1 行だけ。ほかの音の中身は対象外のまま。経過と残りは、下の「気づいたこと」の `EVENT_START_END` の項目。
 - 同じ行のある `fmod/747-400LCF.snd` と `fmod/747-400_XP11.snd` は直さない（「直さない」。問い「同じ誤りは、使っていない 2 つの音の定義 fmod/747-400LCF.snd と fmod/747-400_XP11.snd にもあります。こちらも直しますか？」、選択肢「直さない」「同じに直す」への答え）。どちらも本家のまま一度も変えていないファイルで、custom ブランチと Release には入らない。
+- この直しを `overhaul`・`master`・`custom` に入れるのは、開発 PC で確かめてから（「確かめてから」。問い「（クラウドのセッションには X-Plane も開発 PC も無いので）overhaul・master・custom には、いつ入れますか？」、選択肢「確かめてから」「今すぐ入れる」への答え）。
+  - クラウドのセッションは、枝 `claude/determined-rubin-e9hwn3` の draft PR（https://github.com/Gakugaku87/747-400/pull/36 、宛先 master）まで。
+  - 開発 PC で、下の「気づいたこと」の `EVENT_START_END` の項目の残り 1〜3 を済ませてから PR を入れ、`overhaul` をそろえて `custom` を更新する（残りの 4）。
 
 ## 決まったこと（2026-11-09、利用者の回答）
 
