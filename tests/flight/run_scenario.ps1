@@ -4,7 +4,9 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\run_scenario.ps1 `
 #       -Scenario tests\flight\scenarios\s00_baseline_start.json -Acf custom
 #
-# -Acf custom|stock picks 747-400_custom.acf or 747-400.acf (or give a path
+# -Acf custom|stock picks the 747-400_custom.acf or 747-400.acf of the
+# aircraft folder this kit is in, whatever its name (custom: its 747-400.acf
+# where it has no 747-400_custom.acf, as in a release; or give a path
 # relative to the X-Plane root). -NoFlight runs the steps on the flight that
 # is already loaded. -Reload reloads the aircraft (without art) after the
 # flight starts: X-Plane keeps the loaded aircraft, plugins and their state
@@ -85,11 +87,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'xp.ps1')
 
 $spec = Get-Content -Raw -Encoding UTF8 $Scenario | ConvertFrom-Json
-$acfPath = switch ($Acf) {
-    'custom' { 'Aircraft/747-400-master/747-400_custom.acf' }
-    'stock'  { 'Aircraft/747-400-master/747-400.acf' }
-    default  { $Acf }
-}
+# (2026-11-12) the acf of the aircraft folder this kit is in (xp.ps1); before,
+# Aircraft/747-400-master by name
+$acfPath = Get-XPAircraftRel $Acf
 $acfTag = [IO.Path]::GetFileNameWithoutExtension($acfPath)
 if (-not $RunsDir) { $RunsDir = Join-Path $PSScriptRoot 'runs' }
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'

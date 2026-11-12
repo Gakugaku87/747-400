@@ -1,13 +1,16 @@
 param([switch]$Mem, [int]$TimeoutSec = 300)
-# For tests/flight/tools/run_all.sh (docs/overhaul/TESTING.md §4.6):
+# For tests/flight/tools/run_all.sh (docs/overhaul/TESTING.md 4.6):
 #   -Mem   prints X-Plane's private memory in GB (an integer), -1 when it is
 #          not running
 #   (none) starts X-Plane again: its processes stopped (a crash report's too),
 #          X-Plane.exe started, the Web API waited for, then a flight on RJAA
 #          34L with the engines running loads the 747 once (the first load
 #          after a start differs: a throwaway); prints "up" or "down"
+# The aircraft is the folder this kit is in, whatever its name (2026-11-12;
+# before, Aircraft/747-400-master by name).
 $ErrorActionPreference = 'Stop'
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..\..')).Path   # X-Plane's folder
+. (Join-Path $PSScriptRoot '..\xp.ps1')
+$root = $script:XPRoot   # X-Plane's folder
 
 if ($Mem) {
     $p = Get-Process -Name X-Plane -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -30,9 +33,8 @@ if (-not $up) { 'down'; return }
 # sent right as the Web API answers sometimes left the menus up (below):
 # some time for that first (estimate)
 Start-Sleep -Seconds 30
-. (Join-Path $PSScriptRoot '..\xp.ps1')
 $init = @{
-    aircraft = @{ path = 'Aircraft/747-400-master/747-400_custom.acf' }
+    aircraft = @{ path = (Get-XPAircraftRel 'custom') }
     runway_start = @{ airport_id = 'RJAA'; runway = '34L' }
     engine_status = @{ all_engines = @{ running = $true } }
 } | ConvertTo-Json -Depth 5

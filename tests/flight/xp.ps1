@@ -11,12 +11,45 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\xp.ps1 <verb> [args]
 #   verbs: caps | get <name[index]> | set <name[index]> <value> | cmd <name> [seconds]
 #          flight <init.json> | shot [file.png] | find <text>
+#          acf [custom|stock]   the acf's path from X-Plane's folder
 param([string]$Verb, [string]$Arg1, [string]$Arg2)
 
 $ErrorActionPreference = 'Stop'
 $script:XPBase = if ($env:XP_WEBAPI) { $env:XP_WEBAPI } else { 'http://localhost:8086/api/v3' }
-# the X-Plane root: tests\flight -> aircraft folder -> Aircraft -> X-Plane 12
-$script:XPRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
+
+# The aircraft folder is the one this kit is in (tests\flight two levels
+# down), whatever its name (2026-11-12: a release's copy in
+# Aircraft/747-400-test-pr34 on a PC without the working tree needed the
+# acf's path by hand). X-Plane's folder is the first one above it that holds
+# X-Plane.exe or Resources\plugins (XPLANE_ROOT overrides, as for the
+# regression tests), else the fourth above tests\flight as before.
+function Find-XPRoot([string]$AircraftDir) {
+    if ($env:XPLANE_ROOT -and (Test-Path -LiteralPath $env:XPLANE_ROOT)) { return (Resolve-Path -LiteralPath $env:XPLANE_ROOT).Path.TrimEnd('\') }
+    $d = Split-Path -Parent $AircraftDir
+    while ($d) {
+        if ((Test-Path -LiteralPath (Join-Path $d 'X-Plane.exe')) -or (Test-Path -LiteralPath (Join-Path $d 'Resources\plugins'))) { return $d.TrimEnd('\') }
+        $d = Split-Path -Parent $d
+    }
+    return (Split-Path -Parent (Split-Path -Parent $AircraftDir)).TrimEnd('\')
+}
+# The acf for X-Plane's flight API, a path from X-Plane's folder with "/":
+# "custom" is the aircraft folder's 747-400_custom.acf, or its 747-400.acf
+# where there is no such file (a release: its 747-400.acf is the custom
+# acf); "stock" its 747-400.acf; anything else is taken as that path.
+function Get-XPAircraftRel([string]$Acf = 'custom', [string]$AircraftDir = $script:XPAircraftDir, [string]$Root = $script:XPRoot) {
+    if ($Acf -ne 'custom' -and $Acf -ne 'stock') { return $Acf }
+    $dir = $AircraftDir.TrimEnd('\')
+    $rootDir = $Root.TrimEnd('\')
+    if (-not $dir.StartsWith($rootDir + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "the aircraft folder $dir is not under X-Plane's folder $rootDir`: give -Acf a path from X-Plane's folder"
+    }
+    $file = '747-400.acf'
+    if ($Acf -eq 'custom' -and (Test-Path -LiteralPath (Join-Path $dir '747-400_custom.acf'))) { $file = '747-400_custom.acf' }
+    if (-not (Test-Path -LiteralPath (Join-Path $dir $file))) { throw "no $file in $dir" }
+    return ($dir.Substring($rootDir.Length + 1) -replace '\\', '/') + '/' + $file
+}
+$script:XPAircraftDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path.TrimEnd('\')
+$script:XPRoot = Find-XPRoot $script:XPAircraftDir
 $script:XPDrefs = @{}
 $script:XPCmds = @{}
 
@@ -194,6 +227,7 @@ if ($MyInvocation.InvocationName -ne '.' -and $Verb) {
         'flight' { Start-XPFlight $Arg1 }
         'shot'   { Save-XPScreenshot $Arg1 }
         'find'   { Find-XPDataref $Arg1 }
+        'acf'    { Get-XPAircraftRel $(if ($Arg1) { $Arg1 } else { 'custom' }) }
         default  { throw "unknown verb: $Verb" }
     }
 }
