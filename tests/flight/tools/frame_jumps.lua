@@ -20,6 +20,12 @@
 --     -w <seconds> what the airplane did after a long frame with a step,
 --                  over so many seconds (30)
 --     -n <rows>    the most steps listed away from the long frames (40)
+--     -s           after the report, lines for run_scenario.ps1 (2026-11-13):
+--                  "#summary k=v ..." (rows, long: the stretches,
+--                  long_steps: their steps, away: the other steps, g_lo,
+--                  g_hi, g_rows: the load factor while an A/P flew in the
+--                  air) and "#longstep t=.. col=.. from=.. to=.." for each
+--                  step within a long stretch
 -- A long frame's steps are those of its own row and of the row after it
 -- (what a module computed over the long frame reaches X-Plane a frame
 -- later). Long frames in a row are one stretch.
@@ -137,6 +143,41 @@ function M.analyse(rows, opts)
         has_wall = rows[1] ~= nil and rows[1].wall ~= nil, has_fps = rows[1] ~= nil and rows[1].frame_rate ~= nil}
 end
 
+-- (2026-11-13) the load factor while an A/P flew in the air: the least,
+-- the most and the rows (servos_on 1, on_ground 0); nil, nil, 0 without
+local function ap_air(r)
+    return r.servos_on == 1 and r.on_ground == 0 and r.gload ~= nil
+end
+function M.ap_air_g(rows)
+    local lo, hi, n = nil, nil, 0
+    for _, r in ipairs(rows) do
+        if ap_air(r) then
+            n = n + 1
+            if not lo or r.gload < lo then lo = r.gload end
+            if not hi or r.gload > hi then hi = r.gload end
+        end
+    end
+    return lo, hi, n
+end
+
+-- (2026-11-13) the lines run_scenario.ps1 reads (-s)
+function M.summary_lines(res, rows)
+    local lo, hi, n = M.ap_air_g(rows)
+    local long_steps, away = 0, 0
+    for _, st in ipairs(res.steps) do
+        if st.long then long_steps = long_steps + 1 else away = away + 1 end
+    end
+    local out = {string.format("#summary rows=%d long=%d long_steps=%d away=%d g_lo=%s g_hi=%s g_rows=%d",
+        res.rows, #res.long, long_steps, away, lo and string.format("%.3f", lo) or "-",
+        hi and string.format("%.3f", hi) or "-", n)}
+    for _, st in ipairs(res.steps) do
+        if st.long then
+            out[#out + 1] = string.format("#longstep t=%.2f col=%s from=%.4g to=%.4g", st.t, st.col, st.from, st.to)
+        end
+    end
+    return out
+end
+
 local function num(v, f) return v and string.format(f or "%.2f", v) or "-" end
 
 -- the report's lines
@@ -188,6 +229,7 @@ if arg and arg[0] and arg[0]:match("frame_jumps%.lua$") then
     local path
     local opts = {}
     local most
+    local summary = false
     local i = 1
     while arg[i] do
         local a = arg[i]
@@ -205,6 +247,8 @@ if arg and arg[0] and arg[0]:match("frame_jumps%.lua$") then
             opts.after = assert(tonumber((value())), "-w <seconds>")
         elseif a == "-n" then
             most = assert(tonumber((value())), "-n <rows>")
+        elseif a == "-s" then
+            summary = true
         elseif a == "-j" then
             opts.steps = {}
             for col, step in value():gmatch("([^,:]+):([^,]+)") do
@@ -220,11 +264,13 @@ if arg and arg[0] and arg[0]:match("frame_jumps%.lua$") then
     end
     if not path then
         io.stderr:write("usage: luajit tests/flight/tools/frame_jumps.lua <session.csv> [-f fps] [-g seconds]"
-            .. " [-j col:step,...] [-w seconds] [-n rows]\n")
+            .. " [-j col:step,...] [-w seconds] [-n rows] [-s]\n")
         os.exit(2)
     end
-    local res = M.analyse(M.read(path), opts)
+    local rows = M.read(path)
+    local res = M.analyse(rows, opts)
     print(table.concat(M.lines(res, most), "\n"))
+    if summary then print(table.concat(M.summary_lines(res, rows), "\n")) end
 end
 
 return M

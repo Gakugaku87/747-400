@@ -60,7 +60,7 @@
     { "do": "cdu", "note": "PERF INIT（INIT REF、INDEX、PERF）、CLR を 2 回", "keys": ["INITREF", "L6", "L3", "CLR", "CLR"] },
     { "do": "cdu", "note": "ZFW 223.5、COST INDEX 200、CRZ ALT FL370", "keys": ["223.5", "L3", "200", "L5", "370", "R1"] },
     { "do": "sleep", "seconds": 2 },
-    { "do": "snapshot", "note": "PERF INIT", "drefs": [ "laminar/B747/fms3/Line14_L", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line11_L", "laminar/B747/fms3/Line03_R" ] },
+    { "do": "snapshot", "note": "PERF INIT", "drefs": [ "laminar/B747/fms3/Line14_L", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line11_L" ] },
     { "do": "set", "note": "MCP 高度 4,000 ft（DAHJR の AT 6,000 を FMC の高度が決める）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 4000 },
     { "do": "sleep", "seconds": 12, "note": "予測と VNAV" },
     { "do": "check", "note": "FMC の VNAV は有効", "dref": "laminar/B747/fms/vnav/valid", "op": "==", "value": 1, "stop": true },

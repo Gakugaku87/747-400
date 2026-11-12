@@ -177,4 +177,34 @@ T.equal(#res.long, 1, "its long frame")
 T.near(res.long[1].real, 12.4833, 1e-4, "its real length")
 T.check(#res.long[1].steps == 1 and res.long[1].steps[1].col == "trim", "the trim's step in the frame after (the pitch command empty in between: none)")
 
+-- (2026-11-13) the load factor while an A/P flew in the air, and the lines
+-- run_scenario.ps1 reads (-s): on the ground or with the A/P off the rows
+-- do not count
+rows = build(10, function(r, n)
+    r.on_ground = 0
+    if n <= 60 then r.on_ground = 1; r.gload = 1.4 end        -- the takeoff roll's bumps
+    if n > 120 and n <= 180 then r.servos_on = 0; r.gload = 1.5 end -- a pull by hand
+    if n == 300 then r.gload = 1.12 end
+    if n == 400 then r.gload = 0.93 end
+end)
+local lo, hi, count = J.ap_air_g(rows)
+T.near(lo, 0.93, 1e-9, "the least, A/P in the air")
+T.near(hi, 1.12, 1e-9, "the most, A/P in the air (not the hand's 1.5 nor the ground's 1.4)")
+T.equal(count, #rows - 120, "its rows")
+T.equal(select(3, J.ap_air_g(build(2))), 0, "no on_ground column: no row")
+local sum = J.summary_lines(J.analyse(rows), rows)
+T.equal(#sum, 1, "no long frame: the summary line alone")
+T.check(sum[1]:find("^#summary rows=%d+ long=0 long_steps=0 away=0 g_lo=0%.930 g_hi=1%.120 g_rows=%d+$") ~= nil, "the summary line: " .. sum[1])
+rows = build(20, function(r, n)
+    r.on_ground = 0
+    if n == 600 then r.frame_rate = 19.9; r.wall = r.t + 10; r.dt = 0.05 end
+    if n >= 600 then r.wall = r.t + 10 end
+    if n >= 601 then r.pitch_cmd = 5.5 end
+    if n >= 900 then r.at_cmd = 0.7 end
+end)
+sum = J.summary_lines(J.analyse(rows), rows)
+T.equal(#sum, 2, "a long frame with a step: the summary and its step")
+T.check(sum[1]:find(" long=1 long_steps=1 away=1 ", 1, true) ~= nil, "the summary: one stretch, its step, one step away: " .. sum[1])
+T.check(sum[2]:find("^#longstep t=%d+%.%d%d col=pitch_cmd from=2%.5 to=5%.5$") ~= nil, "the step's line: " .. tostring(sum[2]))
+
 T.done()
