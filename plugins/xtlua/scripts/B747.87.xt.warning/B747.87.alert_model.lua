@@ -132,7 +132,12 @@ local function phases(s, inp)
     -- the takeoff inhibits arm on a takeoff roll only: the aircraft has been
     -- slow on the ground since it last flew (estimate; the landing roll
     -- passes 80 kt the other way)
-    if inp.on_ground and inp.ias < 30 then s.takeoff_armed = true end
+    -- (2026-11-12 review SF-1) at 30 kt or less: the PFD's airspeed (the
+    -- input) is held at 30 at the least (B747.34.xt.airdata.lua's MIN_IAS),
+    -- so "under 30" never came and the takeoff inhibits never armed (FCOM
+    -- p.1594-1595: master CAUTION 80 kt to 400 ft, master WARNING V1 to
+    -- 400 ft; a caution in the roll beeped at once)
+    if inp.on_ground and inp.ias <= 30 then s.takeoff_armed = true end
     if not inp.on_ground then s.takeoff_armed = false end
 
     -- takeoff, master CAUTION: from 80 kt to RA 400 ft or 20 s after
@@ -154,7 +159,7 @@ local function phases(s, inp)
     if s.to_warning and ((not inp.on_ground and inp.radio_alt > 400) or s.t - s.to_warning_at > 25) then
         s.to_warning = false
     end
-    if inp.on_ground and inp.ias < 30 then s.to_warning, s.to_warning_at = false, nil end
+    if inp.on_ground and inp.ias <= 30 then s.to_warning, s.to_warning_at = false, nil end
     ph.to_caution = s.to_caution
     ph.to_warning = s.to_warning
 
@@ -334,7 +339,13 @@ function M.update(s, inp, dt)
     -- (FCOM p.1532, p.1555; not an EICAS message, so without its inhibits)
     if inp.gpws_warning and not s.gpws_warning then s.master_warning = true end
     s.gpws_warning = inp.gpws_warning
-    if inp.master_reset then
+    -- (2026-11-12 review SF-6) not within the takeoff inhibits: the lights
+    -- lit before them cannot be put out until they end, and what came up in
+    -- them announces at their end (FCOM p.1594-1595); before, a push put the
+    -- lights out and dropped what was waiting (no beeper, no bell at 400
+    -- ft). The landing inhibit as before (its >AUTOTHROT DISC reset)
+    local inhibit = ph.to_caution or ph.to_warning
+    if inp.master_reset and not inhibit then
         s.master_warning, s.master_caution = false, false
         for _, rec in pairs(s.seen) do
             rec.pending = false
