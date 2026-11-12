@@ -298,7 +298,13 @@ do
     T.check(out.msg.shutdown[1], "air, CUTOFF: >ENG 1 SHUTDOWN")
     inp.on_ground = true
     out = S.update(s, inp, DT)
-    T.check(not out.msg.shutdown[1], "ground: no >ENG SHUTDOWN (estimate)")
+    -- (2026-11-12 review SF-3) on the ground too (FCOM p.902, p.1586-1587;
+    -- ATA70_80 p.230); before, not on the ground (an estimate)
+    T.check(out.msg.shutdown[1], "ground, CUTOFF: >ENG 1 SHUTDOWN too")
+    inp.fuel_control[1] = true
+    out = S.update(s, inp, DT)
+    T.check(not out.msg.shutdown[1], "ground, RUN: no >ENG 1 SHUTDOWN")
+    inp.fuel_control[1] = false
     inp.autostart_installed, inp.autostart = false, false
     out = S.update(s, inp, DT)
     T.check(not out.msg.autostart_off, "405 (no autostart): no >AUTOSTART OFF")

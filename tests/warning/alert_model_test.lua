@@ -229,6 +229,33 @@ do
     T.equal(texts(out.pages[1])[1], "HYD PRESS SYS 2", "start over: the held caution shows, newest first")
     T.check(out.master_caution, "start over: and lights master CAUTION")
 end
+-- (2026-11-12 review SF-3, SF-4, SF-5) >ENG n SHUTDOWN on the ground with
+-- CUTOFF, without master CAUTION (FCOM p.902, p.1586; ATA70_80 p.230); a
+-- message hidden before the start (CUTOFF) stays hidden when RUN comes in
+-- the start, until the start ends (FCOM p.1587); ENG n FUEL VLV shows in
+-- the start (p.1587's exception; the message's name FCOM p.900)
+do
+    local s, inp = A.new(), A.inputs()
+    inp.fuel_cutoff = {true, true, true, true}
+    alerts(inp, {{"ELEC GEN OFF 4", "advisory"}, {">ENG 4 SHUTDOWN", "caution"}})
+    local out = run(s, inp, 1)
+    local t = table.concat(texts(out.pages[1]), "|")
+    T.check(t:find(">ENG 4 SHUTDOWN", 1, true) ~= nil, "on the ground, CUTOFF: >ENG 4 SHUTDOWN shown (before: hidden): " .. t)
+    T.check(not t:find("ELEC GEN OFF 4", 1, true), "ELEC GEN OFF 4 hidden (CUTOFF)")
+    T.check(not out.master_caution, "no master CAUTION for ENG SHUTDOWN")
+    inp.engine_start = true
+    run(s, inp, 1)
+    inp.fuel_cutoff[4] = false             -- RUN at some 20 % N2
+    alerts(inp, {{"ELEC GEN OFF 4", "advisory"}, {"ENG 4 FUEL VLV", "caution"}})
+    out = run(s, inp, 1)
+    t = table.concat(texts(out.pages[1]), "|")
+    T.check(not t:find("ELEC GEN OFF 4", 1, true), "RUN in the start: ELEC GEN OFF 4 still hidden (before: shown for some 30 s): " .. t)
+    T.check(t:find("ENG 4 FUEL VLV", 1, true) ~= nil, "in the start: ENG 4 FUEL VLV shown (before: held to the start's end): " .. t)
+    inp.engine_start = false
+    out = run(s, inp, 0.5)
+    t = table.concat(texts(out.pages[1]), "|")
+    T.check(t:find("ELEC GEN OFF 4", 1, true) ~= nil, "start over, the generator still off: ELEC GEN OFF 4 shown: " .. t)
+end
 
 -- takeoff (FCOM p.1593-1595): from 80 kt a new caution does not light master
 -- CAUTION until RA 400 ft; from V1 a new warning does not light master
