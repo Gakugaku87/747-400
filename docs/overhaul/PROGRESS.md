@@ -27,6 +27,7 @@
     - 案 27（SM-4・SF-7・HA-2・FA-6・FA-7・FA-10）：SAT R の受信灯の変数名、消火瓶の放出灯の繰り返しを 5 本に、作動油の外気温を機体の位置の気温に、FUEL RES XFR は 2 弁とも閉のとき（ATA26_28 p.498）、>FUEL TANK/ENG の地上の条件を「かつ」に（FCOM p.1478）、APU の燃料弁とポンプを selector ON から（FCOM p.867）。試験 `fuel_model_test`・`fuel_module_test`・`acp_module_test`・`hyd_module_test`。X-Plane（2026-11-13）：s04・s06・s222・s22・s23 合格、s304 で SAT L・R の受信灯が点いた。
     - 案 15（SM-5）：その場のリバリーの読み込みは設定だけを読み直し、スイッチは飛行の開始のときだけ開始位置にする。試験 `livery_reload_switches_test`（HEAD 6 落ち）。X-Plane（2026-11-13）：新しい `s307_livery_reload` 3/3。
     - 案 13（SM-2・DSP-6）：ばね戻りのスイッチは、離す合図が来なければ SPRING_S の後に自分で戻る（IND LTS TEST、OUTFLOW、PTT、PACK RST・ZONE RST・CARGO DISCH、RCL。FCOM p.441・p.574・p.683–684・p.1528。時間は推定）。OUTFLOW CLOSE は OPEN からも効く。試験 `oneshot_springs_test`（HEAD 14 落ち）。X-Plane（2026-11-13）：新しい `s304_oneshot_springs` 4/8（落ちは試験の作り：PTT の 3.7e-32 を == 0 で、受信灯をシナリオ自身が DIM にした 0.4 を > 0.5 で見ていた。直して次の一覧で）。
+    - 案 24（FG-2・FG-3）：パーキング・ブレーキは両ペダルを踏んだままレバーを引けば入り、入れた後に加圧された系統の圧をブレーキに入れる（FCOM p.1516、ATA29_32 p.416）。試験 `brake_model_test`（HEAD 3 落ち）。X-Plane（2026-11-13）：新しい `s308_park_brake_pedals` 2/2、s37 23/23。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。
