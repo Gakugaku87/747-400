@@ -474,6 +474,7 @@
 28. レバーが 2° の少し上（2〜3.4°）にあると、高い所でスロットルの下がりが遅い（2026-11-11 の Fable のレビューの FLAT IDLE、notes/ATA-70-80.md §21。d250e305 の残り）：P&W・FL250 で 2.005° は 29 秒、3° は下がりきらない。下げの途中で `plant_slope` が遅れて残る推力から傾きを小さく見積もる。A/T のモードは 2° 以下なので当たらない。逆推力のレバーの FLAT IDLE（p.151：48.5° まで）も無い。
 29. 燃料の synoptic のエンジンの線の描き方（2026-11-11 の Fable のレビューのクロスフィード、notes/ATA-28.md §15。前から）：FCOM p.1450〜1452 の絵は、主ポンプ ON でポンプからエンジンまでの線が全部緑。シムは実際の送りで描くので、CWT や override のポンプが送るとき（状態 2）は、緑の主ポンプの下の線が空になる。「Main N to Eng N」を主ポンプの圧から、「XF to Eng N」を `xf_flow` から描くのが絵に合う。ほかに、投棄のときの override のポンプの区間（絵は流れなし、シムは緑）、tank to engine で main 2 のポンプ 1 台の故障でエンジン 2 の送りが全部 main 3 に移る（FCOM p.1454 は 1 台でエンジンを賄う）、マスク 4 の 1 px。
 30. APU の空気の残り（2026-11-11 の Fable のレビューの APU、notes/ATA-36.md §13）：空気を待つ始動弁に ENG n START VLV が出る（前から。実機は待たずに両方開き、両方ゆっくり回る：始動弁の作りを直す）。高い空港（MMMX・SKBO など）で 2 発同時に回るかは X-Plane で未確認。X-Plane の APU の抽気の損失（`APU_loss_from_bleed_air_ratio`）が始動の間に 64.5 まで上がる（前は 48）：暑い日の APU の EGT は未確認。
+31. 雨の音の `.snd` の残り（2026-11-12。クラウドのセッションで `fmod/747-400_custom.snd` の `EVENT_START_END` を `EVENT_END_COND` に直した。X-Plane が要る）：手元の `fmod/747-400.snd` の同じ行の直し、Log.txt の `E/SOUN: Warning: unknown line` が消えたことと雨の音の確かめ、`custom` の更新（下の「気づいたこと」の `EVENT_START_END` の項目の「残り」）。
 
 ## 段階 T の状態
 
@@ -537,6 +538,13 @@
 - （2026-10-28 に決まった：(b)）LEGS の PLAN の CTR と STEP（2026-10-26、6-1・6-2 段 5e。FCOM p.1333；FMSPG p.124）：ND の PLAN の中心は X-Plane の FMS の表示中の点で、XTLua からは書けない（`xtlua/xpFMSData` の書き込みは INOP）。(a) X-Plane の CDU のキー（LEGS・NEXT・PREV と PLAN の STEP）を裏で押して X-Plane の表示中の点を動かす（XTLua だけで済むが、X-Plane のページ送りに合わせるので壊れやすい）、(b) XPLMSetDisplayedFMSEntry を呼ぶだけの小さなプラグイン（C++。CLAUDE.md で採用してよいとされた範囲）を作る、(c) 段 7 まで置く、のどれにするか。
   - 2026-10-28 追記：その後、FMS ブリッジ（notes/ATA-34-61-FMC.md §23）に `laminar/B747/fms/xp/displayed`（XPLMSetDisplayedFMSEntry を X-Plane のスレッドで呼ぶ）ができたので、(b) はプラグイン側が済んでいる。(c) の段 7 も済。推奨は (b)：残りは FMC・CDU 側だけ（LEGS の CTR の印と STEP キー、PLAN の中心の点を `xp/displayed` に書く）。(a) は X-Plane の CDU のページの状態に頼るうえ、XTLua の作業スレッドから X-Plane の FMS に触れる形になる（§23 で X-Plane が落ちた原因と同じ）。利用者は (b) に決めた（2026-10-28：下の「決まったこと（2026-10-28、利用者の回答）」）。
 - （2026-10-28 に決まった：下の「決まったこと（2026-10-28、利用者の回答）」）ND の MAP CTR の縮尺（2026-10-26、5-2 段 5c-3）：MAP CTR では、地図の記号（局・経路の点・TCAS）と X-Plane の地図の層が拡大の MAP と同じ縮尺（465 px＝選んだ範囲）で描かれ、見えるのは機体から 250 単位（182 px、範囲の約 4 割）まで。一方、全周のローズの半径は約 230 px。FCOM p.1143 の図からは、MAP CTR ではローズの半径が範囲に当たるようにも読めるが、明記は無い。実機の MAP CTR で、ローズの円が選んだ範囲（または範囲の半分）を表すかを確かめたい。直すなら、MAP CTR のときだけ X-Plane の地図の範囲を 1 段上げ、記号・TCAS・高度の弧・POS の線の縮尺を半分にする（試しに X-Plane の範囲を 1 段上げると地図の層の縮尺が半分になることは確かめた）。
+
+## 決まったこと（2026-11-12、利用者の回答）
+
+- 雨の音の定義（`fmod/747-400_custom.snd` の雨のイベントの終了条件）の `EVENT_START_END` を `EVENT_END_COND` に直す（「直す」。問い「雨の音の定義（fmod/747-400_custom.snd の 7533 行目）の EVENT_START_END を EVENT_END_COND に直しますか？」、選択肢「直す」「直さない」への答え）。
+  - サウンドは対象外（CLAUDE.md）で、承認済みの `.snd` の変更は警報音の結線だけ（PLAN.md §3）。この行は下の「気づいたこと」に「触っていない」と書いてあったので、変える前に聞いた。
+  - 承認はこの 1 行だけ。ほかの音の中身は対象外のまま。経過と残りは、下の「気づいたこと」の `EVENT_START_END` の項目。
+- 同じ行のある `fmod/747-400LCF.snd` と `fmod/747-400_XP11.snd` は直さない（「直さない」。問い「同じ誤りは、使っていない 2 つの音の定義 fmod/747-400LCF.snd と fmod/747-400_XP11.snd にもあります。こちらも直しますか？」、選択肢「直さない」「同じに直す」への答え）。どちらも本家のまま一度も変えていないファイルで、custom ブランチと Release には入らない。
 
 ## 決まったこと（2026-11-09、利用者の回答）
 
@@ -1679,7 +1687,18 @@ PLAN.md §3 に書いた。要点：
 - **エンジン停止の開始でも CTR ポンプのスイッチが ON**：Web API でエンジン停止のフライトを始めても、各モジュールは「エンジン運転中の開始」の設定をする（上の段階 T の注記のとおり）。そのため CWT が空でも CTR L・R のスイッチが ON で、燃料系は FCOM どおり FUEL PRESS CTR L・R（caution）と >FUEL LOW CTR を出す。前のコードも `s00` の最後に FUEL PRESS CTR を出していた。開始時のスイッチの設定（manipulators）を CWT の量に合わせるかは、quick start と一緒に考える。
 - **XTLua の型の書き方の誤り**：エンジンの init スクリプトは配列の型を `"array[4)"` と書いているものが多い。XTLua は最後の 1 文字を捨てて数を読むので動く（X-Plane でも 4 要素の配列）。試験のモック（`tests/lib/xtlua.lua`）も同じ読み方にした（燃料の試験で `engines/fuel_valve_pos` を使うため）。
 - **PROGRESS.md の日誌が一部消えていた**：HYD synoptic・ELEC・APU のコミットで、日誌の末尾に書き足したときに途中の行が切れ、05:2x〜13:4x の項目が消えて、壊れた UTF-8 の 1 バイトが残っていた。過去のコミットの版から戻した（HYD synoptic の項目の頭はコミットの説明から書き直した）。日誌への書き足しは Bash の `cat >>` か Edit で行う。
-- 手元の `747-400.snd`（利用者の 3D 一式）と、その複製の `747-400_custom.snd` の 7,485 行目付近（雨の音）に `EVENT_START_END`（`EVENT_END_COND` の誤りとみられる）があり、機体を読み込むたびに X-Plane が `E/SOUN: Warning: unknown line` を出す。git の HEAD の `747-400.snd` には無い。音の中身は対象外なので触っていない。
+- 手元の `747-400.snd`（利用者の 3D 一式）と、その複製の `747-400_custom.snd` の 7,485 行目付近（雨の音）に `EVENT_START_END`（`EVENT_END_COND` の誤りとみられる）があり、機体を読み込むたびに X-Plane が `E/SOUN: Warning: unknown line` を出す。git の HEAD の `747-400.snd` には無い。音の中身は対象外なので触っていなかった。
+  - **`747-400_custom.snd` の側を直した（2026-11-12、クラウドのセッション。X-Plane では未確認）**：利用者の 11-12 の Log.txt（X-Plane 12.4.4、Release `custom-2026.11.11.3`）にこの警告が出ていた。利用者に聞いてから（上の「決まったこと（2026-11-12、利用者の回答）」）、7,533 行目の `EVENT_START_END` を `EVENT_END_COND` にした。変えたのはこの 1 語だけで、条件（`sim/weather/precipitation_on_aircraft_ratio == 0`）はそのまま。
+  - 根拠：X-Plane の `.snd` の仕様（developer.x-plane.com の Sound (.snd) File Format Specification）に `EVENT_START_END` は無く、イベントを止める条件は `EVENT_END_COND`。本家も、純正の `747-400.snd` の同じ行を同じに直している（`c915917b`、2026-01-31、本家の issue #917。`overhaul-base` に入っている）。仕様の指示の名前と突き合わせると、`747-400_custom.snd` の中で仕様に無い行はこの 1 行だけだった（直した後は 0 行）。
+  - 直す前の動き（`fmod/ambience.bank` を読んだ）：X-Plane はこの行を捨てるので、雨のイベントには始める条件しか無かった。イベントは 31.5 秒の音の繰り返しで、音量はバンクの中のパラメーター（dataref と同じ名前）で決まる：降水 0 で −42 dB、0.01 で −17 dB、0.03 で −7 dB、0.2 で +3 dB、1 で +10 dB。一度降ると、止んだ後もイベントが −42 dB で回り続けていた（ほぼ聞こえない。本家の報告者も、音の違いには気づかなかったと書いている）。直した後は、降水が 0 に戻るとイベントが止まるはず。
+  - dataref の名前は変えていない：`sim/weather/precipitation_on_aircraft_ratio` は X-Plane 12 で置き換えられた旧名（公式の一覧で REPLACED）だが、12.4.4 までの一覧に残っている。バンクのパラメーターも同じ旧名。本家の純正の `.snd` の条件は新しい名前（`sim/weather/aircraft/precipitation_on_aircraft_ratio`）。
+  - `fmod/747-400LCF.snd`（7,526 行目）と `fmod/747-400_XP11.snd`（7,535 行目）にも同じ行があるが、直さない（利用者。どちらも本家のまま）。
+  - 試験（X-Plane なし）：Lua は変えていない。回帰試験 249 本と構文 586 本は合格（LuaJIT は apt の 2.1。X-Plane の `DataRefs.txt` が無いので、XPlane2Blender の 12.08 の写しに、公式の一覧の新しい 388 件を足したもので代えた）。
+  - **残り（X-Plane のある開発 PC で）**：
+    1. 手元の `fmod/747-400.snd`（skip-worktree）の同じ行を同じに直す（CLAUDE.md：`.snd` を変えるときは両方を同じにする）。
+    2. 機体を読み直して、Log.txt に `E/SOUN: Warning: unknown line` が出ないことを確かめる。
+    3. 雨を降らせて雨の音が鳴り、止ませて鳴り止むことを確かめる（気象は、Web API のフライト開始の気象の定義の `precipitation_ratio`（`tests/flight/perf/perf.ps1` が 0 で使っている）か、手で。降水は `sim/weather/precipitation_on_aircraft_ratio` で読める。終了条件は `== 0` なので、止んだ後に値がちょうど 0 に戻るかも見る。音そのものは耳で）。
+    4. `overhaul` に入れた後、`update_custom_branch.sh` で `custom` を更新する（Release の `fmod/747-400.snd` は `747-400_custom.snd` から作られる）。
 - **X-Plane 自身の抽気の mode と isolation valve は連動している**：X-Plane（acf は `_has_full_bleed_air 0`）は、`bleed_air_mode` を 4（APU）にすると isolation valve を両方閉じ、5（auto）と 2 で両方開け、0 で両方閉じる。片方の弁を閉じると mode は 0 になる（Web API で確かめた）。1-5 の組み込みの最初の版は、APU だけのとき mode 4 を書いた。そのため X-Plane のエアスターターに APU の空気が届かず、カスタム acf の `s00` で 4 発とも回らなかった（モデルの始動弁は開いていた。X-Plane の弁を Web API で開けると回り出した）。前のコードも mode を書いていたが、読まずに書いていたので最初の 1 回しか届かず、毎フレーム読んで書いていた isolation valve の方が効いて、結果として弁が開いていた。グルーは mode だけを、ダクトに空気があれば 5、無ければ 0 にする。`s00`・`s05` に X-Plane の mode と弁の確認を足した。
 - **XTLua は X-Plane の dataref への書き込みをキャッシュと比べる**：読むと次のフレームでキャッシュを X-Plane から読み直し、書くとキャッシュと違うときだけ次のフレームで 1 回 X-Plane に渡す（XTLua のソース xpmtdatarefs.cpp）。読まずに同じ値を書き続けると、X-Plane が値を変えた後は直らない（Web API で cross tie を 0 にすると、毎フレーム 1 を書いている電源のグルーが戻さなかった）→ X-Plane の dataref は毎フレーム読んで、違うときだけ書く（ARCHITECTURE.md §9a、TESTING.md §1.2）。電源のグルー（X-Plane の cross tie・バッテリー・GPU・APU 発電機・発電機）も同じに直した（Web API で cross tie を 0 にしても、すぐ 1 に戻る）。
 - `s00` の始動は AUTOSTART OFF のままの手動始動（START を引き、N2 20 % で FUEL CONTROL を RUN）。AUTOSTART ON のときは、START を引くと始動弁は準備だけで、FUEL CONTROL を RUN にすると EEC が開く（FCOM p.879）。新しい空圧のモデルはこれに従う。AI の自動始動（B747.95.xt.AI）は AUTOSTART ON・パック OFF で「START → すぐ RUN」なので、この順で動く。
