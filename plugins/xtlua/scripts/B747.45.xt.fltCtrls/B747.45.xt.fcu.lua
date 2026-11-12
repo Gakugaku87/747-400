@@ -15,6 +15,8 @@ dofile("B747.45.fcu_model.lua")
 local F = B747_fcu_model
 
 simDR_fcu_lever                 = find_dataref("sim/cockpit2/controls/flap_ratio")
+B747DR_fcu_ad_valid             = find_dataref("laminar/B747/airdata/valid")      -- (2026-11-12 review FG-5) ADC L, C, R
+B747DR_fcu_ias_fo               = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_copilot")
 simDR_fcu_hyd_1                 = find_dataref("laminar/B747/hydraulics/pressure_1")
 simDR_fcu_hyd_4                 = find_dataref("laminar/B747/hydraulics/pressure_4")
 B747DR_fcu_duct_L               = find_dataref("laminar/B747/air/duct_pressure_L")
@@ -91,7 +93,14 @@ function B747_fcu()
         inp.dc[i] = B747DR_fcu_bus_dc[i - 1] > 0.5
         inp.reverse[i] = simDR_fcu_prop_mode[i - 1] == 3     -- reverse thrust selected
     end
-    inp.ias_kt = simDR_ind_airspeed_kts_pilot
+    -- (2026-11-12 review FG-5) the FCUs get both ADCs' speeds (ATA27
+    -- p.288): the captain's side's while ADC L is valid, else the F/O's
+    -- (estimate: which one first); neither valid: no load relief and
+    -- STATUS FLAP LOAD RELIEF (p.337). Before, the captain's speed always,
+    -- valid always (a failed ADC's speed drove the load relief)
+    local l_ok, r_ok = B747DR_fcu_ad_valid[0] > 0.5, B747DR_fcu_ad_valid[2] > 0.5
+    inp.ias_kt = (l_ok or not r_ok) and simDR_ind_airspeed_kts_pilot or B747DR_fcu_ias_fo
+    inp.ias_valid = l_ok or r_ok
     inp.altn_arm = B747DR_button_switch_position[ALTN_ARM] > 0.5
     local sel = B747DR_alt_flaps_sel_dial_pos
     inp.altn_sel = (sel > 0.5 and 1) or (sel < -0.5 and -1) or 0

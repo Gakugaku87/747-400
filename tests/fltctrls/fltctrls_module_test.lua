@@ -16,6 +16,10 @@ B747_srm_model_test_rrc = dofile("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747
 local rt = xtlua.new()
 rt:load("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.xt.fltCtrls.lua")
 rt:set("sim/operation/prefs/startup_running", 1)
+-- (2026-11-12 review FG-5) the air data module's ADC L, C, R valid (the SRMs
+-- and FCUs read them; that module is not loaded here)
+local AD_VALID = "laminar/B747/airdata/valid"
+for i = 0, 2 do rt:set(AD_VALID, i, 1) end
 rt:callout("flight_start")
 
 local function frames(seconds)
@@ -110,6 +114,21 @@ T.near(get(CMD), F25, 0.001, "lever 30, 172 kt: still 25 (170 kt)")
 at(168)
 T.near(get(CMD), F30, 0.001, "lever 30, 168 kt: back to 30")
 T.equal(get(ADVISORY, 142), 0, ">FLAP RELIEF cleared")
+-- (2026-11-12 review FG-5) the FCUs' air data (ATA27 p.288, p.337): ADC L
+-- failed, the F/O's side's speed instead (the captain's, failed, reads 190
+-- kt); both failed: no load relief and STATUS FLAP LOAD RELIEF. Before,
+-- the captain's speed always, valid always
+rt:set(AD_VALID, 0, 0)
+rt:set("laminar/B747/gauges/indicators/airspeed_kts_copilot", 160)
+at(190)
+T.near(get(CMD), F30, 0.001, "ADC L failed (190 kt on its side), the F/O's 160 kt: flaps 30, no relief")
+rt:set(AD_VALID, 2, 0)
+at(210)
+T.near(get(CMD), F30, 0.001, "both ADCs failed: no load relief (ATA27 p.337)")
+T.equal(get(STATUS, 87), 1, "both ADCs failed: STATUS FLAP LOAD RELIEF")
+for i = 0, 2 do rt:set(AD_VALID, i, 1) end
+at(168)
+T.equal(get(STATUS, 87), 0, "the ADCs back: no STATUS FLAP LOAD RELIEF")
 rt:set(LEVER, F25)
 at(205)
 T.near(get(CMD), F20, 0.001, "lever 25, 205 kt: relieved to 20")
@@ -212,11 +231,19 @@ T.equal(get(ADVISORY, 262), 1, "upper ratio changer stuck: RUD RATIO SNGL")
 T.equal(get(STATUS, 89), 1, "STATUS RUDDER RATIO")
 T.near(get("laminar/B747/flt_ctrls/rudder_ratio_upr"), r300, 1e-6, "upper stays where it stuck")
 rt:set(SRM_FAIL .. "rrc", 0, 0)
-rt:set("sim/operation/failures/rel_adc_comp", 6)
+-- (2026-11-12 review FG-5) ADC L failed (the air data module's validity):
+-- the SRMs go on with ADC R (ATA27 p.104), the ratio by the speed as
+-- before; both failed: the lower at the 209 kt position. Before, X-Plane's
+-- ADC 1 failure alone took both sides away (the 209 kt position)
+rt:set(AD_VALID, 0, 0)
+fly(200, 0.35, 8)
+T.near(get("laminar/B747/flt_ctrls/rudder_ratio_lwr"), (32 - 27 * B747_srm_model_test_rrc(200)) / 32, 1e-6, "ADC L failed: ADC R still gives the speed (200 kt), the schedule's ratio")
+T.equal(get(STATUS, 93), 0, "ADC L failed: no STATUS STAB SPEED TRIM")
+rt:set(AD_VALID, 2, 0)
 fly(200, 0.35, 8)
 T.near(get("laminar/B747/flt_ctrls/rudder_ratio_lwr"), (32 - 27 * B747_srm_model_test_rrc(209)) / 32, 1e-6,
-    "air data computer failed: lower at the 209 kt position")
-rt:set("sim/operation/failures/rel_adc_comp", 0)
+    "ADC L and R failed: lower at the 209 kt position")
+for i = 0, 2 do rt:set(AD_VALID, i, 1) end
 
 -- the stabilizer trim (B747.45.xt.srm.lua, step 2b): X-Plane's trim (0-15
 -- units on -1..1) followed when set from outside; the wheel switches'

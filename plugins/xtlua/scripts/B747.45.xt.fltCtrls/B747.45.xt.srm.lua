@@ -25,7 +25,7 @@ B747DR_srm_vc_capt              = find_dataref("laminar/B747/gauges/indicators/a
 B747DR_srm_vc_fo                = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_copilot")
 simDR_srm_mach_capt             = find_dataref("sim/cockpit2/gauges/indicators/mach_pilot")
 simDR_srm_mach_fo               = find_dataref("sim/cockpit2/gauges/indicators/mach_copilot")
-simDR_srm_adc_fail              = find_dataref("sim/operation/failures/rel_adc_comp")
+B747DR_srm_ad_valid             = find_dataref("laminar/B747/airdata/valid")      -- (2026-11-12 review FG-5) ADC L, C, R
 B747DR_srm_autoland             = find_dataref("laminar/B747/autopilot/autoland")
 B747DR_srm_lockout_L            = find_dataref("laminar/B747/flt_ctrls/left_outer_aileron_lockout")
 B747DR_srm_lockout_R            = find_dataref("laminar/B747/flt_ctrls/right_outer_aileron_lockout")
@@ -190,8 +190,12 @@ function B747_srm()
     local inp = srm_inputs
     inp.vc[1], inp.vc[2] = B747DR_srm_vc_capt, B747DR_srm_vc_fo
     inp.mach[1], inp.mach[2] = simDR_srm_mach_capt, simDR_srm_mach_fo
-    local adc = simDR_srm_adc_fail ~= 6
-    inp.air_valid[1], inp.air_valid[2] = adc, adc
+    -- (2026-11-12 review FG-5) each side's ADC valid by the air data
+    -- module (X-Plane's ADC 1 and 2 failures and the failure window's):
+    -- ADC L for the captain's side, R for the F/O's (ATA27 p.104: each SRM
+    -- gets both ADCs' speeds, its side's first). Before, X-Plane's ADC 1
+    -- failure alone took both sides away, and the window's none
+    inp.air_valid[1], inp.air_valid[2] = B747DR_srm_ad_valid[0] > 0.5, B747DR_srm_ad_valid[2] > 0.5
     -- LE group A: the inboard and midspan groups on both wings (the FCU)
     local a_in = true
     for i = 0, 3 do
