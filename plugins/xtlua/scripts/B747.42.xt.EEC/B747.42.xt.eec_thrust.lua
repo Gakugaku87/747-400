@@ -223,7 +223,10 @@ function B747_eec_idle(engine) return eec_inputs.idle[engine + 1] end
 -- forward thrust, engine running); ecc_spd in B747.42.xt.EEC.lua sets it
 -- after the displays are worked out, and resets it otherwise. Its time step
 -- at most X-Plane's 0.05 s a frame (2026-10-31: below 20 fps X-Plane's time
--- runs slower while SIM_PERIOD stays real time)
+-- runs slower while SIM_PERIOD stays real time). (2026-11-12 review D-1)
+-- This cap never acts: XTLua's SIM_PERIOD is always 0.02 and its worker
+-- ticks on while X-Plane stands still; init.lua now gates the ticks on
+-- X-Plane's clock. Kept as a guard
 local EEC_DT_MAX = 0.05
 -- (2026-11-10) the open-loop test (the EEC's init script; tests/flight/
 -- measure/eec_steps_*.json): while test_open is 1 each engine's throttle is

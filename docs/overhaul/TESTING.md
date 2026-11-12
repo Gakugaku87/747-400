@@ -31,6 +31,7 @@
   - タイマー（`run_at_interval` など）、`print`、境界の関数（`getFMSData` など）は、試験側で差し替える。
 - **判定**：`check` / `equal` / `near(実際, 期待, 許容)` で数える。失敗を集めて最後に `error` を出し、成功すれば件数を表示する。
 - **XTLua の落とし穴**（旧フォークで分かったこと。新しい試験でも押さえる）：
+  - （2026-11-12 のフルレビュー D-1）XTLua の `SIM_PERIOD` は定数 0.02 で、ワーカーは X-Plane のフレームを待たずに約 20 ms ごとに physics を呼ぶ（本家の `lua_helpers.cpp`・`xlua.cpp`）。モックの `rt:frame(dt)` は `SIM_PERIOD = dt` で時計も dt 進める（X-Plane とは違う）。X-Plane が止まっている間は `rt:still(seconds)`（0.02 の tick を、時計と dataref を止めたまま回す。本物の `init.lua` の tick の門が、X-Plane の時計より 0.06 s 先までしか回さない）。
   - スクリプトのモジュール内で、dataref の最初の読みは 0 になる → 要る dataref は毎フレーム読む。
   - xt スクリプトの `deferred_dataref` は `find_dataref` と同じ → init スクリプトで作っていないと存在しない。
   - メタテーブルの無い global テーブルの、無い添字を読むとスタックが溢れる。

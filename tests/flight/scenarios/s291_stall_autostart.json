@@ -1,0 +1,48 @@
+{
+  "name": "s291_stall_autostart",
+  "description": "X-Plane が止まっている間の始動（2026-11-12 のフルレビュー D-4：REVIEW_2026-11-12.md）の X-Plane での確認。RJAA 34L の地上・エンジン運転中（機体を読み直す、P&W）。エンジン 4 を CUTOFF で止め、autostart（s08 と同じ手順）で始動し、light-off の後の N2 35 % で FlyWithLua の B747_stall_test.lua で X-Plane の主スレッドを 30 秒止める。前（XTLua のワーカーは止まりの間も凍った N2 で数えた）：15 秒で hung start と読み、燃料を切って ENG 4 AUTOSTART。直した後：始動は続き、アイドルに着く。",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "check", "note": "P&W", "dref": "laminar/B747/engines/type", "op": "==", "value": 0 },
+    { "do": "switch", "note": "PACK 1 OFF（始動の空気のため）", "dref": "laminar/B747/air/pack_ctrl/sel_dial_pos[0]", "value": 0,
+      "cmd": "laminar/B747/air/pack_ctrl_01/sel_dial_up", "cmd_down": "laminar/B747/air/pack_ctrl_01/sel_dial_dn" },
+    { "do": "switch", "note": "PACK 2 OFF", "dref": "laminar/B747/air/pack_ctrl/sel_dial_pos[1]", "value": 0,
+      "cmd": "laminar/B747/air/pack_ctrl_02/sel_dial_up", "cmd_down": "laminar/B747/air/pack_ctrl_02/sel_dial_dn" },
+    { "do": "switch", "note": "PACK 3 OFF", "dref": "laminar/B747/air/pack_ctrl/sel_dial_pos[2]", "value": 0,
+      "cmd": "laminar/B747/air/pack_ctrl_03/sel_dial_up", "cmd_down": "laminar/B747/air/pack_ctrl_03/sel_dial_dn" },
+    { "do": "switch", "note": "AUTOSTART ON", "dref": "laminar/B747/button_switch/position[45]", "value": 1, "cmd": "laminar/B747/button_switch/start_autostart" },
+    { "do": "switch", "note": "FUEL CONTROL 4 CUTOFF", "dref": "laminar/B747/fuel/fuel_control/toggle_sw_pos[3]", "value": 0, "cmd": "laminar/B747/fuel/fuel_control_4/toggle_switch" },
+    { "do": "wait", "note": "エンジン 4 の N2 が 10 % 未満", "dref": "sim/flightmodel/engine/ENGN_N2_[3]", "op": "<", "value": 10, "timeout": 180, "stop": true },
+
+    { "do": "mark", "note": "エンジン 4 の autostart、N2 35 % で 30 秒止める" },
+    { "do": "switch", "note": "START 4", "dref": "laminar/B747/toggle_switch/position[19]", "value": 1, "cmd": "laminar/B747/toggle_switch/engine_start4" },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "switch", "note": "FUEL CONTROL 4 RUN（autostart の開始）", "dref": "laminar/B747/fuel/fuel_control/toggle_sw_pos[3]", "value": 1, "cmd": "laminar/B747/fuel/fuel_control_4/toggle_switch" },
+    { "do": "wait", "note": "所定の N2 で燃料", "dref": "sim/cockpit2/engine/actuators/mixture_ratio[3]", "op": "==", "value": 1, "timeout": 60, "stop": true },
+    { "do": "wait", "note": "light-off", "dref": "sim/flightmodel2/engines/engine_is_burning_fuel[3]", "op": "==", "value": 1, "timeout": 20, "stop": true },
+    { "do": "wait", "note": "N2 35 %", "dref": "sim/flightmodel/engine/ENGN_N2_[3]", "op": ">=", "value": 35, "timeout": 60, "stop": true },
+    { "do": "cmd", "note": "X-Plane の主スレッドを 30 秒止める（tests/flight/fwl/B747_stall_test.lua）", "name": "FlyWithLua/B747_stall/s30" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "燃料は入ったまま（前は 15 秒の止まりを hung start と読んで燃料を切った）", "dref": "sim/cockpit2/engine/actuators/mixture_ratio[3]", "op": "==", "value": 1 },
+    { "do": "wait", "note": "アイドル（N2 60 %）に着く", "dref": "sim/flightmodel/engine/ENGN_N2_[3]", "op": ">=", "value": 60, "timeout": 90 },
+    { "do": "check", "note": "ENG 4 AUTOSTART は出ていない", "dref": "laminar/B747/CAS/caution_status[22]", "op": "==", "value": 0 },
+    { "do": "cas", "note": "始動の後" },
+    { "do": "record_stop" }
+  ]
+}

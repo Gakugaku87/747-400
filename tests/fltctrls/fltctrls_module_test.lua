@@ -286,12 +286,19 @@ frames(3)
 T.near(units(), u, 1e-9, "autotrim, 3 s: waits")
 frames(2)
 T.check(units() > u + 0.2 and units() < u + 0.5, "then 0.25 units/s at 200 kt")
--- (2026-10-31) one long frame (X-Plane below 20 fps: its time slower, the
--- frame's SIM_PERIOD real time): at most 0.05 s worth (s145's stabilizer
--- stepped 0.13 of X-Plane's trim at once)
+-- (2026-11-12 review D-1) X-Plane standing still 10 s (XTLua's worker goes
+-- on ticking: init.lua's gate): the stabilizer 0.12 s worth at most (before,
+-- 10 s worth at once when X-Plane went on), then nothing more while it stays
+-- still. (Before, 2026-10-31, one frame of SIM_PERIOD 2 was tested: XTLua's
+-- SIM_PERIOD is always 0.02.)
 local u2 = units()
-rt:frame(2)
-T.check(units() - u2 <= 0.25 * 0.05 + 1e-6, string.format("a 2 s frame: %.4f units, 0.05 s worth at most", units() - u2))
+rt:still(10)
+T.check(units() - u2 <= 0.25 * 0.13 + 1e-6, string.format("X-Plane still 10 s: %.4f units, 0.12 s worth at most", units() - u2))
+local u3 = units()
+rt:still(10)
+T.near(units(), u3, 1e-9, "still 10 s more: the stabilizer does not move")
+frames(0.5)
+T.check(units() > u3 + 0.05, "X-Plane going on: the autotrim goes on")
 rt:set(STAB .. "autotrim_cmd", 0)
 rt:command("laminar/B747/flt_ctrls/stab_trim_dn_capt", 0.2)
 T.check(logged("laminar/B747/autopilot/trim_disengage", "once"), "one A/P and the wheel switches: disengage")

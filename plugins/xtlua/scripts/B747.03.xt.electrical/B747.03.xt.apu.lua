@@ -33,11 +33,13 @@ local apu_valve_wait = 0
 -- (2026-11-11 review) the model and the valve's wait run in X-Plane's time,
 -- as the fuel model moves the valve and X-Plane spins its APU
 -- (B747.25.xt.fuel.lua's fuel_frame_dt: at most 1 s a frame, 0 paused or
--- when the clock goes back). Before, XTLua's SIM_PERIOD, which runs on in a
--- pause and does not follow the time acceleration: an APU start paused
--- with the valve under half open was shut down for want of fuel (the valve
--- stood still), and the start's 120 s, the door's travel and the cooldown
--- ran on paused
+-- when the clock goes back). Before, XTLua's SIM_PERIOD, which does not
+-- follow the time acceleration: on the test mock an APU start paused with
+-- the valve under half open was shut down for want of fuel, and the
+-- start's 120 s, the door's travel and the cooldown ran on paused. (The
+-- 2026-11-12 review: in X-Plane XTLua calls no physics in a pause, upstream
+-- xlua.cpp, so the pause itself did not do it; a long stall did, until
+-- init.lua's tick gate)
 simDR_apu_time_now              = find_dataref("sim/time/total_running_time_sec")
 local apu_clock_t = nil
 local function apu_frame_dt()

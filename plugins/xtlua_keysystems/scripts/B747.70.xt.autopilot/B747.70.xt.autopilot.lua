@@ -978,7 +978,10 @@ simDR_at_sim_speed = find_dataref("sim/time/sim_speed")     -- (2026-11-11 revie
 -- (2026-10-31) the AFDS's and the A/T's time step at most X-Plane's 0.05 s
 -- a frame: below 20 fps X-Plane's time runs slower while SIM_PERIOD stays
 -- real time (s145: one long frame stepped the F/D's pitch 2.5 degrees and,
--- in the SRM, the stabilizer at once)
+-- in the SRM, the stabilizer at once). (2026-11-12 review D-1) This cap
+-- never acts: XTLua's SIM_PERIOD is always 0.02 and its worker ticks on
+-- while X-Plane stands still (upstream lua_helpers.cpp, xlua.cpp); the
+-- plugins' init.lua now gates the ticks on X-Plane's clock. Kept as a guard
 local AFDS_DT_MAX = 0.05
 local function afds_dt() return math.min(SIM_PERIOD, AFDS_DT_MAX) end
 local atState = B747_at_model.new()

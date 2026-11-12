@@ -78,7 +78,10 @@ local STAB_INIT_S = 3       -- from the flight's start, the stabilizer follows X
 local TRIM_SAME = 1e-4      -- X-Plane's trim this close to what was written is ours
 -- (2026-10-31) the model's time step at most X-Plane's 0.05 s a frame: below
 -- 20 fps X-Plane's time runs slower while SIM_PERIOD stays real time (s145:
--- one long frame moved the stabilizer 0.13 of X-Plane's trim at once)
+-- one long frame moved the stabilizer 0.13 of X-Plane's trim at once).
+-- (2026-11-12 review D-1) This cap never acts: XTLua's SIM_PERIOD is
+-- always 0.02 and its worker ticks on while X-Plane stands still; init.lua
+-- now gates the ticks on X-Plane's clock. Kept as a guard
 local SRM_DT_MAX = 0.05
 
 local srm_state = S.new()

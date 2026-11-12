@@ -562,14 +562,26 @@ frames(3)
 T.equal(rt:get(PITCH), 4, "the cruise phase's VNAV SPD with THR: VNAV SPD")
 T.equal(rt:get(AT_FMA_ST), 4, "the A/T's THR")
 T.check(rt:get(LEVER_CMD) < c0, string.format("the levers less for 1,250 fpm down: %.4f from %.4f", rt:get(LEVER_CMD), c0))
--- (2026-10-31) one long frame (X-Plane below 20 fps: its time slower, the
--- frame's SIM_PERIOD real time): the A/T's command 0.05 s worth at most
--- (s145's F/D pitch and stabilizer stepped at once)
+-- (2026-11-12 review D-1, D-2) X-Plane standing still 10 s (XTLua's worker
+-- goes on ticking: init.lua's gate): the A/T's command 0.12 s worth at
+-- most (before, 10 s worth: in X-Plane the A/T's THR went to HOLD as the
+-- levers, written by the EEC's plugin, stood still), the F/D's pitch the
+-- same, nothing more while it stays still. (Before, 2026-10-31, one frame
+-- of SIM_PERIOD 2 was tested: XTLua's SIM_PERIOD is always 0.02.)
 local c1 = rt:get(LEVER_CMD)
 for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, c1) end
-rt:frame(2)
-T.check(c1 - rt:get(LEVER_CMD) <= ap.ns.B747_at_model.K_VS_VNAV * 1250 * 0.05 + 1e-9,
-    string.format("a 2 s frame: %.5f less, 0.05 s worth at most", c1 - rt:get(LEVER_CMD)))
+local p1 = rt:get("laminar/B747/autopilot/pitch_cmd")
+rt:still(10)
+T.check(c1 - rt:get(LEVER_CMD) <= ap.ns.B747_at_model.K_VS_VNAV * 1250 * 0.13 + 1e-9,
+    string.format("X-Plane still 10 s: the levers %.5f less, 0.12 s worth at most", c1 - rt:get(LEVER_CMD)))
+T.equal(rt:get(AT_FMA_ST), 4, "X-Plane still 10 s: the A/T's THR (not HOLD)")
+local c2, p2 = rt:get(LEVER_CMD), rt:get("laminar/B747/autopilot/pitch_cmd")
+rt:still(10)
+T.equal(rt:get(LEVER_CMD), c2, "still 10 s more: the levers' command does not move")
+T.equal(rt:get("laminar/B747/autopilot/pitch_cmd"), p2, "still 10 s more: the F/D's pitch does not move")
+T.check(math.abs(p2 - p1) < 0.2, string.format("X-Plane still 20 s: the F/D's pitch %.3f deg from before", p2 - p1))
+frames(1)
+for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, rt:get(LEVER_CMD)) end
 -- the hand 8 degrees off the A/T's command: HOLD (the crew sets the rate:
 -- FCOM p.1260; the settled HOLD at the rate is the A/T model's test's: here
 -- the speed stays 0, a jump of it would read as a dive)
