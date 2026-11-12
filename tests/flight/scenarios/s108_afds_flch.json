@@ -76,6 +76,7 @@
     { "do": "remember", "dref": "laminar/B747/airspeed/Vminm", "as": "vminm" },
     { "do": "set", "note": "MCP 速度 200 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 200 },
     { "do": "sleep", "seconds": 60 },
+    { "do": "wait", "note": "最小機動速度の近くまで減る（2026-11-12 から待つ：降下の途中の減速はほぼ水平（−100 fpm）までで、アイドルの抵抗で減るので 60 秒では届かないことがある。前は機首を上げて上昇に転じ、1.5 kt/s で減った：notes/ATA-22.md §62。X-Plane では未確認）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [-6, 8], "rel": "vminm", "timeout": 90, "level": "warn" },
     { "do": "snapshot", "note": "速度の保護", "drefs": [ "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/airspeed/Vminm", "sim/flightmodel/position/vh_ind_fpm", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
     { "do": "check", "note": "最小機動速度で止まる（-6〜+8 kt）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [-6, 8], "rel": "vminm" },
     { "do": "check", "note": "FMA は FLCH SPD のまま", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 8 },

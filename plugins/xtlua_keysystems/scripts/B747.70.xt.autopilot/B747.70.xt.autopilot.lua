@@ -731,6 +731,22 @@ local function afds_pitch_inputs(p)
 	local ref = afds_speed_ref()
 	p.ias = simDR_ind_airspeed_kts_pilot
 	p.spd_sel = ref
+	-- (2026-11-12; notes/ATA-22.md §62) the speed law's way, for its
+	-- near-level path (B747.70.afds_pitch_model.lua's SPD_LEVEL_FPM): VNAV
+	-- SPD's the FMC's (the VNAV mode model's: the climb up, its descents
+	-- down), in the FMC's driftdown at its least rate of descent (the FMC's
+	-- V/S there: FCOM p.1268, slowing to the E/O speed the rate of descent
+	-- decreases to a minimum of 300 fpm); FLCH's to the MCP altitude it
+	-- captures (the capture's own: set 3 s after the knob)
+	local way, way_fpm = 0, nil
+	if afds.pitch == "VNAV" then
+		way = vo.way or 0
+		if way < 0 and B747DR_ap_fvn_dd > 0.5 and B747DR_ap_fvn_vs < 0 then way_fpm = -B747DR_ap_fvn_vs end
+	elseif afds.pitch == "FLCH" then
+		local d = simDR_autopilot_altitude_ft - simDR_pressureAlt1
+		way = d > 0 and 1 or (d < 0 and -1 or 0)
+	end
+	p.way, p.way_fpm = way, way_fpm
 	p.mcp_ias = ref
 	p.v_min = B747DR_afds_vminm
 	p.v_max = B747DR_afds_vmax

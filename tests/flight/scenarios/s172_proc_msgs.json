@@ -1,6 +1,6 @@
 {
   "name": "s172_proc_msgs",
-  "description": "6-1/6-2 段 11c4（手続きの advisory）の X-Plane での確認。RJAA 34L の地上（機体を読み直す）。RJAA→RJBB の DEPARTURES で AKAGI4（16R と 34L だけ）を選び、RTE の RUNWAY に 34R を入れると RUNWAY N/A FOR SID で捨てられ（FMSPG p.79）、34L は入る。RJBB→RJAA の ARRIVALS で VOR16R を選んでから BINKSA（34L だけ）を選ぶと ARR N/A FOR RUNWAY で捨てられる（FCOM p.1435）。CDU を撮る。Lua の誤りも確かめる",
+  "description": "6-1/6-2 段 11c4（手続きの advisory）の X-Plane での確認。RJAA 34L の地上（機体を読み直す）。RJAA→RJBB の DEPARTURES で AKAGI4（16R と 34L だけ）を選び、RTE の RUNWAY に 34R を入れると RUNWAY N/A FOR SID で捨てられ（FMSPG p.79）、34L は入る。RJBB→RJAA の ARRIVALS で VOR16R を選んでから BINKSA（34L だけ）を選ぶと、ARR N/A FOR RUNWAY が出て、BINKSA が入り VOR16R が外れる。続けて VOR16R を選ぶと、同じメッセージで VOR16R が入り BINKSA が外れる（2026-11-12 から：notes/ATA-34-61-FMC.md §166、FCOM p.1403・p.1435、FMSPG p.195・p.260。前は選んだ方が捨てられ、反対向きの滑走路の組へ変えられなかった）。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -46,8 +46,12 @@
     { "do": "check", "note": "1L が BINKSA、1R が VOR16R", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^BINKSA.*VOR16R$" },
     { "do": "cdu", "note": "VOR16R、BINKSA", "keys": ["R1", "L1"] },
     { "do": "check", "note": "ARR N/A FOR RUNWAY（FCOM p.1435）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "ARR N/A FOR RUNWAY" },
-    { "do": "check", "note": "BINKSA は選ばれない", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^(?!BINKSA<SEL>)" },
+    { "do": "check", "note": "BINKSA が入り、VOR16R は外れる（選んだ方が通る）", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^BINKSA<SEL> +VOR16R$" },
     { "do": "shot", "name": "cdu_arr_na_for_runway" },
+    { "do": "cdu", "note": "CLR、VOR16R（逆の順）", "keys": ["CLR", "R1"] },
+    { "do": "check", "note": "ARR N/A FOR RUNWAY", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "ARR N/A FOR RUNWAY" },
+    { "do": "check", "note": "VOR16R が入り、BINKSA は外れる", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^BINKSA +<SEL>VOR16R$" },
+    { "do": "shot", "name": "cdu_arr_na_for_runway_appr" },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
     { "do": "view", "name": "forward" },
     { "do": "record_stop" }

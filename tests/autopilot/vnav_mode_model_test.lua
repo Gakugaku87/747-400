@@ -18,7 +18,7 @@
 -- the MCP altitude captured from above (FMSPG p.227); the descent's FMC
 -- altitude a floor above the airplane (VNAV PTH) or the FMC's AT OR BELOW
 -- target under it (VNAV SPD on: the FMC's des_target). A first patch
--- failed these.
+-- failed these. (2026-11-12) The FMC's way out (`way`), for the speed law.
 local T = dofile("tests/lib/check.lua")("vnav_mode_model")
 local V = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.vnav_mode_model.lua")
 
@@ -369,5 +369,23 @@ T.check(o.fma == V.FMA.ALT and o.kind == "mcp" and o.law_alt == 2000, "the MCP l
 local f4 = V.new()
 o = V.update(f4, faf(0, {alt = 5010, mcp = 5000, fmc_alt = 3000, path_dev = 10}))
 T.check(o.fma == V.FMA.ALT and o.kind == "mcp", "the path level at an altitude not the FMC's: VNAV ALT")
+
+-- (2026-11-12; notes/ATA-22.md §62) the FMC's way out, for the speed law's
+-- near-level path (B747.70.afds_pitch_model.lua's `way`): VNAV SPD's climb
+-- up; its descents down (the cruise phase's driftdown; speed intervention,
+-- the early descent and the speed reversion in the descent's phase); none
+-- while levelled
+o = V.update(V.new(), inp())
+T.check(o.fma == V.FMA.SPD and o.way == 1, "VNAV SPD in the climb: the way up")
+o = V.update(V.new(), inp({phase = 2, mode = 1, fmc_alt = 30000, mcp = 30000, alt = 37000, vs = -300, at = 4}))
+T.check(o.fma == V.FMA.SPD and o.way == -1, "VNAV SPD in the cruise phase (the driftdown): down")
+o = V.update(V.new(), inp({phase = 3, mode = 1, fmc_alt = 10000, mcp = 5000, alt = 20000, at = 2}))
+T.check(o.fma == V.FMA.SPD and o.way == -1, "VNAV SPD in the descent: down")
+local w = V.new()
+o = V.update(w, inp({alt = 19400, cap_mcp = true}))
+T.check(o.level and o.way == 0, "levelled (VNAV ALT): none")
+o = V.update(w, inp({alt = 20000, pushes = 1, mcp = 24000}))
+o = V.update(w, inp({alt = 20000, pushes = 2, mcp = 24000}))
+T.check(o.fma == V.FMA.SPD and o.way == 1, "VNAV SPD again: up again")
 
 T.done()

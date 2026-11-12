@@ -114,7 +114,7 @@ M.POS_APP_FT = 300
 function M.new()
     return {level = false,   -- the level held ({kind, alt, mcp, tgt, dir, below}) or false
         pushes = false,      -- the selector's pushes counted the update before
-        out = {fma = M.FMA.SPD, law = false, law_vs = 0, law_alt = 0, at = 0, level = false, kind = false}}
+        out = {fma = M.FMA.SPD, law = false, law_vs = 0, law_alt = 0, at = 0, level = false, kind = false, way = 0}}
 end
 
 -- VNAV's engage from its arm (FMC DATA VALID: ATA22 p.341; ATA34_2 p.621):
@@ -241,7 +241,9 @@ end
 --   cap_mcp, cap_fmc  the AFDS capturing the MCP altitude, the FMC's
 -- out: fma (4 VNAV SPD, 5 VNAV ALT, 6 VNAV PTH), law ("FLCH", "VS",
 -- "ALT"), law_vs (fpm), law_alt (ft), at (the A/T mode asked), level (true
--- while levelled: the A/T's SPD), kind (the level's or false)
+-- while levelled: the A/T's SPD), kind (the level's or false), way (the
+-- FMC's way while not levelled: 1 up, -1 down, 0 level; 2026-11-12, for
+-- VNAV SPD's near-level path: B747.70.afds_pitch_model.lua's `way`)
 function M.update(s, inp)
     local out = s.out
     local n = inp.pushes or 0
@@ -293,10 +295,12 @@ function M.update(s, inp)
         out.fma = (L.kind == "mcp" or L.kind == "hold") and M.FMA.ALT or M.FMA.PTH
         out.law, out.law_vs, out.law_alt = "ALT", 0, L.alt
         out.at, out.level, out.kind = M.AT_SPD, true, L.kind
+        out.way = 0
     else
         out.fma = inp.mode == M.MODE_SPD and M.FMA.SPD or M.FMA.PTH
         out.law, out.law_vs, out.law_alt = law, vs, tgt
         out.at, out.level, out.kind = inp.at or 0, false, false
+        out.way = dir
     end
     return out
 end

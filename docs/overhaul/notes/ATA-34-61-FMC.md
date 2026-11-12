@@ -1651,7 +1651,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - 資料：FCOM p.1435（ARR N/A FOR RUNWAY：選んだ滑走路・進入が選んだ到着と合わない。RUNWAY N/A FOR SID：滑走路が SID と合わない）、FMSPG p.79（RTE の 2L RUNWAY が 2 ページ目の 1L の SID と合わなければ、書き込み行に RUNWAY N/A FOR SID が出て入力は捨てられる）。残りの advisory のうち、VERIFY TAIL NUMBER（FCOM p.1436）は ATC LOGON/STATUS のページ（データリンク：FCOM p.757 の TAIL NO）の話なので段 12 で、STANDBY ONE は航法データを読む間に出している（段 4）。
 - 作ったもの：
   - RUNWAY N/A FOR SID（`B747.68.route_model.lua` の `set_runway`）：SID が選ばれていれば、その SID の滑走路でなければ入力を捨ててこのメッセージ。
-  - ARR N/A FOR RUNWAY（`activepages/B744.fms.pages.deparr.lua` の ARRIVALS）：STAR と進入がそろうとき、STAR がその進入の滑走路を使わなければ（STAR の滑走路の transition に無い。ALL なら合う）、選んだ方を捨ててこのメッセージ。進入の滑走路は脚の滑走路の点、無ければ進入の名前から（VOR16R（D16R）は進入復行点が VOR の NRE で、脚に滑走路が無い）。滑走路の無い進入（周回）はどの STAR とも合うとした（推定）。
+  - ARR N/A FOR RUNWAY（`activepages/B744.fms.pages.deparr.lua` の ARRIVALS）：STAR と進入がそろうとき、STAR がその進入の滑走路を使わなければ（STAR の滑走路の transition に無い。ALL なら合う）、選んだ方を捨ててこのメッセージ。進入の滑走路は脚の滑走路の点、無ければ進入の名前から（VOR16R（D16R）は進入復行点が VOR の NRE で、脚に滑走路が無い）。滑走路の無い進入（周回）はどの STAR とも合うとした（推定）。（2026-11-12 から、選んだ方は通し、合わない相手を経路から外す：§166。）
 - 試験：新しい `proc_msgs_test.lua`（YANKE1（16R だけ）で RTE の RUNWAY 34L が RUNWAY N/A FOR SID で捨てられ 16R は入る、ILS16R の後の BRAVO1（34L だけ）と BRAVO1 の後の ILS16R が ARR N/A FOR RUNWAY で捨てられ、ALPHA1（全部の滑走路）は入る）。試験の航法データの ZZAA に YANKE1 と BRAVO1 を足し、手続きの一覧を見る 3 本（`deparr_pages_test.lua`・`navdb_test.lua`・`proc_model_test.lua`）の期待を合わせた。全 155 本。X-Plane：新しい `s172_proc_msgs`：9/9（2026-11-01、3 回目）。DEPARTURES の AKAGI4 に RTE の RUNWAY 34R を入れると RUNWAY N/A FOR SID で RUNWAY は空のまま、34L は RW34L と入った。ARRIVALS で VOR16R の後に BINKSA（34L だけ）を選ぶと ARR N/A FOR RUNWAY で BINKSA は選ばれない（画像）。Log.txt に Lua の誤りなし。1 回目は 5/9：捨てられた 34R が書き込み行に残り（CLR 1 回ではメッセージだけ消える）、後の入力が崩れた（試験の手順の誤り。CLR を増やした）。2 回目は 7/9：VOR16R の脚は滑走路でなく NRE（進入復行点）で終わるので、滑走路なしでどの STAR とも合うと判断していた。進入の名前から滑走路を取るように直した
 
 ## 98. 11d の段取りと 11d1 の実装（2026-11-01：FMC 2 台の故障と CDU の接続）
@@ -2879,3 +2879,42 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - AP-1（FMC の側）：T/D を過ぎた VNAV ALT（巡航高度、`td_hold`）から MCP を下げて押すと、FMC は MCP を下げたときにもう DES に移っていて、押しで次の降下の制限を消した。
   - 直したこと（`B747_fms_alt_sel_push`）：DES で、AFDS が VNAV ALT（5）、高度が巡航高度の 300 ft の内、T/D が今の点か後ろなら、押しは降下を始めるだけで何も消さない（FCOM p.649：巡航の VNAV PTH・ALT での押しは降下の開始）。
   - 試験：`pred_glue_test` に 1 件（HEAD では制限が消える）。
+
+## 166. ARRIVALS：反対向きの滑走路の組へ変えられなかった（2026-11-12：利用者の FAOR→WSSS の飛行、「今のうちにDEP/APPで1度到着経路と進入方法をアクティベートすると変えようとしてもAPP N/A FOR RUNWAYと表示されて受け付けられないという問題についても対処の方法を考えて」）
+
+- 起きたこと（Release `custom-2026.11.11.3`。機体の FDR の CDU の記録、09:08〜09:17、巡航中。調べたのは利用者の PC のセッション）：
+  - WSSS の ARRIVALS で、有効な経路に 20 側の STAR と進入が入った状態から、02 側の STAR（1 ページ目の 3L：ASUN2A）も 02 側の進入（2 ページ目の 2R：RNV02C）も、選ぶたびに ARR N/A FOR RUNWAY で拒否された。RTE のページの DEL も通らなかった。
+  - WSSS（AIRAC 2611）の STAR 19 本は、どれも 02 側の滑走路だけか 20 側の滑走路だけ（`P.runways` と同じ規則で数えた）。
+- 原因（段 11c4：§97）：
+  - `fmsFunctions.arrsel` は、選んだ STAR・進入を、経路に今ある相手と照合し（`star_serves`）、合わなければ選んだ方を捨てて ARR N/A FOR RUNWAY を出していた。
+  - 相手を外す操作は CDU に無い。両方の向きに使える STAR が無い空港では、STAR と進入がそろった後は、どちらを先に選んでも拒否される。EXEC の前でも同じ。
+  - DEPARTURES（`depsel`）は拒否しない（SID を選ぶと合わない滑走路が外れ、滑走路を選ぶと合わない SID が外れる）。
+  - 直す前の版の回避：RTE の 1 ページ目の DEST に別の空港を入れ、元の空港を入れ直す（`set_dest` が STAR と進入を外す）。
+- 資料（2026-11-12 に利用者から FMS Pilot's Guide の PDF も受け取って読んだ。415 ページで、ノートのページ数と同じ。リポジトリには入れていない）：
+  - FCOM p.1403：STAR を押すと <SEL> が付き、ほかの到着の手続きは出なくなって遷移が出る。前に選んだ手続きは消える。進入を押すと <SEL> が付き、ほかの進入と滑走路は出なくなる。p.1404：ERASE は有効な経路への選択を消し、一覧に戻す。
+  - FMSPG p.194：ページを離れて戻ると全部の項目が出る。p.195：手続きを選ぶと、前に選んだ手続きは消える。進入は一覧から選び、<SEL> か <ACT> が付く。
+  - FCOM p.1435：ARR N/A FOR RUNWAY は「選んだ滑走路・進入が、選んだ到着と合わない」。FMSPG p.260：「選んだ到着と滑走路が合わない」（原因の欄だけ）。
+  - FMSPG p.79：RTE の RUNWAY が SID と合わなければ、RUNWAY N/A FOR SID が出て入力は捨てられる。ARRIVALS については、捨てるとはどこにも書いていない。
+  - FCOM p.1302（DEPARTURES）：滑走路を選ぶと、その滑走路の SID だけが残る。後から滑走路を変えると、前に選んだ出発の手続きは消える。FMSPG p.89–90：SID を選ぶと、その SID に合う滑走路と遷移だけが出る。
+  - 資料に無いこと：ARRIVALS で、合わない相手がどうなるか（経路に残るのか、消えるのか）。
+  - PSX のフォーラム（実機資料なし。Aerowinx の掲示板の「FMC message "RUNWAY N/A FOR SID"」、2018-03）：744 の FMC は、DEPARTURES で SID と合わない滑走路を選んでも拒否せず、SID の方が外れる（PSX の作者と 744 の乗員の書き込み）。STAR にも同じ種類のメッセージがある、とだけ書かれている。
+- 直したこと（`activepages/B744.fms.pages.deparr.lua` の `arrsel`）：
+  - 選んだ方は必ず通す。経路に今ある相手と合わなければ、相手を経路から外し（`R.set_arrival` の `false`）、ARR N/A FOR RUNWAY を出す。
+  - 進入を選んだとき：合わない STAR が外れ、左の列は全部の STAR に戻る。STAR を選んだとき：合わない進入が外れ、右の列は全部の進入に戻る。
+  - 合う組はそのまま残り、メッセージも出ない。
+  - 有効な経路では MOD になり、ERASE で元の組に戻る。有効でない経路（RTE 2 など）ではその場で変わる。
+- 推定：
+  - 合わない相手が経路から外れること。資料はメッセージの意味を書くだけ。DEPARTURES の記述（FCOM p.1302）からの類推と、PSX のフォーラム（PSX 由来（実機資料なし））による。利用者は、相手を残してメッセージだけ出す案と比べて、この案を選んだ（2026-11-12）。
+  - STAR を選んで進入が外れる向きにも、同じメッセージを出すこと。
+- 捨てた案：
+  - 拒否のまま、選択中の行をもう一度押すと外れるようにする：資料に無い操作。
+  - 相手を残したまま通す（メッセージだけ出す）：資料はこうも読める。ただし STAR が、その滑走路の脚を持たないまま経路に残る（WSSS の形では STAR の脚が 1 本も入らない）。使えない組のまま EXEC もできてしまう。
+- 試験（X-Plane なし、LuaJIT）：全 250 本（前は 249 本）と構文 587 本が合格。
+  - `arr_change_test.lua`（新設、53 件）：WSSS と同じ形の試験用の空港 ZZSS で、20 側の組（KILO2B と RNV20C）から 02 側の進入、02 側の STAR をそれぞれ選べる。有効でない経路、有効な経路の EXEC の後（ERASE で元の組に戻る）と EXEC の前、RTE 2（RTE 1 は変わらない）。合う組（KILO2A のまま RNV02L → RNV02C）は残り、メッセージは出ない。経路の脚が新しい側のものになる。直す前のコード（`c1f2c68c`）では 28 件が落ちる（20 側の組のまま動かない）。
+  - `proc_msgs_test.lua` 20 件（前は 17 件）：ZZAA の BRAVO1（34L だけ）と ILS16R で、選んだ方が入り相手が外れることと、ALPHA1（全部の滑走路）は ILS16R と残ること。前の「拒否される」の期待を書き直した。
+  - 試験の航法データに ZZSS を足した（`tests/fms/data/navdb/CIFP/ZZSS.dat`、空港と点）：滑走路 02L/20R・02C/20C、STAR は KILO2A（`RW02B`）と KILO2B（`RW20B`）、進入は RNV の 4 本。ZZAA・ZZBB の一覧は変えていない。
+- X-Plane：**未実施**（クラウドのセッションで、X-Plane が無い）。`s172_proc_msgs` を新しい挙動に合わせた：RJAA の ARRIVALS で VOR16R の後に BINKSA（34L だけ）を選ぶと、メッセージが出て BINKSA が入り VOR16R が外れる。続けて VOR16R を選ぶと、メッセージが出て VOR16R が入り BINKSA が外れる。
+- 残り：
+  - X-Plane での確認：`s172_proc_msgs` と、WSSS で 20 側の組から 02 側の組へ（進入が先、STAR が先の両方）。
+  - 実機で合わない相手が残るのか外れるのか（上の推定。利用者の選択は「外す」）。資料が見つかれば合わせる。
+  - ARRIVALS の一覧を、選んだ STAR の滑走路の進入だけに絞る（FCOM p.1403 の図はそう見える）のは作っていない。
