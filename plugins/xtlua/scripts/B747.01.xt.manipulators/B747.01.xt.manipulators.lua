@@ -2209,7 +2209,13 @@ end
 --function aircraft_load() end
 
 --function aircraft_unload() end
-function setACFType()
+-- (2026-11-12 review SM-5) the livery's type alone: a livery loaded in
+-- flight (X-Plane's next or previous livery, its menu) reads it again and
+-- leaves the switches where the crew put them; the flight start sets the
+-- switches (B747_flight_start_manip) as before. Before, livery_load ran
+-- setACFType, whose end put every switch back to its start position (cold
+-- and dark with X-Plane's startup_running 0)
+local function set_livery_type()
   print("XTLua Typing "..simDR_livery)
   if string.match(simDR_livery, "Global Supertanker") then
       B747DR_acfType=1
@@ -2217,6 +2223,9 @@ function setACFType()
   else
       simDR_acf_m_jettison=0
   end
+end
+function setACFType()
+  set_livery_type()
   B747_flight_start_manip()
 end
 local flightInit=false
@@ -2233,7 +2242,7 @@ end
 function livery_load()
 	local refreshLivery=simDR_livery_path
 
-	run_after_time(setACFType, 1)  --Load specific simConfig data for current livery
+	run_after_time(set_livery_type, 1)  --Load specific simConfig data for current livery
 end
 function B747_animate_value(current_value, target, min, max, speed)
 
