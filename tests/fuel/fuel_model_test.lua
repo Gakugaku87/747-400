@@ -104,9 +104,21 @@ do
     T.equal(from(out, 3), "m3", "CTR OFF after takeoff: engine 3 from main 3")
     T.equal(from(out, 1), "m2", "CTR OFF after takeoff: engine 1 still from main 2 (left side)")
     T.check(out.cas.ovd_ctr_l and not out.cas.low_ctr_l, "CTR OFF in cruise (pitch 0) with 5 t: >FUEL OVD CTR (1,800 kg or more)")
+    -- (2026-11-12 review FA-4) the climb after the pitch has stayed at 5
+    -- degrees or more for 30 s (estimate); a pitch crossing 5 degrees back
+    -- and forth changes nothing (before, each crossing: the CWT's messages
+    -- and the automatic management followed it)
     inp.pitch = 8
     out = run(s, inp, 1)
-    T.check(not out.cas.ovd_ctr_l, "CTR OFF in climb (pitch 8): no >FUEL OVD CTR")
+    T.check(out.cas.ovd_ctr_l and not out.climb, "pitch 8 for 1 s: still the cruise's (30 s hold)")
+    for k = 1, 15 do
+        inp.pitch = (k % 2 == 0) and 5.3 or 4.7
+        out = run(s, inp, 2)
+    end
+    T.check(out.cas.ovd_ctr_l and not out.climb, "the pitch across 5 degrees every 2 s for 30 s: still the cruise's")
+    inp.pitch = 8
+    out = run(s, inp, 31)
+    T.check(not out.cas.ovd_ctr_l and out.climb, "CTR OFF in climb (pitch 8 for 31 s): no >FUEL OVD CTR")
 end
 
 -- a CWT pump low with its switch ON starts override/jettison 2 and 3 (FCOM p.1467)
@@ -254,6 +266,55 @@ do
     T.check(out.cas.pres_stab_l, "stab: FUEL PRES STB L when empty and still commanded")
     out = run(s, inp, 31)
     T.check(not out.pump.stab_l, "stab: the pump stops itself after the delay (estimate 30 s)")
+end
+
+-- (2026-11-12 review FA-1) after the tank-to-engine procedure mains 2 and
+-- 3 a few kg over mains 1 and 4 again (the CWT's scavenge): FUEL OVRD and
+-- >X FEED CONFIG do not come back (the condition latched once reached, as
+-- FUEL IMBALANCE's); before, they came back for the rest of the flight
+do
+    local q = {ctr = 0, m1 = 9000, m2 = 9000, m3 = 9000, m4 = 9000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    pumps_on(inp, MAINS); pumps_on(inp, OJS)
+    engines_running(inp)
+    inp.on_ground = false
+    run(s, inp, 2)
+    for _, id in ipairs(OJS) do inp.sw[id] = false end
+    inp.xfeed[1], inp.xfeed[4] = false, false
+    run(s, inp, 6)
+    s.qty.m2, s.qty.m3 = s.qty.m1 + 50, s.qty.m4 + 50
+    local out = run(s, inp, 10)
+    T.check(not out.cas.oj2_fwd and not out.cas.oj3_aft, "after tank to engine, mains 2 and 3 50 kg over 1 and 4: no FUEL OVRD")
+    T.check(not out.cas.xfeed_config, "and no >X FEED CONFIG")
+end
+
+-- (2026-11-12 review FA-2) a jettison down to main 2's standpipe: its
+-- override/jettison pumps stop there and start again only 150 kg above it
+-- (before, on and off several times a second as mains 1 and 4 flowed in);
+-- the jettison time by the actual rate of the last minute
+do
+    local q = {ctr = 0, m1 = 13000, m2 = 3260, m3 = 3260, m4 = 13000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    pumps_on(inp, MAINS); pumps_on(inp, OJS)
+    engines_running(inp)
+    inp.on_ground = false
+    inp.jett_sel, inp.ftr = 1, 20000
+    inp.nozzle[1], inp.nozzle[2] = true, true
+    local out = run(s, inp, 1)
+    T.check(out.pump.oj2_fwd, "main 2 above the standpipe: its override/jettison pump runs")
+    local ons, was = 0, true
+    for _ = 1, 600 do                 -- 60 s in 0.1 s frames
+        out = run(s, inp, 0.1)
+        if out.pump.oj2_fwd and not was then ons = ons + 1 end
+        was = out.pump.oj2_fwd
+        if s.qty.m2 > 3200 and s.qty.m2 < 3340 and not out.pump.oj2_fwd then
+            -- within the 150 kg: stays off
+        end
+    end
+    T.check(ons <= 1, "60 s at the standpipe: the pump started again at most once (" .. ons .. ")")
+    s.qty.m2 = 3400
+    out = run(s, inp, 0.2)
+    T.check(out.pump.oj2_fwd, "main 2 150 kg above the standpipe again: the pump runs")
 end
 
 -- jettison (FCOM p.1468-1470): selector A, a nozzle ON: override/jettison

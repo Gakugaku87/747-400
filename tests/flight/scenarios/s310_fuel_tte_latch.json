@@ -1,0 +1,46 @@
+{
+  "name": "s310_fuel_tte_latch",
+  "description": "tank to engine の後（2026-11-12 のフルレビュー FA-1：案 19）の X-Plane での確認。空中で Auto fuel management の tank to engine を行い、11 分後も FUEL OVRD 2 FWD と >X FEED CONFIG が戻らない（前は主 2・3 が数 kg 多くなると戻り、着陸まで消えなかった）",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "elevation_in_meters": 3048, "heading_true": 0, "latitude": 35.4, "longitude": 141.3, "speed_in_meters_per_second": 149 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "fueltank_weight_in_kilograms": [ 1289, 13400, 13500, 13500, 13400, 0, 0, 0, 0 ],
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "evolution_over_time_enum": "static",
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_direction_in_degrees": 0,
+      "wave_height_in_meters": 0.5
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "wait", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 40 },
+    { "do": "set", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 290 },
+    { "do": "cmd", "name": "laminar/B747/autopilot/button_switch/speed_mode", "duration": 0.2 },
+    { "do": "switch", "note": "X FEED 2 ON", "dref": "laminar/B747/button_switch/position[49]", "value": 1, "cmd": "laminar/B747/button_switch/fuel_xfeed_vlv_2" },
+    { "do": "switch", "note": "X FEED 3 ON", "dref": "laminar/B747/button_switch/position[50]", "value": 1, "cmd": "laminar/B747/button_switch/fuel_xfeed_vlv_3" },
+    { "do": "sleep", "seconds": 110 },
+    { "do": "snapshot", "note": "落ち着く", "drefs": [ "laminar/B747/CAS/advisory_status[155]", "laminar/B747/CAS/advisory_status[156]", "laminar/B747/CAS/advisory_status[157]", "laminar/B747/CAS/advisory_status[158]", "laminar/B747/CAS/advisory_status[299]", "laminar/B747/CAS/advisory_status[171]", "sim/flightmodel/weight/m_fuel[0]", "sim/flightmodel/weight/m_fuel[1]", "sim/flightmodel/weight/m_fuel[2]", "laminar/B747/button_switch/position[64]", "laminar/B747/button_switch/position[48]", "laminar/B747/button_switch/position[51]", "laminar/B747/button_switch/position[52]" ] },
+    { "do": "set", "note": "Auto fuel management ON（保存しない）", "dref": "laminar/B747/options/auto_fuel_mgmt", "value": 1 },
+    { "do": "mark", "note": "オプションの tank to engine" },
+    { "do": "wait", "note": "オプションが OVRD 2 FWD を OFF", "dref": "laminar/B747/button_switch/position[64]", "op": "==", "value": 0, "timeout": 600, "stop": true },
+    { "do": "wait", "note": "X FEED 4 OFF", "dref": "laminar/B747/button_switch/position[51]", "op": "==", "value": 0, "timeout": 30 },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "snapshot", "note": "tank to engine の終わり", "drefs": [ "laminar/B747/CAS/advisory_status[155]", "laminar/B747/CAS/advisory_status[156]", "laminar/B747/CAS/advisory_status[157]", "laminar/B747/CAS/advisory_status[158]", "laminar/B747/CAS/advisory_status[299]", "laminar/B747/CAS/advisory_status[171]", "sim/flightmodel/weight/m_fuel[0]", "sim/flightmodel/weight/m_fuel[1]", "sim/flightmodel/weight/m_fuel[2]", "laminar/B747/button_switch/position[64]", "laminar/B747/button_switch/position[48]", "laminar/B747/button_switch/position[51]", "laminar/B747/button_switch/position[52]" ] },
+    { "do": "cas", "note": "tank to engine の終わり" },
+    { "do": "sleep", "seconds": 660 },
+    { "do": "snapshot", "note": "11 分後", "drefs": [ "laminar/B747/CAS/advisory_status[155]", "laminar/B747/CAS/advisory_status[156]", "laminar/B747/CAS/advisory_status[157]", "laminar/B747/CAS/advisory_status[158]", "laminar/B747/CAS/advisory_status[299]", "laminar/B747/CAS/advisory_status[171]", "sim/flightmodel/weight/m_fuel[0]", "sim/flightmodel/weight/m_fuel[1]", "sim/flightmodel/weight/m_fuel[2]", "laminar/B747/button_switch/position[64]", "laminar/B747/button_switch/position[48]", "laminar/B747/button_switch/position[51]", "laminar/B747/button_switch/position[52]" ] },
+    { "do": "cas", "note": "11 分後" },
+    { "do": "check", "note": "FUEL OVRD 2 FWD は戻らない（前は戻った）", "dref": "laminar/B747/CAS/advisory_status[155]", "op": "==", "value": 0 },
+    { "do": "check", "note": ">X FEED CONFIG は戻らない（前は戻った）", "dref": "laminar/B747/CAS/advisory_status[299]", "op": "==", "value": 0 },
+    { "do": "set", "note": "オプションを切る", "dref": "laminar/B747/options/auto_fuel_mgmt", "value": 0 }
+  ]
+}
