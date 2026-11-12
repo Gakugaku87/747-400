@@ -306,9 +306,11 @@ function M.update(s, inp, dt)
             or (not inp.autostart and run and not inp.burning[n] and n2 < M.FUEL_ON_N2[kind]))
         -- ENG FAIL: failure or flameout, fuel on, inhibited on the ground
         -- (FCOM p.899; CF6 N2 < 52 %: ATA70_80 p.230). >ENG SHUTDOWN: fire
-        -- switch pulled or CUTOFF (FCOM p.902; on the ground not shown: estimate)
+        -- switch pulled or CUTOFF, in the air and on the ground (FCOM p.902,
+        -- p.1586-1587; ATA70_80 p.230). (2026-11-12 review SF-3) before, in
+        -- the air only (an estimate the sources settle)
         msg.fail[n] = not inp.on_ground and run and n2 < M.FAIL_N2
-        msg.shutdown[n] = not inp.on_ground and (inp.fire_out[n] or not inp.fuel_control[n])
+        msg.shutdown[n] = inp.fire_out[n] or not inp.fuel_control[n]
         -- (the FMC's step 9h3) the engine inoperative, failed, flamed out or
         -- shut down, for the FMC, the AFDS and the A/T: below the ENG FAIL
         -- speed, also on the ground (estimate: their sources give no speed)

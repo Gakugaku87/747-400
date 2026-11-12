@@ -25,12 +25,19 @@ M.STATUS_CUE_LANDING_RA, M.STATUS_CUE_LANDING_IAS = 800, 75
 -- Message classes, matched on the name without its caret and engine number
 -- ("ENG 1 FAIL" and "ELEC GEN OFF 1" both give their class).
 -- Hidden on the ground while that engine's FUEL CONTROL is CUTOFF or its fire
--- switch is out (FCOM p.1586):
-M.PRESTART_HIDDEN = {["ELEC GEN OFF"] = true, ["ENG CONTROL"] = true, ["ENG SHUTDOWN"] = true,
+-- switch is out (FCOM p.1586). (2026-11-12 review SF-3) ENG SHUTDOWN is not
+-- one of them: it is the table's "For Message", the message that hides
+-- these seven (ATA70_80 p.230: CUTOFF or the fire switch pulled shows it,
+-- without master CAUTION or aural, and the other engine messages are
+-- inhibited); before, it was hidden on the ground
+M.PRESTART_HIDDEN = {["ELEC GEN OFF"] = true, ["ENG CONTROL"] = true,
     ["ENG EEC MODE"] = true, ["ENG FAIL"] = true, ["ENG OIL PRESS"] = true, ["HYD PRESS ENG"] = true,
     ["NAI VALVE"] = true}
--- Still shown during an engine start (FCOM p.1587):
-M.START_SHOWN = {["BLEED"] = true, ["ENG AUTOSTART"] = true, ["ENG FUEL VALVE"] = true,
+-- Still shown during an engine start (FCOM p.1587). (2026-11-12 review
+-- SF-5) the fuel valve's message is ENG n FUEL VLV (FCOM p.900), its class
+-- "ENG FUEL VLV"; before, "ENG FUEL VALVE" matched no message and a fuel
+-- valve disagreeing in a start waited for the start's end
+M.START_SHOWN = {["BLEED"] = true, ["ENG AUTOSTART"] = true, ["ENG FUEL VLV"] = true,
     ["ENG SHUTDOWN"] = true, ["ENG START VLV"] = true, ["STARTER CUTOUT"] = true}
 -- Cautions that do not light master CAUTION (FCOM p.902, p.1552):
 M.NO_MASTER_CAUTION = {["ENG SHUTDOWN"] = true}
@@ -286,6 +293,14 @@ function M.update(s, inp, dt)
             s.seen[name] = rec
         elseif rec.held and not ph.engine_start then
             rec.held, rec.since, rec.new = false, s.t, true
+        elseif ph.engine_start and rec.hidden and not rec.held and (level == "caution" or level == "advisory")
+                and not M.START_SHOWN[(M.classify(name))] then
+            -- (2026-11-12 review SF-4) hidden before the start (CUTOFF):
+            -- held to the start's end too when RUN ends the pre-start
+            -- inhibit (FCOM p.1587: from START to idle no new caution or
+            -- advisory but the exceptions; p.1586's inhibit ends at RUN).
+            -- Before, ELEC GEN OFF n came up at RUN for some 30 s
+            rec.held = true
         end
         rec.hidden = rec.held or hidden(name, ph, inp)
     end

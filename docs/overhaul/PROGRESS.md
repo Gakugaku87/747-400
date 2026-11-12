@@ -22,6 +22,7 @@
     - 案 9（FMC-5・6）：手続きの点はその空港のターミナルの点を先に、同じ識別子が複数なら空港に近いもの（`navdb.point`）。ILS は進入の脚の推奨の施設の LOC（`dest_ils`。FCOM p.1306）。試験 `proc_terminal_fix_test`。X-Plane（2026-11-13）：新しい `s300_fmc_ils_appr_navaid` 7/7。`s299_fmc_terminal_fix` は 4/5（シナリオが ARRIVALS を開けずに止まった：直して次の一覧で）。
     - 案 10（FMC-8・9・10 の一部）：RTE HOLD の SPD/TGT ALT は CRZ ALT と同じ高度を受ける（FMSPG p.127）、有効な経路の先にある点は SELECT DESIRED WPT を出さずに使う（FCOM p.1249。RTE・LEGS の入力だけ）、周回進入の名前はそのまま。試験 `route_model_test`・`legs_downtrack_dup_test`・`proc_model_test`。X-Plane（2026-11-13）：s86・s87・s88・s90 合格。
     - 案 16（SF-1・SF-6）：離陸の抑止は地上で 30 kt 以下で武装（PFD の速さは 30 kt が下限で「30 未満」が来ず、抑止が武装しなかった。武装の速さは推定）。抑止の間の master リセットは前から点いている灯を消さず、待っている警報は抑止の終わりに鳴る（FCOM p.1594–1595）。試験 `takeoff_inhibit_glue_test`（HEAD 8 落ち）。X-Plane（2026-11-13）：新しい `s303_takeoff_caution` 3/5（100 kt の caution で beeper なし。2 つの落ちは読み直しの始めから点いていた灯：滑走の前に master リセットを入れて次の一覧で）。
+    - 案 17（SF-3・SF-4・SF-5）：>ENG n SHUTDOWN を地上でも出す（master CAUTION と音なし。FCOM p.902・p.1586、ATA70_80 p.230）。始動前から隠れていたメッセージは RUN の後も始動が終わるまで出さない（FCOM p.1587）。表の例外は ENG FUEL VLV。試験 `engine_start_model_test`・`alert_model_test`。X-Plane（2026-11-13）：新しい `s301_start_messages` 15/16（落ちは始めからの FUEL PRESS CTR の灯：CUTOFF の前に master リセットを入れて次の一覧で）、s00 69/69、s03 29/29。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。
@@ -931,7 +932,6 @@ PLAN.md §3 に書いた。要点：
   - PW の値：autostart の燃料投入 20 % N2、EGT の start limit 535 ℃・takeoff limit 654 ℃（前のコードの値。_ref の資料に無い。EASA の型式証明データシート IM.E.050 p.9 と同じ：2026-11-10）、ENG FAIL の 52 % N2・STARTER CUTOUT（54 % N2、5 秒）・START VLV（8 秒）・FUEL VLV（5 秒）は CF6 の値を PW にも使う。
   - hot start は EGT が start limit の 25 ℃ 手前、hung start は N2 の上がり方が 0.15 %/s 未満で 15 秒（CF6 の空中始動の値を地上にも）、始動の終わりは N2 55 % 以上で上がり方 0.15 %/s 未満が 5 秒。
   - 109 の AUTO IGNITION 1・2 は autostart ON のとき始動ごとに交代（FCOM は「交代」とだけ書く）。シムの AUTOSTART スイッチは 1 個で、全エンジンに効く（109 は 4 個）。405（PW の貨物機）には autostart が無いとした。
-  - >ENG SHUTDOWN は地上では出さない。master CAUTION の灯を点けない扱い（FCOM）はまだ（警報モデルに属性が要る）。
   - X-Plane の starter は N2 60 % を超えたら放す（空気がまだ回していても）。
 - EEC（2-3 段 2。`B747.42.eec_model.lua`・`B747.42.xt.eec_thrust.lua` に「estimate」と書いてある）：
   - 離陸の定格は FCOM PI の着陸復行の表で代用（FCOM に通常モードの離陸の表が無い。ALTN の離陸と着陸復行の表は同じ推力、PI.15.6）。表は 10,000 ft までなので、その上は 10,000 ft の値のまま。
@@ -1234,7 +1234,7 @@ PLAN.md §3 に書いた。要点：
 | ID | 状態 |
 |---|---|
 | ENG-08 ENG FAIL | 済（caution の段階は 1-3。条件を空中・RUN・N2 52 % 未満にした。前は表示 N2 15 % 未満） |
-| ENG-09 >ENG SHUTDOWN | 一部（火災スイッチを引いたか CUTOFF で、空中だけ。master CAUTION を点けない扱いは未） |
+| ENG-09 >ENG SHUTDOWN | 済（火災スイッチを引いたか CUTOFF で、地上でも。master CAUTION と音なし：2026-11-13、案 17。FCOM p.902・p.1586、ATA70_80 p.230） |
 | ENG-10 STARTER CUTOUT | 済（start valve が開いたまま N2 54 % 超が 5 秒） |
 | ENG-11 starter の cutout | 済（X-Plane の N2 50 %。starter はコマンドを放すだけで、燃料を切る shut_down は使わない） |
 | ENG-12 autostart | 済（燃料投入、light-off・hot・hung、GE 3 回・109 2 回の再試行、30 秒 motoring、中止、空中は燃料を切って入れ直すだけ、auto-relight、ENG AUTOSTART、>AUTOSTART OFF。405 は無し） |
