@@ -195,6 +195,35 @@ do
     out = run(s, inp, 15)
     T.check(out.cas.res_xfr2 and out.cas.res_xfr3, "reserve: FUEL RES XFR 2 and 3 when the valves cannot close (10 s, ATA26_28 p.498)")
 end
+-- (2026-11-12 review FA-6) one reserve transfer valve stuck shut: no FUEL
+-- RES XFR (its status message only: ATA26_28 p.498 (28-16)); the other
+-- valve of the tank still transfers. Before, the advisory with one valve
+do
+    local q = {ctr = 0, m1 = 9000, m2 = 18150, m3 = 18150, m4 = 9000, r2 = 4500, r3 = 4500, stab = 0}
+    local s, inp = aircraft(q)
+    pumps_on(inp, MAINS)
+    engines_running(inp)
+    inp.on_ground = false
+    inp.fail.valve.res2a = true
+    local out = run(s, inp, 30)
+    T.check(not out.cas.res_xfr2, "reserve 2A stuck shut, 2B open: no FUEL RES XFR 2 (both valves: ATA26_28 p.498)")
+    T.check(s.qty.r2 < 4500, "reserve 2 still drains through 2B")
+end
+-- (2026-11-12 review FA-7) >FUEL TANK/ENG on the ground: main 2 within
+-- 500 kg of main 1 AND main 3 within 500 kg of main 4 (FCOM p.1478);
+-- before, OR: one side alone showed it
+do
+    local q = {ctr = 0, m1 = 9000, m2 = 9300, m3 = 12000, m4 = 9000, r2 = 0, r3 = 0, stab = 0}
+    local s, inp = aircraft(q)
+    pumps_on(inp, MAINS); pumps_on(inp, OJS)
+    engines_running(inp)
+    inp.on_ground = true
+    local out = run(s, inp, 2)
+    T.check(not out.cas.tank_eng, "ground: main 2 within 500 kg of main 1 but main 3 3,000 kg over main 4: no >FUEL TANK/ENG (FCOM p.1478: AND)")
+    s.qty.m3 = 9300
+    out = run(s, inp, 2)
+    T.check(out.cas.tank_eng, "ground: both within 500 kg: >FUEL TANK/ENG")
+end
 
 -- scavenge (FCOM p.1454, ATA26_28 p.512): below 27,200 kg in main 2 and with
 -- the CWT under its float level, two jet pumps into main 2

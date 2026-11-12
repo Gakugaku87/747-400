@@ -378,7 +378,9 @@ local function write_outputs(out)
     if B747DR_fire_ext_bottle_0304A_psi ~= p[3] then B747DR_fire_ext_bottle_0304A_psi = p[3] end
     if B747DR_fire_ext_bottle_0304B_psi ~= p[4] then B747DR_fire_ext_bottle_0304B_psi = p[4] end
     if B747DR_fire_apu_ext_bottle_psi ~= p[F.APU_BTL] then B747DR_fire_apu_ext_bottle_psi = p[F.APU_BTL] end
-    for b = 1, F.BOTTLES do put(B747DR_fire_light_btl_disch, b - 1, flag(out.btl_low[b])) end
+    -- (2026-11-12 review SF-7) the engine and APU bottles' lights (array[5]);
+    -- the cargo bottles have the CARGO DISCH light. Before, 9 written
+    for b = 1, F.APU_BTL do put(B747DR_fire_light_btl_disch, b - 1, flag(out.btl_low[b])) end
     -- X-Plane's extinguishers; its APU fire goes out with the APU bottle (estimate:
     -- X-Plane has no APU extinguisher)
     for n = 1, 4 do put(simDR_engine_fire_ext_on, n - 1, flag(out.extinguish[n])) end

@@ -677,4 +677,8 @@ T.equal(get(ADVISORY, 203), 1, "fail overheat 2: HYD OVHT SYS 2")
 T.equal(get(HYD .. "light/sys_fault", 1), 1, "fail overheat 2: SYS FAULT 2")
 T.equal(get(ADVISORY, 202), 0, "fail overheat 2: not HYD OVHT SYS 1")
 rt:set(FAIL .. "overheat", 1, 0)
+-- (2026-11-12 review HA-2) the fluid's outside temperature: the air at the
+-- airplane (before, the planet's mean sea-level temperature, 15 C always)
+T.check(rt.bound["sim/weather/aircraft/temperature_ambient_deg_c"] ~= nil, "the outside air temperature at the airplane looked up")
+T.check(rt.bound["sim/physics/earth_temp_c"] == nil, "not the planet's mean sea-level temperature")
 T.done()
