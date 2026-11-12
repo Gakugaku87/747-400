@@ -18,6 +18,7 @@
     - s269 は水平になってから Mach にする（試験側の誤り：FL CH の降下の自動の IAS への戻しで Mach が消えていた）。X-Plane（2026-11-13）：20/20。
     - 案 6（FMC-2）：飛んでいる STAR・進入の選び直しと DEST の入れ直しで、現用の脚までを残す（`route_model` の `set_arrival`・`set_dest`。FMSPG p.79。ARRIVALS の選び直しも同じ扱い：推定）。試験 `arr_active_leg_test`（HEAD で落ちる）。X-Plane（2026-11-13）：新しい `s294_arr_reselect_mid_star` 15/15。s289 は 52/55（現用の点が手続きの最初の点なら、まだ手続きに入っていない：全体を入れ替える直しを次に入れる）。
     - 案 5（FMC-1）：滑走路の点の無い進入は、滑走路を進入の名前から取り、E/D を MAP にする（`proc_model.approach_legs`、`xt.fms.lua`。FCOM p.1258・p.1261・p.1306–1307。LOC・LDA・RNAV の MAP は VOR 進入からの類推：推定）。試験 `appr_no_rwy_test`（試験用の航法データ `navdb_map`）。X-Plane（2026-11-13）：新しい `s295_fmc_lda22w_star_rwy` 11/11、`s296_fmc_loc16r_ed` 10/10。
+    - 案 8（FMC-4）：RTE の RUNWAY の変更で SID の滑走路別の脚を入れ直す。滑走路に無い SID は SID を入れて滑走路を外し RUNWAY N/A FOR SID（文言は推定）。FCOM p.1301、FMSPG p.90・p.79。試験 `rte_runway_sid_test`。X-Plane（2026-11-13）：新しい `s298_fmc_rte_runway_sid` 10/10。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。

@@ -181,6 +181,15 @@ function fmsFunctions.depsel(fmsO, value)
       if id == rwy then ok = true end
     end
     err = R.set_departure(st, a[2], ok and rwy or nil, nil)
+    -- (2026-11-12 review FMC-4) a SID that does not serve the runway
+    -- selected: the SID goes in, the runway out, RUNWAY N/A FOR SID (as
+    -- ARRIVALS does with a STAR and an approach that do not go together:
+    -- FCOM p.1435; estimate). Before, the runway stayed with the SID's legs
+    -- none and no message
+    if not err and not ok then
+      R.edit(st).runway = nil
+      fmsO["notify"] = R.RUNWAY_NA_SID
+    end
   elseif a[1] == "trans" then
     err = R.set_departure(st, sid.name, rwy, a[2])
   else
