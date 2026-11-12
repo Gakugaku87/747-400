@@ -1049,8 +1049,11 @@ local fuel_age = 0                  -- seconds since the flight start
 -- engines burn, in X-Plane's time. XTLua's frames (SIM_PERIOD) summed to
 -- about 94.5 % of the time flown, so the tanks went down 5.5 % less than the
 -- fuel flow (the perf kit, PERF_SIMBRIEF phase 0: FUEL USED 0.945 of the
--- flow at M.85, FL310 and FL350). SIM_PERIOD also runs on in a pause and does
--- not follow the time acceleration. total_running_time_sec does both: in
+-- flow at M.85, FL310 and FL350). SIM_PERIOD does not follow the time
+-- acceleration (it is XTLua's constant 0.02 a tick, its ticks about 21 ms
+-- apart; in a pause XTLua calls no physics at all: the 2026-11-12 review,
+-- upstream xlua.cpp; "runs on in a pause" was the test mock's, not
+-- X-Plane's). total_running_time_sec follows both: in
 -- X-Plane 12.4.4 on 11-06 it stood still over 5.8 s paused, and ran at 1.00
 -- of the real time at 1 x and 3.49 at 4 x asked (3.2-3.5 achieved).
 local fuel_clock_t = nil

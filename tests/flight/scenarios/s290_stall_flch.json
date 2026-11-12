@@ -1,0 +1,68 @@
+{
+  "name": "s290_stall_flch",
+  "description": "X-Plane が止まっている間のモジュール（2026-11-12 のフルレビュー D-1・D-2：REVIEW_2026-11-12.md）の X-Plane での確認。銚子沖の海上 10,000 ft・250 kt・北向きの空中開始（機体を読み直す、270 t）。ALT HOLD・A/T SPD から MCP 15,000 ft で FLCH、その 1 秒後に FlyWithLua の B747_stall_test.lua で X-Plane の主スレッドを 10 秒止める。前（XTLua のワーカーは止まりの間も凍った入力で積分を続けた）：止まりの直後に A/T が HOLD に落ちて推力が出ず、pitch_cmd が 1 フレームで 2.3°、その後 0.85〜1.72 g。直した後（init.lua の tick の門：X-Plane の時計より 0.06 s 先までしか進まない）：A/T は THR のまま、pitch_cmd の段は 0.5° 以内、30 秒の荷重倍数 0.9〜1.15、上昇が続く。続けて ALT の水平飛行でもう 10 秒止める。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 0, "speed_in_meters_per_second": 149.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "set", "note": "MCP 方位 007", "dref": "laminar/B747/autopilot/heading/degrees", "value": 7 },
+    { "do": "set", "note": "MCP 速度 250 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 250 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "sleep", "seconds": 20 },
+    { "do": "check", "note": "A/T SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "stop": true },
+    { "do": "check", "note": "ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "stop": true },
+    { "do": "check", "note": "重さは約 270 t", "dref": "sim/flightmodel/weight/m_total", "op": "between", "value": [268000, 272000] },
+    { "do": "record_start" },
+
+    { "do": "mark", "note": "FLCH で 15,000 ft、1 秒後に 10 秒止める" },
+    { "do": "set", "note": "MCP 高度 15,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 15000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 15000 },
+    { "do": "sleep", "seconds": 4 },
+    { "do": "cmd", "note": "FLCH", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "FLCH SPD・A/T THR", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 4, "stop": true },
+    { "do": "remember", "dref": "laminar/B747/autopilot/pitch_cmd", "as": "pc1" },
+    { "do": "cmd", "note": "X-Plane の主スレッドを 10 秒止める（tests/flight/fwl/B747_stall_test.lua）", "name": "FlyWithLua/B747_stall/s10" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "snapshot", "note": "止まりの直後", "drefs": [ "laminar/B747/autopilot/pitch_cmd", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autothrottle/lever_cmd", "sim/flightmodel2/controls/elevator_trim", "sim/flightmodel/position/vh_ind_fpm" ] },
+    { "do": "check", "note": "A/T は THR のまま（前は HOLD：D-2）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 4 },
+    { "do": "check", "note": "pitch_cmd の段は 0.5° 以内（前は 10 秒ぶんの積分：D-1）", "dref": "laminar/B747/autopilot/pitch_cmd", "op": "between", "value": [-0.5, 1.5], "rel": "pc1" },
+    { "do": "watch", "note": "その後 30 秒、荷重倍数 0.9〜1.15（前は 0.85〜1.72 g）", "dref": "sim/flightmodel2/misc/gforce_normal", "min": 0.9, "max": 1.15, "timeout": 30 },
+    { "do": "check", "note": "上昇が続く（前は推力が出ず水平のまま）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": ">", "value": 1000 },
+    { "do": "check", "note": "A/T は THR のまま", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 4 },
+
+    { "do": "mark", "note": "ALT の水平飛行で 10 秒止める" },
+    { "do": "wait", "note": "ALT（15,000 ft を捕捉）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 150 },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "remember", "dref": "laminar/B747/autopilot/pitch_cmd", "as": "pc2" },
+    { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "as": "alt2" },
+    { "do": "cmd", "note": "10 秒止める", "name": "FlyWithLua/B747_stall/s10" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "pitch_cmd の段は 0.5° 以内", "dref": "laminar/B747/autopilot/pitch_cmd", "op": "between", "value": [-0.5, 0.5], "rel": "pc2" },
+    { "do": "watch", "note": "その後 30 秒、荷重倍数 0.9〜1.1", "dref": "sim/flightmodel2/misc/gforce_normal", "min": 0.9, "max": 1.1, "timeout": 30 },
+    { "do": "check", "note": "高度は ±100 ft", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [-100, 100], "rel": "alt2" },
+    { "do": "record_stop" }
+  ]
+}

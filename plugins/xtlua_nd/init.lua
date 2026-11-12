@@ -524,11 +524,46 @@ function setup_callback_var(var_name,var_value)
 	n[var_name] = var_value
 end
 
+-- (747-400 overhaul, 2026-11-12 review D-1) XTLua's worker thread calls
+-- before_physics and after_physics every 20 ms or so with SIM_PERIOD the
+-- constant 0.02, whether X-Plane's frames go on or not (upstream XTLua
+-- lua_helpers.cpp, xlua.cpp). While X-Plane's main thread stood still (a
+-- long scenery load) the modules integrated on frozen inputs and the
+-- first frame after showed it at once: pitch_cmd +3 deg after 10 s, the
+-- A/T's THR to HOLD, an autostart aborted as a hung start. A module's
+-- physics now keep to X-Plane's clock (sim/time/total_running_time_sec,
+-- which stands still with X-Plane and in a pause): they run only while
+-- the time this module has integrated (SIM_PERIOD a tick) is less than
+-- TICK_AHEAD_MAX ahead of X-Plane's; the time it lags is counted to
+-- TICK_AHEAD_MAX at most (a stall lets it catch up 2 x 0.06 s, no more).
+-- The worker is a little slower than X-Plane (21 ms a tick: 94.6 % of
+-- X-Plane's time on the development PC) and does not wait in a normal
+-- flight; below X-Plane's 19.9 fps floor (X-Plane's time slower than the
+-- wall clock) it waits with X-Plane. The flight's other callouts, the
+-- commands and the timers (X-Plane's clock) are not gated.
+local TICK_AHEAD_MAX = 0.06
+local tick_clock, tick_last, tick_ahead, tick_run = nil, nil, 0, true
+local function tick_gate()
+	if not tick_clock then tick_clock = XTLuaFindDataRef("sim/time/total_running_time_sec") end
+	local now = XTLuaGetNumber(tick_clock)
+	if type(now) ~= "number" then tick_run = true return end
+	if tick_last then
+		local d = now - tick_last
+		if d < 0 then tick_ahead = 0 else tick_ahead = tick_ahead - d end   -- (a new clock: from 0)
+	end
+	tick_last = now
+	tick_run = tick_ahead < TICK_AHEAD_MAX
+	if tick_run then tick_ahead = tick_ahead + ((n and n.SIM_PERIOD) or 0.02) end
+	if tick_ahead < -TICK_AHEAD_MAX then tick_ahead = -TICK_AHEAD_MAX end
+end
+
 -- (747-400 overhaul) a callout's Lua error: XTLua prints it only to its
 -- console, in no log, and stops every module of this plugin. It also goes
 -- to Output/B747_xtlua_errors.txt with its traceback, then on to XTLua as
 -- before (tests/flight/run_scenario.ps1 fails a scenario on it)
 function do_callout(fname)
+	if fname == "before_physics" then tick_gate() end
+	if not tick_run and (fname == "before_physics" or fname == "after_physics") then return end
 	func=n[fname]
 	if func ~= nil then
 		if STP ~= nil then

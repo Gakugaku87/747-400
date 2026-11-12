@@ -342,8 +342,27 @@ function Runtime:callout(name)
     end
 end
 
+-- (2026-11-12 review D-1) X-Plane standing still for `seconds` (a long
+-- scenery load): XTLua's worker goes on calling before_physics and
+-- after_physics every 0.02 s with SIM_PERIOD its constant 0.02 while
+-- X-Plane's clock and datarefs do not move (upstream XTLua lua_helpers.cpp,
+-- xlua.cpp); no timer comes due (they run on X-Plane's clock). The real
+-- init.lua's tick gate decides what runs.
+function Runtime:still(seconds)
+    for _ = 1, math.floor(seconds / 0.02 + 0.5) do
+        for _, module in ipairs(self.modules) do
+            module.env.n = module.ns
+            module.env.setup_callback_var("SIM_PERIOD", 0.02)
+            module.env.setup_callback_var("IN_REPLAY", 0)
+        end
+        self:callout("before_physics")
+        self:callout("after_physics")
+    end
+end
+
 -- One frame: advance the sim clock, fire due timers, then before_physics and
--- after_physics in every module, in load order.
+-- after_physics in every module, in load order. SIM_PERIOD is dt here (in
+-- X-Plane XTLua's is always 0.02, its ticks about 20 ms apart: still()).
 function Runtime:frame(dt)
     dt = dt or 1 / 30
     self.time = self.time + dt
