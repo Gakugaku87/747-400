@@ -21,6 +21,16 @@
 # 0: no check; XP_FLIGHT_GB: xp.ps1) the scenario does not start (exit
 # status 3). Each run adds its lines to tests\flight\runs\STATUS.md.
 #
+# (2026-11-13, the 2026-11-12 review 21) The scenario is checked first
+# against the kit's keys, tests\flight\scenario_keys.json: a step key the
+# kit does not read, a key missing, an op or a level it does not know, and
+# it does not start (exit status 4). A flight without "weight" gets the
+# kit's 270 t (below). The result has the start's weight, outside air
+# temperature and engine type; with a recording, its long frames and the
+# steps at them (tools\frame_jumps.lua with LuaJIT: a step within a long
+# frame is a warn) and the load factor while an A/P flew in the air; the
+# Log.txt lines about the aircraft are a warn (xp.ps1).
+#
 # Scenario file (JSON): { "name", "description", "flight": {init without
 # "aircraft"}, ["reload": true], ["livery": "<folder>"], "steps": [ ... ] }.
 # "reload" asks for -Reload (the scenario needs the aircraft's systems
@@ -59,7 +69,10 @@
 #                                                the company datalink: simbrief\)
 #   remove  {path}                               delete such a file (none: nothing)
 #   snapshot {drefs: [...]}                      log values
-#   cas                                          log the EICAS message lines
+#   cas     {[has], [lacks], [level]}            log the EICAS message lines; with
+#                                                "has" / "lacks" (a text or a list),
+#                                                pass when each is on / none is on a
+#                                                line (2026-11-13)
 #   view    {name} | {the, psi, [fov]}           turn the pilot's head: a preset
 #                                                (forward, panel, overhead, eicas, bleed, lights)
 #                                                or pitch/heading, with a field of view
@@ -245,30 +258,135 @@ function Confirm-AirStartEngines($init) {
     }
 }
 
+# (2026-11-13, the 2026-11-12 review C-5) the scenario against the kit's
+# keys (scenario_keys.json; tests/static/scenario_keys_test.lua checks
+# every scenario with the same list): the problems, none for a good one.
+# Before, a key the kit did not read was passed over: s256's and s257's
+# CLR steps with "seconds": 1.5, for "duration", pressed the key once
+function Test-ScenarioSpec($Spec, [string]$KeysFile = (Join-Path $PSScriptRoot 'scenario_keys.json')) {
+    $def = Get-Content -Raw -Encoding UTF8 $KeysFile | ConvertFrom-Json
+    $bad = New-Object System.Collections.ArrayList
+    $topKeys = @($def.top.need) + @($def.top.may)
+    $names = @($Spec.PSObject.Properties | ForEach-Object { $_.Name })
+    foreach ($k in $names) { if ($topKeys -cnotcontains $k) { [void]$bad.Add("the scenario: unknown key '$k'") } }
+    foreach ($k in @($def.top.need)) { if ($names -cnotcontains $k) { [void]$bad.Add("the scenario: no '$k'") } }
+    $ops = @($def.ops); $levels = @($def.levels); $nums = @($def.numbers); $bools = @($def.booleans)
+    $n = 0
+    foreach ($step in @($Spec.steps)) {
+        $n++
+        $keys = @($step.PSObject.Properties | ForEach-Object { $_.Name })
+        $kind = $step.do
+        if (-not $kind) { [void]$bad.Add("step ${n}: no 'do'"); continue }
+        $d = $def.steps.PSObject.Properties[[string]$kind]
+        if (-not $d) { [void]$bad.Add("step ${n}: unknown step type '$kind'"); continue }
+        $d = $d.Value
+        $allowed = @($def.common) + @($d.need) + @($d.may)
+        foreach ($k in $keys) { if ($allowed -cnotcontains $k) { [void]$bad.Add("step $n ($kind): unknown key '$k'") } }
+        foreach ($k in @($d.need)) { if ($keys -cnotcontains $k) { [void]$bad.Add("step $n ($kind): no '$k'") } }
+        if ($d.need_one_of) {
+            $any = $false
+            foreach ($group in @($d.need_one_of)) {
+                $all = $true
+                foreach ($k in @($group)) { if ($keys -cnotcontains $k) { $all = $false } }
+                if ($all) { $any = $true }
+            }
+            if (-not $any) { [void]$bad.Add("step $n ($kind): needs " + ((@($d.need_one_of) | ForEach-Object { @($_) -join ' and ' }) -join ', or ')) }
+        }
+        foreach ($k in $keys) {
+            $v = $step.$k
+            if ($nums -ccontains $k -and -not ($v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal])) { [void]$bad.Add("step $n ($kind): '$k' not a number") }
+            if ($bools -ccontains $k -and -not ($v -is [bool])) { [void]$bad.Add("step $n ($kind): '$k' not true or false") }
+        }
+        if ($keys -ccontains 'op' -and $ops -cnotcontains [string]$step.op) { [void]$bad.Add("step $n ($kind): unknown op '$($step.op)'") }
+        if ($keys -ccontains 'level' -and $levels -cnotcontains [string]$step.level) { [void]$bad.Add("step $n ($kind): unknown level '$($step.level)'") }
+        if (($step.op -ceq 'between' -or $step.op -ceq 'outside') -and @($step.value).Count -ne 2) { [void]$bad.Add("step $n ($kind): '$($step.op)' needs two values") }
+        if ($keys -ccontains 'until') {
+            $u = $step.until
+            $uKeys = @($u.PSObject.Properties | ForEach-Object { $_.Name })
+            $uAllowed = @($def.until.need) + @($def.until.may)
+            foreach ($k in $uKeys) { if ($uAllowed -cnotcontains $k) { [void]$bad.Add("step $n ($kind): unknown key '$k' in 'until'") } }
+            foreach ($k in @($def.until.need)) { if ($uKeys -cnotcontains $k) { [void]$bad.Add("step $n ($kind): no '$k' in 'until'") } }
+            if ($uKeys -ccontains 'op' -and $ops -cnotcontains [string]$u.op) { [void]$bad.Add("step $n ($kind): unknown op '$($u.op)' in 'until'") }
+        }
+    }
+    return $bad.ToArray()
+}
+
+# (2026-11-13, the 2026-11-12 review T-5) a flight without "weight": the
+# kit's 270 t (269,979 kg with the custom acf: no payload, 86,535 kg of fuel
+# in the main tanks, as s108, s292 and six more), the weight nearly every
+# scenario without one was written and passed at. Before, the weight the
+# last flight left: s142 flew at 270, 274, 280, 310 and 340 t, s114 at 270,
+# 280 and 310 t, and s157 failed at 310 t
+$KitWeight = [ordered]@{
+    payload_weight_in_kilograms  = @(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    fueltank_weight_in_kilograms = @(0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0)
+}
+
+# (2026-11-13, the 2026-11-12 review 21) LuaJIT for the recording's check
+# (tools\frame_jumps.lua): LUAJIT, luajit on the PATH, or the development
+# PC's %USERPROFILE%\tools\luajit\bin\luajit.exe; none: the check skipped
+function Find-LuaJit {
+    if ($env:LUAJIT -and (Test-Path -LiteralPath $env:LUAJIT)) { return $env:LUAJIT }
+    $c = Get-Command luajit -ErrorAction SilentlyContinue
+    if ($c) { return $c.Source }
+    if ($env:USERPROFILE) {
+        $p = Join-Path $env:USERPROFILE 'tools\luajit\bin\luajit.exe'
+        if (Test-Path -LiteralPath $p) { return $p }
+    }
+    return $null
+}
+
 # the first Log.txt line of this run, for the excerpt at the end
 $logStart = if (Test-Path $logPath) { (Get-Content $logPath).Count } else { 0 }
 
 # the result files (result.json, result.md) from the results so far; also
 # for a scenario that did not start and a run that ended on an error
 $loaded = ''
+# (2026-11-13) the start's weight (kg), outside air temperature (deg C) and
+# engine type (laminar/B747/engines/type: 0 P&W, 1 GE, 2 RR), and the load
+# factor while an A/P flew in the air (frame_jumps.lua): $null unknown
+$script:startInfo = [ordered]@{ weight_kg = $null; oat_c = $null; engine_type = $null }
+$script:apAirG = $null
 function Complete-Run {
     $summary = [ordered]@{
         scenario = $spec.name; description = $spec.description; acf = $acfPath; loaded = $loaded
         started = $stamp; wall_s = [math]::Round($wall.Elapsed.TotalSeconds, 1)
+        start_weight_kg = $script:startInfo.weight_kg; oat_c = $script:startInfo.oat_c; engine_type = $script:startInfo.engine_type
+        ap_air_g = $script:apAirG
         pass = @($results | Where-Object { $_.status -eq 'pass' }).Count
         fail = @($results | Where-Object { $_.status -eq 'fail' }).Count
         warn = @($results | Where-Object { $_.status -eq 'warn' }).Count
         steps = $results
     }
     $summary | ConvertTo-Json -Depth 10 | Out-File -Encoding utf8 (Join-Path $out 'result.json')
+    $startMd = ''
+    if ($null -ne $script:startInfo.weight_kg) { $startMd += "、重さ {0:N1} t" -f ($script:startInfo.weight_kg / 1000) }
+    if ($null -ne $script:startInfo.oat_c) { $startMd += "、外気温 {0:N0} °C" -f $script:startInfo.oat_c }
+    if ($null -ne $script:startInfo.engine_type) { $startMd += "、エンジン " + (Format-EngineType $script:startInfo.engine_type) }
+    if ($script:apAirG) { $startMd += "、A/P の空中の荷重倍数 {0:N3}〜{1:N3} g" -f $script:apAirG.lo, $script:apAirG.hi }
     $md = @("# $($spec.name) ($acfTag)", '', "$($spec.description)", '',
-        "- 開始: $stamp、所要 $($summary.wall_s) s、PASS $($summary.pass) / FAIL $($summary.fail) / WARN $($summary.warn)", '',
+        "- 開始: $stamp、所要 $($summary.wall_s) s、PASS $($summary.pass) / FAIL $($summary.fail) / WARN $($summary.warn)$startMd", '',
         '| # | 種類 | 結果 | 内容 | メモ | 出典 | sim 時刻 |', '|---|---|---|---|---|---|---|')
     foreach ($r in $results) {
         $md += "| $($r.n) | $($r.do) | $($r.status) | $(($r.detail -replace '\|', '\|')) | $($r.note) | $($r.cite) | $($r.sim_t) |"
     }
     $md | Out-File -Encoding utf8 (Join-Path $out 'result.md')
     return $summary
+}
+function Format-EngineType($Type) {
+    switch ([int]$Type) { 0 { 'P&W' } 1 { 'GE' } 2 { 'RR' } default { "type $Type" } }
+}
+
+# (2026-11-13, the 2026-11-12 review C-5) a scenario the kit cannot read
+# as written does not start: its problems are the result (exit status 4)
+$specBad = @(Test-ScenarioSpec $spec)
+if ($specBad.Count -gt 0) {
+    foreach ($b in $specBad) { Add-Result @{ do = 'scenario' } 'fail' $b }
+    $summary = Complete-Run
+    Add-XPStatus ("not started {0} ({1}): the scenario's steps: {2}" -f $spec.name, $acfTag, ($specBad -join '; '))
+    Write-Host "result: $out  (pass $($summary.pass), fail $($summary.fail), warn $($summary.warn))"
+    exit 4
 }
 
 # (2026-11-12, TESTING.md 4.6) X-Plane's memory and the system's commit
@@ -307,6 +425,10 @@ try {
 $freshLoad = $false
 if (-not $NoFlight) {
     $init = $spec.flight | ConvertTo-Json -Depth 30 | ConvertFrom-Json
+    if ($null -eq $init.weight) {
+        $init | Add-Member -NotePropertyName weight -NotePropertyValue $KitWeight -Force
+        Add-Result @{ do = 'flight' } 'info' "no weight in the scenario: the kit's 270 t (no payload, 86,535 kg of fuel in the main tanks)"
+    }
     $aircraft = @{ path = $acfPath }
     # a livery (its folder name under liveries/) picks the engine type: B747-400_simconfig.dat
     if ($spec.livery) { $aircraft.livery = $spec.livery }
@@ -406,6 +528,16 @@ if ($Reload) {
 }
 $loaded = Get-XPDataref 'sim/aircraft/view/acf_relative_path'
 Add-Result @{ do = 'aircraft' } 'info' $loaded
+# (2026-11-13, the 2026-11-12 review T-5) the start's weight, outside air
+# temperature and engine type, into the result (result.json, result.md)
+foreach ($p in @(@('weight_kg', 'sim/flightmodel/weight/m_total'), @('oat_c', 'sim/weather/aircraft/temperature_ambient_deg_c'),
+        @('engine_type', 'laminar/B747/engines/type'))) {
+    try { $script:startInfo[$p[0]] = [math]::Round([double](Get-XPDataref $p[1]), 1) } catch { $script:startInfo[$p[0]] = $null }
+}
+Add-Result @{ do = 'aircraft' } 'info' ("the start: {0} t, outside air {1} deg C, engines {2}" -f `
+    $(if ($null -ne $script:startInfo.weight_kg) { [math]::Round($script:startInfo.weight_kg / 1000, 1) } else { '?' }),
+    $(if ($null -ne $script:startInfo.oat_c) { [math]::Round($script:startInfo.oat_c) } else { '?' }),
+    $(if ($null -ne $script:startInfo.engine_type) { Format-EngineType $script:startInfo.engine_type } else { '?' }))
 # (after the reload and the air starts)
 Add-SettingNotes (Confirm-XPTestSettings)
 # The aircraft's native plugin's sim options (Plugins > 747-400), read from
@@ -552,7 +684,24 @@ foreach ($step in $spec.steps) {
                 foreach ($d in $step.drefs) { try { $vals[$d] = Get-XPDataref $d } catch { $vals[$d] = 'ERROR' } }
                 Add-Result $step 'info' (($vals.Keys | ForEach-Object { "$_=$($vals[$_])" }) -join '; ') $vals
             }
-            'cas' { $lines = Get-CasLines; Add-Result $step 'info' ("{0} line(s): {1}" -f $lines.Count, ($lines -join ' | ')) $lines }
+            'cas' {
+                $lines = @(Get-CasLines)
+                $detail = "{0} line(s): {1}" -f $lines.Count, ($lines -join ' | ')
+                if ($null -ne $step.has -or $null -ne $step.lacks) {
+                    # (2026-11-13) a text each line is searched for (its
+                    # level before it: "caution: >ENG 4 SHUTDOWN")
+                    $miss = @(@($step.has) | Where-Object { $_ } | Where-Object { $h = [string]$_; -not ($lines | Where-Object { $_.Contains($h) }) })
+                    $there = @(@($step.lacks) | Where-Object { $_ } | Where-Object { $h = [string]$_; [bool]($lines | Where-Object { $_.Contains($h) }) })
+                    $ok = $miss.Count -eq 0 -and $there.Count -eq 0
+                    $why = @()
+                    if ($miss.Count) { $why += 'missing: ' + ($miss -join ', ') }
+                    if ($there.Count) { $why += 'there: ' + ($there -join ', ') }
+                    $status = if ($ok) { 'pass' } elseif ($step.level -eq 'warn') { 'warn' } else { 'fail' }
+                    Add-Result $step $status ($(if ($why.Count) { ($why -join '; ') + '; ' } else { '' }) + $detail) $lines
+                } else {
+                    Add-Result $step 'info' $detail $lines
+                }
+            }
             'view' {
                 # head pitch/heading in degrees from the captain's eye point, and
                 # a field of view for a close look (back to the user's after)
@@ -653,6 +802,52 @@ if (Test-Path $logPath) {
     $log[$logStart..($log.Count - 1)] | Out-File -Encoding utf8 (Join-Path $out 'log_full.txt')
     $log[$logStart..($log.Count - 1)] | Where-Object { $_ -match '(?i)\bE/|error|LUA|xtlua|fail|missing|cannot|unable|replaced' } |
         Out-File -Encoding utf8 (Join-Path $out 'log_errors.txt')
+    # (2026-11-13, the 2026-11-12 review C-3) those about the aircraft: a warn
+    $acLines = @(Get-XPAircraftLogErrors @($log[$logStart..($log.Count - 1)]) ($acfPath -replace '[^/]+$', ''))
+    if ($acLines.Count -gt 0) {
+        $acLines | Out-File -Encoding utf8 (Join-Path $out 'log_aircraft.txt')
+        $kinds = @($acLines | ForEach-Object { ($_ -replace '^\W*[\d:.]+\s+', '') } | Select-Object -Unique)
+        Add-Result @{ do = 'log' } 'warn' ("{0} line(s) of Log.txt about the aircraft (log_aircraft.txt): {1}" -f $acLines.Count,
+            (($kinds | Select-Object -First 3) -join ' | '))
+    }
+}
+# (2026-11-13, the 2026-11-12 review 21) the recording's long frames and the
+# steps at them (tools\frame_jumps.lua): a step of the AFDS's or the A/T's
+# command, the controls or the trim within a long frame is a warn (the
+# jumps after X-Plane stood still: REVIEW_2026-11-12.md D-1); the steps
+# elsewhere (the modes' changes) in frame_jumps.txt only. And the load
+# factor while an A/P flew in the air, into the result
+$csv = Join-Path $out 'session.csv'
+if (Test-Path -LiteralPath $csv) {
+    $lj = Find-LuaJit
+    if (-not $lj) {
+        Add-Result @{ do = 'frames' } 'info' 'the recording not checked for long frames: no LuaJIT (LUAJIT)'
+    } else {
+        $eap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $fj = @(& $lj (Join-Path $PSScriptRoot 'tools\frame_jumps.lua') $csv -s)
+        $fjCode = $LASTEXITCODE
+        $ErrorActionPreference = $eap
+        @($fj | Where-Object { -not ([string]$_).StartsWith('#') }) | Out-File -Encoding utf8 (Join-Path $out 'frame_jumps.txt')
+        $sum = @($fj | Where-Object { ([string]$_).StartsWith('#summary ') }) | Select-Object -First 1
+        if ($fjCode -ne 0 -or -not $sum) {
+            Add-Result @{ do = 'frames' } 'info' "the recording's check did not run (frame_jumps.lua, exit status $fjCode)"
+        } else {
+            $kv = @{}
+            foreach ($m in [regex]::Matches([string]$sum, '(\w+)=(\S+)')) { $kv[$m.Groups[1].Value] = $m.Groups[2].Value }
+            $longSteps = @($fj | Where-Object { ([string]$_).StartsWith('#longstep ') } | ForEach-Object { ([string]$_).Substring(10) })
+            if ($longSteps.Count -gt 0) {
+                Add-Result @{ do = 'frames' } 'warn' ("{0} step(s) within long frames (frame_jumps.txt): {1}" -f $longSteps.Count,
+                    (($longSteps | Select-Object -First 3) -join ' | '))
+            } else {
+                Add-Result @{ do = 'frames' } 'info' ("long frames: {0} stretch(es), no step at them; {1} step(s) elsewhere (frame_jumps.txt)" -f $kv['long'], $kv['away'])
+            }
+            if ([int]$kv['g_rows'] -gt 0) {
+                $script:apAirG = [ordered]@{ lo = [double]$kv['g_lo']; hi = [double]$kv['g_hi']; rows = [int]$kv['g_rows'] }
+                Add-Result @{ do = 'frames' } 'info' ("load factor while an A/P flew in the air: {0} .. {1} g ({2} rows)" -f $kv['g_lo'], $kv['g_hi'], $kv['g_rows'])
+            }
+        }
+    }
 }
 $xtErrors = @(Get-XTLuaErrors)
 if ($xtErrors.Count -gt 0) {
@@ -672,10 +867,11 @@ if ($xtErrors.Count -gt 0) {
     $mem1 = Get-XPMemory
     Add-Result @{ do = 'memory' } 'info' (Format-XPMemory $mem1)
     $summary = Complete-Run
-    Add-XPStatus ("end {0} ({1}): pass {2}, fail {3}, warn {4}, {5} s{6}, {7}; {8}; {9}" -f $spec.name, $acfTag, $summary.pass,
+    Add-XPStatus ("end {0} ({1}): pass {2}, fail {3}, warn {4}, {5} s{6}{10}, {7}; {8}; {9}" -f $spec.name, $acfTag, $summary.pass,
         $summary.fail, $summary.warn, [math]::Round($wall.Elapsed.TotalSeconds), $(if ($fatal) { ", ended on an error: $fatal" } else { '' }),
         (Split-Path -Leaf $out), (Format-XPMemory $mem1),
-        $(if ($back.Count) { @($back | Where-Object { $_ } | ForEach-Object { $_ -replace '^!', 'WARNING: ' }) -join '; ' } else { 'no setting to put back' }))
+        $(if ($back.Count) { @($back | Where-Object { $_ } | ForEach-Object { $_ -replace '^!', 'WARNING: ' }) -join '; ' } else { 'no setting to put back' }),
+        $(if ($null -ne $script:startInfo.weight_kg) { ", {0:N1} t" -f ($script:startInfo.weight_kg / 1000) } else { '' }))
 }
 if ($fatal) {
     Write-Host "error: $fatal  (the result files: $out)"

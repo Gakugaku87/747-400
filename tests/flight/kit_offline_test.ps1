@@ -4,7 +4,9 @@
 # taken for a run and put back (a run that died, a setting X-Plane does not
 # take), the memory's limit, the state file's lines, run_all.sh's choice of
 # scenarios and xp_restart.ps1's memory line, and a scenario that does not
-# start for too little commit left.
+# start for too little commit left. (2026-11-13) A scenario with a step key
+# the kit does not read does not start either, and the Log.txt lines about
+# the aircraft are picked out of a sample.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tests\flight\kit_offline_test.ps1
 $ErrorActionPreference = 'Stop'
@@ -291,6 +293,52 @@ Check ($dir.Count -eq 1 -and (Test-Path (Join-Path $dir[0].FullName 'result.json
 $st = @(Get-Content -LiteralPath (Join-Path $runs 'STATUS.md'))
 Check ($st[-1] -match 'not started s172_proc_msgs \(747-400_custom\): ') "the state file: not started, why ($($st[-1]))"
 Check (-not (Test-Path -LiteralPath (Join-Path $tmp 'out\kit_settings.txt'))) 'no setting touched'
+
+# --- a scenario that does not start: a key the kit does not read (2026-11-13) --
+$runs3 = Join-Path $tmp 'runs3'
+$bad = Join-Path $tmp 's000_bad_keys.json'
+[IO.File]::WriteAllText($bad, '{ "name": "s000_bad_keys", "description": "d", "flight": {}, "steps": [' +
+    '{ "do": "cmd", "name": "laminar/B747/fms1/key/clear", "seconds": 1.5 },' +
+    '{ "do": "watch", "dref": "a/b", "mx": 1 },' +
+    '{ "do": "check", "dref": "a/b", "op": "=", "value": 1 },' +
+    '{ "do": "wiat", "dref": "a/b" },' +
+    '{ "do": "view", "the": 10 },' +
+    '{ "do": "sleep", "seconds": 2 } ] }')
+$out = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'run_scenario.ps1') `
+    -Scenario $bad -Acf custom -RunsDir $runs3 2>&1
+$code = $LASTEXITCODE
+$text = @($out) -join "`n"
+Equal $code 4 'a key the kit does not read: exit status 4'
+Check ($text -match "FAIL scenario step 1 \(cmd\): unknown key 'seconds'") "the cmd's seconds (s256, s257) named"
+Check ($text -match "FAIL scenario step 2 \(watch\): unknown key 'mx'") 'a misspelt max named'
+Check ($text -match "FAIL scenario step 3 \(check\): unknown op '='") 'an op the kit does not know'
+Check ($text -match "FAIL scenario step 4: unknown step type 'wiat'") 'a step type the kit does not know'
+Check ($text -match "FAIL scenario step 5 \(view\): needs name, or the and psi") 'a view without its preset nor its angles'
+Check ($text -notmatch 'step 6') 'the good step: nothing said'
+Check ($text -match 'result: .*\(pass 0, fail 5, warn 0\)') "the result line: five failures ($(($text -split "`n" | Select-String 'result:') -join ''))"
+$st = @(Get-Content -LiteralPath (Join-Path $runs3 'STATUS.md'))
+Check ($st[-1] -match "not started s000_bad_keys \(747-400_custom\): the scenario's steps: step 1 \(cmd\): unknown key 'seconds'") "the state file: not started, why ($($st[-1]))"
+Check (-not (Test-Path -LiteralPath (Join-Path $tmp 'out\kit_settings.txt'))) 'no setting touched'
+
+# --- Log.txt: the lines about the aircraft (2026-11-13) ----------------------
+$sample = @(
+    ([char]0xFEFF + '0:58:58.141 E/SCN: Failed to find resource ''Exterior_Wiper.png'', referenced from file ''Aircraft/747-400-master/objects/747_exterior/''.'),
+    '1:42:58.244 E/SOUN: Warning: unknown line EVENT_START_END sim/weather/precipitation_on_aircraft_ratio == 0',
+    '1:43:00.000 E/GFX/VK: Memory heap 0 has overstepped its budget!',
+    '1:43:01.000 W/TEX: Aircraft/747-400-master/objects/747_exterior/Exterior_Gear_NML.dds cannot be compressed',
+    '1:43:02.000 E/SCN: Failed to find resource ''Cockpit_Main.png'', referenced from file ''Aircraft/747-400-master/objects/747_cockpit/''.',
+    '1:43:03.000 E/APT: the airport KXYZ has a broken taxiway',
+    '1:43:04.000 E/OBJ: bad object Custom Scenery/x/y.obj',
+    '1:43:05.000 E/SCN: Failed to find resource ''a.png'', referenced from file ''Aircraft/Other/objects/''.'
+)
+$got = @(Get-XPAircraftLogErrors $sample 'Aircraft/747-400-master/')
+Equal $got.Count 3 "the aircraft's lines of the sample ($($got -join ' / '))"
+Check (($got -join "`n") -match 'E/SOUN: Warning: unknown line EVENT_START_END') 'the .snd''s E/SOUN (the rain sound, 2026-11-11)'
+Check (($got -join "`n") -match "Cockpit_Main\.png") 'an E/ line naming the aircraft''s folder'
+Check (($got -join "`n") -match 'E/OBJ: bad object') 'an E/OBJ'
+Check (($got -join "`n") -notmatch 'Exterior_Wiper') 'the exterior''s textures allowed'
+Check (($got -join "`n") -notmatch 'GFX|W/TEX|E/APT|Aircraft/Other') 'X-Plane''s graphics, a W/ line, the scenery''s and another aircraft''s lines left out'
+Equal @(Get-XPAircraftLogErrors @() 'Aircraft/747-400-master/').Count 0 'no line: none'
 
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

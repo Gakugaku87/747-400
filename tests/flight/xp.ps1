@@ -400,6 +400,33 @@ function Test-XPMemory($Mem, [double]$MinFreeGb = -1, [double]$FlightGb = -1) {
     return $null
 }
 
+# --- Log.txt: the aircraft's errors (2026-11-13, TESTING.md 4.2) ---------
+# The lines of a run's Log.txt that concern the aircraft (the 2026-11-12
+# review C-3): an E/ line of the kinds its files make (E/SOUN: its .snd,
+# E/ACF: the acf, E/PNL: its panel, E/OBJ: its objects) or naming its
+# folder, less those allowed below. Before, they went to log_errors.txt
+# with every line that said "error" or "fail" (hundreds a run), and the
+# rain sound's E/SOUN at each load (2026-11-11) was found in the user's
+# Log.txt, not by the kit. $AircraftRel: the folder from X-Plane's root
+# with forward slashes ('Aircraft/747-400-master/').
+$script:XPLogAllowed = @(
+    # the exterior's textures: the stock ones taken out on purpose and those
+    # the 3D set brings (3D is outside this work: CLAUDE.md)
+    "E/SCN: Failed to find resource '[^']+', referenced from file 'Aircraft/.+/objects/747_exterior/"
+)
+function Get-XPAircraftLogErrors([string[]]$Lines, [string]$AircraftRel) {
+    $folder = if ($AircraftRel) { [regex]::Escape(($AircraftRel -replace '\\', '/')) } else { $null }
+    $found = New-Object System.Collections.ArrayList
+    foreach ($l in @($Lines)) {
+        if (-not $l -or $l -notmatch '\bE/') { continue }
+        if (-not (($l -match '\bE/(SOUN|ACF|PNL|OBJ)\b') -or ($folder -and $l -match $folder))) { continue }
+        $allowed = $false
+        foreach ($a in $script:XPLogAllowed) { if ($l -match $a) { $allowed = $true; break } }
+        if (-not $allowed) { [void]$found.Add($l) }
+    }
+    return $found.ToArray()
+}
+
 # --- the state of a long test (2026-11-12, TESTING.md 4.6) ----------------
 # A line a run in the runs folder's STATUS.md (tests\flight\runs): what ran
 # and how it ended, what the kit changed in X-Plane and put back, the
