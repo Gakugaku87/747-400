@@ -29,6 +29,7 @@
     - 案 13（SM-2・DSP-6）：ばね戻りのスイッチは、離す合図が来なければ SPRING_S の後に自分で戻る（IND LTS TEST、OUTFLOW、PTT、PACK RST・ZONE RST・CARGO DISCH、RCL。FCOM p.441・p.574・p.683–684・p.1528。時間は推定）。OUTFLOW CLOSE は OPEN からも効く。試験 `oneshot_springs_test`（HEAD 14 落ち）。X-Plane（2026-11-13）：新しい `s304_oneshot_springs` 4/8（落ちは試験の作り：PTT の 3.7e-32 を == 0 で、受信灯をシナリオ自身が DIM にした 0.4 を > 0.5 で見ていた。直して次の一覧で）。
     - 案 24（FG-2・FG-3）：パーキング・ブレーキは両ペダルを踏んだままレバーを引けば入り、入れた後に加圧された系統の圧をブレーキに入れる（FCOM p.1516、ATA29_32 p.416）。試験 `brake_model_test`（HEAD 3 落ち）。X-Plane（2026-11-13）：新しい `s308_park_brake_pedals` 2/2、s37 23/23。
     - 案 25（FG-5・FG-6・HA-7）：SRM と FCU は左右の ADC を別々に受け、片側の故障では生きている側（ATA27 p.104・p.288・p.337）。オートブレーキは機長の IRS セレクターの IRU（FCOM p.1044）。APU の火災スイッチを抽気へ（LH36 p.88–89）。試験 `fltctrls_module_test`・`srm_lag_test`・`autobrake_irs_test`・`bleed_module_test`。X-Plane（2026-11-13）：新しい `s309_adc_irs` 5/5、s41 20/20。
+    - 案 11（C-1・C-2）：THRUST LIM の EPR／N1 はエンジン型式から（KLM PH-BFV の `thrust_ref` を N1 に）。リバリーの simconfig は全体を読み、BOM を落とし、`pcall` で読み、欠けた節と鍵は既定で補う（読めなければ既定：CDU のメッセージは作っていない）。試験 `livery_simconfig_test`（19 本）・`simconfig_read_test`・`fmc_fixes_test`。X-Plane（2026-11-13）：s152 12/12、s307 3/3。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。

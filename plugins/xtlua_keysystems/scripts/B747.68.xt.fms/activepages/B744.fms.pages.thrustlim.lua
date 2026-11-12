@@ -22,7 +22,10 @@ fmsFunctionsDefs["THRUSTLIM"]["R3"]={"setDref","CLB1"}
 fmsFunctionsDefs["THRUSTLIM"]["R4"]={"setDref","CLB2"}
 
 local SEL, ARM, NONE = "<SEL>", "<ARM>", "     "
-local function epr() return simConfigData["data"].PLANE.thrust_ref == "EPR" end
+-- (2026-11-12 review C-1) EPR or N1 by the engine type (laminar/B747/engines/type:
+-- 0 P&W, 2 RR in EPR, 1 GE in N1; CLAUDE.md: the type from the dataref); before,
+-- the livery file's thrust_ref (the KLM PH-BFV livery: GE in EPR)
+local function epr() return B747DR_fms_engine_type ~= 1 end
 -- the mode and its unit ("TO 1 EPR"), the limit ("1.42", "101.6%")
 local function thrlim_title()
   return B747_thrlim_model.label(B747_fms_thrlim()) .. (epr() and " EPR" or " N1")
