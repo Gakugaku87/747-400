@@ -99,7 +99,7 @@
 | `tests/lib/source.lua` | 機体の Lua を文字列で読む。init と xt の区別、init で作られる名前の一覧 |
 | `tests/lib/xtlua.lua` | XTLua のモジュールを X-Plane なしで動かす（下） |
 | `tests/lib/lnav_sim.lua` | LNAV の閉ループの試験の簡単な機体（ロールは 3°/s まで、旋回はバンクから、風。経路は LNAV が言うとおりに順送り）。`tests/fms/lnav_model_test.lua`・`lnav_hold_test.lua` が使う（2026-10-27、6-1・6-2 段 7a） |
-| `tests/static/*_test.lua` | 全系統に共通の検査。xt スクリプトの dataref が init で作られているか、`INTERFACES.tsv` の名前が残っているか、全モジュール（26）が X-Plane なしで読み込み・`flight_start`・60 フレームを Lua の誤りなしに通るか（`modules_run_test.lua`） |
+| `tests/static/*_test.lua` | 全系統に共通の検査。xt スクリプトの dataref が init で作られているか、`INTERFACES.tsv` の名前が残っているか、全モジュール（26）が X-Plane なしで読み込み・`flight_start`・60 フレームを Lua の誤りなしに通るか（`modules_run_test.lua`）、カスタム acf の音の定義 `fmod/747-400_custom.snd` が `.snd` の仕様と `fmod/GUIDs.txt` に合うか（`snd_format_test.lua`、2026-11-12。下の `.snd` の注意） |
 | `tests/tools/same_behaviour.lua` | 挙動を変えない変更（コードの切り出しなど）の確認。作業ツリーと git の版で同じモジュールを同じ入力・同じ乱数の種で回し、毎フレーム、書かれた dataref・実行したコマンド・print の行を比べる。20・30・45 fps で回す |
 | `tests/tools/scenarios/*.lua` | `same_behaviour.lua` の入力。`hydraulics_afds.lua` は油圧モジュール（AFDS の制御則・ヨーダンパー・スラットを含む） |
 | `tests/tools/pitch_sysid.lua`・`attitude_loop_sim.lua` | X-Plane の 747 のピッチの動きの当てはめと、A/P の姿勢のループの模型（2026-10-28、notes/ATA-22.md §20） |
@@ -239,6 +239,12 @@
 - 空中開始の `s01` は、機体の読み込み方で AFDS の初期状態が変わり、結果が変わる（PROGRESS.md「気づいたこと」）。X-Plane を起動し直した後の最初のフライト（フライトの開始で機体が読み込まれる）で回す。
 - スクリーンショットは、sim が止まっているか読み込み中だと撮れない。X-Plane は撮れるようになってからまとめて保存する。
 - `.snd` で、音のバンクの `fmod/GUIDs.txt` で行がコメントアウト（`#`）されているイベント（GPWS の `dontsink`）を使うと、機体の読み込みで X-Plane が警告のダイアログ（BE ADVISED：Couldn't find this GUID in any sound bank!）を出して止まり、閉じた後も 10 分「応答なし」のまま戻らなかった（2026-10-25、`s43_gpws`）。`.snd` に足すイベントは `GUIDs.txt` にあるか確かめる。
+  - 2026-11-12 からは `tests/static/snd_format_test.lua`（`tests/run.sh static`）が X-Plane なしで確かめる。対象は `fmod/747-400_custom.snd`。
+    - 仕様（developer.x-plane.com の「Sound (.snd) File Format Specification」）の頭の 3 行、仕様に無い指示語（雨の音の `EVENT_START_END` で X-Plane 12.4.4 が `E/SOUN: Warning: unknown line` を出した）、指示語の置き場所（attachment・sound space の中と外）、BEGIN と END の対。
+    - attachment ごとにイベント名かスナップショット名がちょうど 1 つ。その名前が `GUIDs.txt` の `#` で始まらない行にあるか（`#` の行にしか無いと、上の dontsink のように止まる）。`REQUIRES_BANK` のバンクが `fmod/` にあるか。
+    - 判定の関数は、わざと壊した小さなサンプル（16 通り）にも毎回当て、見逃すようになったら落ちる。
+    - 確かめないもの：条件の書式（仕様は `<dataref> <演算子> <値>` だが、音のパックの 119 行は `DELTA=` などの dataref だけ）と、attachment の位置（仕様は `VEH_XYZ` か `VEH_PART` を求めるが、スナップショットと、純正にもある `gear_lock` のイベント 1 つには無い）。
+  - 開発 PC では、`fmod/747-400.snd` が skip-worktree の手元の写しなら、`747-400_custom.snd` と行ごとに比べる（CLAUDE.md：`.snd` は両方を同じにする。改行の CRLF と LF の違いは見ない）。違えば、最初に違う行の番号を出して落ちる。ほかの所（クラウドなど）では git の純正のファイルなので比べない。
 - X-Plane を起動した直後の最初のフライトは、Web API でエンジン運転中を指定しても、機体のシステムが cold & dark で始まる（エンジンが止まり、AC バスが落ちる。PROGRESS.md「気づいたこと」）。`run_scenario.ps1` はこのとき読み直さないので、X-Plane を起動した直後は、捨ててよいシナリオ（`s00` など）を 1 本流してから、エンジン運転中のシナリオを回す。6-3 段 5a（2026-10-30）からは、この最初のフライトでは A/P も engage しない：AC 1・3 と DC 2・3 が無く（電池と standby だけ）、FCC の電源、ADC の 2 台、SRM の autotrim valid が無いため（engage のインターロック。診断の読み取りで確かめた）。捨ての `s66` の「A/P のサーボ」が落ちるのはこのため。
 - FlyWithLua に付属の `please read the manual.lua` は、スクリーンショットの右上に吹き出しを出していた。2026-10-23 に利用者が消した。
 - 超過の色と赤い枠（N1・N2・EGT）は、今の値では運転で超えない（表示の EGT が低い、N1・N2 はオーバースピード保護で赤線の手前で止まる）。X-Plane で見るときは、表示のモデルの限界（`M.RPM_RED`、`M.EGT`）を一時的に下げた版で流して、すぐ戻す（コミットしない。2026-10-24 の ENG-21 で使ったシナリオは PROGRESS.md の日誌）。X-Plane の hot start の故障でも EGT は始動限界（P&W 535 ℃）に届かない。
