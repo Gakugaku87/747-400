@@ -310,19 +310,20 @@ T.equal(rt:get(ALT_STATUS), 2, "ALT HOLD")
 T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12000, 0.5, "at the altitude then")
 T.equal(rt:get(PITCH), 9, "the FMA's ALT")
 T.equal(rt:get(PITCH_LAW), 1, "ALT: the pitch law")
--- the capture by the 0.05 g level-off and 10 s (step 3a; before, the old
--- window): V/S at 2,000 fpm 700 ft below the MCP altitude 12,700 is not
--- yet, 600 ft below it is (678 ft)
+-- the capture by the level-off at CAPTURE_G and 10 s (step 3a; before,
+-- the old window; the 2026-11-12 review's B4: 0.0375 g, before 0.05 g and
+-- 678 ft): V/S at 2,000 fpm 850 ft below the MCP altitude 12850 is not
+-- yet, 750 ft below it is (794 ft)
 rt:command(CMD .. "vs_mode")
 frames()
-rt:set("laminar/B747/autopilot/altitude_dial_ft", 12700)
+rt:set("laminar/B747/autopilot/altitude_dial_ft", 12850)
 rt:set("sim/flightmodel/position/vh_ind_fpm", 2000)
 frames(3)
-T.equal(rt:get(PITCH), 7, "700 ft below at 2,000 fpm: V/S")
+T.equal(rt:get(PITCH), 7, "850 ft below at 2,000 fpm: V/S")
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12100)
 frames()
-T.equal(rt:get(PITCH), 9, "600 ft below: ALT, the capture")
-T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12700, 0.5, "to the MCP altitude")
+T.equal(rt:get(PITCH), 9, "750 ft below: ALT, the capture")
+T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12850, 0.5, "to the MCP altitude")
 rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12000)
 rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
 rt:set("sim/flightmodel/position/vh_ind_fpm", 0)

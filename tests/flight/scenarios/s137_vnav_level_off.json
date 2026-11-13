@@ -35,7 +35,7 @@
     { "do": "cmd", "note": "VNAV", "name": "laminar/B747/autopilot/button_switch/VNAV" },
     { "do": "wait", "note": "VNAV engage", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "between", "value": [4, 6], "timeout": 10 },
     { "do": "snapshot", "note": "VNAV の状態", "drefs": [ "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/vnav_state", "laminar/B747/autopilot/altitude_dial_ft", "laminar/B747/autopilot/heading/altitude_dial_ft", "laminar/B747/autopilot/flightPhase", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
-    { "do": "watch", "note": "300 秒：MCP の 13,000 ft を 300 ft より行き過ぎない（340 kt への加速の後に上がる）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 13300, "timeout": 300 },
+    { "do": "watch", "note": "300 秒：MCP の 13,000 ft を 60 ft より行き過ぎない（340 kt への加速の後に上がる。2026-11-13、フルレビューの B4：前は 3,372〜3,433 fpm から 88・91 ft、この確かめは 300 ft まで）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 13060, "timeout": 300 },
     { "do": "snapshot", "note": "300 秒後", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/vnav_state", "laminar/B747/autopilot/altitude_dial_ft", "laminar/B747/autopilot/flightPhase", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot" ] },
     { "do": "check", "note": "13,000 ft の近くで水平", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [12800, 13300] },
     { "do": "check", "note": "VNAV ALT（5）か VNAV PTH（6）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "between", "value": [5, 6] },
