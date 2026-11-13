@@ -9,8 +9,9 @@
 --    the FMA stays V/S).
 --  - ALT: the altitude the AFDS model holds (the push's, or the MCP
 --    altitude from its capture: ATA22 p.346), its error made a vertical
---    speed, at most the one that levels off at the capture's 0.05 g
---    (ATA22 p.286), the altitude taken ANTICIPATE_S ahead; closing on it,
+--    speed, at most the one that levels off at CAPTURE_G (under the
+--    capture's 0.05 g, ATA22 p.286), the altitude taken ANTICIPATE_S
+--    ahead; closing on it,
 --    never more than when the law started until the level-off asks for
 --    less. The capture starts (`capture`, the AFDS model's input: before,
 --    the old window) when the airplane, closing on the MCP altitude, is no
@@ -157,6 +158,29 @@ M.K_ALT = 0.1
 -- command's and the airplane's lag: estimate), or within CAPTURE_NEAR ft
 M.CAPTURE_LAG_S = 10
 M.CAPTURE_NEAR = 20
+-- (2026-11-13; the 2026-11-12 review AFDS-6, B4) the capture's level-off
+-- (its start and ALT's profile) planned at CAPTURE_G, under the command's
+-- G_LIMIT (the capture's maneuver limit 0.05 g, ATA22 p.286): the airplane
+-- comes 2 s behind the command in its attitude and 3 s more in its path
+-- (X-Plane's 747 some 1.35 times that at 17,000 ft and 346 kt, the
+-- review's records), and the speed's change in the level-off moves its
+-- angle of attack (a climb's speed short of the A/T's target coming back:
+-- the attitude turns the path the less); a level-off planned at the limit
+-- itself had no room to make that up. Estimate (the sources give no
+-- overshoot; FCTM p.124: the normal capture profile, an overshoot only
+-- where there is not the altitude left to complete it). X-Plane at 0.05 g:
+-- s139 92 and 94 ft past from 3,500 fpm at 346 kt (GE's 141 to 176 ft
+-- before 2026-11-10), s137 88 and 91 ft, s313 (V/S 5,000 fpm to 10,000 ft
+-- at 238 t, the speed 8 kt short and decaying at the capture) 430 ft; at
+-- 0.0425 g s139 +0.7 ft, s137 -0.4 ft (the speed held), s313 108.5 ft (the
+-- angle of attack 4.1 to 3.56 degrees as the speed came back, the path
+-- turning at 0.038 g). On the lagged airplane (1.35 times, ALT's gain 0.7
+-- to 0.83: tests/autopilot/alt_capture_test.lua): s313's case within 5 ft
+-- with the angle of attack by the dynamic pressure (84 ft at 0.0425 g),
+-- VNAV's climbs from 3,500 to 5,000 fpm 0 ft past (87 to 282 ft at 0.05
+-- g), at 1.5 times within 36 ft; 2,000 fpm and under within 5 ft as
+-- before, 45 to 48 s to within 20 ft from 2,000 fpm (26 to 40 s at 0.05 g)
+M.CAPTURE_G = 0.0375
 -- the command's limits (estimate)
 M.PITCH_MIN = -10
 M.PITCH_MAX = 20
@@ -331,6 +355,7 @@ local KT = 1852 / 3600
 local FPM_KT = 1852 / FT / 60    -- fpm a knot
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 local function a_ft() return M.G_LIMIT * G / FT end   -- the limit, ft/s/s
+local function cap_ft() return M.CAPTURE_G * G / FT end   -- (B4) the capture's level-off, ft/s/s
 -- the flight path (degrees) of a vertical speed (fpm) at v (m/s)
 local function path(fpm, v) return math.deg(math.asin(clamp(fpm * FT / 60 / v, -1, 1))) end
 
@@ -407,21 +432,22 @@ function M.inputs()
     }
 end
 
--- the vertical speed (fpm) that levels off from dh ft at the limit
+-- the vertical speed (fpm) that levels off from dh ft at CAPTURE_G (B4;
+-- before, at the limit)
 function M.level_off_vs(dh)
-    return math.sqrt(2 * a_ft() * math.abs(dh)) * 60
+    return math.sqrt(2 * cap_ft() * math.abs(dh)) * 60
 end
 
 -- the MCP altitude's capture (ATA22 p.286): closing on it no farther than
--- the level-off at G_LIMIT and CAPTURE_LAG_S of the vertical speed, or
--- within CAPTURE_NEAR
+-- the level-off at CAPTURE_G (B4) and CAPTURE_LAG_S of the vertical speed,
+-- or within CAPTURE_NEAR
 function M.capture(inp, target)
     if target == nil then return false end
     local dh = target - inp.alt
     if math.abs(dh) <= M.CAPTURE_NEAR then return true end
     local vs = inp.vs / 60
     if dh * vs <= 0 then return false end
-    return math.abs(dh) <= vs * vs / (2 * a_ft()) + math.abs(vs) * M.CAPTURE_LAG_S
+    return math.abs(dh) <= vs * vs / (2 * cap_ft()) + math.abs(vs) * M.CAPTURE_LAG_S
 end
 
 -- ALT's vertical speed (fpm) to the altitude: K_ALT of the error, at most

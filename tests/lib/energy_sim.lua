@@ -61,6 +61,10 @@ M.A = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.at_m
 M.D = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.perf_db.lua")
 local P, A, D = M.P, M.A, M.D
 local KT, G, FT = 1852 / 3600, 9.80665, 0.3048
+-- (2026-11-13, B4) the zero-lift angle of attack (the body's) for
+-- new{alpha_q = true}: X-Plane's 747 in s313, 4.04 degrees at 241.6 kt and
+-- 0.967 g, 3.56 at 249.3 kt and 0.946 g (the lift by n over the IAS squared)
+M.ALPHA0_LIFT = -1.9
 
 -- the rate of climb (fpm) at a constant true airspeed that an acceleration
 -- in level flight (kt of true airspeed a second) is, at a true airspeed
@@ -104,7 +108,12 @@ Sim.__index = Sim
 -- levers at the reference thrust, 0.83), thrust_ref (the A/T's reference
 -- on its display, 1.5: an EPR, 1.0 at the aft stop),
 -- tau_pitch (2), tau_path (3), tau_engine (3), alpha (the angle of attack,
--- 2 degrees), dt (0.05), at (false: no A/T), law (false: no pitch law)
+-- 2 degrees), dt (0.05), at (false: no A/T), law (false: no pitch law),
+-- q (true: the pitch law gets the dynamic pressure and the weight, ALT's
+-- gain by the lift coefficient: B747.70.afds_pitch_model.lua's path_gain;
+-- 2026-11-13, the 2026-11-12 review's B4), alpha_q (true: the angle of
+-- attack by the dynamic pressure, the start's above ALPHA0_LIFT by the
+-- square of the IAS's ratio; else constant: B4, X-Plane's s313)
 function M.new(o)
     o = o or {}
     local m = setmetatable({}, Sim)
@@ -138,6 +147,9 @@ function M.new(o)
     m.lever, m.thr = lever, lever
     m.ps = m.ps_fn(m)
     m.law = o.law ~= false
+    m.give_q = o.q == true
+    m.alpha_q = o.alpha_q == true
+    m.alpha_k = (m.alpha - M.ALPHA0_LIFT) * m.ias * m.ias
     m.pitch_state, m.pitch_inp = P.new(), P.inputs()
     m.pitch_inp.active = true
     m.at = o.at ~= false
@@ -194,9 +206,13 @@ function Sim:step()
         local pi = m.pitch_inp
         pi.ias, pi.tas, pi.alt, pi.pitch, pi.vs, pi.weight = ias, tas, m.alt, m.pitch, m.vs, m.weight
         pi.accel_in = acc_in
+        if m.give_q then pi.q = 0.7 * D.atmos(m.alt, m.isa_dev) * m.mach * m.mach end
         m.cmd = P.update(m.pitch_state, pi, dt)
         if m.cmd then m.pitch = m.pitch + (m.cmd - m.pitch) * math.min(1, dt / m.tau_pitch) end
     end
+    -- (B4) the angle of attack by the dynamic pressure: the speed's change
+    -- turns the path as the attitude's does
+    if m.alpha_q then m.alpha = M.ALPHA0_LIFT + m.alpha_k / (m.ias * m.ias) end
     m.gam = m.gam + ((m.pitch - m.alpha) - m.gam) * math.min(1, dt / m.tau_path)
     -- the energy: the true airspeed on the thrust's excess less the climb
     local v = m.tas * KT

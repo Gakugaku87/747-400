@@ -47,11 +47,12 @@ local function inp(o)
     return i
 end
 
--- the capture: 2,000 fpm up to 10,000 ft needs 345 ft to level off at 0.05
--- g and 333 ft for 10 s
-T.near(P.level_off_vs(345), 2000, 5, "2,000 fpm levels off in 345 ft at 0.05 g")
-T.check(not P.capture(inp({alt = 9200, vs = 2000}), 10000), "800 ft below at 2,000 fpm: not yet")
-T.check(P.capture(inp({alt = 9350, vs = 2000}), 10000), "650 ft below: captured (678 ft)")
+-- the capture: 2,000 fpm up to 10,000 ft needs 460 ft to level off at
+-- CAPTURE_G (0.0375 g; the 2026-11-12 review's B4: before, 345 ft at the
+-- 0.05 g) and 333 ft for 10 s
+T.near(P.level_off_vs(460), 2000, 5, "2,000 fpm levels off in 460 ft at CAPTURE_G")
+T.check(not P.capture(inp({alt = 9100, vs = 2000}), 10000), "900 ft below at 2,000 fpm: not yet")
+T.check(P.capture(inp({alt = 9350, vs = 2000}), 10000), "650 ft below: captured (794 ft)")
 T.check(not P.capture(inp({alt = 9600, vs = -2000}), 10000), "going away: not")
 T.check(P.capture(inp({alt = 9990, vs = 0}), 10000), "within 20 ft: captured")
 T.check(not P.capture(inp({alt = 9600, vs = 2000}), nil), "no altitude: not")
@@ -92,7 +93,7 @@ local g = fly(s, i, 120, function(x)
         captured_at = x.alt
     end
 end)
-T.check(captured_at and captured_at < 9380 and captured_at > 9270, "captured about 678 ft below (at " .. tostring(captured_at) .. ")")
+T.check(captured_at and captured_at < 9245 and captured_at > 9175, "captured about 794 ft below (at " .. tostring(captured_at) .. ")")
 T.check(i.alt < 10010, "no overshoot over 10 ft (" .. i.alt .. ")")
 T.near(i.alt, 10000, 5, "level at 10,000 ft")
 T.check(g <= 0.055, "within the 0.05 g (" .. g .. ")")
