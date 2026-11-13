@@ -47,6 +47,13 @@
 --                   vnav_vs, vnav_dd, mcp_alt, n1; the rest filled in)
 --   m.at = false    no A/T: the levers stay where the caller puts them
 --   m.law = false   no pitch law: the attitude stays the caller's (m.pitch)
+--   m.gust          (2026-11-13, B3) a function of the model giving a gust,
+--                   kt of airspeed, that the IAS and the TAS the laws see
+--                   carry (the airplane's own speed unchanged: the air's
+--                   short gust); nil: none
+--   m.accel_in      the inertial acceleration along the air path the laws
+--                   get (kt/s of TAS: the last step's, as the IRU's; false:
+--                   none, the laws on the IAS's rate as before 2026-11-13)
 local M = {}
 
 M.P = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_pitch_model.lua")
@@ -139,6 +146,7 @@ function M.new(o)
     m.servo_inp = {n1 = false, thrust_ref = o.thrust_ref or 1.5, v_max = 365, v_min = 0, flaps_up = true}
     m.target = nil
     m.last_ias = m.ias
+    m.accel_in = 0
     return m
 end
 
@@ -158,15 +166,20 @@ function Sim:step()
         m.pitch_inp.spd_sel, m.pitch_inp.mcp_ias = tgt_ias, tgt_ias
         m.servo_inp.target = tgt_ias
     end
-    m.accel = m.accel + ((m.ias - m.last_ias) / dt - m.accel) * math.min(1, dt / 0.5)
-    m.last_ias = m.ias
+    -- the airspeeds the laws see: the air's gust on them (B3)
+    local g = m.gust and m.gust(m) or 0
+    local ias, tas = m.ias + g, m.tas + g * m.tas / m.ias
+    local acc_in = m.accel_in or nil
+    m.accel = m.accel + ((ias - m.last_ias) / dt - m.accel) * math.min(1, dt / 0.5)
+    m.last_ias = ias
     -- the A/T
     if m.at then
         local ai, si, s = m.at_inp, m.servo_inp, m.at_state
-        ai.cas, ai.lever_idle = m.ias, m.lever <= 0.001
+        ai.cas, ai.lever_idle = ias, m.lever <= 0.001
         A.update(s, ai)
         ai.toga, ai.spd, ai.thr, ai.disc = nil, nil, nil, nil
-        si.dt, si.ias, si.accel, si.vs, si.ivs, si.alt, si.lever = dt, m.ias, m.accel, m.vs, m.vs, m.alt, m.lever
+        si.dt, si.ias, si.accel, si.vs, si.ivs, si.alt, si.lever = dt, ias, m.accel, m.vs, m.vs, m.alt, m.lever
+        si.tas, si.accel_in = tas, acc_in
         si.thrust = m:display()
         si.evs = A.target_vs(s, m.vs, m.tas * KT, is_mach and m.mach or m.ias, is_mach or false, dt)
         A.servo(s, si)
@@ -179,7 +192,8 @@ function Sim:step()
     -- the pitch law, the attitude behind its command
     if m.law then
         local pi = m.pitch_inp
-        pi.ias, pi.tas, pi.alt, pi.pitch, pi.vs, pi.weight = m.ias, m.tas, m.alt, m.pitch, m.vs, m.weight
+        pi.ias, pi.tas, pi.alt, pi.pitch, pi.vs, pi.weight = ias, tas, m.alt, m.pitch, m.vs, m.weight
+        pi.accel_in = acc_in
         m.cmd = P.update(m.pitch_state, pi, dt)
         if m.cmd then m.pitch = m.pitch + (m.cmd - m.pitch) * math.min(1, dt / m.tau_pitch) end
     end
@@ -187,7 +201,9 @@ function Sim:step()
     -- the energy: the true airspeed on the thrust's excess less the climb
     local v = m.tas * KT
     local sin = math.sin(math.rad(m.gam))
-    v = v + G * (m.ps * FT / 60 / v - sin) * dt
+    local a = G * (m.ps * FT / 60 / v - sin)
+    v = v + a * dt
+    if m.accel_in ~= false then m.accel_in = a / KT end
     m.alt = m.alt + v * sin / FT * dt
     m.vs = v * sin / FT * 60
     local _, temp = D.atmos(m.alt, m.isa_dev)
