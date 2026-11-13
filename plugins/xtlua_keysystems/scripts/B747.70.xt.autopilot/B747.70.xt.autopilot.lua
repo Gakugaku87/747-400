@@ -1052,8 +1052,8 @@ local function afds_dt() return math.min(SIM_PERIOD, AFDS_DT_MAX) end
 local atState = B747_at_model.new()
 local atIn = {}
 local atIas, atAccel = nil, 0
-local atPush = {spd = 0, thr = 0, disc = 0}
-local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+local atPush = {spd = 0, thr = 0, disc = 0, flch = 0}
+local atSeen = {spd = 0, thr = 0, disc = 0, flch = 0, toga = nil}
 -- the FMC master selector and its FMC working last frame, and the master
 -- FMC's failure waiting for the ARM switch (step 11d2)
 local atMaster, atMasterOK, atFmcLatch = nil, false, false
@@ -1112,7 +1112,7 @@ local function afds_at()
 	local n = B747DR_ap_toga_pushes
 	i.toga = atSeen.toga ~= nil and n ~= atSeen.toga
 	atSeen.toga = n
-	for _, k in ipairs({"spd", "thr", "disc"}) do
+	for _, k in ipairs({"spd", "thr", "disc", "flch"}) do
 		i[k] = atPush[k] ~= atSeen[k]
 		atSeen[k] = atPush[k]
 	end
@@ -1588,6 +1588,8 @@ end
 function B747_afds_flch()
 	local ok, speed = B747_afds_model.flch(afds, afds_inp())
 	if not ok then return end
+	-- (2026-11-13) a push to the A/T: THR again in FLCH too (FCOM p.646)
+	atPush.flch = atPush.flch + 1
 	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 	if speed and simDR_autopilot_airspeed_is_mach == 0 then
 		B747DR_ap_ias_dial_value = math.floor(speed + 0.5)
@@ -3816,8 +3818,8 @@ end
 local function B747_at_reset()
 	atState = B747_at_model.new()
 	atIas, atAccel = nil, 0
-	atPush = {spd = 0, thr = 0, disc = 0}
-	atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+	atPush = {spd = 0, thr = 0, disc = 0, flch = 0}
+	atSeen = {spd = 0, thr = 0, disc = 0, flch = 0, toga = nil}
 	atMaster, atMasterOK, atFmcLatch = nil, false, false
 	-- (VNAV's levels: the VNAV mode model's, anew in B747_afds_reset)
 	afdsTogaPushes = nil
