@@ -76,6 +76,29 @@ M.REF_NEAR_EPR, M.REF_NEAR_N1 = 0.05, 2.5
 -- the approach's 15 s, kept)
 M.K_SPD, M.K_ACC, M.SPD_DOWN = 0.003, 0.045, 0.5
 M.SPD_DOWN_KT = {5, 15}
+-- (2026-11-13; the 2026-11-12 review AT-3, AT-4, B5) SPD with the flaps up.
+-- (AT-4) K_SPD and K_ACC were tuned at 270 t, low, with the flaps out, where
+-- a unit of lever gives some 6 kt/s of IAS (G); at 307 t and FL370 it gives
+-- 0.83, and the loop's damping, (K_ACC / 2) sqrt(G / K_SPD), fell from 1.0
+-- to 0.4 (s262: +3.0, -1.0, +0.85 kt over 280 s after a +21 kt target).
+-- With the flaps up the gains are times G_TGT / G (from 1 to G_SCALE_MAX):
+-- G estimated as G_C delta (IAS/TAS) (1 - G_MACH M) / (the weight, t),
+-- fitted within 20 % to the EEC's and the engines' models (the review's) at
+-- 12 points from 238 t at 10,000 ft to 397 t at FL310 and FL410; G_TGT the
+-- loop's G aimed at by the pressure ratio, less up high where X-Plane's
+-- engines answer slower (2.9 and 1.3 s at 11,000 ft, 3.2 and 1.8 at FL250,
+-- 5.8 and 2.1 at FL390: the EEC's open-loop test, notes/ATA-70-80.md §14;
+-- on G alone the acceleration's loop swung the levers every 22 s at
+-- FL370). (AT-3) SPD_DOWN_UP: with the flaps up the reduction near the
+-- target is cut less (FCTM p.43's up fast, down slowly is the approach's;
+-- the cruise's gusts are the speed complement's, GUST_TAU). Estimates: the
+-- sources give no gains. On the review's models: a +10 kt step within 0.5
+-- kt over (before up to +4.1), s262's swing +0.34 kt (+2.42), a 10 kt shear
+-- in the cruise back within 1 kt in 42 to 57 s (164 to 168 s before), the
+-- levers' travel the same or less
+M.G_C, M.G_MACH, M.G_SCALE_MAX = 3630, 0.488, 8
+M.G_TGT = {{0.66, 5.0}, {0.37, 4.2}, {0.194, 2.7}}
+M.SPD_DOWN_UP = 0.75
 M.K_VS = 1.2e-5
 -- G/A's THR on the energy's rate (evs, as VNAV's: the speed's change
 -- counts) and faster (estimate: on the V/S at K_VS the levers took 37 s
@@ -134,7 +157,9 @@ M.GUST_TAU, M.GUST_FADE_KT, M.GUST_RATIO_S = 20, 10, 2
 -- (s108, 2026-11-07); a model of that run (tests/autopilot/
 -- flch_entry_test.lua) stops the thrust under 100 kN and the speed within
 -- 10 kt, the V/S settling on the rate. The sources give the V/S (ATA34_2
--- p.646, p.670), not its measure: an estimate (notes/ATA-34-61-FMC.md §152)
+-- p.646, p.670), not its measure: an estimate (notes/ATA-34-61-FMC.md §152).
+-- (2026-11-13, B5) Descents on it too while the speed is at or under its
+-- target (the servo's THR)
 M.FLCH_EVS_KT = 5
 -- (the FMC's step 9d2) VNAV's THR (the early descent, the driftdown): the
 -- levers to the FMC's V/S on the energy's rate at the target speed (the V/S
@@ -350,15 +375,41 @@ function M.target_vs(s, ivs, tas, x, mach, dt)
     return ivs + M.EVS_K * tas * tas * s.lx_rate
 end
 
+-- (B5) the ISA's pressure ratio at a pressure altitude (ft)
+local function delta_of(alt)
+    if alt <= 36089 then return (1 - 6.8756e-6 * alt) ^ 5.2559 end
+    return 0.22336 * math.exp(-(alt - 36089) / 20806)
+end
+-- (B5) the loop's G aimed at, by the pressure ratio (G_TGT)
+function M.g_target(alt)
+    local d, tg = delta_of(alt), M.G_TGT
+    if d >= tg[1][1] then return tg[1][2] end
+    for i = 2, #tg do
+        if d >= tg[i][1] then
+            local f = (d - tg[i][1]) / (tg[i - 1][1] - tg[i][1])
+            return tg[i][2] + f * (tg[i - 1][2] - tg[i][2])
+        end
+    end
+    return tg[#tg][2] * math.sqrt(d / tg[#tg][1])
+end
+-- (B5) G, the acceleration a unit of lever gives (kt/s of IAS), estimated
+-- from the servo's inputs (weight kg, mach, tas kt, ias, alt); nil without
+function M.lever_accel(inp)
+    if not (inp.weight and inp.weight > 0 and inp.tas and inp.tas > 50 and inp.mach and inp.alt) then return nil end
+    return M.G_C * delta_of(inp.alt) * (inp.ias / inp.tas) * (1 - M.G_MACH * inp.mach) / (inp.weight / 1000)
+end
+
 -- the speed law's lever rate to a speed: the error and the acceleration,
--- less when reducing near the target
-local function speed_rate(ias, accel, tgt)
+-- less when reducing near the target; k the gains' scale and flaps_up
+-- SPD_DOWN_UP's (B5)
+local function speed_rate(ias, accel, tgt, k, flaps_up)
     local e = tgt - ias
-    local r = M.K_SPD * e - M.K_ACC * accel
+    local r = (k or 1) * (M.K_SPD * e - M.K_ACC * accel)
     if r < 0 then
         local b = M.SPD_DOWN_KT
         local x = clamp((-e - b[1]) / (b[2] - b[1]), 0, 1)
-        r = r * (M.SPD_DOWN + (1 - M.SPD_DOWN) * x)
+        local down = flaps_up and M.SPD_DOWN_UP or M.SPD_DOWN
+        r = r * (down + (1 - down) * x)
     end
     return r
 end
@@ -423,6 +474,14 @@ end
 -- (GUST_TAU; none: the IAS)
 function M.servo(s, inp)
     local gias, gacc = gust_speed(s, inp)
+    -- (B5) the lever's acceleration G and SPD's gains' scale, flaps up
+    local g_lev = inp.flaps_up and M.lever_accel(inp) or nil
+    local k = g_lev and clamp(M.g_target(inp.alt) / g_lev, 1, M.G_SCALE_MAX) or 1
+    -- (B5, AT-3) the inertial V/S's rate (m/s/s), over a second
+    if s.ff_vs and inp.ivs and inp.dt > 0 then
+        s.ff_acc = (s.ff_acc or 0) + (((inp.ivs - s.ff_vs) * 0.3048 / 60) / inp.dt - (s.ff_acc or 0)) * math.min(1, inp.dt)
+    end
+    s.ff_vs = inp.ivs
     local mode = s.engaged and s.mode or nil
     if mode ~= M.THR then s.reach_t = 0 end
     if mode == nil or mode == M.HOLD then
@@ -459,7 +518,7 @@ function M.servo(s, inp)
         rate = -(s.retard and M.FLARE_RATE or M.SERVO_RATE)
     elseif mode == M.THR_REF then
         -- the reference thrust, the limit speed (ATA34_2 p.672)
-        rate = math.min(limit, speed_rate(inp.ias, inp.accel, vmax))
+        rate = math.min(limit, speed_rate(inp.ias, inp.accel, vmax, k, inp.flaps_up))
     elseif mode == M.SPD then
         -- the floor the minimum maneuvering speed, with the margin only
         -- with the flaps extended (FCOM p.675), as the pitch laws'
@@ -467,7 +526,19 @@ function M.servo(s, inp)
         -- A/T held M.858 for the MCP's M.85 at 307 t and FL370
         -- (PERF_SIMBRIEF phase 1)
         local tgt = clamp(inp.target, inp.v_min + (inp.flaps_up and 0 or M.LIMIT_MARGIN), vmax)
-        rate = math.min(speed_rate(gias, gacc, tgt), cap)
+        rate = speed_rate(gias, gacc, tgt, k, inp.flaps_up)
+        -- (B5, AT-3) the thrust follows the path's change: a vertical speed
+        -- dh at the same speed needs W dh / V more thrust (the energy's), its
+        -- lever by G (flaps up; estimate: the sources give no law). Before,
+        -- at an altitude capture from THR REF's climb the levers came back
+        -- only once the speed rose: 8 to 11 kt over the target at every
+        -- weight (s139: +10.1 kt at FL170; the KSEA-KLAX T/C M.883 for
+        -- .859); on the review's models now 0.6 to 4.5 kt
+        if g_lev and s.ff_acc and inp.tas and inp.tas > 50 then
+            local v = inp.tas * 0.514444
+            rate = rate + 9.80665 * s.ff_acc / v / 0.514444 / (g_lev * inp.tas / inp.ias)
+        end
+        rate = math.min(rate, cap)
     else
         -- THR: FLCH's V/S to the MCP altitude in 125 s, G/A's 2,000 fpm,
         -- VNAV's the FMC's (step 9d2a: the early descent; 9h4b: the driftdown);
@@ -491,6 +562,16 @@ function M.servo(s, inp)
             -- FLCH's climb (2026-11-07): the energy's rate while the speed
             -- is at or over its target, the V/S under it
             local w = clamp((inp.ias - inp.target) / M.FLCH_EVS_KT + 1, 0, 1)
+            ev = vs + w * (inp.evs - vs)
+        elseif want < 0 and inp.evs and inp.target then
+            -- (2026-11-13; the review AT-6, B5) FLCH's descent: the energy's
+            -- rate too, while the speed is at or under its target, from none
+            -- of it FLCH_EVS_KT over it (as the climb's: the elevator turns
+            -- the speed's change into the path; estimate). On the V/S alone a
+            -- light airplane's small descent swung: 210 t, 180 kt, 1,000 ft
+            -- down, -744 to -201 fpm with a 52 s period for -480 (now -561 to
+            -- -479). A large descent still goes to the aft stop and HOLD
+            local w = clamp((inp.target - inp.ias) / M.FLCH_EVS_KT + 1, 0, 1)
             ev = vs + w * (inp.evs - vs)
         else
             ev = vs

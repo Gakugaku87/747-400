@@ -86,8 +86,13 @@ local function run(opt)
     return r
 end
 
--- the record's gusts: on the IAS and complemented
+-- the record's gusts: on the IAS and complemented. (2026-11-13) The
+-- record's A/T cut its reductions near the target by SPD_DOWN with the flaps
+-- up too (B5's SPD_DOWN_UP since): the IAS's run with it, as then
+local keep_down = A.SPD_DOWN_UP
+A.SPD_DOWN_UP = A.SPD_DOWN
 local a = run({wind = record_wind(), seconds = 1200})
+A.SPD_DOWN_UP = keep_down
 local b = run({wind = record_wind(), seconds = 1200, inertial = true})
 T.check(a.mean > 0.6 and a.over > 0.8, string.format(
     "on the IAS (before): the speed %+.2f kt over its target, %.0f %% of the time over (X-Plane +0.7 kt, 83 %%)",

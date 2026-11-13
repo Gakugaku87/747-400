@@ -1,0 +1,47 @@
+{
+  "name": "s315_at_spd_step_heavy",
+  "description": "2026-11-12 のフルレビューの AT-4（案 B5：A/T の SPD の利得を、レバーあたりの加速と高さのエンジンの遅れに合わせる。B747.70.at_model.lua の G_TGT・lever_accel）の X-Plane での確認、空中。FL310・指示 314 kt（M.84 の近く）、340 t で開始（機体を読み直す）。FMC の空中の初期化（CMD L・ALT HOLD）の後、MCP を IAS 314 kt にして A/T の SPD。落ち着かせてから MCP の速さを +10 kt（324 kt）：行き過ぎは 2 kt まで（レビューの見込み：直す前は模型で 397 t・FL290 +3.0 kt、300 t・FL250 +4.1 kt、X-Plane の s262 は +3.0 kt）、その後 1 kt 以内。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 9448.8, "heading_true": 0, "speed_in_meters_per_second": 252.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [6827, 7187, 8624, 11140, 2156, 18003, 16063, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の初期化" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "sleep", "seconds": 8, "note": "空中の初期化の速さの巻き取り" },
+    { "do": "set", "note": "MCP 高度 FL310", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 31000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 31000 },
+    { "do": "set", "note": "MCP を IAS に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 0 },
+    { "do": "set", "note": "窓 314 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 314 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（空中の初期化の ALT HOLD。違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "FMA の A/T が SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10, "stop": true },
+    { "do": "wait", "note": "314 kt の ±2 kt に乗る", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [312, 316], "timeout": 300 },
+    { "do": "sleep", "seconds": 90, "note": "落ち着かせる" },
+    { "do": "snapshot", "note": "段の前", "drefs": [ "sim/flightmodel/weight/m_total", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/mach_pilot", "laminar/B747/engines/display_EPR[0]" ] },
+    { "do": "record_start" },
+    { "do": "mark", "note": "MCP の速さ +10 kt" },
+    { "do": "set", "note": "窓 324 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 324 },
+    { "do": "watch", "note": "150 秒：行き過ぎは 2 kt まで（B5）", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "max": 326, "timeout": 150 },
+    { "do": "watch", "note": "その後 30 秒、324 kt の ±1 kt", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "min": 323, "max": 325, "timeout": 30 },
+    { "do": "check", "note": "FL310 を保つ（±100 ft）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [30900, 31100] },
+    { "do": "record_stop" }
+  ]
+}

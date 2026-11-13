@@ -1093,6 +1093,9 @@ local function afds_at()
 	-- (2026-11-10) SPD in the air's gusts: the TAS (kt) and the inertial
 	-- acceleration along the air path (kt/s)
 	i.tas = simDR_at_tas * 3600 / 1852
+	-- (2026-11-13, B5) SPD's gains by the acceleration a unit of lever gives
+	-- (B747.70.at_model.lua's lever_accel): the Mach and the gross weight
+	i.mach, i.weight = simDR_airspeed_mach, simDR_afds_weight
 	i.accel_in = B747_at_model.path_accel(simDR_at_acc_x, simDR_at_acc_y, simDR_at_acc_z,
 		simDR_at_vel_x, simDR_at_vel_y, simDR_at_vel_z, simDR_at_wind_x, simDR_at_wind_y, simDR_at_wind_z)
 	-- (2026-11-11 review) X-Plane's time faster than XTLua's frames (the
