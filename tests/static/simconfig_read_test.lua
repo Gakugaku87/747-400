@@ -17,15 +17,18 @@ local good = '{"FMC":{"INIT":{"op_program":"","active":"","drag_ff":"+0.0/-0.0",
     .. '"SIM":{"std_pax_weight":120,"baro_sync":"NO","kgs_to_lbs":2.2046226218488,"fo_lwr":"NORM",'
     .. '"weight_display_units":"KGS","auto_fuel_mgmt":"NO","capt_inbd":"NORM","irs_align_time":600,'
     .. '"capt_lwr":"NORM","baro_indicator":"IN","fo_inbd":"NORM","lbs_to_kgs":0.45359237}}'
+-- the third: the engine type; the fourth (2026-11-13, case 11): the file
+-- did not decode (laminar/B747/simconfig/read_failed: the CDUs' SIM CONFIG
+-- NOT READ)
 local cases = {
-    {"one line (as the CDU writes it)", good, 1},
-    {"set out over several lines", (good:gsub("{", "{\n"):gsub(",", ",\n")), 1},
-    {"cut short", good:sub(1, 200), 0},
-    {"empty", "", 0},
-    {"a BOM in front", "\239\187\191" .. good, 1},
-    {"without the FMC section", (good:gsub('"FMC":{.-}},', "")), 1},
-    {"without PLANE.engines", (good:gsub('"engines":"[^"]*",', "")), 0},
-    {"the engines in lower case", (good:gsub("CF6%-80C2%-B1F", "cf6-80c2-b1f")), 1},
+    {"one line (as the CDU writes it)", good, 1, 0},
+    {"set out over several lines", (good:gsub("{", "{\n"):gsub(",", ",\n")), 1, 0},
+    {"cut short", good:sub(1, 200), 0, 1},
+    {"empty", "", 0, 1},
+    {"a BOM in front", "\239\187\191" .. good, 1, 0},
+    {"without the FMC section", (good:gsub('"FMC":{.-}},', "")), 1, 0},
+    {"without PLANE.engines", (good:gsub('"engines":"[^"]*",', "")), 0, 0},
+    {"the engines in lower case", (good:gsub("CF6%-80C2%-B1F", "cf6-80c2-b1f")), 1, 0},
 }
 for _, c in ipairs(cases) do
     local f = assert(io.open(dir .. "B747-400_simconfig.dat", "wb"))
@@ -42,6 +45,7 @@ for _, c in ipairs(cases) do
     if ok then
         T.equal(rt:get("laminar/B747/engines/type"), c[3], c[1] .. ": engine type")
         T.equal(rt:get("laminar/B747/engines/thrust_ref"), c[3], c[1] .. ": thrust reference")
+        T.equal(rt:get("laminar/B747/simconfig/read_failed"), c[4], c[1] .. ": read_failed (the CDUs' SIM CONFIG NOT READ)")
     end
 end
 os.remove(dir .. "B747-400_simconfig.dat")

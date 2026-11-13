@@ -45,6 +45,7 @@ simDR_baro_fo				= find_dataref("sim/cockpit/misc/barometer_setting2")
 -- Holds all SimConfig options
 B747DR_simconfig_data						= deferred_dataref("laminar/B747/simconfig", "string")
 B747DR_newsimconfig_data					= deferred_dataref("laminar/B747/newsimconfig", "number")
+B747DR_simconfig_read_failed				= deferred_dataref("laminar/B747/simconfig/read_failed", "number")
 B747DR_is_freighter          				= deferred_dataref("laminar/B747/freighter", "number")
 B747DR_efis_baro_ref_capt_sel_dial_pos		= find_dataref("laminar/B747/efis/baro_ref/capt/sel_dial_pos", "number")
 B747DR_efis_baro_ref_fo_sel_dial_pos		= deferred_dataref("laminar/B747/efis/baro_ref/fo/sel_dial_pos", "number")
@@ -389,6 +390,9 @@ function aircraft_simConfig()
 		file:close()
 		tmpDataS = tmpDataS:gsub("^\239\187\191", "")
 		local ok, tmpData = pcall(json.decode, tmpDataS)
+		-- (2026-11-13, case 11) the CDUs say so: SIM CONFIG NOT READ (the
+		-- FMS; XTLua's print reaches no log)
+		B747DR_simconfig_read_failed = (ok and type(tmpData) == "table") and 0 or 1
 		if not ok or type(tmpData) ~= "table" then
 			print("simconfig: " .. file_location .. " not read (" .. tostring(tmpData) .. "): the defaults")
 			tmpData = simconfig_values()
@@ -401,6 +405,7 @@ function aircraft_simConfig()
 		B747DR_newsimconfig_data=1
 		run_after_time(set_loaded_configs, 3)  --Apply loaded configs.  Wait a few seconds to ensure they load correctly.
 	else
+		B747DR_simconfig_read_failed = 0   -- no file: the defaults, nothing wrong
 		B747DR_simconfig_data = json.encode(simconfig_values())
 		run_after_time(set_loaded_configs, 3)  --Apply loaded configs.  Wait a few seconds to ensure they load correctly.
 	end

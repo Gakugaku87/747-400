@@ -3264,6 +3264,10 @@ function B747_fmc_lnav_update()
 end
 -- the clocks' dates: the FMC's clock calendar from the Captain's clock,
 -- else the F/O's (FCOM p.1285)
+-- (2026-11-13; the 2026-11-12 review C-2, case 11) the livery's simconfig
+-- did not decode (the simconfig module, another XTLua plugin: read every
+-- frame)
+B747DR_fmc_simconfig_failed=find_dataref("laminar/B747/simconfig/read_failed")
 B747DR_fmc_clock_capt_on=find_dataref("laminar/B747/fltInst/capt/clock_on")
 B747DR_fmc_clock_capt_day=find_dataref("laminar/B747/fltInst/capt/clock_day")
 B747DR_fmc_clock_capt_month=find_dataref("laminar/B747/fltInst/capt/clock_month")
@@ -6231,6 +6235,11 @@ function after_physics()
   -- from the start, without the FMCs' power or warm-up (the sim's, as the
   -- CDU's PAX/CARGO data)
   B747_fms_wb_update()
+  -- (2026-11-13; the 2026-11-12 review C-2, case 11) a livery's simconfig
+  -- that did not decode: an advisory on the CDUs while its defaults are in
+  -- use (no such message in the sources: the sim's own; the wording an
+  -- estimate)
+  B747_cdu_fmc_condition("SIM CONFIG NOT READ",B747DR_fmc_simconfig_failed>0.5,false)
   -- the FMCs from the start (6-1/6-2 step 11d2b: fmc_ok for the NDs and the
   -- AFDS before the systems' warm-up)
   update_fmc_link()
