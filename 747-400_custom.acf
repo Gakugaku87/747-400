@@ -75122,7 +75122,7 @@ GROUP Captain PFD
           POS 315.500000 969.000000
           IMAGE CRT Displays/PFD/AFDS Status Annun/box2
           DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/autopilot/AFDS/mode_box2_status_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/autopilot/AFDS/mode_box2_status_pilot
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 2
@@ -77947,7 +77947,7 @@ GROUP Captain PFD
           BUS_SRC 2
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME 1.000000 1.000000
-          DIGITS 4
+          DIGITS 5
           DECIMALS 0
           PERIOD_WIDTH 0
           LED_ROWS 4
@@ -79408,7 +79408,7 @@ GROUP Captain PFD
           POS 315.500000 969.000000
           IMAGE CRT Displays/PFD/AFDS Status Annun/box2
           DATAREF 
-          SHOW_EQUAL 1.000000 laminar/B747/autopilot/AFDS/mode_box2_status_copilot
+          SHOW_EQUAL 1.000000 laminar/B747/autopilot/AFDS/mode_box2_status_pilot
           HIDE
           LIGHT_MODE GLASS_AUTO
           LIGHT_RHEOSTAT 2
@@ -82233,7 +82233,7 @@ GROUP Captain PFD
           BUS_SRC 2
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME 1.000000 1.000000
-          DIGITS 4
+          DIGITS 5
           DECIMALS 0
           PERIOD_WIDTH 0
           LED_ROWS 4
@@ -84656,7 +84656,7 @@ GROUP First Officer PFD
           gen_pointer Line UP 2
             POS 786.500000 887.500000
             IMAGE CRT Displays/PFD/ASI/ASITrndLineUP
-            DATAREF sim/cockpit2/gauges/indicators/airspeed_acceleration_kts_sec_pilot
+            DATAREF sim/cockpit2/gauges/indicators/airspeed_acceleration_kts_sec_copilot
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -86470,7 +86470,7 @@ GROUP First Officer PFD
           BUS_SRC 4
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME 1.000000 1.000000
-          DIGITS 4
+          DIGITS 5
           DECIMALS 0
           PERIOD_WIDTH 0
           LED_ROWS 4
@@ -88899,7 +88899,7 @@ GROUP First Officer PFD
           gen_pointer Line UP 2
             POS 786.500000 887.500000
             IMAGE CRT Displays/PFD/ASI/ASITrndLineUP
-            DATAREF sim/cockpit2/gauges/indicators/airspeed_acceleration_kts_sec_pilot
+            DATAREF sim/cockpit2/gauges/indicators/airspeed_acceleration_kts_sec_copilot
             HIDE
             CLIP
             LIGHT_MODE GLASS_AUTO
@@ -90713,7 +90713,7 @@ GROUP First Officer PFD
           BUS_SRC 4
           KEY_FRAME 0.000000 0.000000 1.000000
           KEY_FRAME 1.000000 1.000000
-          DIGITS 4
+          DIGITS 5
           DECIMALS 0
           PERIOD_WIDTH 0
           LED_ROWS 4

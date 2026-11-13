@@ -685,6 +685,9 @@ function defaultFMSData()
   transpd="250",
   spdtransalt="10000",
   transalt="18000",
+  -- (2026-11-13; the 2026-11-12 review DSP-2) DESCENT FORECAST's TRANS LVL
+  -- for the PFD's barometric box and the ND's DATA (B747_fms_publish_trans_lvl)
+  translvl="18000",
   clbrestspd="---",
   maxkts="420",
   clbrestalt="-----",
@@ -5834,6 +5837,20 @@ end
 -- (laminar/B747/fms/route_eta) written when it changes, once a second
 B747DR_fms_route_eta = find_dataref("laminar/B747/fms/route_eta")
 local route_eta_t = -1
+-- (2026-11-13; the 2026-11-12 review DSP-2) the transition level in the
+-- FMC's data ("translvl") for the PFD's barometric setting's amber box and
+-- the ND's DATA (FCOM p.995, p.1396): DESCENT FORECAST's TRANS LVL
+-- (B747_fms_trans_lvl: the crew's entry, the arrival's, the destination's
+-- data, else FL180), once a second when it changes. Before, the displays
+-- took FL180 for every descent (17,600 ft for RJAA's FL140)
+local trans_lvl_t = -1
+function B747_fms_publish_trans_lvl()
+	if simDRTime - trans_lvl_t < 1 and simDRTime >= trans_lvl_t then return end
+	trans_lvl_t = simDRTime
+	local v = B747_fms_trans_lvl and tonumber(B747_fms_trans_lvl()) or 18000
+	local s = string.format("%d", math.floor(v + 0.5))
+	if (string.gsub(fmsModules["data"]["translvl"] or "", "%s+$", "")) ~= s then setFMSData("translvl", s) end
+end
 function B747_route_eta(fms, airborne)
 	if simDRTime - route_eta_t < 1 and simDRTime >= route_eta_t then return end
 	route_eta_t = simDRTime
@@ -5895,9 +5912,11 @@ function waypoint_eta_display()
 		fms_distance_to_next_waypoint,time_to_waypoint,nhours,nmins,nsecs = get_waypoint_estimate(fms_latitude, fms_longitude,fms_next_waypoint, fms_next_latitude, fms_next_longitude,time_to_waypoint)
 		end
 		B747_route_eta(fms, simDR_onGround ~= 1)
+		B747_fms_publish_trans_lvl()
 	else
 		B747DR_destination="----"	
 		if B747DR_fms_route_eta ~= "[]" then B747DR_fms_route_eta = "[]" end
+		B747_fms_publish_trans_lvl()
 	end
 	
 	-- the active waypoint (FCOM p.1147), a conditional one by its name too

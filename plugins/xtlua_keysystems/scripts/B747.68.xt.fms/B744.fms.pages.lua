@@ -988,7 +988,12 @@ function fmsFunctions.setdata(fmsO,value)
 		return
 	end
 	local alt=tonumber(fmsO["scratchpad"])
-	if fmsO.id=="fmsR" then 
+	-- (2026-11-13; the 2026-11-12 review DSP-7) RAD -20 to 999 ft (FCOM p.1064)
+	if alt < -20 or alt > 999 then
+		fmsO["notify"]="INVALID ENTRY"
+		return
+	end
+	if fmsO.id=="fmsR" then
 		simDR_radio_alt_DH_fo=alt
 	else
 		simDR_radio_alt_DH_capt=alt
@@ -999,7 +1004,12 @@ function fmsFunctions.setdata(fmsO,value)
 			return
 		end
 		local alt=tonumber(fmsO["scratchpad"])
-		if fmsO.id=="fmsR" then 
+		-- (2026-11-13; the 2026-11-12 review DSP-7) BARO -1001 to 15000 ft (FCOM p.1064)
+		if alt < -1001 or alt > 15000 then
+			fmsO["notify"]="INVALID ENTRY"
+			return
+		end
+		if fmsO.id=="fmsR" then
 			B747DR_efis_baro_alt_ref_fo=alt
 		else
 			B747DR_efis_baro_alt_ref_capt=alt

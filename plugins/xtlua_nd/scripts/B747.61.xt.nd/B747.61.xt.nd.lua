@@ -88,6 +88,9 @@ B747DR_nd_capt_data_sel = find_dataref("laminar/B747/nd/data/capt/data")
 B747DR_nd_fo_data_sel = find_dataref("laminar/B747/nd/data/fo/data")
 B747DR_nd_fms_route_eta = find_dataref("laminar/B747/fms/route_eta")
 B747DR_nd_fms_data = find_dataref("laminar/B747/fms/data")
+-- (2026-11-13; the 2026-11-12 review DSP-2) the FMC's phase (3 the descent)
+-- for the DATA's flight levels
+B747DR_nd_fmc_phase = find_dataref("laminar/B747/fms/vnav/phase")
 iconTextDataCapt.rdata=find_dataref("laminar/B747/nd/capt/text/rdata_color")
 iconTextDataFO.rdata=find_dataref("laminar/B747/nd/fo/text/rdata_color")
 for n=0,ND_DATA.SLOTS-1,1 do
@@ -218,6 +221,10 @@ simDR_groundspeed			                      = find_dataref("sim/flightmodel2/posit
 simDR_vvi_fpm_pilot        	                = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 simDR_autopilot_altitude_ft    		          = find_dataref("laminar/B747/autopilot/altitude_dial_ft") -- alternate might better MCP which is B747DR_autopilot_altitude_ft
 simDR_pressureAlt1	                        = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
+-- (2026-11-13; the 2026-11-12 review DSP-1) the F/O's side's own, for the
+-- altitude range arc
+simDR_nd_vvi_fpm_fo = find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_copilot")
+simDR_nd_alt_fo = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_copilot")
 --B747DR_nd_alt_distance                  		= find_dataref("laminar/B747/nd/toc/distance")
 B747DR_nd_alt_distance_fo                  		= find_dataref("laminar/B747/nd/toc/distance/fo")
 B747DR_nd_alt_distance_capt                  		= find_dataref("laminar/B747/nd/toc/distance/capt")
@@ -296,6 +303,13 @@ function decodeFlightPlan()
   end
   local d=B747DR_nd_fms_data
   transAlt=(type(d)=="string" and tonumber(d:match('"transalt"%s*:%s*"?(%d+)'))) or ND_DATA.TRANS_ALT_FT
+  -- (2026-11-13; the 2026-11-12 review DSP-2) in the FMC's descent its
+  -- transition level (DESCENT FORECAST's TRANS LVL, FCOM p.1396), as the
+  -- PFD's box; before, the departure's transition altitude all the way.
+  -- Estimate: by the FMC's phase (its LEGS: by each leg)
+  if B747DR_nd_fmc_phase == 3 then
+    transAlt=(type(d)=="string" and tonumber(d:match('"translvl"%s*:%s*"?(%d+)'))) or transAlt
+  end
 end
 -- (2026-11-05 review) these three's working values local: as globals each
 -- write went through the module's namespace (a Lua call), for every
@@ -1251,6 +1265,24 @@ end
 
 debug_nd     = find_dataref("laminar/B747/debug/nd")
 
+-- (2026-11-13; the 2026-11-12 review DSP-1) the altitude range arc where
+-- the MCP altitude is reached at the present vertical speed and ground
+-- speed (FCOM p.1148), each side on its own VSI and altimeter, in any pitch
+-- mode, closing on the MCP altitude at 500 fpm or more (the 500: as
+-- before, an estimate), within the side's range. Before: VNAV PTH and V/S
+-- on the MCP's V/S window, which nothing writes while VNAV flies (a VNAV PTH
+-- descent had no arc with the window 0, or one where the window's last
+-- value put it: 62.5 NM for 25 NM), V/S away from the MCP altitude put it
+-- behind the airplane's symbol, and the F/O's side took the captain's
+-- instruments. Nil: no arc
+local function alt_range_arc_nm(alt, fpm, gs_kt)
+  local diff = simDR_autopilot_altitude_ft - alt
+  if (diff > 0 and fpm > 500) or (diff < 0 and fpm < -500) then
+    return gs_kt * diff / fpm / 60
+  end
+  return nil
+end
+
 function compute_and_show_alt_range_arc()
   local meters_per_second_to_kts = 1.94384449
   local actual_speed = simDR_groundspeed * meters_per_second_to_kts
@@ -1261,29 +1293,21 @@ function compute_and_show_alt_range_arc()
     B747DR_nd_alt_capt_active=0 
     return
   end
-  if simDR_autopilot_alt_hold_status<2 and ((simDR_autopilot_altitude_ft>simDR_pressureAlt1 and simDR_vvi_fpm_pilot>500) or (simDR_autopilot_altitude_ft<simDR_pressureAlt1 and simDR_vvi_fpm_pilot<-500) or B747DR_ap_FMA_active_pitch_mode==7) then
-    altDiff=simDR_autopilot_altitude_ft-simDR_pressureAlt1
-    local fpmVal=simDR_vvi_fpm_pilot
-    if B747DR_ap_FMA_active_pitch_mode==6 or B747DR_ap_FMA_active_pitch_mode==7 then
-      fpmVal=simDR_autopilot_vs_fpm
-    end
-    minsToAlt=altDiff/fpmVal
-    distanceToAlt=(actual_speed*minsToAlt)/60
-    --print("distanceToAlt="..distanceToAlt.." minsToAlt="..minsToAlt.." altDiff="..altDiff.." actual_speed="..actual_speed)
-    -- MAP and MAP CTR (FCOM p.1148), on that side's map scale (MAP CTR's
-    -- half: 2026-10-28)
-    if distanceToAlt < ranges[simDR_range_dial_capt + 1] then
-      B747DR_nd_alt_distance_capt=distanceToAlt*map_scale(true)
-    else
-      B747DR_nd_alt_distance_capt=-99
-    end
-    if distanceToAlt < ranges[simDR_range_dial_fo + 1] then
-      B747DR_nd_alt_distance_fo=distanceToAlt*map_scale(false)
-    else
-      B747DR_nd_alt_distance_fo=-99
-    end
+  local dc, df = nil, nil
+  if simDR_autopilot_alt_hold_status<2 then
+    dc = alt_range_arc_nm(simDR_pressureAlt1, simDR_vvi_fpm_pilot, actual_speed)
+    df = alt_range_arc_nm(simDR_nd_alt_fo, simDR_nd_vvi_fpm_fo, actual_speed)
+  end
+  -- MAP and MAP CTR (FCOM p.1148), on that side's map scale (MAP CTR's
+  -- half: 2026-10-28)
+  if dc and dc < ranges[simDR_range_dial_capt + 1] then
+    B747DR_nd_alt_distance_capt=dc*map_scale(true)
   else
     B747DR_nd_alt_distance_capt=-99
+  end
+  if df and df < ranges[simDR_range_dial_fo + 1] then
+    B747DR_nd_alt_distance_fo=df*map_scale(false)
+  else
     B747DR_nd_alt_distance_fo=-99
   end
   

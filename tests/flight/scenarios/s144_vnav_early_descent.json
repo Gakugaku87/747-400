@@ -73,6 +73,11 @@
     { "do": "check", "note": "経路からの偏差は ±400 ft の中", "dref": "laminar/B747/fms/vnav/path_dev", "op": "between", "value": [-400, 400] },
     { "do": "check", "note": "VNAV PTH のまま", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
     { "do": "check", "note": "A/T は HOLD・IDLE・SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "between", "value": [1, 3] },
+    { "do": "set", "note": "（2026-11-13、フルレビューの DSP-1）機長の ND は MAP・160 NM", "dref": "laminar/B747/nd/range/capt/sel_dial_pos", "value": 4 },
+    { "do": "set", "dref": "laminar/B747/nd/mode/capt/sel_dial_pos", "value": 2 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "snapshot", "note": "高度到達の弧", "drefs": [ "laminar/B747/nd/toc/capt_active", "laminar/B747/nd/toc/distance/capt", "sim/cockpit2/autopilot/vvi_dial_fpm", "sim/cockpit2/gauges/indicators/vvi_fpm_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/autopilot/FMA/active_pitch_mode", "sim/flightmodel2/position/groundspeed" ] },
+    { "do": "check", "note": "VNAV PTH の降下で、ND の高度到達の弧が出る（FCOM p.1148。前は V/S の窓の 0 で計算し出なかった：DSP-1）", "dref": "laminar/B747/nd/toc/capt_active", "op": "==", "value": 1 },
     { "do": "record_stop" }
   ]
 }

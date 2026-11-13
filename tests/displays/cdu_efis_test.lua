@@ -78,6 +78,32 @@ key("L", "ls_key/L6")
 T.equal(rt:get(ND .. "range/capt/sel_dial_pos"), 1, "RANGE DECR twice: 20 NM")
 for _ = 1, 3 do key("L", "ls_key/L6") end
 T.equal(rt:get(ND .. "range/capt/sel_dial_pos"), 0, "not below 10 NM")
+-- (2026-11-13; the 2026-11-12 review DSP-7) the minimums' entries within
+-- FCOM p.1064's ranges (RAD -20 to 999 ft, BARO -1001 to 15000 ft); out of
+-- them INVALID ENTRY and the setting kept (before, any number taken)
+local function pad() return (line("L", 14):gsub("%s+$", "")) end
+local function clear() for _ = 1, 20 do rt:command(CDU.L.keys .. "key/clear") end frames(0.1) end
+rt:set("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot", 200)
+type_in("L", "1000")
+key("L", "ls_key/L2")
+T.equal(pad(), "INVALID ENTRY", "DH 1000: INVALID ENTRY")
+T.equal(rt:get("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot"), 200, "  the DH kept")
+clear()
+type_in("L", "999")
+key("L", "ls_key/L2")
+T.equal(rt:get("sim/cockpit2/gauges/actuators/radio_altimeter_bug_ft_pilot"), 999, "DH 999: set")
+clear()
+rt:set(EF .. "baro_ref/capt", 500)
+type_in("L", "15001")
+key("L", "ls_key/L4")
+T.equal(pad(), "INVALID ENTRY", "MDA 15001: INVALID ENTRY")
+T.equal(rt:get(EF .. "baro_ref/capt"), 500, "  the MDA kept")
+clear()
+type_in("L", "15000")
+key("L", "ls_key/L4")
+T.equal(rt:get(EF .. "baro_ref/capt"), 15000, "MDA 15000: set")
+clear()
+
 -- DH RESET and STD through the CDU's own commands (the panel's ignore a
 -- failed panel)
 key("L", "ls_key/L3")

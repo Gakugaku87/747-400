@@ -83,7 +83,9 @@ function B747_speedtape()
     inp.vref30 = B747DR_airspeed_Vref30
     local v25 = B747DR_spd_fms_vref25
     if v25 > 0 then inp.vref25 = v25 end
-    inp.alt_ft = simDR_altitude_ft_pilot
+    -- (2026-11-13, DSP-3) the Captain's selected ADC's altitude (FCOM
+    -- p.972: no flap bugs above about 20,000 ft); before, X-Plane's own
+    inp.alt_ft = B747DR_fi_adc_alt_capt
     inp.flap_ratio = simDR_flap_ratio_control
     inp.land_flap = math.floor(B747DR_airspeed_VrefFlap + 0.5)
     inp.air = simDR_spd_air > 0.5
