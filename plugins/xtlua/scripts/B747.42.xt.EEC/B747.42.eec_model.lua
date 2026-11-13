@@ -36,9 +36,33 @@ B747_eec_model = M
 M.TO_ALT, M.MCT_ALT = 17000, 18000
 M.TO_KIAS, M.MCT_KIAS = 300, 293
 M.MCT_ALT_TOP, M.CLB_ALT = 22000, 25000
+-- (2026-11-13; the 2026-11-12 review AT-1, AT-2, B2) The P&W (and the RR,
+-- on its data): the full-forward rating (the maximum EPR) the go-around's at
+-- every speed and altitude, not the CF6's steps to the maximum continuous
+-- and climb ratings (FCOM p.876: maximum EPR the maximum rated thrust,
+-- thrust limited to it at the full forward lever in any phase; the
+-- Lufthansa PW4000 training, 71-80 p.260: a function of the ambient and
+-- total pressures and TAT). Above its table (10,000 ft) the table's held, or
+-- the maximum continuous plus PW_MAX_OVER_MCT when higher: an estimate (no
+-- source gives the rating up there; the go-around over the maximum
+-- continuous by 0.14 to 0.19 at 0 to 10,000 ft, FCOM PI.10.37 and PI.13.1;
+-- the NTSB's FDR of a PW4056 747-400, Delta 276 at FL320, two steady
+-- lever-EPR points on a line to about 1.75 at 48 degrees). Before: the CF6's
+-- steps (the maximum continuous from 293-300 kt and 17,000-18,000 ft): the
+-- climb's reference was the maximum EPR in most climbs (the digits red,
+-- FCOM p.873), and passing 300 kt the lever's command fell 0.04 EPR (thrust
+-- -6 %, the levers ran forward some 15 degrees: s285)
+M.PW_MAX_OVER_MCT = 0.16
 -- thrust lever angles, degrees from forward idle (ATA70_80 p.146-151): the
 -- takeoff rating is reached at 48°, the forward stop is 50°; the climb
--- rating at 35° (ATA70_80 p.208)
+-- rating at 35° (ATA70_80 p.208). (2026-11-13, B2) The lever's line: the
+-- CF6's from forward idle to the maximum climb N1 at the CLIMB position
+-- (TLA_CLB) whatever the rating, from there to the full-forward rating at
+-- TLA_TO (ATA70_80 p.209, the 73-21 figure); the P&W's one line from idle to
+-- its maximum EPR at TLA_TO (estimate: no figure; the FDR's points above lie
+-- on such a line, and P&W's operating instructions are quoted for a linear
+-- EPR against the lever's angle). Before, one line to the full-forward
+-- rating for both, so a change of the rating moved the whole line (AT-2)
 M.TLA_STOP, M.TLA_TO, M.TLA_CLB = 50, 48, 35
 -- (2026-11-11) the flat idle: a forward TLA from 0 to 2° commands idle
 -- (ATA70_80 p.151, the TLA critical points: FLAT IDLE UPPER LIMIT 2°; the
@@ -746,7 +770,8 @@ function M.new()
     return {approach = {false, false, false, false}, hold = {0, 0, 0, 0},
         altn = {false, false, false, false}, throttle = {}, err = {}, ref = {},
         rate = {},          -- (2026-11-10) the roll's learned throttle rate (RAMP_W)
-        soft_top = {}}      -- (2026-11-04) the schedule an automatic reversion keeps
+        soft_top = {},      -- (2026-11-04) the schedule an automatic reversion keeps
+        soft_clb = {}}      -- (2026-11-13, B2) and the CF6's line's CLIMB point
 end
 
 -- the gains for the pressure ratio delta (nil: KI_DELTA_REF's)
@@ -854,8 +879,15 @@ function M.update(s, inp, dt)
     -- the P&W's at every altitude: see the top)
     local mct_share = inp.type == "GE" and clamp((M.CLB_ALT - inp.alt) / (M.CLB_ALT - M.MCT_ALT_TOP), 0, 1) or 1
     local mct = (mct_share > 0 and to_share < 1) and M.lookup_mct(tables.mct, inp.tat, inp.alt, inp.kias) or nil
+    -- (B2) the P&W's maximum continuous at every speed (its full-forward
+    -- rating above the go-around table's 10,000 ft)
+    local mct_pw = (inp.type ~= "GE" and inp.alt > ga_alt) and M.lookup_mct(tables.mct, inp.tat, inp.alt, inp.kias) or nil
     -- the alternate mode's schedule: the corner point rating, no bleed adjustments
     local altn_max = to_share * M.lookup_max(tables.ga, ga_alt) + (1 - to_share) * M.lookup_max(tables.clb, inp.alt)
+    -- (B2) the P&W's full-forward rating at TLA_TO always; the alternate
+    -- mode's line as before (tla_mix)
+    local tla_mix = tla_full
+    if inp.type ~= "GE" then tla_full = M.TLA_TO end
     local out = {max = {}, command = {}, altn = {}, lim_prot = {}, to_share = to_share, tla_full = tla_full,
         at_disconnect = false,
         -- (2026-11-04) the ALTN light, >ENG n CONTROL, >ENG CONTROLS
@@ -863,11 +895,24 @@ function M.update(s, inp, dt)
     local altn_count, manual_count, degraded = 0, 0, 0
     for n = 1, 4 do
         local nai = inp.nai[n]
-        local cont = clb + adjustment(tables.clb, inp, inp.alt, nai)
+        local clb_n = clb + adjustment(tables.clb, inp, inp.alt, nai)
+        local cont = clb_n
         if mct then
             cont = cont + mct_share * math.max(0, mct + adjustment(tables.mct, inp, inp.alt, nai) - cont)
         end
-        local max = to_share * (ga + adjustment(tables.ga, inp, ga_alt, nai)) + (1 - to_share) * cont
+        local max
+        if inp.type == "GE" then
+            max = to_share * (ga + adjustment(tables.ga, inp, ga_alt, nai)) + (1 - to_share) * cont
+        else
+            -- (B2) the P&W's: the go-around's, above its table the higher
+            -- of the table's held and the maximum continuous plus
+            -- PW_MAX_OVER_MCT (estimate)
+            max = ga + adjustment(tables.ga, inp, ga_alt, nai)
+            if inp.alt > ga_alt then
+                local mct_n = mct_pw and (mct_pw + adjustment(tables.mct, inp, inp.alt, nai)) or clb_n
+                max = math.max(max, math.max(clb_n, mct_n) + M.PW_MAX_OVER_MCT)
+            end
+        end
         local tla = clamp(inp.lever[n], 0, 1) * M.TLA_STOP
         local manual = inp.altn[n]
         local auto = inp.fail_altn[n] and not manual
@@ -882,7 +927,7 @@ function M.update(s, inp, dt)
             if s.soft_top[n] == nil then s.soft_top[n] = max end
             top = s.soft_top[n]
         end
-        if not auto then s.soft_top[n] = nil end
+        if not auto then s.soft_top[n], s.soft_clb[n] = nil, nil end
         if manual then manual_count = manual_count + 1 end
         -- the ALTN light: the alternate mode, for the GE's automatic one by
         -- the ECU's reversionary mode contact above 50 % N2 (ATA70_80
@@ -895,7 +940,39 @@ function M.update(s, inp, dt)
         if faulty then degraded = degraded + 1 end
         local idle = math.min(inp.idle[n], max)
         out.max[n] = max
-        out.command[n] = idle + (top - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (tla_full - M.TLA_FLAT_IDLE), 0, 1)
+        -- (B2) the lever's line (TLA_CLB's comment): the CF6's to the
+        -- maximum climb N1 at the CLIMB position, then to the full-forward
+        -- rating; the P&W's one line to its maximum EPR at TLA_TO. The
+        -- crew's ALTN (the hard reversion: the corner point schedule): the
+        -- P&W's single line as before, the CF6's the same knee with its
+        -- CLIMB point raised by the corner point's excess over the rating
+        -- (estimate: so ALTN never gives less than the normal mode at a
+        -- lever, FCOM p.877); the automatic reversion keeps the CLIMB point
+        -- with the rest of the last valid schedule
+        if manual and inp.type ~= "GE" then
+            out.command[n] = idle + (top - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (tla_mix - M.TLA_FLAT_IDLE), 0, 1)
+        elseif manual then
+            local c = math.max(math.min(clb_n + math.max(0, top - max), top), idle)
+            if tla <= M.TLA_CLB then
+                out.command[n] = idle + (c - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (M.TLA_CLB - M.TLA_FLAT_IDLE), 0, 1)
+            else
+                out.command[n] = c + (top - c) * clamp((tla - M.TLA_CLB) / (M.TLA_TO - M.TLA_CLB), 0, 1)
+            end
+        elseif inp.type == "GE" then
+            local cl = clb_n
+            if auto then
+                if s.soft_clb[n] == nil then s.soft_clb[n] = clb_n end
+                cl = s.soft_clb[n]
+            end
+            local c = math.max(math.min(cl, top), idle)
+            if tla <= M.TLA_CLB then
+                out.command[n] = idle + (c - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (M.TLA_CLB - M.TLA_FLAT_IDLE), 0, 1)
+            else
+                out.command[n] = c + (top - c) * clamp((tla - M.TLA_CLB) / (M.TLA_TO - M.TLA_CLB), 0, 1)
+            end
+        else
+            out.command[n] = idle + (top - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (M.TLA_TO - M.TLA_FLAT_IDLE), 0, 1)
+        end
         out.altn[n] = altn
         if inp.type == "GE" then
             out.lim_prot[n] = altn and out.command[n] > max

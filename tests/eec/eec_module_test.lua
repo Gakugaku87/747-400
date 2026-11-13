@@ -73,9 +73,12 @@ rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 280)
 rt:set("laminar/B747/antiice/nacelle/valve_pos", 0, 1)
 for i = 0, 3 do rt:set(USER, i, 0.7) end
 frames(3)
-T.near(get(ENG .. "display_EPR_max", 1), 1.622, 0.005, "P&W: max EPR at 30,000 ft, TAT -20: the maximum continuous (2026-11-02; before the climb's 1.57)")
-T.near(get(ENG .. "display_EPR_max", 0), 1.582, 0.005, "P&W: engine 1's anti-ice lowers its max EPR")
-T.near(get(ENG .. "TRA", 1), 1.622, 0.005, "P&W: 35° TLA commands the max EPR above 25,000 ft")
+-- (2026-11-13, B2) the maximum EPR the maximum continuous + 0.16 (1.78;
+-- 1.74 with engine 1's anti-ice): on the display at most 1.71 (the glue's
+-- cap); the lever's one line to it at 48°
+T.near(get(ENG .. "display_EPR_max", 1), 1.71, 0.005, "P&W: max EPR at 30,000 ft, TAT -20: over the climb's (1.78, the display's 1.71; before the maximum continuous 1.622)")
+T.near(get(ENG .. "display_EPR_max", 0), 1.71, 0.005, "P&W: engine 1's anti-ice: 1.74, the display's 1.71")
+T.near(get(ENG .. "TRA", 1), 1.0 + (1.622 + 0.16 - 1.0) * 33 / 46, 0.005, "P&W: 35° TLA commands 33/46 of the way to the max EPR (B2; before, the max above 25,000 ft)")
 -- (step 9g3) CLB's reference the maximum climb table's; CLB 2 at 30,000 ft
 -- still 4 % less thrust (the 109's washout to 35,000 ft)
 rt:set(ENG .. "ref_thr_limit_mode", "CLB")
