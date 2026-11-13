@@ -44,6 +44,7 @@
     - 案 6 の手直し（s289）：手続きの最初の点へ飛んでいる間は、まだ手続きに入っていない：全体を入れ替える（推定）。試験 `arr_active_leg_test`。X-Plane（2026-11-13）：s289 55/55（第 2 陣では案 6 の後退で落ちていた）、s294 15/15。
     - 案 10 の残り（FMC-10）：SPD RESTR は速さと「/」と有効な高度だけ（上昇は今の高度以上・巡航高度未満：FMSPG p.114、降下は E/D より上：p.192）、CLB・DES の 1R の DELETE で次の高度の制約を経路から消す（p.114・p.187）。試験 `vnav_spd_rest_test`・`route_model_test`。X-Plane（2026-11-13）：新しい `s319_clb_1r_delete` 2 回目で 7/7（1 回目は 1R の見出しを大きい文字の行で読んだ）：1R は AT LOPIA /12000A、DELETE で MOD と EXEC の灯（KEY/FUNCTION INOP なし）、EXEC の後 1R は空白（上昇の制限が残らない）、4L の 250/1500 は INVALID ENTRY。
     - 案 20（FMC-7）：RTE の VIA の DELETE（航空路の区間をその TO への DIRECT に：推定）、不連続の箱と DIRECT の TO への入力（FMSPG p.82）。「推定で作った部分」の RTE の行を消した。試験 `route_model_test` 11 項目。X-Plane（2026-11-13）：s86 23/23（Y71 の DELETE で DIRECT XAC、DIRECT の DELETE は INVALID DELETE、ERASE で Y71 に戻る）。
+    - ALTN GEAR（FG-7、4 の勧めどおり）：代替下げのサイクルは押した瞬間に 1 回（ATA29_32 p.276–278）、下りてロックの後に空中で脚レバーを UP に動かすと通常の系統で上がる（推定）。試験 `gear_model_test`（HEAD 7 落ち）。X-Plane（2026-11-13）：新しい `s320_altn_gear_retract` 17/17（ALTN GEAR の後、レバー UP で前脚は 14 秒で上がり、ドアが閉じ、GEAR DISAGREE・GEAR DOOR なし）。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。
