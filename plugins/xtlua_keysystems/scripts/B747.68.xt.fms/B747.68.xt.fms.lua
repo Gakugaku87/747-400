@@ -1804,6 +1804,9 @@ B747DR_fms_ias_dial = find_dataref("laminar/B747/autopilot/ias_dial_value")
 B747DR_fms_vnav_mcp_alt = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
 B747DR_fms_vnav_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
+-- (2026-11-13) its band on the PFD: from the first flap retraction after
+-- takeoff (FCOM p.973), VNAV's floor from then
+B747DR_fms_vnav_show_mins = find_dataref("laminar/B747/pfd/show_mins")
 simDR_fms_vnav_flaps = find_dataref("sim/cockpit2/controls/flap_ratio")
 local vnavState = B747_vnav_model.new()
 function B747_fms_vnav_phase() return vnavState.phase end
@@ -2337,7 +2340,10 @@ local function update_vnav()
   inp.mcp_alt = B747DR_fms_vnav_mcp_alt
   inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
   inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
-  inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  -- (2026-11-13) the minimum maneuvering speed from the first flap
+  -- retraction after takeoff, as the PFD shows it (FCOM p.973); before,
+  -- the takeoff's VNAV target over V2 + 25 at a heavy weight (s326)
+  inp.vmin = (B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_show_mins > 0.5) and B747DR_fms_vnav_vminm or nil
   -- (step 9e2) END OF DES and on approach
   if inp.ground or not inp.active then
     vnavEndDes = false

@@ -169,13 +169,22 @@ T.check(math.abs(d) < 0.01, string.format("at 300 fpm of descent: held (%.3f)", 
 -- speed protection in the driftdown (FCOM p.675: none with an engine
 -- failure above the maximum engine-out altitude), the FMC's 250 kt still;
 -- out of it the protection's 310 kt
-local VMINM = "laminar/B747/airspeed/Vminm"
+local VMINM, SHOW_MINS = "laminar/B747/airspeed/Vminm", "laminar/B747/pfd/show_mins"
+-- (2026-11-13) its band shown (from the first flap retraction after
+-- takeoff: FCOM p.973)
+rt:set(SHOW_MINS, 1)
 rt:set(VMINM, 310)
 frames(30)
 T.near(rt:get(PITCH_TARGET), 250, 0.5, "the driftdown, the minimum maneuvering speed 310 kt: the FMC's 250 kt (FCOM p.675)")
 fvn({dd = 0, at = 2, vs = 0, phase = 3})
 frames(30)
 T.near(rt:get(PITCH_TARGET), 310, 0.5, "out of the driftdown: the protection's 310 kt")
+-- (2026-11-13) its band not shown (the takeoff's, before the first flap
+-- retraction: FCOM p.973): no protection by it (before, the heavy
+-- takeoff's target held at its 182 kt + 5, over V2 160: s326)
+rt:set(SHOW_MINS, 0)
+frames(30)
+T.near(rt:get(PITCH_TARGET), 250, 0.5, "the band not shown: the FMC's 250 kt, no protection by it (FCOM p.973)")
 rt:set(VMINM, 0)
 frames(30)
 

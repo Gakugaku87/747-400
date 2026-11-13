@@ -123,7 +123,10 @@ T.equal(rt:get("laminar/B747/fms/thrlim/code"), 40, "the reference thrust limit 
 -- protection with an engine failure above the maximum engine-out altitude
 -- (FCOM p.675). Before, its 5 kt over as a CAS: 310 t at FL366, E/O LRC
 -- .827 became 285 kt (M.861) and the airplane dived for it
-local VMINM = "laminar/B747/airspeed/Vminm"
+local VMINM, SHOW_MINS = "laminar/B747/airspeed/Vminm", "laminar/B747/pfd/show_mins"
+-- (2026-11-13) its band shown (from the first flap retraction after
+-- takeoff: FCOM p.973)
+rt:set(SHOW_MINS, 1)
 rt:set(VMINM, 330)
 frames(1)
 T.check(rt:get(VN .. "mach_mode") == 1 and math.abs(rt:get(VN .. "mach") - m) < 1e-6,
@@ -173,6 +176,11 @@ frames(1)
 T.check(rt:get(VN .. "mach_mode") == 0 and math.abs(rt:get(VN .. "cas") - 335) < 1e-6,
     string.format("the cruise at CRZ ALT, the minimum maneuvering speed 330 kt: 335 kt (%s, mach_mode %s)",
         tostring(rt:get(VN .. "cas")), tostring(rt:get(VN .. "mach_mode"))))
+-- (2026-11-13) its band not shown (the takeoff's, before the first flap
+-- retraction: FCOM p.973): no floor by it
+rt:set(SHOW_MINS, 0)
+frames(1)
+T.equal(rt:get(VN .. "mach_mode"), 1, "the band not shown: the cruise's Mach, no floor (FCOM p.973)")
 rt:set(VMINM, 0)
 frames(1)
 pred = fms.ns.B747_fms_preds()

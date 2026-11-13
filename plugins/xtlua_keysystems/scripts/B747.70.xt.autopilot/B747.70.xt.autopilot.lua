@@ -671,6 +671,19 @@ simDR_afds_weight = find_dataref("sim/flightmodel/weight/m_total")
 -- (the speed tape's, for the FMC's of FCOM p.675), the PLI (valid when the
 -- PFDs show it: estimate), GPWS's windshear
 B747DR_afds_vminm = find_dataref("laminar/B747/airspeed/Vminm")
+-- (2026-11-13) the minimum maneuvering speed the FMC supplies the AFDS and
+-- the A/T (FCOM p.675) from the first flap retraction after takeoff, as
+-- the PFD shows its band (FCOM p.973: laminar/B747/pfd/show_mins); none in
+-- the FMC's driftdown (FCOM p.675: no speed protection with an engine
+-- failure above the maximum engine-out altitude). Before, the speed
+-- always: at 350.7 t with flaps 20 at 30 degrees C the takeoff's target
+-- was held at its 182 kt + 5, over V2 160 (and over V2 to V2 + 10 with an
+-- engine out: ATA22 p.264) (s326)
+B747DR_afds_show_mins = find_dataref("laminar/B747/pfd/show_mins")
+local function afds_vmin()
+	if B747DR_ap_fvn_dd > 0.5 or B747DR_afds_show_mins < 0.5 then return 0 end
+	return B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
+end
 B747DR_afds_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 -- the FMC's VNAV (6-1/6-2 step 9c; the FMS module's: notes/
 -- ATA-34-61-FMC.md §56-57): valid, the phase (1 climb, 2 cruise, 3
@@ -805,10 +818,10 @@ local function afds_pitch_inputs(p)
 	end
 	p.way, p.way_fpm = way, way_fpm
 	p.mcp_ias = ref
-	-- (2026-11-13) no minimum speed's protection in the FMC's driftdown
-	-- (FCOM p.675: none with an engine failure above the maximum
-	-- engine-out altitude; VNAV flies E/O LRC SPD, p.1268)
-	p.v_min = B747DR_ap_fvn_dd > 0.5 and 0 or B747DR_afds_vminm
+	-- (2026-11-13) none in the FMC's driftdown (FCOM p.675; VNAV flies E/O
+	-- LRC SPD, p.1268), none before the first flap retraction after
+	-- takeoff (FCOM p.973): afds_vmin
+	p.v_min = afds_vmin()
 	p.v_max = B747DR_afds_vmax
 	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
 	p.flaps_up = simDR_flap_ratio_control < 0.01
@@ -1161,8 +1174,8 @@ local function afds_at()
 	-- time acceleration): no gust complement (B747.70.at_model.lua)
 	i.time_accel = simDR_at_sim_speed > 1
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
-	-- (2026-11-13) none in the FMC's driftdown (FCOM p.675; the pitch's too)
-	i.v_min = (B747DR_afds_vminm > 0 and B747DR_ap_fvn_dd < 0.5) and B747DR_afds_vminm or 0
+	-- (2026-11-13) as the pitch's (afds_vmin: FCOM p.675, p.973)
+	i.v_min = afds_vmin()
 	-- (2026-11-13) the AFDS's altitude and the inertial V/S (B747_afds_alt);
 	-- before, X-Plane's Captain's altimeter and VSI
 	i.vs, i.alt, i.mcp_alt = B747_afds_ivs(), B747_afds_alt(), B747DR_autopilot_altitude_ft
