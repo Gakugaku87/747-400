@@ -207,6 +207,17 @@ rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 10000)
 rt:set("laminar/B747/airdata/alt_capt", 17600)
 frames(0.1)
 T.equal(rt:get(P .. "capt/baro_alert"), 1, "STD, descending to 10,000 ft at 17,600 ft (300 ft below FL180): boxed amber")
+-- (2026-11-13; the 2026-11-12 review DSP-2) the FMC's TRANS LVL FL140
+-- (RJAA's): boxed from 13,600 ft (before, FL180's 17,600 for every descent)
+rt:set("laminar/B747/fms/data", '{"crzalt":"FL350","transalt":"14000","translvl":"14000"}')
+frames(2.5)
+T.equal(rt:get(P .. "capt/baro_alert"), 0, "  the FMC's TRANS LVL FL140: not at 17,600 ft")
+rt:set("laminar/B747/airdata/alt_capt", 13800)
+frames(0.1)
+T.equal(rt:get(P .. "capt/baro_alert"), 0, "  nor at 13,800 ft")
+rt:set("laminar/B747/airdata/alt_capt", 13600)
+frames(0.1)
+T.equal(rt:get(P .. "capt/baro_alert"), 1, "  boxed at 13,600 ft (300 ft below FL140)")
 
 -- the flight path vector (step 4d): the FPV switch latches now; the IRU's
 -- NAV data, else the FPV flag

@@ -1066,9 +1066,11 @@ local function pfd_sources(fmc)
 end
 
 -- the barometric setting's amber box at the transition (step 4b): the FMC's
--- transition altitude read from its data every 2 s (TRANS ALT on the CLB
--- page; the FMC has no TRANS LVL yet: its default FL180)
-local trans_alt_ft, trans_t = PM.TRANS_ALT_FT, nil
+-- transition altitude and (2026-11-13; the 2026-11-12 review DSP-2) its
+-- transition level read from its data every 2 s (TRANS ALT on the CLB
+-- page, DESCENT FORECAST's TRANS LVL: FCOM p.995, p.1396; before, FL180 for
+-- every descent: RJAA's FL140 boxed at 17,600 ft, not 13,600)
+local trans_alt_ft, trans_lvl_ft, trans_t = PM.TRANS_ALT_FT, PM.TRANS_LVL_FT, nil
 local function pfd_baro()
     trans_t = (trans_t or 2) + SIM_PERIOD
     if trans_t >= 2 then
@@ -1076,13 +1078,15 @@ local function pfd_baro()
         local d = B747DR_dsp_fms_data
         local v = type(d) == "string" and tonumber(d:match('"transalt"%s*:%s*"?(%d+)'))
         trans_alt_ft = v or PM.TRANS_ALT_FT
+        v = type(d) == "string" and tonumber(d:match('"translvl"%s*:%s*"?(%d+)'))
+        trans_lvl_ft = v or PM.TRANS_LVL_FT
     end
     local mcp = B747DR_dsp_mcp_alt
     local v = PM.baro_alert(B747DR_efis_baro_std_capt_switch_pos > 0.5, B747DR_dsp_alt_capt, mcp,
-        trans_alt_ft, PM.TRANS_LVL_FT) and 1 or 0
+        trans_alt_ft, trans_lvl_ft) and 1 or 0
     if B747DR_dsp_pfd_baro_alert_capt ~= v then B747DR_dsp_pfd_baro_alert_capt = v end
     v = PM.baro_alert(B747DR_efis_baro_std_fo_switch_pos > 0.5, B747DR_dsp_alt_fo, mcp,
-        trans_alt_ft, PM.TRANS_LVL_FT) and 1 or 0
+        trans_alt_ft, trans_lvl_ft) and 1 or 0
     if B747DR_dsp_pfd_baro_alert_fo ~= v then B747DR_dsp_pfd_baro_alert_fo = v end
 end
 
