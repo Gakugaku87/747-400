@@ -121,4 +121,28 @@ local div = legs(st)
 T.check(div:match("^ZZV"), "a new DEST while flying the STAR: the active leg stays (" .. div .. ")")
 T.equal(R.shown(st).dest and R.shown(st).dest.ident, "ZZBB", "the new DEST")
 
+-- (2026-11-13) the STAR not entered yet: a route with no waypoint of its
+-- own (the STAR from its first fix DELTA, as s289's to WSSS), flying to
+-- DELTA; another STAR (BRAVO1, from ALPHA) selected replaces the whole
+-- arrival (on the active leg alone, X-Plane's s289 kept ARAM1B's first fix
+-- ARAMA with the new STAR after a discontinuity)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+frames(1)
+key("func_key/fpln")
+enter("ZZAA", "L1") enter("ZZAA", "R1")
+st = ns.B747_fmc_route_num(1)
+R.set_arrival(st, {name = "ALPHA1", trans = "DELTA"}, {id = "I16R"})
+ns.B747_fmc_route_changed()
+key("func_key/fpln") key("ls_key/R6") key("key/execute")
+frames(1)
+air()
+T.check(legs(st):match("^DELTA "), "a new route: DELTA, the STAR's first fix, active (" .. legs(st) .. ")")
+R.set_arrival(st, {name = "BRAVO1"}, nil)
+ns.B747_fmc_route_changed()
+key("key/execute") frames(2)
+local whole = legs(st)
+T.check(not whole:match("DELTA"), "BRAVO1 before reaching DELTA: the whole arrival replaced, DELTA gone (" .. whole .. ")")
+T.check(whole:match("^ALPHA "), "  from BRAVO1's ALPHA (" .. whole .. ")")
+
 T.done()

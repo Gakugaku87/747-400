@@ -245,11 +245,22 @@ end
 local function same_fix(a, b)
     return a and b and a.ident == b.ident and math.abs(a.lat - b.lat) < 1e-4 and math.abs(a.lon - b.lon) < 1e-4
 end
+-- (2026-11-13) whether the active leg's procedure is not entered yet: its
+-- active waypoint the procedure's first fix (assigned after arrival_legs)
+local proc_not_entered
 -- the active route's active leg (its first) when a STAR's or an approach's
--- with a waypoint, else nil
+-- with a waypoint, else nil. (2026-11-13) Not while the procedure is not
+-- entered yet (its first fix the active waypoint: the leg to it is no part
+-- of the procedure's path, ARINC 424's IF): then the procedure goes whole
+-- as before. On the active leg alone, X-Plane's s289 (WSSS, 300 NM before
+-- ARAM1B's first fix ARAMA) kept ARAMA when ARAM1A was selected, the RTE
+-- page's VIA ARAM1B with it
 local function active_proc_leg(st, r)
     local l = st.active and r.legs[1]
-    if l and not l.disc and l.fix and (l.proc == "STAR" or l.proc == "APPR") then return l end
+    if l and not l.disc and l.fix and (l.proc == "STAR" or l.proc == "APPR") then
+        if proc_not_entered and proc_not_entered(st, r, l) then return nil end
+        return l
+    end
     return nil
 end
 
@@ -1205,6 +1216,15 @@ local function arrival_legs(st, r)
         for _, l in ipairs(legs) do out[#out + 1] = l end
     end
     return out
+end
+-- (2026-11-13) the procedure of the active leg not entered yet: the active
+-- waypoint is the first fix of that procedure in the arrival as selected
+proc_not_entered = function(st, r, act)
+    local cur = arrival_legs(st, {dest = r.dest, star = r.star, appr = r.appr})
+    for _, l in ipairs(cur) do
+        if l.proc == act.proc and l.fix then return same_fix(l.fix, act.fix) end
+    end
+    return false
 end
 
 -- ARRIVALS (FCOM p.1401-1405): the STAR (`star` = {name, trans}) and the
