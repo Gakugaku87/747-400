@@ -1,9 +1,9 @@
 {
   "name": "s104_afds_ga",
-  "description": "AFDS の作り直し 6-3 段 1e（TO/GA）の着陸復行の確認、空中。銚子沖の海上 1,500 ft・160 kt で開始（機体を読み直す）、FMS の空中の初期化で A/P CMD L・ALT HOLD、フラップ 20。V/S で降りて MCP 高度 300 ft で捕まえ（空中開始の浮き沈みに頼らない）、MCP 高度を 1,500 ft にして、TO/GA で G/A（ロール・ピッチとも TO/GA、TO/GA の旗、前の autoland の着陸復行 -2：ATA22 p.337、FCOM p.657）、400 ft 未満では HDG SEL と V/S が効かない（表 p.351、p.335）、400 ft を超えると HDG SEL が効く、MCP 高度は 800 ft より上で捕まえる（ALT：表 p.335）。A/P と F/D を切って全部切、F/D のスイッチ OFF のまま TO/GA で G/A と両席の F/D の表示・両 PFD の FD（FCOM p.657、p.661）、機長の PFD を撮る。F/D L を ON・OFF すると全部切。",
+  "description": "AFDS の作り直し 6-3 段 1e（TO/GA）の着陸復行の確認、空中。銚子沖の海上 2,500 ft・160 kt で開始（機体を読み直す）、FMS の空中の初期化で A/P CMD L・ALT HOLD、フラップ 20。V/S で降りて MCP 高度 300 ft で捕まえ（空中開始の浮き沈みに頼らない）、MCP 高度を 1,500 ft にして、TO/GA で G/A（ロール・ピッチとも TO/GA、TO/GA の旗、前の autoland の着陸復行 -2：ATA22 p.337、FCOM p.657）、400 ft 未満では HDG SEL と V/S が効かない（表 p.351、p.335）、400 ft を超えると HDG SEL が効く、MCP 高度は 800 ft より上で捕まえる（ALT：表 p.335）。A/P と F/D を切って全部切、F/D のスイッチ OFF のまま TO/GA で G/A と両席の F/D の表示・両 PFD の FD（FCOM p.657、p.661）、機長の PFD を撮る。F/D L を ON・OFF すると全部切。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 457.2, "heading_true": 0, "speed_in_meters_per_second": 82.3 },
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 762.0, "heading_true": 0, "speed_in_meters_per_second": 82.3 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
     "weather": {
@@ -19,22 +19,29 @@
   "steps": [
     { "do": "set", "note": "フラップ 20（すぐ）", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.668 },
     { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
-    { "do": "sleep", "seconds": 8, "note": "空中の初期化の ALT HOLD（CMD L の後）を待つ" },
+    { "do": "wait", "note": "空中の初期化の ALT HOLD（CMD L の後。2026-11-13：8 秒の待ちでは足りない回があり、後から入った ALT HOLD で V/S が消えた）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 30 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "record_start", "note": "記録（2026-11-13：G/A の入りの荷重倍数を測る。フルレビューの B6）" },
     { "do": "set", "note": "MCP 速度 160 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 160 },
+    { "do": "switch", "note": "A/T ARM（2026-11-13：初期化は A/T を入れない。11-03 から、A/T の無いまま速さが約 290 kt まで増えて G/A していた）", "dref": "laminar/B747/toggle_switch/position[29]", "value": 1, "cmd": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/T SPD（160 kt を保つ）", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "set", "note": "MCP 方位 360", "dref": "laminar/B747/autopilot/heading/degrees", "value": 360 },
+    { "do": "wait", "note": "空中開始の浮き沈みが落ち着く：V/S ±300 fpm（2026-11-13 の 2 回目は 1,500 ft の開始で −3,300 fpm のまま V/S を押し、すぐ 300 ft の捕捉に入った）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [-300, 300], "timeout": 180, "stop": true },
+    { "do": "wait", "note": "速さが 160 kt の近く（A/T SPD）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [154, 168], "timeout": 120, "stop": true },
     { "do": "set", "note": "MCP 高度 300 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 300 },
     { "do": "set", "note": "前の則の目標も（つまみなら 3 秒後に写る）", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 300 },
     { "do": "cmd", "note": "V/S", "name": "laminar/B747/autopilot/button_switch/vs_mode" },
     { "do": "set", "note": "V/S -1,000 fpm", "dref": "sim/cockpit2/autopilot/vvi_dial_fpm", "value": -1000 },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "V/S で降りる", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 7 },
-    { "do": "wait", "note": "MCP 高度 300 ft の捕捉（ALT）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 120 },
+    { "do": "wait", "note": "MCP 高度 300 ft の捕捉（ALT。2,500 ft の開始から −1,000 fpm で約 2 分半：2026-11-13 の 3 回目は 120 秒で切れた）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 240 },
     { "do": "wait", "note": "400 ft 未満まで降りる", "dref": "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "op": "<", "value": 380, "timeout": 90 },
     { "do": "sleep", "seconds": 5 },
     { "do": "set", "note": "MCP 高度 1,500 ft（着陸復行の先）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 1500 },
     { "do": "set", "note": "前の則の目標も（つまみなら 3 秒後に写る）", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 1500 },
     { "do": "snapshot", "note": "TO/GA の前", "drefs": [ "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/autopilot/FMA/active_roll_mode", "laminar/B747/autopilot/FMA/active_pitch_mode" ] },
     { "do": "check", "note": "400 ft 未満", "dref": "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", "op": "between", "value": [150, 399] },
+    { "do": "check", "note": "進入の速さ（160 kt の ±15 kt）で G/A する（B6 の荷重倍数の測りの前提）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [145, 175], "stop": true },
     { "do": "cmd", "note": "TO/GA", "name": "sim/engines/TOGA_power" },
     { "do": "sleep", "seconds": 0.5 },
     { "do": "check", "note": "G/A：FMA のロールは TO/GA", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 1 },
@@ -87,6 +94,7 @@
     { "do": "check", "note": "F/D の表示も消える", "dref": "laminar/B747/autopilot/fd/capt/shown", "op": "==", "value": 0 },
     { "do": "cmd", "note": "A/P を戻す（終わりの安定のため）", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
-    { "do": "view", "name": "forward" }
+    { "do": "view", "name": "forward" },
+    { "do": "record_stop" }
   ]
 }
