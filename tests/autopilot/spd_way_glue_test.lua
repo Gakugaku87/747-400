@@ -165,7 +165,19 @@ T.check(d < -0.05 and d > -0.2, string.format("the driftdown at 100 fpm of desce
 rt:set(VSI, -300 / FPM)
 d = moved(-0.5)
 T.check(math.abs(d) < 0.01, string.format("at 300 fpm of descent: held (%.3f)", d))
+-- (2026-11-13) the minimum maneuvering speed over the FMC's target: no
+-- speed protection in the driftdown (FCOM p.675: none with an engine
+-- failure above the maximum engine-out altitude), the FMC's 250 kt still;
+-- out of it the protection's 310 kt
+local VMINM = "laminar/B747/airspeed/Vminm"
+rt:set(VMINM, 310)
+frames(30)
+T.near(rt:get(PITCH_TARGET), 250, 0.5, "the driftdown, the minimum maneuvering speed 310 kt: the FMC's 250 kt (FCOM p.675)")
 fvn({dd = 0, at = 2, vs = 0, phase = 3})
+frames(30)
+T.near(rt:get(PITCH_TARGET), 310, 0.5, "out of the driftdown: the protection's 310 kt")
+rt:set(VMINM, 0)
+frames(30)
 
 -- FLCH by the MCP altitude it flies to: above, 28 kt under the MCP speed
 -- at 100 fpm and gaining: held; below: down for the speed as before

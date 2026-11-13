@@ -98,7 +98,8 @@ M.EO_VREF_ADD = 100
 -- at the cruise speed at CRZ ALT (the CRZ page's LRC SPD, E/O SPD or SEL
 -- SPD) and the A/T's THR to EO_DD_VS down at least, CON the most (the A/T's
 -- limit); to CRZ ALT or the maximum at its start, below which the cruise
--- descent's law (E/O CRZ DES: estimate)
+-- descent's law (E/O CRZ DES: estimate). (2026-11-13) The target not held
+-- over the minimum maneuvering speed there (FCOM p.675)
 M.EO_DD_VS, M.EO_DD_ABOVE = 300, 200
 -- the descent slower than the target by more than SLOW_KT (SLOW_KT_LOW
 -- below the speed transition: the first speed constraint): the A/T from
@@ -377,7 +378,12 @@ local function target_speed(P, sched, crz, inp, phase, to_cas, crz_ft)
     local lim, limited = nil, false
     if inp.flaps_placard then lim = inp.flaps_placard - M.PLACARD_MARGIN end
     if lim and cas > lim then cas, mach, mm, limited = lim, P.cas_to_mach(lim, inp.alt), false, true end
-    if inp.vmin and inp.vmin > 0 and cas < inp.vmin + M.VMIN_MARGIN then
+    -- (2026-11-13) not in the driftdown (crz_ft): no speed protection with
+    -- an engine failure above the maximum engine-out altitude (FCOM p.675),
+    -- VNAV flies E/O LRC SPD (p.1268). Before, the minimum maneuvering
+    -- speed + 5 there: at 310 t and FL366 E/O LRC .827 became 285 kt
+    -- (M.861) and the airplane at M.848 dived at 1,276 fpm for it (s328)
+    if not crz_ft and inp.vmin and inp.vmin > 0 and cas < inp.vmin + M.VMIN_MARGIN then
         cas, limited = inp.vmin + M.VMIN_MARGIN, true
         mach, mm = P.cas_to_mach(cas, inp.alt), false
     end

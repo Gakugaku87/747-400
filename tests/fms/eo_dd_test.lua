@@ -118,6 +118,18 @@ local m = P.eo_lrc(pw, 1, gw, crz)
 T.check(rt:get(VN .. "mach_mode") == 1 and math.abs(rt:get(VN .. "mach") - m) < 1e-6,
     string.format("E/O LRC at CRZ ALT as the Mach: M%.3f (%.3f)", rt:get(VN .. "mach"), m))
 T.equal(rt:get("laminar/B747/fms/thrlim/code"), 40, "the reference thrust limit CON")
+-- (2026-11-13) the minimum maneuvering speed over E/O LRC's speed (heavy
+-- near the maximum altitude, as s328): E/O LRC all the same, no speed
+-- protection with an engine failure above the maximum engine-out altitude
+-- (FCOM p.675). Before, its 5 kt over as a CAS: 310 t at FL366, E/O LRC
+-- .827 became 285 kt (M.861) and the airplane dived for it
+local VMINM = "laminar/B747/airspeed/Vminm"
+rt:set(VMINM, 330)
+frames(1)
+T.check(rt:get(VN .. "mach_mode") == 1 and math.abs(rt:get(VN .. "mach") - m) < 1e-6,
+    string.format("the minimum maneuvering speed 330 kt: E/O LRC's M%.3f still (FCOM p.675)", rt:get(VN .. "mach")))
+rt:set(VMINM, 0)
+frames(1)
 
 -- the predictions: the level off at CRZ ALT at once (made again as the
 -- driftdown starts: s157's first ones before it had none), the engine-out
@@ -154,6 +166,15 @@ rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15 - 1.98 * crz / 1000)
 frames(1)
 T.equal(rt:get(VN .. "dd"), 0, "within 50 ft of CRZ ALT: the driftdown over")
 T.equal(rt:get(VN .. "mode"), 2, "VNAV PTH")
+-- (2026-11-13) out of the driftdown the minimum maneuvering speed + 5
+-- holds the target again (LIM SPD)
+rt:set(VMINM, 330)
+frames(1)
+T.check(rt:get(VN .. "mach_mode") == 0 and math.abs(rt:get(VN .. "cas") - 335) < 1e-6,
+    string.format("the cruise at CRZ ALT, the minimum maneuvering speed 330 kt: 335 kt (%s, mach_mode %s)",
+        tostring(rt:get(VN .. "cas")), tostring(rt:get(VN .. "mach_mode"))))
+rt:set(VMINM, 0)
+frames(1)
 pred = fms.ns.B747_fms_preds()
 T.check(pred and pred.lvl == nil, "the predictions made again: no level off")
 key("func_key/prog")

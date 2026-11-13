@@ -805,7 +805,10 @@ local function afds_pitch_inputs(p)
 	end
 	p.way, p.way_fpm = way, way_fpm
 	p.mcp_ias = ref
-	p.v_min = B747DR_afds_vminm
+	-- (2026-11-13) no minimum speed's protection in the FMC's driftdown
+	-- (FCOM p.675: none with an engine failure above the maximum
+	-- engine-out altitude; VNAV flies E/O LRC SPD, p.1268)
+	p.v_min = B747DR_ap_fvn_dd > 0.5 and 0 or B747DR_afds_vminm
 	p.v_max = B747DR_afds_vmax
 	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
 	p.flaps_up = simDR_flap_ratio_control < 0.01
@@ -1158,7 +1161,8 @@ local function afds_at()
 	-- time acceleration): no gust complement (B747.70.at_model.lua)
 	i.time_accel = simDR_at_sim_speed > 1
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
-	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
+	-- (2026-11-13) none in the FMC's driftdown (FCOM p.675; the pitch's too)
+	i.v_min = (B747DR_afds_vminm > 0 and B747DR_ap_fvn_dd < 0.5) and B747DR_afds_vminm or 0
 	-- (2026-11-13) the AFDS's altitude and the inertial V/S (B747_afds_alt);
 	-- before, X-Plane's Captain's altimeter and VSI
 	i.vs, i.alt, i.mcp_alt = B747_afds_ivs(), B747_afds_alt(), B747DR_autopilot_altitude_ft
