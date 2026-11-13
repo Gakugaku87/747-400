@@ -924,6 +924,17 @@ function M.delete_constraint(st, i)
     l.spd, l.alt, l.alt2, l.akind, l.step = nil, nil, nil, nil, nil
 end
 
+-- (2026-11-13; the 2026-11-12 review FMC-10) the CLB and DES pages' 1R
+-- DELETE: the altitude constraint alone off the leg (FMSPG p.114: the
+-- altitude constraint is deleted from the lateral route); INVALID DELETE
+-- where there is none
+function M.delete_alt_constraint(st, i)
+    local l = M.shown(st).legs[i]
+    if not (l and l.alt) or l.altterm then return M.INVALID_DELETE end
+    l = M.edit(st).legs[i]
+    l.alt, l.alt2, l.akind = nil, nil, nil
+end
+
 -- a constraint as the LEGS pages show it: "250/10000A", "/FL240",
 -- "220A240B" (the speed's slash also alone: FCOM p.1332); a planned step
 -- "/FL370S" (FCOM p.1332)
