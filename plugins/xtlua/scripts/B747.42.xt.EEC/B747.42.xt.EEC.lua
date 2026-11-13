@@ -211,6 +211,9 @@ simDR_engn_thro_use			= find_dataref("sim/flightmodel/engine/ENGN_thro_use")
 simDR_throttle_max			= find_dataref("sim/aircraft/engine/acf_throtmax_FWD")
 simDR_acf_weight_total_kg   = find_dataref("sim/flightmodel/weight/m_total")
 simDR_ias_pilot				= find_dataref("sim/cockpit2/gauges/indicators/airspeed_kts_pilot")
+-- (2026-11-13) the flight model's indicated airspeed (no instrument's
+-- failures): a stopped engine's windmilling (B747_eec_hold_stopped_n2)
+simDR_eec_wm_ias			= find_dataref("sim/flightmodel/position/indicated_airspeed")
 simDR_vvi_fpm_pilot        	= find_dataref("sim/cockpit2/gauges/indicators/vvi_fpm_pilot")
 simDR_tas_pilot				= find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")
 simDR_flap_ratio			= find_dataref("sim/cockpit2/controls/flap_ratio")
@@ -574,10 +577,25 @@ end
 --freeze a stopped engine on the ground; in the air it windmills (ENG-19,
 --FCOM p.879 and p.881: windmill starts and the N2 shown for them). Every
 --frame for every engine type (set_engines); before 2026-11-10 inside
---egt_thermal_profile, which the P&W and GE no longer call
+--egt_thermal_profile, which the P&W and GE no longer call.
+-- (2026-11-13; finding 2 of the 2026-11-12 review) In the air a stopped
+-- engine (not burning, its starter off) windmills with the airspeed: its
+-- N2 at least WINDMILL_N2_KT % a knot of the indicated airspeed, at most
+-- WINDMILL_N2_MAX (estimate: the sources give no values; 15 % at 250 kt,
+-- with which the engine-driven pumps, their flow with N2 (B747.19.
+-- hyd_model.lua), bring the all-engine-out gear down in about a minute,
+-- within FCTM p.286 (8.8)'s two and a half). Before, X-Plane's own
+-- windmilling: 1.3 % at 255 kt two minutes after the FUEL CONTROL switch
+-- to CUTOFF, the pumps gave nothing and the gear stopped halfway (s321)
+local WINDMILL_N2_KT, WINDMILL_N2_MAX = 0.06, 25
 function B747_eec_hold_stopped_n2(engineid)
-	if simDR_onGround == 1 and simDR_N2[engineid]<22 and simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
-	 simDR_N2[engineid]=0
+	if simDR_onGround == 1 then
+		if simDR_N2[engineid]<22 and simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
+			simDR_N2[engineid]=0
+		end
+	elseif simDR_engine_starter_status[engineid]<0.5 and simDR_heating[engineid]<0.5 then
+		local wm = math.min(WINDMILL_N2_MAX, WINDMILL_N2_KT * math.max(0, simDR_eec_wm_ias))
+		if simDR_N2[engineid] < wm then simDR_N2[engineid] = wm end
 	end
 end
 function clear_thrust_targets()
