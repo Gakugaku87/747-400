@@ -1,0 +1,42 @@
+{
+  "name": "s333_simconfig_not_read",
+  "description": "読めないリバリーの設定（2026-11-12 のフルレビュー C-2：REVIEW_2026-11-12.md 案 11 の残り）の X-Plane での確かめ。RJAA 34L の地上（機体を読み直す、既定のリバリー）。simconfig のモジュール（xtlua）の旗 laminar/B747/simconfig/read_failed を 1 にして（読めなかったときの旗。ファイルの読み取りと旗は tests/static/simconfig_read_test.lua で確かめた）、FMS（xtlua_keysystems、ほかのプラグイン）がそれを読み、CDU のスクラッチパッドに SIM CONFIG NOT READ（FMC の助言。文言は推定）を出す。CLR で消える。旗を 0 に戻すと出ない。前は何も出なかった（print は Log.txt に出ない）。2026-11-13 の 1 回目は、切れたファイルを機体のフォルダーの直下へ写してリバリーを切り替えたが、既定のリバリーの設定の場所は『リバリーのフォルダー（空）＋ファイル名』で X-Plane の作業フォルダーの直下を読み、機体のフォルダーのファイルは読まれなかった（もともとの作り：報告する別の件）。X-Plane の直下に壊れたファイルを置くと、試験が途中で止まったとき利用者のフライトに残るので、旗を直接書く",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "FMS の初期化" },
+    { "do": "snapshot", "note": "始め", "drefs": [ "sim/aircraft/view/acf_livery_path", "laminar/B747/simconfig/read_failed", "laminar/B747/engines/type", "laminar/B747/fms3/Line14_L" ] },
+    { "do": "check", "note": "始めは読めている（旗 0）", "dref": "laminar/B747/simconfig/read_failed", "op": "==", "value": 0, "stop": true },
+    { "do": "check", "note": "SIM CONFIG NOT READ は出ていない", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^((?!SIM CONFIG NOT READ).)*$" },
+    { "do": "mark", "note": "旗を 1 に（リバリーの設定が読めなかった）" },
+    { "do": "set", "note": "read_failed 1（simconfig のモジュールが、読めないファイルで立てる旗）", "dref": "laminar/B747/simconfig/read_failed", "value": 1 },
+    { "do": "wait", "note": "CDU に SIM CONFIG NOT READ（FMC の助言。文言は推定。FMS はほかのプラグインの旗を毎フレーム読む）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "SIM CONFIG NOT READ", "timeout": 10 },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_simconfig_not_read" },
+    { "do": "view", "name": "forward" },
+    { "do": "cdu", "note": "CLR", "keys": ["CLR"] },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "CLR で消える", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^((?!SIM CONFIG NOT READ).)*$" },
+    { "do": "mark", "note": "旗を 0 に戻す" },
+    { "do": "set", "note": "read_failed 0", "dref": "laminar/B747/simconfig/read_failed", "value": 0 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "check", "note": "SIM CONFIG NOT READ は出ていない", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^((?!SIM CONFIG NOT READ).)*$" }
+  ]
+}

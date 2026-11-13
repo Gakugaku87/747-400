@@ -38,6 +38,10 @@ end
 --*************************************************************************************--
 
 B747DR_newsimconfig_data				= deferred_dataref("laminar/B747/newsimconfig", "number")
+-- (2026-11-13; the 2026-11-12 review C-2, case 11) 1 while the livery's
+-- B747-400_simconfig.dat did not decode (its defaults in use): the FMS shows
+-- SIM CONFIG NOT READ
+B747DR_simconfig_read_failed			= deferred_dataref("laminar/B747/simconfig/read_failed", "number")
 B747DR_pfd_style						= deferred_dataref("laminar/B747/pfd/style", "number")
 B747DR_nd_style							= deferred_dataref("laminar/B747/nd/style", "number")
 B747DR_thrust_ref						= deferred_dataref("laminar/B747/engines/thrust_ref", "number")
