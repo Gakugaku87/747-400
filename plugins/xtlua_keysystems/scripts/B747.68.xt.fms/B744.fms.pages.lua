@@ -575,6 +575,18 @@ function validAlt(value)
 
   return ""..val
 end
+-- (2026-11-13; the 2026-11-12 review FMC-10) SPD RESTR (the CLB and DES
+-- pages' 4L): a speed, "/" and an altitude, both valid (FMSPG p.114), else
+-- nil (INVALID ENTRY): the speed and the altitude's text. Before, the first
+-- three characters were the speed and the rest the altitude when valid:
+-- 250/1500 left 250/----- with no message, 230 and 240X8000 were taken
+function B747_spd_rest_entry(sp)
+  local s, a = string.match(sp or "", "^(%d%d%d)/(.+)$")
+  if not s or validateSpeed(s) == false then return nil end
+  local alt = validAlt(a)
+  if not alt then return nil end
+  return s, alt
+end
 function validFL(value)
   local val=tonumber(value)
   if string.len(value)>2 and string.sub(value,1,2)=="FL" then val=tonumber(string.sub(value,3)) end
@@ -1120,15 +1132,15 @@ function fmsFunctions.setdata(fmsO,value)
     setFMSData("clbrestspd","---")
     setFMSData("clbrestalt","-----")
   elseif value=="clbrest" then
-    spd=string.sub(fmsO["scratchpad"],1,3)
-    alt=string.sub(fmsO["scratchpad"],5)
-    if validateSpeed(spd) ==false then 
+    -- (FMC-10) the climb's: the altitude at or over the airplane's and under
+    -- the cruise altitude (FMSPG p.114)
+    local s, a = B747_spd_rest_entry(fmsO["scratchpad"])
+    local crz = B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["crzalt"], "%s+$", "")))
+    if not s or tonumber(a) < simDR_pressureAlt1 or (crz and tonumber(a) >= crz) then
       fmsO["notify"]="INVALID ENTRY"
     else
-      setFMSData("clbrestspd",spd)
-      if validAlt(alt) ~=nil then 
-	setFMSData("clbrestalt",validAlt(alt))
-      end
+      setFMSData("clbrestspd",s)
+      setFMSData("clbrestalt",a)
     end
   elseif value=="crzspd" then
     -- SEL SPD (6-1/6-2 step 8b; FCOM p.1348, FMSPG p.132): a CAS or a Mach
@@ -1174,15 +1186,14 @@ function fmsFunctions.setdata(fmsO,value)
     setFMSData("desrestspd","---")
     setFMSData("desrestalt","-----")
    elseif value=="desrest" then
-    spd=string.sub(fmsO["scratchpad"],1,3)
-    alt=string.sub(fmsO["scratchpad"],5)
-    if validateSpeed(spd) ==false then 
+    -- (FMC-10) the descent's: the altitude over the E/D's (FMSPG p.192)
+    local s, a = B747_spd_rest_entry(fmsO["scratchpad"])
+    local ed = B747_fms_vnav_wpts and B747_fms_vnav_wpts().ed
+    if not s or (ed and ed.alt and tonumber(a) <= ed.alt) then
       fmsO["notify"]="INVALID ENTRY"
     else
-      setFMSData("desrestspd",spd)
-      if validAlt(alt) ~=nil then 
-	setFMSData("desrestalt",validAlt(alt))
-      end
+      setFMSData("desrestspd",s)
+      setFMSData("desrestalt",a)
     end
   elseif value=="airportpos" then
 	-- REF AIRPORT (FCOM p.1285): an ICAO identifier of an airport in the FMC's

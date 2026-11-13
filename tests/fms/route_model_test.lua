@@ -180,6 +180,13 @@ T.equal(R.constraint_text(R.legs(R.shown(st))[2], 18000), "/FL220AFL240B", "the 
 T.equal(R.delete_constraint(st, 1), nil, "DELETE the constraint")
 T.equal(R.constraint_text(R.legs(R.shown(st))[1], 18000), nil, "the speed and the altitude both gone")
 T.equal(R.delete_constraint(st, 1), R.INVALID_DELETE, "DELETE where there is none")
+-- (2026-11-13; the 2026-11-12 review FMC-10) the CLB and DES pages' 1R
+-- DELETE: the altitude constraint alone off the leg (FMSPG p.114)
+T.equal(R.set_constraint(st, 1, {spd = 250, alt = 10000, akind = "A"}, 35000), nil, "250/10000A again")
+T.equal(R.delete_alt_constraint(st, 1), nil, "the 1R DELETE")
+T.equal(R.constraint_text(R.legs(R.shown(st))[1], 18000), "250/", "the altitude gone, the speed kept")
+T.equal(R.delete_alt_constraint(st, 1), R.INVALID_DELETE, "no altitude constraint: INVALID DELETE")
+R.delete_constraint(st, 1)
 
 -- (2026-11-05) a planned step climb "XXXS" (FCOM p.1332; p.1257)
 T.equal(R.set_step(st, 1, 37000, 35000), nil, "370S at CHARL")

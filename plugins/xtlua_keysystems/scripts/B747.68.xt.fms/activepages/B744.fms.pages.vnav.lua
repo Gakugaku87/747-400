@@ -283,7 +283,8 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["L4"]={"setdata","clbrest"}
       fmsFunctionsDefs["VNAV"]["L5"]=fmsModules["data"]["clbspdmode"]=="S" and {"vnavspd","clb"} or nil
       fmsFunctionsDefs["VNAV"]["L6"]=nil
-      fmsFunctionsDefs["VNAV"]["R1"]=nil
+      -- (FMC-10) the next climb constraint: DELETE only (FMSPG p.114)
+      fmsFunctionsDefs["VNAV"]["R1"]={"vnavcons","clb"}
       fmsFunctionsDefs["VNAV"]["R3"]={"setdata","transalt"}
       fmsFunctionsDefs["VNAV"]["R5"]=nil
       fmsFunctionsDefs["VNAV"]["R6"]=nil
@@ -581,7 +582,8 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       -- before, the prompt's text without a page); <ERASE over it with a
       -- modification (vnav_6l)
       fmsFunctionsDefs["VNAV"]["L6"]={"setpage","OFFPATH"}
-      fmsFunctionsDefs["VNAV"]["R1"]=nil
+      -- (FMC-10) the next descent constraint: DELETE only (FMSPG p.187)
+      fmsFunctionsDefs["VNAV"]["R1"]={"vnavcons","des"}
       fmsFunctionsDefs["VNAV"]["R3"]=nil
       -- FORECAST> (FCOM p.1393; step 8e2): the DESCENT FORECAST page
       fmsFunctionsDefs["VNAV"]["R5"]={"setpage","DESFORECAST"}
@@ -785,4 +787,18 @@ end
 -- http://lua-users.org/wiki/StringTrim
 function trim1(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
+-- (2026-11-13; the 2026-11-12 review FMC-10) the CLB and DES pages' 1R, the
+-- next constraint (AT XXXXX): no entry, DELETE takes its altitude
+-- constraint off the lateral route (FMSPG p.114, p.187), a modification to
+-- EXEC as on the LEGS pages (its speed constraint stays). Before, the key
+-- did nothing (KEY/FUNCTION INOP)
+function fmsFunctions.vnavcons(fmsO, value)
+  local sp = fmsO["scratchpad"]
+  if sp == "" then return end
+  if sp ~= "DELETE" then fmsO["notify"] = "INVALID ENTRY" return end
+  local w = B747_fms_vnav_wpts()[value]
+  if not (w and w.leg and w.leg.alt) then fmsO["notify"] = "INVALID DELETE" return end
+  B747_fmc_route_entry(fmsO, B747_route_model.delete_alt_constraint(B747_fmc_route, w.i))
 end
