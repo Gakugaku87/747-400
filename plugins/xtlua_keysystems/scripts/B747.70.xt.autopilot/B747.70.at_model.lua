@@ -96,8 +96,13 @@ M.SPD_DOWN_KT = {5, 15}
 -- kt over (before up to +4.1), s262's swing +0.34 kt (+2.42), a 10 kt shear
 -- in the cruise back within 1 kt in 42 to 57 s (164 to 168 s before), the
 -- levers' travel the same or less
-M.G_C, M.G_MACH, M.G_SCALE_MAX = 3630, 0.488, 8
-M.G_TGT = {{0.66, 5.0}, {0.37, 4.2}, {0.194, 2.7}}
+-- (2026-11-13, B2) Refitted after the EEC's B2 (the P&W's maximum EPR the
+-- go-around's carried up, its lever's one line to it at 48°: up high a
+-- unit of lever gives some 20 % less, 0.69 kt/s at 307 t and FL370): within
+-- 3 % from 10,000 ft to FL410 but FL250's 300 kt (15 % under); FL250's G_TGT
+-- 3.8 for it (4.2 before: the levers rang on a +10 kt step)
+M.G_C, M.G_MACH, M.G_SCALE_MAX = 4029, 0.66, 8
+M.G_TGT = {{0.66, 5.0}, {0.37, 3.8}, {0.194, 2.7}}
 M.SPD_DOWN_UP = 0.75
 M.K_VS = 1.2e-5
 -- G/A's THR on the energy's rate (evs, as VNAV's: the speed's change
