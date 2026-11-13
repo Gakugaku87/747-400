@@ -322,6 +322,21 @@ simDR_empty_weight			= find_dataref("sim/aircraft/weight/acf_m_empty")
 simDR_fuel_qty				= find_dataref("sim/flightmodel/weight/m_fuel")
 simDR_cg_adjust				= find_dataref("sim/flightmodel/misc/cgz_ref_to_default")
 simDR_livery_path			= find_dataref("sim/aircraft/view/acf_livery_path")
+simDR_fms_livery_index		= find_dataref("sim/aircraft/view/acf_livery_index")
+-- (2026-11-13) a livery's file (B747-400_simconfig.dat for the CDU's SAVE,
+-- B747-400_lastpos.dat): in the livery's folder, with the default livery
+-- (its index 0) in the aircraft's (by its .acf: simDR_acf_relative_path,
+-- below), where B747.05.xt.simconfig.lua reads the simconfig. The default
+-- livery by its index, not by its empty path: back on it, XTLua's read of
+-- the path still gave the livery before's (X-Plane s333). Before, "" and
+-- the file's name: X-Plane's own folder (s333)
+function B747_fms_livery_file(name)
+  local function text_of(v) return type(v) == "string" and (string.match(v, "^[^%z]*")) or "" end
+  local folder = ""
+  if simDR_fms_livery_index ~= 0 then folder = text_of(simDR_livery_path) end
+  if folder == "" then folder = string.match(text_of(simDR_acf_relative_path), "^(.*[/\\])") or "" end
+  return folder .. name
+end
 simDR_payload_weight		= find_dataref("sim/flightmodel/weight/m_fixed")
 simDR_fuel_totalizer_kg		= find_dataref("sim/cockpit2/fuel/fuel_totalizer_init_kg")
 --Marauder28
@@ -6030,7 +6045,7 @@ end
 -- stopped the plugin)
 local lastPosRead=nil
 function aircraft_last_pos(phase)
-	local file_location = simDR_livery_path.."B747-400_lastpos.dat"
+	local file_location = B747_fms_livery_file("B747-400_lastpos.dat")
 
 	if phase == "LOAD" then
 		--Load FMC last position
@@ -6222,8 +6237,18 @@ function throttleDataRefresh()
 	local ref26=simDR_throttle_max      
 end
 
+-- (2026-11-13) the livery's and the .acf's paths read every PATHS_S
+-- seconds, the livery's index every frame: XTLua gives a read the value
+-- fetched at the read before it (the first ""), and B747_fms_livery_file
+-- reads them on an event (the CDU's SAVE, POS INIT's LAST POS, the unload)
+local PATHS_S, pathsRead = 5, nil
 function after_physics()
   if debug_fms>0 then return end
+  if pathsRead == nil or simDRTime - pathsRead >= PATHS_S or simDRTime < pathsRead then
+    pathsRead = simDRTime
+    local liv, acf = simDR_livery_path, simDR_acf_relative_path
+  end
+  local liveryIndex = simDR_fms_livery_index
   if not B747_fmc_navdb.ready then B747_navdb.load(B747_fmc_navdb,32768) end
 	
   if hasSimConfig()==false then return end

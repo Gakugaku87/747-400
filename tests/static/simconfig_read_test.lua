@@ -36,6 +36,7 @@ for _, c in ipairs(cases) do
     f:close()
     local rt = xtlua.new{types = {["sim/aircraft/view/acf_livery_path"] = "string"}}
     rt:set("sim/aircraft/view/acf_livery_path", dir)
+    rt:set("sim/aircraft/view/acf_livery_index", 1)   -- a livery (the default livery's index is 0)
     local ok, err = pcall(function()
         rt:load("plugins/xtlua/scripts/B747.05.xt.simconfig/B747.05.xt.simconfig.lua")
         rt:callout("flight_start")
@@ -47,6 +48,68 @@ for _, c in ipairs(cases) do
         T.equal(rt:get("laminar/B747/engines/thrust_ref"), c[3], c[1] .. ": thrust reference")
         T.equal(rt:get("laminar/B747/simconfig/read_failed"), c[4], c[1] .. ": read_failed (the CDUs' SIM CONFIG NOT READ)")
     end
+end
+-- (2026-11-13) the default livery (its path ""): the file in the
+-- aircraft's folder, by its .acf (before, the file's name alone:
+-- X-Plane's own folder, s333)
+do
+    local f = assert(io.open(dir .. "B747-400_simconfig.dat", "wb"))
+    f:write(good)
+    f:close()
+    local rt = xtlua.new{types = {["sim/aircraft/view/acf_livery_path"] = "string",
+        ["sim/aircraft/view/acf_relative_path"] = "string"}}
+    rt:set("sim/aircraft/view/acf_livery_path", "")
+    rt:set("sim/aircraft/view/acf_relative_path", dir .. "747-400_custom.acf")
+    rt:load("plugins/xtlua/scripts/B747.05.xt.simconfig/B747.05.xt.simconfig.lua")
+    rt:callout("flight_start")
+    for _ = 1, 30 * 8 do rt:frame(1 / 30) end
+    T.equal(rt:get("laminar/B747/engines/type"), 1, "the default livery: the aircraft folder's file read (CF6)")
+    T.equal(rt:get("laminar/B747/simconfig/read_failed"), 0, "the default livery: read")
+end
+-- (2026-11-13) the paths read as XTLua reads X-Plane's datarefs (the value
+-- fetched at the read before: the first ""): the .acf's path read once
+-- before (do_flight_start, livery_load). Before, the first read gave "":
+-- s333's second part found no file
+do
+    local rt = xtlua.new{types = {["sim/aircraft/view/acf_livery_path"] = "string",
+        ["sim/aircraft/view/acf_relative_path"] = "string"}, lagged = {"sim/aircraft/view/acf_livery_path", "sim/aircraft/view/acf_relative_path"}}
+    rt:set("sim/aircraft/view/acf_livery_path", "")
+    rt:set("sim/aircraft/view/acf_relative_path", dir .. "747-400_custom.acf")
+    rt:load("plugins/xtlua/scripts/B747.05.xt.simconfig/B747.05.xt.simconfig.lua")
+    rt:callout("flight_start")
+    for _ = 1, 30 * 8 do rt:frame(1 / 30) end
+    T.equal(rt:get("laminar/B747/engines/type"), 1, "the default livery, the paths read as XTLua reads them: the aircraft folder's file read (CF6)")
+end
+-- (2026-11-13) a livery with the P&W, then the default livery: its index
+-- 0 and XTLua's livery_load, the livery's path read still the livery
+-- before's (as XTLua read it in X-Plane: s333's trace): its file in the
+-- aircraft's folder (the CF6) read 2 s on. Before, the livery before's
+-- path: back on the default livery its settings stayed (s333)
+do
+    local f = assert(io.open(dir .. "B747-400_simconfig.dat", "wb"))
+    f:write(good)
+    f:close()
+    local liv = dir .. "liv/"
+    os.execute(windows and ('mkdir "' .. liv:gsub("/", "\\") .. '" 2>nul') or ('mkdir -p "' .. liv .. '"'))
+    f = assert(io.open(liv .. "B747-400_simconfig.dat", "wb"))
+    f:write((good:gsub("CF6%-80C2%-B1F", "PW4056")))
+    f:close()
+    local rt = xtlua.new{types = {["sim/aircraft/view/acf_livery_path"] = "string",
+        ["sim/aircraft/view/acf_relative_path"] = "string"},
+        lagged = {"sim/aircraft/view/acf_livery_path", "sim/aircraft/view/acf_relative_path"}}
+    rt:set("sim/aircraft/view/acf_livery_path", liv)
+    rt:set("sim/aircraft/view/acf_livery_index", 1)
+    rt:set("sim/aircraft/view/acf_relative_path", dir .. "747-400_custom.acf")
+    rt:load("plugins/xtlua/scripts/B747.05.xt.simconfig/B747.05.xt.simconfig.lua")
+    rt:callout("flight_start")
+    for _ = 1, 30 * 8 do rt:frame(1 / 30) end
+    T.equal(rt:get("laminar/B747/engines/type"), 0, "a livery with the P&W: P&W")
+    rt:set("sim/aircraft/view/acf_livery_index", 0)
+    rt:callout("livery_load")
+    for _ = 1, 30 * 8 do rt:frame(1 / 30) end
+    T.equal(rt:get("laminar/B747/engines/type"), 1, "back on the default livery (its index 0, the path read still the livery's): the aircraft folder's file read (CF6)")
+    os.remove(liv .. "B747-400_simconfig.dat")
+    os.execute(windows and ('rmdir "' .. liv:gsub("/", "\\") .. '" 2>nul') or ('rmdir "' .. liv .. '"'))
 end
 os.remove(dir .. "B747-400_simconfig.dat")
 os.execute(windows and ('rmdir "' .. dir:gsub("/", "\\") .. '" 2>nul') or ('rmdir "' .. dir .. '"'))
