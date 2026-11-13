@@ -34,6 +34,12 @@ dofile("json/json.lua")
 
 simDR_livery_path			= find_dataref("sim/aircraft/view/acf_livery_path")
 simDR_acf_tailnum			= find_dataref("sim/aircraft/view/acf_tailnum")
+-- (2026-11-13) the .acf's path relative to X-Plane's folder (the default
+-- livery's B747-400_simconfig.dat in the aircraft's folder)
+simDR_simconfig_acf_path	= find_dataref("sim/aircraft/view/acf_relative_path")
+-- (2026-11-13) the livery's index: 0 the default livery (simconfig_file)
+simDR_simconfig_livery_index	= find_dataref("sim/aircraft/view/acf_livery_index")
+simDR_simconfig_time		= find_dataref("sim/time/total_running_time_sec")
 
 --Baro Sync
 simDR_baro_capt				= find_dataref("sim/cockpit/misc/barometer_setting")
@@ -380,8 +386,23 @@ end
 -- Before, its first line only, decoded unguarded: a set-out, cut or empty
 -- file, or one without the FMC section, stopped every module of this
 -- XTLua plugin on a Lua error
+-- (2026-11-13) the livery's B747-400_simconfig.dat: in the livery's folder,
+-- with the default livery (its index 0) in the aircraft's (by its .acf,
+-- relative to X-Plane's folder where XTLua opens files; the CDU's SAVE the
+-- same: B747_fms_livery_file). The default livery by its index, not by its
+-- empty path: back on it, XTLua's read of the path still gave the livery
+-- before's (X-Plane s333, traced: the index 1 to 0 at once, the path read
+-- 2 s on the Global Supertanker's; a change to another livery's path came
+-- at once). Before, "" and the file's name: X-Plane's own folder (s333)
+local function simconfig_file()
+	local function text_of(v) return type(v) == "string" and (string.match(v, "^[^%z]*")) or "" end
+	local folder = ""
+	if simDR_simconfig_livery_index ~= 0 then folder = text_of(simDR_livery_path) end
+	if folder == "" then folder = string.match(text_of(simDR_simconfig_acf_path), "^(.*[/\\])") or "" end
+	return folder .. "B747-400_simconfig.dat"
+end
 function aircraft_simConfig()
-	local file_location = simDR_livery_path.."B747-400_simconfig.dat"
+	local file_location = simconfig_file()
 	print("File = "..file_location)
 	local file = io.open(file_location, "rb")
 
@@ -424,6 +445,10 @@ function flight_start()
 end
 function do_flight_start()
 	local refreshLivery=simDR_livery_path
+	-- (2026-11-13) the .acf's path too: XTLua gives a read the value fetched
+	-- at the read before it (the first ""), aircraft_simConfig reads it
+	-- 1 or 2 s on (s333: the default livery's file not found)
+	local refreshAcf=simDR_simconfig_acf_path
 	B747DR_simconfig_data=json.encode(simConfigData["data"]["values"]) --make the simConfig data available to other modules
 	B747DR_newsimconfig_data=1
 	run_after_time(aircraft_simConfig, 1)  --Load specific simConfig data for current livery
@@ -431,6 +456,10 @@ end
 function livery_load()
 	--print("simcongfig livery_load")
 	local refreshLivery=simDR_livery_path
+	-- (2026-11-13) the .acf's path too: XTLua gives a read the value fetched
+	-- at the read before it (the first ""), aircraft_simConfig reads it
+	-- 1 or 2 s on (s333: the default livery's file not found)
+	local refreshAcf=simDR_simconfig_acf_path
 	B747DR_newsimconfig_data=1
 	run_after_time(aircraft_simConfig, 2)  --Load specific simConfig data for current livery
 end
@@ -448,7 +477,19 @@ function hasSimConfig()
 	end
 	return setSimConfig
 end
+-- (2026-11-13; finding 4 of the 2026-11-12 review) the livery's and the
+-- .acf's paths read once a PATHS_S, the livery's index every frame (XTLua
+-- gives a read the value fetched at the read before it; X-Plane's livery
+-- path is a slow dataref: DataRefs.txt), so that aircraft_simConfig, 2 s
+-- after XTLua's livery_load, finds them current
+local PATHS_S, pathsRead = 1, nil
 function after_physics()
+	local now = simDR_simconfig_time
+	if pathsRead == nil or now - pathsRead >= PATHS_S or now < pathsRead then
+		pathsRead = now
+		local liv, acf = simDR_livery_path, simDR_simconfig_acf_path
+	end
+	local li = simDR_simconfig_livery_index
 	--Keep the structure fresh
 	--print("in simconfig "..B747DR_simconfig_data)
 	if flightInit==false then

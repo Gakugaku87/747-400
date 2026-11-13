@@ -272,6 +272,41 @@ simDR_AHARS_roll_deg_pilot = find_dataref("sim/cockpit2/gauges/indicators/roll_A
 simDR_AHARS_heading_deg_pilot = find_dataref("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot")
 simDR_nav1_radio_course_deg = find_dataref("sim/cockpit2/radios/actuators/nav1_course_deg_mag_pilot")
 simDR_pressureAlt1 = find_dataref("sim/cockpit2/gauges/indicators/altitude_ft_pilot")
+-- (2026-11-13) the AFDS's altitude: its FCC's ADC at that pilot's baro
+-- setting (B747.34.xt.airdata.lua's laminar/B747/airdata/alt_capt, _fo).
+-- FCC L and C take the Captain's selected ADC, FCC R the F/O's (ATA22
+-- p.204: normally the left ADC and the right; the AIR DATA switch selects
+-- the center one). One AFDS model flies here: the F/O's ADC with CMD R
+-- alone, else the Captain's (estimate: more than one A/P, or the F/Ds
+-- only, as FCC L). The V/S is the IRU's inertial V/S (B747_afds_ivs: ATA22
+-- p.344; ALT's damping too, p.346). Before, X-Plane's Captain's altimeter
+-- and VSI, and its VVI (vh_ind_fpm, X-Plane's of the Captain's static
+-- system): with the Captain's static port blocked they stopped, and V/S
+-- -2,500 pitched to -10 degrees from FL350 into the sea (s318)
+B747DR_afds_alt_capt = find_dataref("laminar/B747/airdata/alt_capt")
+B747DR_afds_alt_fo = find_dataref("laminar/B747/airdata/alt_fo")
+-- the F/O's ADC: CMD R alone (FCC R)
+function B747_afds_fo()
+	return B747DR_ap_cmd_R_mode > 0.5 and B747DR_ap_cmd_L_mode < 0.5 and B747DR_ap_cmd_C_mode < 0.5
+end
+function B747_afds_alt()
+	if B747_afds_fo() then return B747DR_afds_alt_fo end
+	return B747DR_afds_alt_capt
+end
+-- (2026-11-13) and its TAS (kt): that ADC's Mach (laminar/B747/airdata/
+-- mach_capt, _fo) at the static air temperature (X-Plane's outside air
+-- temperature: the TAT probe's, not the static port's; estimate: the
+-- ADC's own TAS not modelled). ATA22 p.204: the ADC gives its FCC the Mach
+-- and the TAS. Before, X-Plane's Captain's TAS gauge: with the Captain's
+-- static port blocked it read high, and ALT's capture of FL300 pitched up
+-- too slowly (s318: 1,500 fpm down 260 ft above it 25 s on)
+B747DR_afds_mach_capt = find_dataref("laminar/B747/airdata/mach_capt")
+B747DR_afds_mach_fo = find_dataref("laminar/B747/airdata/mach_fo")
+simDR_afds_sat = find_dataref("sim/cockpit2/temperature/outside_air_temp_degc")
+function B747_afds_tas()
+	local m = B747_afds_fo() and B747DR_afds_mach_fo or B747DR_afds_mach_capt
+	return m * 38.967854 * math.sqrt(math.max(150, simDR_afds_sat + 273.15))
+end
 -- (2026-11-06) the pressure altitude, for the MCP Mach's CAS (ap_mach_cas)
 simDR_ap_mach_press_alt = find_dataref("sim/flightmodel2/position/pressure_altitude")
 simDR_radarAlt1 = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
@@ -593,7 +628,8 @@ B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
 B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
 B747DR_ap_roll_valid = find_dataref("laminar/B747/autopilot/roll_valid")
 B747DR_ap_rudder_cmd = find_dataref("laminar/B747/autopilot/rudder_cmd")
-simDR_afds_tas = find_dataref("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")
+-- (2026-11-13) the TAS: its FCC's ADC's (B747_afds_tas); before, X-Plane's
+-- Captain's TAS gauge (sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot)
 -- the pitch laws (steps 3a and 3b; notes/ATA-22.md §18, §19): the command
 -- the A/P flies (the hydraulics module's servo law reads it) and the F/Ds
 -- show; without a law there (G/S, FLARE) the old law
@@ -605,7 +641,27 @@ B747DR_ap_pitch_cmd = find_dataref("laminar/B747/autopilot/pitch_cmd")
 B747DR_ap_pitch_law = find_dataref("laminar/B747/autopilot/pitch_law")
 B747DR_ap_pitch_target = find_dataref("laminar/B747/autopilot/pitch_target")
 simDR_afds_pitch = find_dataref("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot")
-simDR_afds_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+-- (2026-11-13) the IRU's inertial V/S (fpm; ATA22 p.344, p.346): X-Plane's
+-- velocity up at the airplane, its local frame's (OpenGL: y up at the
+-- frame's origin) y velocity with the horizontal velocity along the
+-- earth's curve from the origin to the airplane (the up vector there
+-- (x/R, 1, z/R) to first order). local_vy alone was off by the ground
+-- speed times the distance over the earth's radius (X-Plane: -234 fpm
+-- against the VVI's -58 at 48 km from the origin and 150 m/s; this -48).
+-- Before, X-Plane's sim/flightmodel/position/vh_ind_fpm, which follows
+-- the Captain's static system: with that port blocked it read 0 while
+-- the airplane went down at 6,000 fpm, and ALT's capture never pitched
+-- up (s318). Estimate: the IRUs' baro-inertial loop (their vertical
+-- channel damped by an ADC's altitude) not modelled
+simDR_afds_vy = find_dataref("sim/flightmodel/position/local_vy")
+simDR_afds_vx = find_dataref("sim/flightmodel/position/local_vx")
+simDR_afds_vz = find_dataref("sim/flightmodel/position/local_vz")
+simDR_afds_px = find_dataref("sim/flightmodel/position/local_x")
+simDR_afds_pz = find_dataref("sim/flightmodel/position/local_z")
+local AFDS_EARTH_R = 6371000
+function B747_afds_ivs()
+	return (simDR_afds_vy + (simDR_afds_vx * simDR_afds_px + simDR_afds_vz * simDR_afds_pz) / AFDS_EARTH_R) * 196.850394
+end
 -- the ALT law's gain by the lift coefficient (2026-11-07, notes/ATA-22.md
 -- §53): the dynamic pressure (Pa; X-Plane's "Ambient Q", labelled psf in
 -- DataRefs.txt but 10,128 Pa at 250 kt and 9,000 ft) and the gross weight
@@ -615,6 +671,19 @@ simDR_afds_weight = find_dataref("sim/flightmodel/weight/m_total")
 -- (the speed tape's, for the FMC's of FCOM p.675), the PLI (valid when the
 -- PFDs show it: estimate), GPWS's windshear
 B747DR_afds_vminm = find_dataref("laminar/B747/airspeed/Vminm")
+-- (2026-11-13) the minimum maneuvering speed the FMC supplies the AFDS and
+-- the A/T (FCOM p.675) from the first flap retraction after takeoff, as
+-- the PFD shows its band (FCOM p.973: laminar/B747/pfd/show_mins); none in
+-- the FMC's driftdown (FCOM p.675: no speed protection with an engine
+-- failure above the maximum engine-out altitude). Before, the speed
+-- always: at 350.7 t with flaps 20 at 30 degrees C the takeoff's target
+-- was held at its 182 kt + 5, over V2 160 (and over V2 to V2 + 10 with an
+-- engine out: ATA22 p.264) (s326)
+B747DR_afds_show_mins = find_dataref("laminar/B747/pfd/show_mins")
+local function afds_vmin()
+	if B747DR_ap_fvn_dd > 0.5 or B747DR_afds_show_mins < 0.5 then return 0 end
+	return B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
+end
 B747DR_afds_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 -- the FMC's VNAV (6-1/6-2 step 9c; the FMS module's: notes/
 -- ATA-34-61-FMC.md §56-57): valid, the phase (1 climb, 2 cruise, 3
@@ -704,7 +773,7 @@ local function afds_gs_inputs(p)
 		and simDR_nav1_gs_flag == 0 and simDR_nav2_gs_flag == 0
 	p.ra = simDR_radarAlt1
 	p.gs = simDR_groundspeed * 1.94384
-	p.vs = simDR_afds_vs
+	p.vs = B747_afds_ivs()
 	-- FLARE and NOSE LETDOWN (step 4b)
 	p.gear_alt = afds_gear_alt()
 	p.letdown = afds.letdown
@@ -716,10 +785,10 @@ end
 -- flaps, a windshear; G/S's (step 3c)
 local function afds_pitch_inputs(p)
 	p.pitch = simDR_afds_pitch
-	p.vs = simDR_afds_vs
+	p.vs = B747_afds_ivs()
 	p.q, p.weight = simDR_afds_q, simDR_afds_weight
-	p.tas = simDR_afds_tas
-	p.alt = simDR_pressureAlt1
+	p.tas = B747_afds_tas()
+	p.alt = B747_afds_alt()
 	p.vs_sel = simDR_autopilot_vs_fpm
 	-- VNAV's law (the FMC's step 9i: B747.70.vnav_mode_model.lua's, made
 	-- once a frame by afds_vnav_mode after the AFDS model): VNAV SPD on the
@@ -744,12 +813,15 @@ local function afds_pitch_inputs(p)
 		way = vo.way or 0
 		if way < 0 and B747DR_ap_fvn_dd > 0.5 and B747DR_ap_fvn_vs < 0 then way_fpm = -B747DR_ap_fvn_vs end
 	elseif afds.pitch == "FLCH" then
-		local d = simDR_autopilot_altitude_ft - simDR_pressureAlt1
+		local d = simDR_autopilot_altitude_ft - B747_afds_alt()
 		way = d > 0 and 1 or (d < 0 and -1 or 0)
 	end
 	p.way, p.way_fpm = way, way_fpm
 	p.mcp_ias = ref
-	p.v_min = B747DR_afds_vminm
+	-- (2026-11-13) none in the FMC's driftdown (FCOM p.675; VNAV flies E/O
+	-- LRC SPD, p.1268), none before the first flap retraction after
+	-- takeoff (FCOM p.973): afds_vmin
+	p.v_min = afds_vmin()
 	p.v_max = B747DR_afds_vmax
 	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
 	p.flaps_up = simDR_flap_ratio_control < 0.01
@@ -996,8 +1068,8 @@ local function afds_dt() return math.min(SIM_PERIOD, AFDS_DT_MAX) end
 local atState = B747_at_model.new()
 local atIn = {}
 local atIas, atAccel = nil, 0
-local atPush = {spd = 0, thr = 0, disc = 0}
-local atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+local atPush = {spd = 0, thr = 0, disc = 0, flch = 0}
+local atSeen = {spd = 0, thr = 0, disc = 0, flch = 0, toga = nil}
 -- the FMC master selector and its FMC working last frame, and the master
 -- FMC's failure waiting for the ARM switch (step 11d2)
 local atMaster, atMasterOK, atFmcLatch = nil, false, false
@@ -1056,7 +1128,7 @@ local function afds_at()
 	local n = B747DR_ap_toga_pushes
 	i.toga = atSeen.toga ~= nil and n ~= atSeen.toga
 	atSeen.toga = n
-	for _, k in ipairs({"spd", "thr", "disc"}) do
+	for _, k in ipairs({"spd", "thr", "disc", "flch"}) do
 		i[k] = atPush[k] ~= atSeen[k]
 		atSeen[k] = atPush[k]
 	end
@@ -1102,14 +1174,17 @@ local function afds_at()
 	-- time acceleration): no gust complement (B747.70.at_model.lua)
 	i.time_accel = simDR_at_sim_speed > 1
 	i.v_max = B747DR_afds_vmax > 0 and B747DR_afds_vmax or 365
-	i.v_min = B747DR_afds_vminm > 0 and B747DR_afds_vminm or 0
-	i.vs, i.alt, i.mcp_alt = simDR_vvi_fpm_pilot, simDR_pressureAlt1, B747DR_autopilot_altitude_ft
+	-- (2026-11-13) as the pitch's (afds_vmin: FCOM p.675, p.973)
+	i.v_min = afds_vmin()
+	-- (2026-11-13) the AFDS's altitude and the inertial V/S (B747_afds_alt);
+	-- before, X-Plane's Captain's altimeter and VSI
+	i.vs, i.alt, i.mcp_alt = B747_afds_ivs(), B747_afds_alt(), B747DR_autopilot_altitude_ft
 	-- (step 9d2a) VNAV's THR to the FMC's V/S (the early and the cruise
 	-- descent) on the V/S at the target speed, its HOLD on that and the
 	-- inertial V/S (the VSI's lag held the levers early)
-	i.vnav_vs, i.ivs = B747DR_ap_fvn_vs, simDR_afds_vs
+	i.vnav_vs, i.ivs = B747DR_ap_fvn_vs, B747_afds_ivs()
 	local machMode = simDR_autopilot_airspeed_is_mach == 1
-	i.evs = B747_at_model.target_vs(atState, simDR_afds_vs, simDR_at_tas,
+	i.evs = B747_at_model.target_vs(atState, B747_afds_ivs(), simDR_at_tas,
 		machMode and simDR_airspeed_mach or ias, machMode, dt)
 	i.n1, i.thrust = n1, thr
 	i.thrust_ref = n1 and simDR_at_N1_bug[0] or simDR_at_EPR_bug[0]
@@ -1168,7 +1243,7 @@ local function afds_inp()
 	-- FLARE's height (step 4b): the gear altitude, the inertial vertical
 	-- speed (the VSI's lags)
 	afdsIn.gear_alt = afds_gear_alt()
-	afdsIn.ivs = simDR_afds_vs
+	afdsIn.ivs = B747_afds_ivs()
 	afdsIn.dt = afds_dt()
 	-- the approach (step 1d): LOC's capture by the roll laws (step 2b: the
 	-- ground speed, the intercept angle and the deviation, ATA22 p.290),
@@ -1184,8 +1259,8 @@ local function afds_inp()
 	-- MCP altitude's capture by the pitch laws (step 3a: the 0.05 g level-off;
 	-- before, the old window), VNAV's engage (the FMC's step 9i), the old
 	-- autoland's FLARE arm
-	afdsIn.vs = simDR_vvi_fpm_pilot
-	afdsIn.alt = simDR_pressureAlt1
+	afdsIn.vs = B747_afds_ivs()
+	afdsIn.alt = B747_afds_alt()
 	afdsIn.ias = simDR_ind_airspeed_kts_pilot
 	afdsIn.mcp_ias = B747DR_ap_ias_dial_value
 	afdsIn.window_open = B747DR_ap_ias_mach_window_open == 1
@@ -1215,9 +1290,9 @@ local function afds_vs_default()
 	simDR_autopilot_vs_status = 2
 	B747DR_ap_thrust_mode = 0
 	B747DR_ap_inVNAVdescent = 0
-	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > simDR_pressureAlt1 and 1 or 3
+	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > B747_afds_alt() and 1 or 3
 	B747DR_ap_vnav_state = 0
-	local vs = math.max(-8000, math.min(6000, roundToIncrement(simDR_vvi_fpm_pilot, 100)))
+	local vs = math.max(-8000, math.min(6000, roundToIncrement(B747_afds_ivs(), 100)))
 	simDR_autopilot_vs_fpm = vs
 	B747DR_autopilot_vs_fpm = vs
 end
@@ -1437,7 +1512,7 @@ local function afds_roll_law()
 	r.att_bank = afds.roll_fail and afds.fail_bank or afds.att_bank
 	r.lnav_bank = B747DR_fms_lnav_roll
 	r.selector = B747DR_ap_bank_limit_sel_dial_pos
-	r.tas = simDR_afds_tas
+	r.tas = B747_afds_tas()
 	r.ias = simDR_ind_airspeed_kts_pilot
 	r.flaps_up = simDR_flap_ratio_control < 0.01
 	r.v2 = B747DR_airspeed_V2
@@ -1515,7 +1590,7 @@ function B747_afds_vs()
 	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 	B747DR_ap_thrust_mode = 0
 	B747DR_ap_inVNAVdescent = 0
-	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > simDR_pressureAlt1 and 1 or 3
+	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > B747_afds_alt() and 1 or 3
 	simDR_autopilot_vs_fpm = sync
 	B747DR_autopilot_vs_fpm = sync
 	afds_sync()
@@ -1530,12 +1605,14 @@ end
 function B747_afds_flch()
 	local ok, speed = B747_afds_model.flch(afds, afds_inp())
 	if not ok then return end
+	-- (2026-11-13) a push to the A/T: THR again in FLCH too (FCOM p.646)
+	atPush.flch = atPush.flch + 1
 	simDR_autopilot_altitude_ft = B747DR_autopilot_altitude_ft
 	if speed and simDR_autopilot_airspeed_is_mach == 0 then
 		B747DR_ap_ias_dial_value = math.floor(speed + 0.5)
 	end
 	B747DR_ap_inVNAVdescent = 0
-	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > simDR_pressureAlt1 and 1 or 3
+	B747DR_ap_flightPhase = B747DR_autopilot_altitude_ft > B747_afds_alt() and 1 or 3
 	B747DR_ap_thrust_mode = 2
 	afds_sync()
 end
@@ -1628,7 +1705,7 @@ local function afds_vnav_mode()
 	i.path_dev = B747DR_ap_fvn_path_dev
 	i.td_hold = B747DR_ap_fvn_td_hold == 1
 	i.on_app = B747DR_ap_fvn_on_app == 1
-	i.mcp, i.alt = B747DR_autopilot_altitude_ft, simDR_pressureAlt1
+	i.mcp, i.alt = B747DR_autopilot_altitude_ft, B747_afds_alt()
 	i.settled = afds_vnav_mcp_settled()
 	i.pushes = B747DR_ap_alt_sel_pushes
 	i.cap_mcp = i.engaged and B747_afds_pitch_model.capture(p, i.mcp)
@@ -1685,7 +1762,7 @@ function B747_ap_switch_speed_mode_CMDhandler(phase, duration)
 		-- a push to the A/T (the FMC's step 9f1: its SPD)
 		atPush.spd = atPush.spd + 1
 		--B747DR_ap_flightPhase = 2
-		if B747DR_autopilot_altitude_ft > simDR_pressureAlt1 then
+		if B747DR_autopilot_altitude_ft > B747_afds_alt() then
 			B747DR_ap_flightPhase = 1
 		else
 			B747DR_ap_flightPhase = 3
@@ -2630,10 +2707,11 @@ function B747_ap_ias_mach_mode()
 	-- speed intervention too: the window open, its speed flown (FCOM p.643:
 	-- the window changes from IAS to Mach at about M.840 in the climb, back
 	-- at about 310 kt in the descent); before, the window kept IAS climbing
-	-- through M.86
+	-- through M.86. (2026-11-13) Climbing or descending on the inertial V/S
+	-- (B747_afds_alt); before, X-Plane's Captain's VSI
 	local mcpSpd = B747DR_ap_vnav_state < 2 or getVNAVState("manualVNAVspd") == 1
 	if simDR_airspeed_mach < 0.40 and B747DR_switchingIASMode == 0 and mcpSpd then
-		if simDR_vvi_fpm_pilot < -250.0 then
+		if B747_afds_ivs() < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
@@ -2647,7 +2725,7 @@ function B747_ap_ias_mach_mode()
 	end
     --D6-30151-481 4.10.4/5
 	if simDR_airspeed_mach > 0.84 and B747DR_switchingIASMode == 0 and mcpSpd then
-		if simDR_vvi_fpm_pilot > 250.0 then
+		if B747_afds_ivs() > 250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 0 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
@@ -2659,7 +2737,7 @@ function B747_ap_ias_mach_mode()
 		end
 	end
 	if simDR_autopilot_airspeed_kts > 310 and B747DR_switchingIASMode == 0 and mcpSpd then
-		if simDR_vvi_fpm_pilot < -250.0 then
+		if B747_afds_ivs() < -250.0 then
 			if ap_simDR_autopilot_airspeed_is_mach == 1 then
 				B747DR_lastap_dial_airspeed = simDR_autopilot_airspeed_kts
 				--simDR_autopilot_airspeed_kts = ap_dial_airspeed								-- WRITE THE NEW VALUE TO FORCE CONVERSION TO CORRECT UNITS
@@ -3077,16 +3155,20 @@ function B747_ap_altitude(fms)
 	local servoStatus = simDR_autopilot_servos_on
 	local numAPengaged = B747DR_ap_cmd_L_mode + B747DR_ap_cmd_C_mode + B747DR_ap_cmd_R_mode
 
-	B747DR_alt_capture_window = B747_rescale(0,200,3000,1000,math.abs(simDR_vvi_fpm_pilot))
-	if simDR_pressureAlt1 < B747DR_autopilot_altitude_ft then
-		if B747DR_autopilot_altitude_ft - simDR_pressureAlt1 > 400 then
-			B747DR_autopilot_altitude_ft_pfd = simDR_pressureAlt1 + 400
+	-- (2026-11-13) on the inertial V/S and the Captain's PFD altitude (the
+	-- Captain's selected ADC: B747_afds_alt); before, X-Plane's Captain's
+	-- VSI and altimeter
+	B747DR_alt_capture_window = B747_rescale(0,200,3000,1000,math.abs(B747_afds_ivs()))
+	local pfdAlt = B747DR_afds_alt_capt
+	if pfdAlt < B747DR_autopilot_altitude_ft then
+		if B747DR_autopilot_altitude_ft - pfdAlt > 400 then
+			B747DR_autopilot_altitude_ft_pfd = pfdAlt + 400
 		else
 			B747DR_autopilot_altitude_ft_pfd = B747DR_autopilot_altitude_ft
 		end
 	else
-		if simDR_pressureAlt1 - B747DR_autopilot_altitude_ft > 380 then
-			B747DR_autopilot_altitude_ft_pfd = simDR_pressureAlt1 - 380
+		if pfdAlt - B747DR_autopilot_altitude_ft > 380 then
+			B747DR_autopilot_altitude_ft_pfd = pfdAlt - 380
 		else
 			B747DR_autopilot_altitude_ft_pfd = B747DR_autopilot_altitude_ft
 		end
@@ -3753,8 +3835,8 @@ end
 local function B747_at_reset()
 	atState = B747_at_model.new()
 	atIas, atAccel = nil, 0
-	atPush = {spd = 0, thr = 0, disc = 0}
-	atSeen = {spd = 0, thr = 0, disc = 0, toga = nil}
+	atPush = {spd = 0, thr = 0, disc = 0, flch = 0}
+	atSeen = {spd = 0, thr = 0, disc = 0, flch = 0, toga = nil}
 	atMaster, atMasterOK, atFmcLatch = nil, false, false
 	-- (VNAV's levels: the VNAV mode model's, anew in B747_afds_reset)
 	afdsTogaPushes = nil

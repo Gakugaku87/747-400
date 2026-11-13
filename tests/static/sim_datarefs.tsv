@@ -16,6 +16,7 @@ sim/aircraft/overflow/jet_SFC_takeoff	number
 sim/aircraft/parts/acf_gear_deploy	array[10]
 sim/aircraft/parts/acf_slatEQ	int number
 sim/aircraft/view/acf_has_stallwarn	int number
+sim/aircraft/view/acf_livery_index	int number
 sim/aircraft/view/acf_livery_path	-
 sim/aircraft/view/acf_relative_path	-
 sim/aircraft/view/acf_tailnum	string
@@ -438,6 +439,8 @@ sim/flightmodel/position/local_az	number
 sim/flightmodel/position/local_vx	number
 sim/flightmodel/position/local_vy	number
 sim/flightmodel/position/local_vz	number
+sim/flightmodel/position/local_x	number
+sim/flightmodel/position/local_z	number
 sim/flightmodel/position/longitude	number
 sim/flightmodel/position/mag_psi	number
 sim/flightmodel/position/magnetic_variation	number

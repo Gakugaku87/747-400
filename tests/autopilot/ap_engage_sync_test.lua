@@ -8,6 +8,9 @@
 -- bars themselves are not changed. Through the real glue
 -- (B747.70.xt.autopilot.lua) on the XTLua mock.
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 local T = dofile("tests/lib/check.lua")("ap_engage_sync")
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local CMD = "laminar/B747/autopilot/button_switch/"
@@ -40,10 +43,13 @@ for i = 0, 1 do
 end
 -- level at 5,200 ft, 250 kt, pitch 2 degrees
 rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 0)
-rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
-rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 5200)
+rt:set("sim/flightmodel/position/local_vy", 0 / FPM)
+rt:set("laminar/B747/airdata/alt_capt", 5200)
 rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 2)
-rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 270)
+-- (2026-11-13) the TAS 270 kt: the FCC's ADC's Mach at 15 degrees C (B747_afds_tas)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set("laminar/B747/airdata/mach_capt", 270 / 661.47)
+rt:set("laminar/B747/airdata/mach_fo", 270 / 661.47)
 rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 250)
 rt:callout("flight_start")
 local function frames(n, dt) for _ = 1, n do rt:frame(dt or 1 / 30) end end

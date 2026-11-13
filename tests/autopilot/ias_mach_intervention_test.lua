@@ -9,13 +9,16 @@
 -- and Mach as X-Plane does: the test sets the knots X-Plane would give.
 local T = dofile("tests/lib/check.lua")("ias_mach_intervention")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local CMD = "laminar/B747/autopilot/button_switch/"
 local VNAV_STATE = "laminar/B747/autopilot/vnav_state"
 local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
-local ALT_IND, VSI = "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm"
-local VVI = "sim/cockpit2/gauges/indicators/vvi_fpm_pilot"
+local ALT_IND, VSI = "laminar/B747/airdata/alt_capt", "sim/flightmodel/position/local_vy"
+local VVI = "sim/flightmodel/position/local_vy"
 local MCP_ALT = "laminar/B747/autopilot/heading/altitude_dial_ft"
 local IS_MACH = "sim/cockpit2/autopilot/airspeed_is_mach"
 local DIAL = "laminar/B747/autopilot/ias_dial_value"
@@ -65,7 +68,7 @@ fvn({perf = 1, valid = 1, phase = 1, mode = 1, cas = 310, mach = 0.84, mach_mode
 rt:set(MCP_ALT, 37000)
 rt:set(RA, 9000)
 rt:set(ALT_IND, 20000)
-rt:set(VSI, 2000)
+rt:set(VSI, 2000 / FPM)
 rt:command(CMD .. "VNAV")
 frames(10)
 T.equal(rt:get(VNAV_STATE), 2, "VNAV engaged")
@@ -83,7 +86,7 @@ frames(5)
 rt:set(ALT_IND, 32000)
 rt:set("sim/flightmodel2/position/pressure_altitude", 32000)
 rt:set("sim/flightmodel/misc/machno", 0.86)
-rt:set(VVI, 1500)
+rt:set(VVI, 1500 / FPM)
 frames(30)
 T.equal(rt:get(VNAV_STATE), 2, "VNAV still engaged")
 T.equal(rt:get(IS_MACH), 1, "climbing through M.840 in speed intervention: the window in Mach (before: IAS)")
@@ -92,7 +95,7 @@ T.check(rt:get(OPEN) == 1 and rt:get(SPD_INT) == 1, "the window open again, the 
 -- 2. descending at 330 kt's Mach (more than 310 kt): the window in IAS
 rt:set(KTS, 330)                -- X-Plane's knots of the Mach target
 rt:set("sim/flightmodel/misc/machno", 0.80)
-rt:set(VVI, -1500)
+rt:set(VVI, -1500 / FPM)
 frames(30)
 T.equal(rt:get(IS_MACH), 0, "descending with more than 310 kt in speed intervention: the window in IAS")
 T.check(rt:get(OPEN) == 1 and rt:get(SPD_INT) == 1, "the window open, the intervention on")
@@ -102,7 +105,7 @@ rt:command("laminar/B747/button_switch/press_airspeed")
 frames(10)
 T.check(rt:get(OPEN) == 0 and rt:get(SPD_INT) == 0, "pushed again: the window blank, no intervention")
 rt:set("sim/flightmodel/misc/machno", 0.86)
-rt:set(VVI, 1500)
+rt:set(VVI, 1500 / FPM)
 local before = rt:get(IS_MACH)
 frames(30)
 T.equal(rt:get(IS_MACH), before, "the window blank: no change of units by itself")

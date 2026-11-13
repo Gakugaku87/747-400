@@ -10,6 +10,9 @@
 -- and Mach as X-Plane does: the tests set the knots X-Plane would give.
 local T = dofile("tests/lib/check.lua")("ias_mach_changeover")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local I = "sim/cockpit2/gauges/indicators/"
@@ -51,12 +54,12 @@ end
 rt:set("laminar/B747/fms/fmc_ok", 0, 1)
 rt:set("laminar/B747/fms/fmc_ok", 1, 1)
 local function at(ft, ias, m, vs)
-    rt:set(I .. "altitude_ft_pilot", ft)
+    rt:set("laminar/B747/airdata/alt_capt", ft)
     rt:set("sim/flightmodel2/position/pressure_altitude", ft)
     rt:set(I .. "airspeed_kts_pilot", ias)
     rt:set(IAS_IND, ias)
     rt:set("sim/flightmodel/misc/machno", m)
-    rt:set(I .. "vvi_fpm_pilot", vs)
+    rt:set("sim/flightmodel/position/local_vy", vs / FPM)
 end
 at(31000, 301, 0.81, 0)
 rt:callout("flight_start")

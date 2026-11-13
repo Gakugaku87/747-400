@@ -322,6 +322,21 @@ simDR_empty_weight			= find_dataref("sim/aircraft/weight/acf_m_empty")
 simDR_fuel_qty				= find_dataref("sim/flightmodel/weight/m_fuel")
 simDR_cg_adjust				= find_dataref("sim/flightmodel/misc/cgz_ref_to_default")
 simDR_livery_path			= find_dataref("sim/aircraft/view/acf_livery_path")
+simDR_fms_livery_index		= find_dataref("sim/aircraft/view/acf_livery_index")
+-- (2026-11-13) a livery's file (B747-400_simconfig.dat for the CDU's SAVE,
+-- B747-400_lastpos.dat): in the livery's folder, with the default livery
+-- (its index 0) in the aircraft's (by its .acf: simDR_acf_relative_path,
+-- below), where B747.05.xt.simconfig.lua reads the simconfig. The default
+-- livery by its index, not by its empty path: back on it, XTLua's read of
+-- the path still gave the livery before's (X-Plane s333). Before, "" and
+-- the file's name: X-Plane's own folder (s333)
+function B747_fms_livery_file(name)
+  local function text_of(v) return type(v) == "string" and (string.match(v, "^[^%z]*")) or "" end
+  local folder = ""
+  if simDR_fms_livery_index ~= 0 then folder = text_of(simDR_livery_path) end
+  if folder == "" then folder = string.match(text_of(simDR_acf_relative_path), "^(.*[/\\])") or "" end
+  return folder .. name
+end
 simDR_payload_weight		= find_dataref("sim/flightmodel/weight/m_fixed")
 simDR_fuel_totalizer_kg		= find_dataref("sim/cockpit2/fuel/fuel_totalizer_init_kg")
 --Marauder28
@@ -1789,6 +1804,9 @@ B747DR_fms_ias_dial = find_dataref("laminar/B747/autopilot/ias_dial_value")
 B747DR_fms_vnav_mcp_alt = find_dataref("laminar/B747/autopilot/heading/altitude_dial_ft")
 B747DR_fms_vnav_vmax = find_dataref("laminar/B747/airspeed/Vmax")
 B747DR_fms_vnav_vminm = find_dataref("laminar/B747/airspeed/Vminm")
+-- (2026-11-13) its band on the PFD: from the first flap retraction after
+-- takeoff (FCOM p.973), VNAV's floor from then
+B747DR_fms_vnav_show_mins = find_dataref("laminar/B747/pfd/show_mins")
 simDR_fms_vnav_flaps = find_dataref("sim/cockpit2/controls/flap_ratio")
 local vnavState = B747_vnav_model.new()
 function B747_fms_vnav_phase() return vnavState.phase end
@@ -2322,7 +2340,10 @@ local function update_vnav()
   inp.mcp_alt = B747DR_fms_vnav_mcp_alt
   inp.clb, inp.des, inp.crzspd = B747_fms_schedules(perf)
   inp.flaps_placard = simDR_fms_vnav_flaps > 0.01 and B747DR_fms_vnav_vmax > 0 and B747DR_fms_vnav_vmax or nil
-  inp.vmin = B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_vminm or nil
+  -- (2026-11-13) the minimum maneuvering speed from the first flap
+  -- retraction after takeoff, as the PFD shows it (FCOM p.973); before,
+  -- the takeoff's VNAV target over V2 + 25 at a heavy weight (s326)
+  inp.vmin = (B747DR_fms_vnav_vminm > 0 and B747DR_fms_vnav_show_mins > 0.5) and B747DR_fms_vnav_vminm or nil
   -- (step 9e2) END OF DES and on approach
   if inp.ground or not inp.active then
     vnavEndDes = false
@@ -6030,7 +6051,7 @@ end
 -- stopped the plugin)
 local lastPosRead=nil
 function aircraft_last_pos(phase)
-	local file_location = simDR_livery_path.."B747-400_lastpos.dat"
+	local file_location = B747_fms_livery_file("B747-400_lastpos.dat")
 
 	if phase == "LOAD" then
 		--Load FMC last position
@@ -6222,8 +6243,18 @@ function throttleDataRefresh()
 	local ref26=simDR_throttle_max      
 end
 
+-- (2026-11-13) the livery's and the .acf's paths read every PATHS_S
+-- seconds, the livery's index every frame: XTLua gives a read the value
+-- fetched at the read before it (the first ""), and B747_fms_livery_file
+-- reads them on an event (the CDU's SAVE, POS INIT's LAST POS, the unload)
+local PATHS_S, pathsRead = 5, nil
 function after_physics()
   if debug_fms>0 then return end
+  if pathsRead == nil or simDRTime - pathsRead >= PATHS_S or simDRTime < pathsRead then
+    pathsRead = simDRTime
+    local liv, acf = simDR_livery_path, simDR_acf_relative_path
+  end
+  local liveryIndex = simDR_fms_livery_index
   if not B747_fmc_navdb.ready then B747_navdb.load(B747_fmc_navdb,32768) end
 	
   if hasSimConfig()==false then return end

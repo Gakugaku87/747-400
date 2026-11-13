@@ -21,6 +21,9 @@
 -- fpm: up) and T/O on the ground (8 degrees) on the pitch laws.
 local T = dofile("tests/lib/check.lua")("afds_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local CMD = "laminar/B747/autopilot/button_switch/"
@@ -66,7 +69,7 @@ rt:set("laminar/B747/flt_ctrls/stab_trim/srm_valid", 1, 1)
 -- master FMC's)
 rt:set("laminar/B747/fms/fmc_ok", 0, 1)
 rt:set("laminar/B747/fms/fmc_ok", 1, 1)
-rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 1234)
+rt:set("sim/flightmodel/position/local_vy", 1234 / FPM)
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 2)
 rt:callout("flight_start")
 for _ = 1, 30 do rt:frame(1 / 30) end
@@ -175,7 +178,7 @@ T.equal(rt:get(VS_STATUS), 0, "everything off with neither the A/P nor a F/D (FC
 T.check(sent("sim/autopilot/servos_fdir_off"), "X-Plane's heading modes off too")
 -- and nothing shows near the MCP altitude (the old capture window showed
 -- ALT without a mode: s99 in X-Plane)
-rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 10000)
+rt:set("laminar/B747/airdata/alt_capt", 10000)
 rt:set("laminar/B747/autopilot/altitude_dial_ft", 10000)
 rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 10000)
 frames(10)
@@ -187,7 +190,7 @@ rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
 rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 20000)
 -- the first F/D ON at 15 degrees of bank: V/S and ATT
 rt:set("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot", 15)
-rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", -640)
+rt:set("sim/flightmodel/position/local_vy", -640 / FPM)
 rt:set(FD, 23, 1)
 frames()
 T.equal(rt:get(VS_STATUS), 2, "the first F/D ON in the air: V/S")
@@ -281,10 +284,10 @@ rt:set("laminar/B747/fms/data", '{"clbspd":"340","transpd":"250","spdtransalt":"
     .. '"clbrestspd":"---","clbrestalt":"-----","crzalt":"FL350","crzspd":"810","desspdmach":"805",'
     .. '"desspd":"270","destranspd":"240","desspdtransalt":"10000","desrestspd":"---","desrestalt":"-----",'
     .. '"costindex":"100"}')
-rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12000)
+rt:set("laminar/B747/airdata/alt_capt", 12000)
 rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
 rt:set("laminar/B747/autopilot/heading/altitude_dial_ft", 20000)
-rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 1840)
+rt:set("sim/flightmodel/position/local_vy", 1840 / FPM)
 rt:command(CMD .. "vs_mode")
 frames()
 T.equal(rt:get(VS_STATUS), 2, "V/S")
@@ -295,8 +298,11 @@ T.equal(rt:get(PITCH), 7, "the FMA's V/S")
 -- more than flown: the command up
 local PITCH_LAW, PITCH_CMD = "laminar/B747/autopilot/pitch_law", "laminar/B747/autopilot/pitch_cmd"
 rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 5)
-rt:set("sim/flightmodel/position/vh_ind_fpm", 1840)
-rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 300)
+rt:set("sim/flightmodel/position/local_vy", 1840 / FPM)
+-- (2026-11-13) the TAS 300 kt: the FCC's ADC's Mach at 15 degrees C (B747_afds_tas)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set("laminar/B747/airdata/mach_capt", 300 / 661.47)
+rt:set("laminar/B747/airdata/mach_fo", 300 / 661.47)
 frames(150)
 T.equal(rt:get(PITCH_LAW), 1, "V/S: the pitch law")
 rt:set("sim/cockpit2/autopilot/vvi_dial_fpm", 2800)
@@ -317,16 +323,16 @@ T.equal(rt:get(PITCH_LAW), 1, "ALT: the pitch law")
 rt:command(CMD .. "vs_mode")
 frames()
 rt:set("laminar/B747/autopilot/altitude_dial_ft", 12850)
-rt:set("sim/flightmodel/position/vh_ind_fpm", 2000)
+rt:set("sim/flightmodel/position/local_vy", 2000 / FPM)
 frames(3)
 T.equal(rt:get(PITCH), 7, "850 ft below at 2,000 fpm: V/S")
-rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12100)
+rt:set("laminar/B747/airdata/alt_capt", 12100)
 frames()
 T.equal(rt:get(PITCH), 9, "750 ft below: ALT, the capture")
 T.near(rt:get("laminar/B747/autopilot/altitude_hold_ft"), 12850, 0.5, "to the MCP altitude")
-rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 12000)
+rt:set("laminar/B747/airdata/alt_capt", 12000)
 rt:set("laminar/B747/autopilot/altitude_dial_ft", 20000)
-rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
+rt:set("sim/flightmodel/position/local_vy", 0 / FPM)
 rt:command(CMD .. "vs_mode")
 frames()
 T.equal(rt:get(VS_DIAL), 0, "V/S after ALT: 000 (ATA22 p.282)")
@@ -347,13 +353,13 @@ T.equal(rt:get(VS_STATUS), 0, "V/S off")
 -- climb); the MCP altitude below, down from level as before
 T.equal(rt:get(PITCH_LAW), 1, "FLCH: the pitch law (step 3b)")
 T.near(rt:get("laminar/B747/autopilot/pitch_target"), 200, 0.5, "(the FMC's step 9h3b) the speed law's target published: 200 kt")
-rt:set("sim/flightmodel/position/vh_ind_fpm", 2000)
+rt:set("sim/flightmodel/position/local_vy", 2000 / FPM)
 rt:set(IAS, 180)
 frames(200)
 local p1 = rt:get(PITCH_CMD)
 frames(30)
 T.check(rt:get(PITCH_CMD) < p1 - 0.1, "FLCH up to the MCP altitude, climbing and 20 kt slow: the command down")
-rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
+rt:set("sim/flightmodel/position/local_vy", 0 / FPM)
 -- (2026-11-13, B3) the IAS stepped with the TAS held: the speed laws' rate
 -- (the speed complemented by the inertial acceleration) settles through
 -- its IAS/TAS ratio over GUST_RATIO_S, 2 s
@@ -465,11 +471,11 @@ T.equal(rt:get(AFTER_TOD), 0, "no path pointer in the climb")
 -- 6-1/6-2 step 9a: climbing in VNAV SPD to the MCP altitude, VNAV levels
 -- there (VNAV ALT: FCOM p.645, ATA22 p.280; before, the rebuilt AFDS flew
 -- the old VNAV's FLCH on through it: s137); a new MCP altitude, VNAV SPD
-local ALT_IND, VSI = "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm"
+local ALT_IND, VSI = "laminar/B747/airdata/alt_capt", "sim/flightmodel/position/local_vy"
 local MCP_ALT = "laminar/B747/autopilot/heading/altitude_dial_ft"
 local a0 = rt:get(ALT_IND)
 local mcp0 = rt:get(MCP_ALT)
-rt:set(VSI, 1500)
+rt:set(VSI, 1500 / FPM)
 rt:set(MCP_ALT, a0 + 60)
 -- (the FMC's step 9i: VNAV goes by the MCP altitude settled, 3 s after the
 -- knob, or at once with the selector's push: here the push; no FMC here)
@@ -518,7 +524,7 @@ T.equal(rt:get(PITCH), 4, "the MCP set back and pushed: VNAV SPD")
 -- the cruise (the FMC's phase 2): VNAV PTH at CRZ ALT, the A/T SPD, the
 -- FMC's Mach on the dial in Mach (.845: 84.5) with the units changed, the
 -- cruise's phase (the EEC's CRZ)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 fvn({phase = 2, mode = 2, alt = a0, at = 3, mach_mode = 1, mach = 0.845})
 frames(30)
 T.equal(rt:get(PITCH), 6, "the cruise: VNAV PTH")
@@ -539,13 +545,13 @@ frames(30)
 T.equal(rt:get(PITCH), 6, "the cruise descent: VNAV PTH")
 T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD (the cruise speed kept)")
 T.check(rt:get(PITCH_CMD) < p3 - 0.1, string.format("1,250 fpm asked from level: the command down (%.2f from %.2f)", rt:get(PITCH_CMD), p3))
-rt:set(VSI, -1200)
+rt:set(VSI, -1200 / FPM)
 fvn({alt = a0 - 60})
 frames(3)
 local p4 = rt:get(PITCH_CMD)
 frames(30)
 T.check(rt:get(PITCH) == 6 and rt:get(PITCH_CMD) > p4, string.format("60 ft above CRZ ALT at 1,200 fpm down: captured, VNAV PTH, the command up (%.2f from %.2f)", rt:get(PITCH_CMD), p4))
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 fvn({mode = 2, alt = a0, at = 3, vs = 0})
 frames(30)
 -- (step 9d2a) VNAV SPD with THR in the cruise phase (9d2a's cruise descent
@@ -596,13 +602,13 @@ frames()
 T.equal(rt:get(AT_FMA_ST), 4, "VNAV's THR, the levers 8 degrees off: THR kept (p.648)")
 for e = 0, 3 do rt:set("laminar/B747/engine/throttle", e, rt:get(LEVER_CMD)) end
 frames()
-rt:set(VSI, -1200)
+rt:set(VSI, -1200 / FPM)
 
 fvn({alt = a0 - 60})
 frames(3)
 T.equal(rt:get(PITCH), 6, "60 ft above the new CRZ ALT: VNAV PTH (the FMC altitude captured)")
 T.equal(rt:get(AT_FMA_ST), 3, "the A/T SPD while level")
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 rt:set("sim/cockpit2/gauges/indicators/vvi_fpm_pilot", 0)
 fvn({mode = 2, alt = a0, at = 3, vs = 0})
 frames(3)
@@ -969,7 +975,7 @@ local ONGND = "sim/flightmodel/failures/onground_any"
 -- (1-2) the AFDS's and the A/T's ground: the PSEU's primary ground
 local PRIGND = "laminar/B747/gear/air_ground/pri_gnd"
 rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 3.3)
-rt:set("sim/flightmodel/position/vh_ind_fpm", -790)
+rt:set("sim/flightmodel/position/local_vy", -790 / FPM)
 rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 145)  -- (the old autoland's disconnect is under 65 kt on the ground)
 rt:set(RA, 60)
 frames()
@@ -1051,7 +1057,7 @@ rt:set(FLAPS, 0.668)
 push()
 T.check(rt:get(ROLL) == 1 and rt:get(PITCH) == 1, "the flaps out of up: G/A, the FMA's TO/GA")
 T.equal(rt:get(PITCH_LAW), 1, "G/A: the pitch law (step 3b)")
-rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
+rt:set("sim/flightmodel/position/local_vy", 0 / FPM)
 local g0 = rt:get(PITCH_CMD)
 frames(10)
 T.check(rt:get(PITCH_CMD) > g0 + 0.1, "G/A under 600 fpm: up toward 15 degrees (FCOM p.674)")

@@ -2547,7 +2547,7 @@ function fmsFunctions.setdata(fmsO,value)
 			fmsO["notify"] = "INVALID ENTRY"
 		end
 	elseif value=="simConfigSave" then
-			local file_location = simDR_livery_path.."B747-400_simconfig.dat"
+			local file_location = B747_fms_livery_file("B747-400_simconfig.dat")
 			--print("File = "..file_location)
 			local file = io.open(file_location, "w")
 

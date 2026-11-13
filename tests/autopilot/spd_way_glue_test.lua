@@ -22,6 +22,9 @@
 --  - FLCH by the MCP altitude: above, held near level; below, down.
 local T = dofile("tests/lib/check.lua")("spd_way_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local CMD = "laminar/B747/autopilot/button_switch/"
@@ -29,9 +32,10 @@ local PITCH = "laminar/B747/autopilot/FMA/active_pitch_mode"
 local PITCH_CMD = "laminar/B747/autopilot/pitch_cmd"
 local PITCH_TARGET = "laminar/B747/autopilot/pitch_target"
 local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
-local ALT_IND, VSI = "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm"
+local ALT_IND, VSI = "laminar/B747/airdata/alt_capt", "sim/flightmodel/position/local_vy"
 local IAS = "laminar/B747/gauges/indicators/airspeed_kts_pilot"
-local TAS = "sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot"
+-- (2026-11-13) the TAS as the FCC's ADC's Mach at 15 degrees C (B747_afds_tas)
+local TAS, MACH_FO = "laminar/B747/airdata/mach_capt", "laminar/B747/airdata/mach_fo"
 local MCP_ALT, SIM_ALT = "laminar/B747/autopilot/heading/altitude_dial_ft", "laminar/B747/autopilot/altitude_dial_ft"
 local PUSH = "laminar/B747/button_switch/press_altitude"
 
@@ -66,7 +70,9 @@ rt:set("laminar/B747/fms/fmc_ok", 0, 1)
 rt:set("laminar/B747/fms/fmc_ok", 1, 1)
 rt:set(ALT_IND, 10000)
 rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 5)
-rt:set(TAS, 316)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set(TAS, 316 / 661.47)
+rt:set(MACH_FO, 316 / 661.47)
 rt:callout("flight_start")
 local ias = 272
 rt:set(IAS, ias)
@@ -102,7 +108,7 @@ frames()
 fvn({perf = 1, valid = 1, phase = 1, mode = 1, cas = 340, mach = 0.6, mach_mode = 0, alt = 35000,
     vs = 0, path_dev = 0, at = 5, td_hold = 0, on_app = 0, dd = 0})
 rt:set(MCP_ALT, 35000)
-rt:set(VSI, 1500)
+rt:set(VSI, 1500 / FPM)
 rt:command(CMD .. "VNAV")
 frames(30)
 T.equal(rt:get(PITCH), 4, "VNAV SPD")
@@ -111,15 +117,15 @@ T.near(rt:get(PITCH_TARGET), 340, 0.5, "the speed law's target the FMC's 340 kt"
 -- level's step for the speed's gain: a quarter of 0.18 degree a second
 local d = moved(0)
 T.check(d < -0.3, string.format("VNAV SPD's climb at 1,500 fpm, 68 kt under: the command down at the law's own rate (%.3f in a second)", d))
-rt:set(VSI, 100)
+rt:set(VSI, 100 / FPM)
 d = moved(0.5)
 T.check(math.abs(d) < 0.01, string.format("at 100 fpm and gaining 0.5 kt/s: held (%.3f; before, down 0.35)", d))
 d = moved(0)
 T.check(d < -0.02 and d > -0.06, string.format("the speed not gaining there: on down to level flight, slowly (%.3f)", d))
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 d = moved(0)
 T.check(math.abs(d) < 0.01, string.format("level and not gaining: held, no altitude for the speed (%.3f)", d))
-rt:set(VSI, 600)
+rt:set(VSI, 600 / FPM)
 d = moved(0.5)
 T.check(d < -0.1 and d > -0.3, string.format("at 600 fpm: down to near level, slower than the law's own rate (%.3f)", d))
 
@@ -129,20 +135,20 @@ ias = 300
 rt:set(MCP_ALT, 5000)
 rt:command(PUSH)
 fvn({phase = 3, mode = 1, cas = 250, alt = 5000, at = 2})
-rt:set(VSI, -2000)
+rt:set(VSI, -2000 / FPM)
 frames(30)
 T.equal(rt:get(PITCH), 4, "VNAV SPD in the descent")
 T.near(rt:get(PITCH_TARGET), 250, 0.5, "the target the FMC's 250 kt")
 d = moved(0)
 T.check(d > 0.3, string.format("descending 2,000 fpm, 50 kt over: the command up at the law's own rate (%.3f)", d))
-rt:set(VSI, -100)
+rt:set(VSI, -100 / FPM)
 d = moved(-0.5)
 T.check(math.abs(d) < 0.01, string.format("at 100 fpm of descent and slowing 0.5 kt/s: held (%.3f; before, up 0.35: a climb)", d))
 -- the early descent (VNAV SPD with THR to the FMC's -1,250 fpm, no
 -- driftdown): its V/S is not the near-level rate; at 600 fpm of descent
 -- and slowing, up to near level (with it for the rate, down to 1,250)
 fvn({vs = -1250, at = 4})
-rt:set(VSI, -600)
+rt:set(VSI, -600 / FPM)
 d = moved(-0.5)
 T.check(d > 0.1 and d < 0.3, string.format("the early descent at 600 fpm, slowing: up to near level, not down to its 1,250 fpm (%.3f)", d))
 fvn({vs = 0, at = 2})
@@ -151,15 +157,36 @@ fvn({vs = 0, at = 2})
 -- its V/S -300): 100 fpm of descent is under its least rate
 ias = 300
 fvn({phase = 2, mode = 1, cas = 250, alt = 5000, at = 4, vs = -300, dd = 1})
-rt:set(VSI, -100)
+rt:set(VSI, -100 / FPM)
 frames(30)
 T.equal(rt:get(PITCH), 4, "the driftdown: VNAV SPD")
 d = moved(-0.5)
 T.check(d < -0.05 and d > -0.2, string.format("the driftdown at 100 fpm of descent, slowing: down to its 300 fpm (%.3f; FCOM p.1268)", d))
-rt:set(VSI, -300)
+rt:set(VSI, -300 / FPM)
 d = moved(-0.5)
 T.check(math.abs(d) < 0.01, string.format("at 300 fpm of descent: held (%.3f)", d))
+-- (2026-11-13) the minimum maneuvering speed over the FMC's target: no
+-- speed protection in the driftdown (FCOM p.675: none with an engine
+-- failure above the maximum engine-out altitude), the FMC's 250 kt still;
+-- out of it the protection's 310 kt
+local VMINM, SHOW_MINS = "laminar/B747/airspeed/Vminm", "laminar/B747/pfd/show_mins"
+-- (2026-11-13) its band shown (from the first flap retraction after
+-- takeoff: FCOM p.973)
+rt:set(SHOW_MINS, 1)
+rt:set(VMINM, 310)
+frames(30)
+T.near(rt:get(PITCH_TARGET), 250, 0.5, "the driftdown, the minimum maneuvering speed 310 kt: the FMC's 250 kt (FCOM p.675)")
 fvn({dd = 0, at = 2, vs = 0, phase = 3})
+frames(30)
+T.near(rt:get(PITCH_TARGET), 310, 0.5, "out of the driftdown: the protection's 310 kt")
+-- (2026-11-13) its band not shown (the takeoff's, before the first flap
+-- retraction: FCOM p.973): no protection by it (before, the heavy
+-- takeoff's target held at its 182 kt + 5, over V2 160: s326)
+rt:set(SHOW_MINS, 0)
+frames(30)
+T.near(rt:get(PITCH_TARGET), 250, 0.5, "the band not shown: the FMC's 250 kt, no protection by it (FCOM p.973)")
+rt:set(VMINM, 0)
+frames(30)
 
 -- FLCH by the MCP altitude it flies to: above, 28 kt under the MCP speed
 -- at 100 fpm and gaining: held; below: down for the speed as before
@@ -167,7 +194,7 @@ ias = 272
 rt:set(IAS, ias)
 rt:set(MCP_ALT, 20000)
 rt:set(SIM_ALT, 20000)
-rt:set(VSI, 100)
+rt:set(VSI, 100 / FPM)
 rt:command(CMD .. "flch_mode")
 frames(30)
 T.equal(rt:get(PITCH), 8, "FLCH SPD")

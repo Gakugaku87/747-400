@@ -42,7 +42,7 @@
     { "do": "sleep", "seconds": 15 },
     { "do": "check", "note": "25 秒：前脚はまだ下りきっていない（ふつうは 14 秒。前は 12.9 秒で下りた）", "dref": "sim/flightmodel2/gear/deploy_ratio[0]", "op": "<", "value": 0.999 },
     { "do": "check", "note": "系統 1 の圧は 2,800 psi 以上のまま", "dref": "laminar/B747/hydraulics/pressure_1", "op": ">=", "value": 2800 },
-    { "do": "wait", "note": "全脚ダウンロック（FCTM p.286：最大 2 分半。注意どまり：X-Plane の風車回転の N2 は CUTOFF から 2 分ほどで 1.3 % まで落ち、エンジン駆動ポンプの流量が無くなって脚が途中で止まる：2026-11-13、報告する別の件）", "dref": "laminar/B747/gear/air_ground/all_gear_down", "op": "==", "value": 1, "timeout": 125, "level": "warn" },
+    { "do": "wait", "note": "全脚ダウンロック（FCTM p.286：最大 2 分半。2026-11-13 の 1 回目は X-Plane の風車回転の N2 が CUTOFF から 2 分ほどで 1.3 % まで落ち、エンジン駆動ポンプの流量が無くなって脚が途中で止まった：範囲の外の発見 2 で、止まったエンジンの N2 を速さで保つ（推定）ようにした）", "dref": "laminar/B747/gear/air_ground/all_gear_down", "op": "==", "value": 1, "timeout": 125 },
     { "do": "snapshot", "note": "2 分半の時の脚の位置と N2", "drefs": [ "sim/flightmodel2/gear/deploy_ratio[0]", "sim/flightmodel2/gear/deploy_ratio[1]", "sim/flightmodel2/gear/deploy_ratio[3]", "sim/flightmodel/engine/ENGN_N2_[0]", "sim/flightmodel/engine/ENGN_N2_[3]", "laminar/B747/gear/hyd_gpm[0]", "laminar/B747/gear/hyd_gpm[3]", "laminar/B747/hydraulics/spare_gpm[0]", "laminar/B747/hydraulics/spare_gpm[3]" ] },
     { "do": "snapshot", "note": "その時", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/engine/ENGN_N2_[0]", "sim/flightmodel/engine/ENGN_N2_[3]", "laminar/B747/hydraulics/pressure_1", "laminar/B747/hydraulics/pressure_4", "laminar/B747/hydraulics/spare_gpm[0]", "laminar/B747/hydraulics/spare_gpm[3]" ] },
     { "do": "mark", "note": "フラップ 5" },

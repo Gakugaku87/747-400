@@ -6,7 +6,8 @@
 --  - Engage (ATA34_2 p.644): the A/T ARM switch on and the interlocks met
 --    (`inp.ok`: the engines, the EECs' ALTN, the switch's own fail); a
 --    mode engages it (FCOM p.641-642, p.656; ATA34_2 p.647, p.660-674):
---    VNAV or FLCH engaging (or the ARM switch put on while they are), a
+--    VNAV or FLCH engaging (or the ARM switch put on while they are; the
+--    FL CH switch pushed again in FLCH: FCOM p.646), a
 --    TO/GA push (on the ground under 50 kt with the flaps out and the TO
 --    limit: TO; in the air with the flaps out or G/S, not the TO limit:
 --    G/A; after takeoff on the TO limit: THR REF), the SPD switch (from
@@ -259,7 +260,8 @@ end
 -- "FLARE" or nil), retard, vnav_at (the FMC's A/T mode), vnav_level,
 -- vnav_phase (the FMC's: step 9d2a), vnav_dd (the FMC's driftdown: its step
 -- 9h4b), lever_idle (the levers at the aft stop); the pushes since the last
--- update: toga, spd, thr, disc (true when pushed)
+-- update: toga, spd, thr, disc, flch (the FL CH switch's push the AFDS took)
+-- (true when pushed)
 function M.update(s, inp)
     local was = s.pitch
     -- the no-TO inhibit: no push by 50 kt on the ground (FCOM p.656)
@@ -314,6 +316,16 @@ function M.update(s, inp)
             and (inp.pitch == "ALT" or inp.pitch == "VS" or inp.pitch == "GS") then
             engage(s, M.SPD)
         end
+    elseif inp.flch and inp.pitch == "FLCH" and can then
+        -- (2026-11-13) the FL CH switch pushed again in FLCH: the A/T in
+        -- THR, then HOLD in a descent (FCOM p.646: each push selects FLCH
+        -- and the A/T operates in THR), FLCH's V/S from where the airplane
+        -- is (ATA34_2 p.670). Before, only a change of the pitch mode
+        -- engaged it: in a descent's HOLD a new MCP altitude above and the
+        -- push kept the levers at idle (s331)
+        s.to = false
+        engage(s, M.THR)
+        s.flch_vs, s.flch_mcp = nil, nil
     end
     s.pitch = inp.pitch
     if s.pitch ~= "FLCH" then s.flch_vs, s.flch_mcp = nil, nil end

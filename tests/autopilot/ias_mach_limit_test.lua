@@ -8,6 +8,9 @@
 --    with the MCP in Mach. Before, in knots: 291 kt became M2.91.
 local T = dofile("tests/lib/check.lua")("ias_mach_limit")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local I = "sim/cockpit2/gauges/indicators/"
@@ -26,12 +29,12 @@ rt:set(I .. "radio_altimeter_height_ft_pilot", 2500)
 -- in cruise at FL350, M.85 (291 kt), level: Vmo as the flight instruments
 -- make it there (B747.60.xt.fltInst02.lua: 365 kt at 28,620 ft to 252.35 at
 -- 45,000), the limit Vmo - 10 = 311.1 kt (M.902)
-rt:set(I .. "altitude_ft_pilot", 35000)
+rt:set("laminar/B747/airdata/alt_capt", 35000)
 rt:set("sim/flightmodel2/position/pressure_altitude", 35000)
 rt:set(I .. "airspeed_kts_pilot", 291)
 rt:set("laminar/B747/gauges/indicators/airspeed_kts_pilot", 291)
 rt:set("sim/flightmodel/misc/machno", 0.85)
-rt:set(I .. "vvi_fpm_pilot", 0)
+rt:set("sim/flightmodel/position/local_vy", 0 / FPM)
 rt:set("laminar/B747/airspeed/Vmo", 321.1)
 rt:set("laminar/B747/airspeed/Mms", 0.92)
 rt:set("laminar/B747/airspeed/Vmc", 200)

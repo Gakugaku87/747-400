@@ -40,6 +40,15 @@
     { "do": "check", "note": "5 行目 DOYLE", "dref": "laminar/B747/fms3/Line11_L", "op": "matches", "value": "^DOYLE", "stop": true },
     { "do": "check", "note": "D097V→DOYLE は 40 NM 未満（前は北海道の D097V から 439 NM）", "dref": "laminar/B747/fms3/Line10_S", "op": "matches", "value": "^ *[0-9]{3}` +([0-9]|[1-3][0-9])NM" },
     { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
-    { "do": "shot", "name": "cdu_legs_sulp1d" }
+    { "do": "shot", "name": "cdu_legs_sulp1d" },
+    { "do": "mark", "note": "(2026-11-13、範囲の外の発見 8) ARRIVALS を開き直すと、全部の選択肢が 1 ページ目から並び、SULP1D の横に <SEL>（FCOM p.1302：ページを離れて戻ると全部の選択肢と <SEL>・<ACT>）" },
+    { "do": "cdu", "note": "DEP ARR、ARR>（R2）", "keys": ["DEPARR", "R2"] },
+    { "do": "wait", "note": "RJTT ARRIVALS", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "RJTT ARRIVALS", "timeout": 10 },
+    { "do": "snapshot", "note": "開き直した 1 ページ目（全部の選択肢）", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line05_L" ] },
+    { "do": "cdu", "note": "9 ページ目へ", "keys": ["NEXT", "NEXT", "NEXT", "NEXT", "NEXT", "NEXT", "NEXT", "NEXT"] },
+    { "do": "check", "note": "9 ページ目の 5L が SULP1D<SEL>", "dref": "laminar/B747/fms3/Line11_L", "op": "matches", "value": "^SULP1D<SEL>" },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_arrivals_reopened_p9" },
+    { "do": "view", "name": "forward" }
   ]
 }
