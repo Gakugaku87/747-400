@@ -103,8 +103,12 @@ B747DR_init_fltctrls_CD             = find_dataref("laminar/B747/fltctrls/init_C
 B747DR_init_ice_CD                  = find_dataref("laminar/B747/ice/init_CD")
 B747DR_init_air_CD                  = find_dataref("laminar/B747/air/init_CD")
 B747DR_init_inst_CD                 = find_dataref("laminar/B747/inst/init_CD")
-B747DR_init_fmsL_CD                 = find_dataref("laminar/B747/fmsL/init_CD")
-B747DR_init_fmsR_CD                 = find_dataref("laminar/B747/fmsR/init_CD")
+-- (2026-11-12 review SM-1) no init script makes fmsL/init_CD nor
+-- fmsR/init_CD (the FMS has no cold-and-dark step): step 1 waited for them
+-- and timed out, AUTO-BOARD SEQUENCE ABORTED (after putting a running
+-- airplane cold and dark)
+--B747DR_init_fmsL_CD                 = find_dataref("laminar/B747/fmsL/init_CD")
+--B747DR_init_fmsR_CD                 = find_dataref("laminar/B747/fmsR/init_CD")
 --B747DR_init_autopilot_CD            = find_dataref("laminar/B747/autopilot/init_CD")
 B747DR_init_safety_CD               = find_dataref("laminar/B747/safety/init_CD")
 B747DR_init_warning_CD              = find_dataref("laminar/B747/warning/init_CD")
@@ -221,8 +225,10 @@ B747CMD_ai_fltctrls_quick_start     = find_command("laminar/B747/ai/fltctrls_qui
 B747CMD_ai_antiice_quick_start      = find_command("laminar/B747/ai/antiice_quick_start")
 B747CMD_ai_air_quick_start         	= find_command("laminar/B747/ai/air_quick_start")
 B747CMD_ai_fltinst_quick_start      = find_command("laminar/B747/ai/fltinst_quick_start")
-B747CMD_ai_fmsL_quick_start         = find_command("laminar/B747/ai/fmsL_quick_start")
-B747CMD_ai_fmsR_quick_start         = find_command("laminar/B747/ai/fmsR_quick_start")
+-- (2026-11-12 review SM-3) no init script makes the FMSs' quick start
+-- commands (nothing to quick start: the FMS is ready when powered)
+--B747CMD_ai_fmsL_quick_start         = find_command("laminar/B747/ai/fmsL_quick_start")
+--B747CMD_ai_fmsR_quick_start         = find_command("laminar/B747/ai/fmsR_quick_start")
 B747CMD_ai_autopilot_quick_start    = find_command("laminar/B747/ai/autopilot_quick_start")
 B747CMD_ai_safety_quick_start       = find_command("laminar/B747/ai/safety_quick_start")
 B747CMD_ai_warning_quick_start      = find_command("laminar/B747/ai/warning_quick_start")
@@ -478,8 +484,8 @@ function B747_auto_board()
             B747DR_init_ice_CD = 1
             B747DR_init_air_CD = 1
             B747DR_init_inst_CD = 1
-            B747DR_init_fmsL_CD = 1
-            B747DR_init_fmsR_CD = 1
+            --B747DR_init_fmsL_CD = 1
+            --B747DR_init_fmsR_CD = 1
             --B747DR_init_autopilot_CD = 1
             B747DR_init_safety_CD = 1
             B747DR_init_warning_CD = 1
@@ -508,8 +514,8 @@ function B747_auto_board()
                 and B747DR_init_ice_CD == 2
                 and B747DR_init_air_CD == 2
                 and B747DR_init_inst_CD == 2
-                and B747DR_init_fmsL_CD == 2
-                and B747DR_init_fmsR_CD == 2
+                --and B747DR_init_fmsL_CD == 2
+                --and B747DR_init_fmsR_CD == 2
                 --and B747DR_init_autopilot_CD == 2
                 and B747DR_init_safety_CD == 2
                 and B747DR_init_warning_CD == 2
@@ -531,8 +537,8 @@ function B747_auto_board()
                 B747DR_init_ice_CD = 0
                 B747DR_init_air_CD = 0
                 B747DR_init_inst_CD = 0
-                B747DR_init_fmsL_CD = 0
-                B747DR_init_fmsR_CD = 0
+                --B747DR_init_fmsL_CD = 0
+                --B747DR_init_fmsR_CD = 0
                 --B747DR_init_autopilot_CD = 0
                 B747DR_init_safety_CD = 0
                 B747DR_init_warning_CD = 0
@@ -2564,14 +2570,13 @@ function B747_ai_quick_start()
 	-- FLIGHT INSTRUMENTS
 	B747CMD_ai_fltinst_quick_start:once()
 	
-	-- FMS L
-	B747CMD_ai_fmsL_quick_start:once()
+	-- FMS L, FMS R: (2026-11-12 review SM-3) no such commands
 	
-	-- FMS R
-	B747CMD_ai_fmsR_quick_start:once()
-	
-	-- AUTOPILOT
-	B747CMD_ai_ap_quick_start:once()
+	-- AUTOPILOT: (2026-11-12 review SM-3) bound above as
+	-- B747CMD_ai_autopilot_quick_start; B747CMD_ai_ap_quick_start is the
+	-- autopilot module's name, nil here: the quick start stopped on a Lua
+	-- error at this line, after the flight instruments
+	B747CMD_ai_autopilot_quick_start:once()
 	
 	-- SAFTEY
 	B747CMD_ai_safety_quick_start:once()

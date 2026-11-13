@@ -1053,6 +1053,12 @@ end
 debug_warning     = deferred_dataref("laminar/B747/debug/warning", "number")
 function after_physics()
   if debug_warning>0 then return end
+    -- (2026-11-13; the 2026-11-12 review SM-1, 案 14) the auto board's cold
+    -- and dark flag answered with or without power: step 1 puts the airplane
+    -- cold and dark, the EIUs lose their power in the same frame and the
+    -- flag waited unanswered until the step timed out (AUTO-BOARD SEQUENCE
+    -- ABORTED: X-Plane s305). Before, only with the EIUs powered
+    B747_warning_monitor_AI()
     local diff=simDRTime-lastUpdate
     local eiu_power = B747DR_warning_elec_stby_main == 1 or B747DR_warning_elec_xfr_capt == 1 or B747DR_warning_elec_xfr_fo == 1
     if not eiu_power or simDR_esys1==6 then
@@ -1065,7 +1071,6 @@ function after_physics()
 
       B747_warnings_EICAS_msg()
 
-      B747_warning_monitor_AI()
       lastUpdate=simDRTime
     else
       -- the EIUs start 4 s after the power comes (estimate: the old value)
