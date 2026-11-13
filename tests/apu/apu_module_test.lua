@@ -96,18 +96,20 @@ frames(30)
 T.equal(get(DOOR), 0, "OFF: inlet door closed after the run-down")
 T.equal(get(ADVISORY, 13), 0, "OFF: no APU advisory")
 
--- the quick start's X-Plane command (sim/electrical/APU_start) turns the
--- selector OFF to START with two sel_dial_up; the mock logs the commands a
--- module runs instead of running them, so the test runs them as X-Plane would
+-- the quick start's and the auto start's X-Plane command
+-- (sim/electrical/APU_start): the selector ON and START's latch set by the
+-- handler itself, no selector commands (2026-11-13; finding 3: before, two
+-- sel_dial_up onces in one frame, which X-Plane ran as one push: the
+-- selector stopped at ON and the APU did not start, s305)
 local before = #rt.command_log
 rt:command("sim/electrical/APU_start", 0)
 local ups = 0
 for i = before + 1, #rt.command_log do
     local c = rt.command_log[i]
-    if c.name == "laminar/B747/electrical/apu/sel_dial_up" and c.phase == "once" then ups = ups + 1 end
+    if c.name == "laminar/B747/electrical/apu/sel_dial_up" then ups = ups + 1 end
 end
-T.equal(ups, 2, "APU_start command: the selector turned twice (OFF to START)")
-for _ = 1, ups do rt:command("laminar/B747/electrical/apu/sel_dial_up", 0) end
+T.equal(ups, 0, "APU_start command: no selector commands")
+T.equal(get(SEL), 1, "APU_start command: the selector ON at once")
 frames(80)
 T.equal(get(STARTER), 1, "APU_start command: running")
 T.equal(get(SEL), 1, "APU_start command: selector at ON")

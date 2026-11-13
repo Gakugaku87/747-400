@@ -201,15 +201,18 @@ dofile("B747.03.xt.apu.lua")
 --*************************************************************************************--
 
 -- APU
+-- (2026-11-13; finding 3 of the 2026-11-12 review) the selector to START
+-- and back to ON at once: ON, and START's latch of the automatic start
+-- (B747_apu_start_pushed, as the selector's own command: FCOM p.867,
+-- p.896). Before, the selector's command twice from here: in X-Plane the
+-- two onces of one frame came out as one push, the selector stopped at
+-- ON and the APU did not start (X-Plane's auto start: auto board's step
+-- 8 timed out after 120 s, s305)
 function sim_apu_start_CMDhandler(phase, duration)
     if phase == 0 then
         if simDR_apu_running == 0 then
-            if B747DR_elec_apu_sel_pos == 0 then
-                B747CMD_elec_apu_sel_up:once()
-                B747CMD_elec_apu_sel_up:once()
-            elseif B747DR_elec_apu_sel_pos == 1 then
-                B747CMD_elec_apu_sel_up:once()
-            end
+            if B747DR_elec_apu_sel_pos < 1 then B747DR_elec_apu_sel_pos = 1 end
+            B747_apu_start_pushed = true
         end
     end
 end

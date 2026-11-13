@@ -78,6 +78,11 @@ simDR_apu_N1_pct                    = find_dataref("sim/cockpit2/electrical/APU_
 simDR_nav_lights_switch             = find_dataref("sim/cockpit2/switches/navigation_lights_on")
 simDR_strobe_lights_switch			= find_dataref("sim/cockpit2/switches/strobe_lights_on")
 simDR_apu_gen_on                    = find_dataref("sim/cockpit2/electrical/APU_generator_on")
+-- (2026-11-13) the 747's APU power 1: available (the APU GEN 1 switch's
+-- AVAIL light) and on the AC system (its breaker closed:
+-- B747.03.xt.elec_buses.lua), for auto board's step 9
+B747DR_ai_apu_pwr1_avail            = find_dataref("laminar/B747/electrical/apu_pwr1_avail")
+B747DR_ai_apu_pwr1_on               = find_dataref("laminar/B747/electrical/apu_pwr1_on")
 simDR_gear_handle_down              = find_dataref("sim/cockpit2/controls/gear_handle_down")
 simDR_generator_on                  = find_dataref("sim/cockpit2/electrical/generator_on")
 simDR_panel_brightness_switch       = find_dataref("sim/cockpit2/switches/panel_brightness_ratio")
@@ -254,6 +259,8 @@ B747CMD_ai_lighting_quick_start     = find_command("laminar/B747/ai/lighting_qui
 function sim_autoboard_CMDhandler(phase, duration)
     if phase == 0 then
         print("==> AUTOBOARD COMMAND INVOKED")
+        if autostart.step < 0 then B747_ai_log_new() end
+        B747_ai_log("==> AUTOBOARD COMMAND INVOKED")
         if autoboard.in_progress == 0
         	and autostart.in_progress == 0
         then
@@ -273,6 +280,8 @@ end
 function sim_autostart_CMDhandler(phase, duration)
     if phase == 0 then
     print("==> AUTOSTART COMMAND INVOKED")
+    B747_ai_log_new()
+    B747_ai_log("==> AUTOSTART COMMAND INVOKED")
         if autoboard.in_progress == 0
         	and autostart.in_progress == 0
         then
@@ -356,9 +365,26 @@ simCMD_quick_start         			= wrap_command("sim/operation/quick_start", sim_qu
 --** 				                 SYSTEM FUNCTIONS           	    			 **--
 --*************************************************************************************--
 
+-- (2026-11-13; finding 3 of the 2026-11-12 review) the sequences' lines
+-- also to Output/B747_ai_sequence.txt (XTLua's print reaches no log), with
+-- X-Plane's running time; a new file at each AUTO-BOARD or AUTO-START
+-- command (a few lines a step)
+simDR_ai_log_time = find_dataref("sim/time/total_running_time_sec")
+local aiLogNew = true
+function B747_ai_log(line)
+    local f = io and io.open("Output/B747_ai_sequence.txt", aiLogNew and "w" or "a")
+    aiLogNew = false
+    if f then
+        f:write(string.format("%8.1f %s\n", simDR_ai_log_time or 0, line))
+        f:close()
+    end
+end
+function B747_ai_log_new() aiLogNew = true end
+
 function B747_print_sequence_status(step, phase, message)
     local msg = string.format("| Step:%02d/Phase:%02d - %s", step, phase, message)
     print(msg)
+    B747_ai_log(msg)
 end
 
 function B747_print_completed_line()
@@ -383,18 +409,21 @@ function B747_autoboard_init()
 end
 
 function B747_print_autoboard_begin()
+    B747_ai_log("AUTO-BOARD SEQUENCE BEGIN")
     print("+----------------------------------------------+")
     print("|          AUTO-BOARD SEQUENCE BEGIN           |")
     print("+----------------------------------------------+")
 end
 
 function B747_print_autoboard_abort()
+    B747_ai_log("AUTO-BOARD SEQUENCE ABORTED")
     print("+----------------------------------------------+")
     print("|         AUTO-BOARD SEQUENCE ABORTED          |")
     print("+----------------------------------------------+")
 end
 
 function B747_print_autoboard_completed()
+    B747_ai_log("AUTO-BOARD SEQUENCE COMPLETED")
     print("+----------------------------------------------+")
     print("|        AUTO-BOARD SEQUENCE COMPLETED         |")
     print("+----------------------------------------------+")
@@ -661,40 +690,50 @@ function B747_auto_board()
         end
 
 
-    ----- AUTO-BOARD STEP 5: BUS-TIE SWITCHES TO ON
+    ----- AUTO-BOARD STEP 5: BUS TIE SWITCHES TO AUTO
+    -- (2026-11-13; finding 3 of the 2026-11-12 review) the four BUS TIE
+    -- switches themselves: each one not AUTO pushed, the step done when all
+    -- four are AUTO (AUTO arms the bus tie breakers and closes the DC
+    -- isolation relays: FCOM p.785 (6.10.7)). Before, they were pushed only
+    -- with X-Plane's cross tie open, which the electrical glue keeps closed
+    -- (B747.03.xt.elec_buses.lua): the step was done at once with cold and
+    -- dark's switches OFF, the APU's power never reached the AC and DC buses
+    -- (ELEC AC BUS 1-4), the APU bleed valve and the start valves had no
+    -- power, and the auto start timed out at engine 4's start (s305)
     elseif autoboard.step == 5 then
 
         -- PHASE 1: SET THE SWITCHES
         if autoboard.phase[autoboard.step] == 1 then
-            B747_print_sequence_status(autoboard.step, autoboard.phase[autoboard.step], "Cross-Tie Switch to ON...")  -- PRINT THE START PHASE MESSAGE
-            if simDR_cross_tie == 0 then                                                    -- CROSS TIE IS OFF
-                if B747DR_button_switch_position[18] < 0.95 then B747CMD_elec_bus_tie_1:once() end  -- TURN THE BUS TIE SWITCH ON
-                if B747DR_button_switch_position[19] < 0.95 then B747CMD_elec_bus_tie_2:once() end  -- TURN THE BUS TIE SWITCH ON
-                if B747DR_button_switch_position[20] < 0.95 then B747CMD_elec_bus_tie_3:once() end  -- TURN THE BUS TIE SWITCH ON
-                if B747DR_button_switch_position[21] < 0.95 then B747CMD_elec_bus_tie_4:once() end  -- TURN THE BUS TIE SWITCH ON
-            end
+            B747_print_sequence_status(autoboard.step, autoboard.phase[autoboard.step], "Bus Tie Switches to AUTO...")  -- PRINT THE START PHASE MESSAGE
+            if B747DR_button_switch_position[18] < 0.95 then B747CMD_elec_bus_tie_1:once() end  -- TURN THE BUS TIE SWITCH TO AUTO
+            if B747DR_button_switch_position[19] < 0.95 then B747CMD_elec_bus_tie_2:once() end  -- TURN THE BUS TIE SWITCH TO AUTO
+            if B747DR_button_switch_position[20] < 0.95 then B747CMD_elec_bus_tie_3:once() end  -- TURN THE BUS TIE SWITCH TO AUTO
+            if B747DR_button_switch_position[21] < 0.95 then B747CMD_elec_bus_tie_4:once() end  -- TURN THE BUS TIE SWITCH TO AUTO
             autoboard.phase[autoboard.step] = 2                                             -- INCREMENT THE PHASE
         end
 
         -- PHASE 2: PRINT MONITOR STATUS AND START PHASE TIMER
         B747_autoboard_phase_monitor(5.0)
 
-        -- PHASE 3: MONITOR THE SIM STATUS
+        -- PHASE 3: MONITOR THE SWITCHES
         if autoboard.phase[autoboard.step] == 3 then
             if autoboard.sequence_timeout == true then                                      -- PHASE FAILED
                 B747_autoboard_step_failed(autoboard.step, autoboard.phase[autoboard.step])
-            --end
-            elseif simDR_cross_tie == 1 then                                                    -- PHASE WAS SUCCESSFUL
+            elseif B747DR_button_switch_position[18] > 0.95
+                and B747DR_button_switch_position[19] > 0.95
+                and B747DR_button_switch_position[20] > 0.95
+                and B747DR_button_switch_position[21] > 0.95
+            then                                                                            -- PHASE WAS SUCCESSFUL
                 if is_timer_scheduled(B747_autoboard_phase_timeout) == true then
                     stop_timer(B747_autoboard_phase_timeout)                                -- KILL THE TIMER
                 end
                 autoboard.phase[autoboard.step] = 4                                         -- INCREMENT THE PHASE
             end
-         end
+        end
 
         -- PHASE 4: COMPLETE THE STEP
         if autoboard.phase[autoboard.step] == 4 then
-            B747_autoboard_step_completed(autoboard.step, autoboard.phase[autoboard.step], "Completed, Cross-Tie Switch is ON")
+            B747_autoboard_step_completed(autoboard.step, autoboard.phase[autoboard.step], "Completed, Bus Tie Switches are AUTO")
         end
 
 
@@ -819,32 +858,40 @@ function B747_auto_board()
 
 
     ----- AUTO-BOARD STEP 9: APU GENERATOR SWITCH TO ON
+    -- (2026-11-13; finding 3 of the 2026-11-12 review) the APU GEN 1 switch
+    -- pushed once its AVAIL light is on (a push connects the APU power then,
+    -- and disconnects it with ON lit: FCOM p.783 (6.10.5)), the step done
+    -- when APU power 1 is on (its breaker closed). Before, one push right
+    -- after step 8, without waiting for AVAIL (the electrical system drops
+    -- a push before it: B747.03.elec_model.lua), and 5 s for X-Plane's APU
+    -- generator flag
     elseif autoboard.step == 9 then
 
-        -- PHASE 1: SET THE SWITCH
+        -- PHASE 1: PRINT THE STEP
         if autoboard.phase[autoboard.step] == 1 then
             B747_print_sequence_status(autoboard.step, autoboard.phase[autoboard.step], "APU Generator Switch to ON...")  -- PRINT THE START PHASE MESSAGE
-            if simDR_apu_gen_on == 0 then                                                   -- APU GENERATOR IS OFF
-                B747CMD_elec_apu_gen_1:once()                                               -- ACTUATE THE APU GEN BUTTON SWITCH
-            end
+            autoboard.apu_gen_pushed = false
             autoboard.phase[autoboard.step] = 2                                             -- INCREMENT THE PHASE
         end
 
-        -- PHASE 2: PRINT MONITOR STATUS AND START PHASE TIMER
-        B747_autoboard_phase_monitor(5.0)
+        -- PHASE 2: PRINT MONITOR STATUS AND START PHASE TIMER (AVAIL comes
+        -- with the APU at speed: 30 s, estimate)
+        B747_autoboard_phase_monitor(30.0)
 
-        -- PHASE 3: MONITOR THE SIM STATUS
+        -- PHASE 3: PUSH THE SWITCH WITH AVAIL ON, MONITOR APU POWER 1
         if autoboard.phase[autoboard.step] == 3 then
             if autoboard.sequence_timeout == true then                                      -- PHASE FAILED
                 B747_autoboard_step_failed(autoboard.step, autoboard.phase[autoboard.step])
-            --end
-            elseif simDR_apu_gen_on == 1 then                                                   -- PHASE WAS SUCCESSFUL
+            elseif B747DR_ai_apu_pwr1_on > 0.5 then                                         -- PHASE WAS SUCCESSFUL
                 if is_timer_scheduled(B747_autoboard_phase_timeout) == true then
                     stop_timer(B747_autoboard_phase_timeout)                                -- KILL THE TIMER
                 end
                 autoboard.phase[autoboard.step] = 4                                         -- INCREMENT THE PHASE
+            elseif not autoboard.apu_gen_pushed and B747DR_ai_apu_pwr1_avail > 0.5 then
+                B747CMD_elec_apu_gen_1:once()                                               -- ACTUATE THE APU GEN BUTTON SWITCH
+                autoboard.apu_gen_pushed = true
             end
-         end
+        end
 
         -- PHASE 4: COMPLETE THE STEP
         if autoboard.phase[autoboard.step] == 4 then
@@ -1474,18 +1521,21 @@ function B747_autostart_init()
 end
 
 function B747_print_autostart_begin()
+    B747_ai_log("AUTO-START SEQUENCE BEGIN")
     print("+----------------------------------------------+")
     print("|          AUTO-START SEQUENCE BEGIN           |")
     print("+----------------------------------------------+")
 end
 
 function B747_print_autostart_abort()
+    B747_ai_log("AUTO-START SEQUENCE ABORTED")
     print("+----------------------------------------------+")
     print("|         AUTO-START SEQUENCE ABORTED          |")
     print("+----------------------------------------------+")
 end
 
 function B747_print_autostart_completed()
+    B747_ai_log("AUTO-START SEQUENCE COMPLETED")
     print("+----------------------------------------------+")
     print("|        AUTO-START SEQUENCE COMPLETED         |")
     print("+----------------------------------------------+")
@@ -1774,17 +1824,15 @@ function B747_auto_start()
         -- PHASE 1: SET THE SWITCH
         if autostart.phase[autostart.step] == 1 then
             B747_print_sequence_status(autostart.step, autostart.phase[autostart.step], "Beacon Light Switch to BOTH...")  -- PRINT THE START PHASE MESSAGE
-            if B747DR_toggle_switch_position[8] == 0.0 then                                 -- SET THE SWITCH
-                B747CMD_beacon_light_switch_down:once()
-            elseif B747DR_toggle_switch_position[8] == 1.0 then                                 -- SET THE SWITCH
-                B747CMD_beacon_light_switch_down:once()
-                B747CMD_beacon_light_switch_down:once()
-            end
+            -- (2026-11-13; finding 3 of the 2026-11-12 review) one push every
+            -- 0.3 s until BOTH (phase 3): two onces of the command in
+            -- one frame came out as one push in X-Plane
+            autostart.beacon_t = nil
             autostart.phase[autostart.step] = 2                                             -- INCREMENT THE PHASE
         end
 
         -- PHASE 2: PRINT MONITOR STATUS AND START PHASE TIMER
-        B747_autostart_phase_monitor(2.0)
+        B747_autostart_phase_monitor(5.0)
 
         -- PHASE 3: MONITOR THE STATUS
         if autostart.phase[autostart.step] == 3 then
@@ -1795,6 +1843,10 @@ function B747_auto_start()
                     stop_timer(B747_autostart_phase_timeout)                                -- KILL THE TIMER
                 end
                 autostart.phase[autostart.step] = 4                                         -- INCREMENT THE PHASE
+            elseif autostart.beacon_t == nil or simDR_ai_log_time - autostart.beacon_t >= 0.3
+                or simDR_ai_log_time < autostart.beacon_t then
+                B747CMD_beacon_light_switch_down:once()                                     -- ONE PUSH DOWN
+                autostart.beacon_t = simDR_ai_log_time
             end
         end
 
