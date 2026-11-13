@@ -1,0 +1,52 @@
+{
+  "name": "s316_flch_small_descent_light",
+  "description": "2026-11-12 のフルレビューの AT-6（案 B5：FLCH の降下も、速さが目標以下ならエネルギーの率で推力を決める。B747.70.at_model.lua）の X-Plane での確認、空中。銚子沖の海上 4,000 ft・指示 180 kt・北向き、210 t で開始（機体を読み直す）。A/P CMD L・HDG SEL・A/T SPD 180 kt、フラップ 10。MCP 3,000 ft で FLCH：125 秒で変える V/S −480 fpm（ATA34_2 p.670）に、30 秒以後は ±150 fpm で乗る（レビューの見込み：直す前は模型で −744〜−201 fpm と 52 秒の周期で揺れた）。3,000 ft で捕捉。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 1219.2, "heading_true": 0, "speed_in_meters_per_second": 98.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 4000, 9250, 9250, 4000, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "set", "note": "MCP 方位 007", "dref": "laminar/B747/autopilot/heading/degrees", "value": 7 },
+    { "do": "set", "note": "MCP 速度 180 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 180 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "ALT HOLD（今の高度で落ち着かせる）", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "set", "note": "フラップ 10", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "sleep", "seconds": 30, "note": "フラップが出て速さが落ち着く" },
+    { "do": "wait", "note": "180 kt の ±4 kt に乗る", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [176, 184], "timeout": 120 },
+    { "do": "sleep", "seconds": 15 },
+    { "do": "snapshot", "note": "降下の前", "drefs": [ "sim/flightmodel/weight/m_total", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel2/controls/flap1_deploy_ratio", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+
+    { "do": "mark", "note": "FLCH で 3,000 ft へ" },
+    { "do": "set", "note": "MCP 高度 3,000 ft（前の則の目標にも）", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 3000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 3000 },
+    { "do": "sleep", "seconds": 4, "note": "MCP の高度が中へ写るのを待つ（3 秒）" },
+    { "do": "record_start" },
+    { "do": "cmd", "note": "FLCH", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "wait", "note": "FMA のピッチは FLCH SPD（8）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 8, "timeout": 10, "stop": true },
+    { "do": "sleep", "seconds": 30, "note": "入りの 30 秒" },
+    { "do": "watch", "note": "その後 45 秒、V/S は −480 ± 150 fpm（B5）", "dref": "sim/flightmodel/position/vh_ind_fpm", "min": -630, "max": -330, "timeout": 45 },
+    { "do": "watch", "note": "速さは 180 kt の ±6 kt（注意どまり）", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "min": 174, "max": 186, "timeout": 5, "level": "warn" },
+    { "do": "wait", "note": "3,000 ft の捕捉で ALT（FMA 9）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 120 },
+    { "do": "record_stop" }
+  ]
+}

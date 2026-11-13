@@ -583,10 +583,18 @@ T.near(s30.cmd - c0, A.K_VS * (want30 - 2000), 1e-9, "slowing while the V/S is o
 c0 = s30.cmd
 A.servo(s30, sv{mcp_alt = 15000, vs = 1000, ias = 250, target = 250, lever = c0})
 T.near(s30.cmd - c0, A.K_VS * (want30 - 1000), 1e-9, "no energy rate given: the V/S")
+-- (2026-11-13; the 2026-11-12 review AT-6, B5) FLCH's descent on the
+-- energy's rate too while the speed is at or under its target, from none
+-- of it 5 kt over (before, the V/S alone: a light airplane's small descent
+-- swung, tests/autopilot/at_spd_gain_test.lua)
 local s30b = A.new()
 A.update(s30b, inp{pitch = "FLCH"})
 A.servo(s30b, sv{alt = 15000, mcp_alt = 9000, vs = -500, evs = -1500, ias = 280, target = 280})
-T.near(s30b.cmd - 0.5, A.K_VS * (-6000 / 125 * 60 + 500), 1e-9, "a FLCH descent: the V/S alone (the energy's rate would retard slower)")
+T.near(s30b.cmd - 0.5, A.K_VS * (-6000 / 125 * 60 + 1500), 1e-9, "a FLCH descent at the target speed: the energy's rate (B5; before, the V/S alone)")
+local s30c = A.new()
+A.update(s30c, inp{pitch = "FLCH"})
+A.servo(s30c, sv{alt = 15000, mcp_alt = 9000, vs = -500, evs = -1500, ias = 285, target = 280})
+T.near(s30c.cmd - 0.5, A.K_VS * (-6000 / 125 * 60 + 500), 1e-9, "  5 kt over it: the V/S alone")
 
 -- (2026-11-10) SPD in the air's gusts (GUST_TAU; notes/ATA-34-61-FMC.md
 -- §162): the speed complemented by the inertial acceleration along the air

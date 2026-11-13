@@ -192,6 +192,7 @@ function Sim:step()
         ai.toga, ai.spd, ai.thr, ai.disc = nil, nil, nil, nil
         si.dt, si.ias, si.accel, si.vs, si.ivs, si.alt, si.lever = dt, ias, m.accel, m.vs, m.vs, m.alt, m.lever
         si.tas, si.accel_in = tas, acc_in
+        si.mach, si.weight = m.mach, m.weight
         si.thrust = m:display()
         si.evs = A.target_vs(s, m.vs, m.tas * KT, is_mach and m.mach or m.ias, is_mach or false, dt)
         A.servo(s, si)
