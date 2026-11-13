@@ -433,4 +433,30 @@ do
     T.check(not out.sys[3].ovht, "overheat: pumps off, cooled below 104 °C (" .. out.sys[3].temp .. ")")
     inp.overheat[3] = false
 end
+
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow left for the gear
+-- (spare_gpm): what the pumps give less the leakage and the flight controls;
+-- what the gear takes is a load (estimates; FCTM p.286 (8.8): windmilling
+-- engine pumps, the flight controls kept)
+do
+    local s, inp = parked()
+    engines_running(inp)
+    for n = 1, 4 do inp.demand_sel[n] = 0 end     -- the engine pumps alone
+    local out = run(s, inp, 5)
+    T.check(math.abs(out.sys[1].spare_gpm - (37.5 * 0.65 - 0.5)) < 1e-6,
+        "65 % N2: 23.9 gpm left for the gear (" .. out.sys[1].spare_gpm .. ")")
+    -- all engines windmilling at 10 % N2, the fuel cut off
+    for n = 1, 4 do inp.n2[n], inp.fuel_cutoff[n] = 10, true end
+    out = run(s, inp, 5)
+    T.check(math.abs(out.sys[4].spare_gpm - 3.25) < 1e-6, "10 % N2: 3.25 gpm left for the gear")
+    T.check(out.sys[4].psi > 2950, "no gear moving: about 3000 psi (" .. out.sys[4].psi .. ")")
+    inp.gear_gpm[4] = out.sys[4].spare_gpm       -- the gear takes it all
+    out = run(s, inp, 30)
+    T.check(math.abs(out.sys[4].psi - 2850) < 1, "the gear taking all of it: the pump's rated 2850 psi, the flight controls powered (" .. out.sys[4].psi .. ")")
+    T.check(math.abs(out.sys[4].spare_gpm - 3.25) < 1e-6, "the gear's own take not counted in what is left for it")
+    T.check(not out.sys[4].press_eng and not out.sys[4].press_sys, "no HYD PRESS message")
+    inp.demand_gpm[4] = 1
+    out = run(s, inp, 1)
+    T.check(math.abs(out.sys[4].spare_gpm - 2.25) < 1e-6, "the flight controls taking 1 gpm: 2.25 left for the gear")
+end
 T.done()

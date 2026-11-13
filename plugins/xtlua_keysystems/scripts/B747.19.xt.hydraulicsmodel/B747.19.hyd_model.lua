@@ -105,6 +105,10 @@ function M.inputs()
         flaps_moving = false,                     -- trailing edge flaps in transit (FCU)
         flaps_down = false,                       -- trailing edge flaps not up (FCU)
         demand_gpm = {0, 0, 0, 0},                -- what the loads draw from each system
+        -- (2026-11-13; the 2026-11-12 review HA-1, 案 26) what the gear's
+        -- actuators take from each system (B747.10.gear_model.lua: no more
+        -- than out.sys[n].spare_gpm)
+        gear_gpm = {0, 0, 0, 0},
         qty_use = {0, 0, 0, 0},                   -- quantity the loads took this frame (ratio)
         brake_use_in3 = 0,                        -- fluid the brakes took from the accumulator
         oat = 15,                                 -- °C
@@ -143,6 +147,7 @@ function M.new()
             light_eng_press = true, light_dem_press = true, light_sys_fault = true,
             press_sys = false, press_eng = false, press_dem = false, ovht = false, qty_low = false,
             control = false,
+            spare_gpm = 0,                        -- (案 26) the flow left for the gear
             status_eng = true, status_dem = false, status_ovht = false, status_rsvr = true,
             status_hydim = true,
             syn_edp = M.SYN_ON_AMBER, syn_dem = M.SYN_OFF, syn_inop = false,
@@ -267,7 +272,15 @@ function M.update(s, inp, dt)
         -- system pressure: 3000 psi with no flow, lower as the loads take
         -- what the pumps give, falling when they cannot (estimate, notes §4.7)
         local capacity = edp_gpm + dem_gpm + aux_gpm
-        local draw = M.LEAK_GPM + inp.demand_gpm[n]
+        local draw = M.LEAK_GPM + inp.demand_gpm[n] + inp.gear_gpm[n]
+        -- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow left for
+        -- the gear after the leakage and the flight controls (estimate: the
+        -- flight controls first; FCTM p.286 (8.8): with all engines
+        -- windmilling the gear extension, up to two and a half minutes, does
+        -- not significantly reduce flight control performance with adequate
+        -- airspeed). Before, the gear took no flow: on windmilling pumps it
+        -- came down in its normal time
+        o.spare_gpm = math.max(0, capacity - M.LEAK_GPM - inp.demand_gpm[n])
         local target = 0
         if capacity >= draw then
             target = M.NOMINAL_PSI - (M.NOMINAL_PSI - M.RATED_PSI) * draw / capacity

@@ -114,6 +114,10 @@ B747DR_pseu_lever_unlock       = deferred_dataref("laminar/B747/gear/air_ground/
 B747DR_gear_lever_lock         = deferred_dataref("laminar/B747/gear/lever_lock", "number")
 B747DR_gear_position           = deferred_dataref("laminar/B747/gear/position", "array[5]")
 B747DR_gear_door               = deferred_dataref("laminar/B747/gear/door", "array[5]")
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow the gear's
+-- actuators take from each hydraulic system, gpm ([0] system 1, [3] system
+-- 4); read by the hydraulics module (xtlua_keysystems)
+B747DR_gear_hyd_gpm            = deferred_dataref("laminar/B747/gear/hyd_gpm", "array[4]")
 B747DR_gear_annun_gear         = deferred_dataref("laminar/B747/gear/gear_position/annun_gear", "array[5]")
 B747DR_gear_fail_actuator      = deferred_dataref("laminar/B747/gear/fail/actuator", "array[5]")
 B747DR_gear_fail_door          = deferred_dataref("laminar/B747/gear/fail/door", "array[5]")

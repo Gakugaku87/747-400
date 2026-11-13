@@ -25,6 +25,9 @@ end
 for i, a in ipairs({8, 8, 58, 58}) do rt:set("sim/flightmodel2/gear/eagle_claw_angle_deg", i, a) end
 rt:set("laminar/B747/hydraulics/pressure_1", 3000)
 rt:set("laminar/B747/hydraulics/pressure_4", 3000)
+-- (2026-11-13; 案 26) the flow the hydraulics can give the gear: plenty
+rt:set("laminar/B747/hydraulics/spare_gpm", 0, 99)
+rt:set("laminar/B747/hydraulics/spare_gpm", 3, 99)
 for i = 0, 3 do
     rt:set("laminar/B747/electrical/bus/ac", i, 1)
     rt:set("laminar/B747/electrical/bus/dc", i, 1)
@@ -61,6 +64,23 @@ run(10)
 T.equal(rt:get(ACF, 0), 1, "16 s: the nose gear down (2 + 12 s)")
 T.equal(rt:get(G .. "gear_position/annun_status"), 1, "DOWN")
 T.equal(rt:get(G .. "EICAS1_display_status"), 1, "the normal display")
+
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow: the gear's take
+-- written for the hydraulics ([0] system 1, [3] system 4); with 1 gpm from
+-- system 4 the wing gear's doors open at 1/18 of their speed
+T.equal(rt:get(G .. "hyd_gpm", 0), 4, "16 s: the nose gear's doors closing take its 4 gpm from system 1")
+T.equal(rt:get(G .. "hyd_gpm", 3), 0, "the wing gear's doors closed: none from system 4")
+run(4)
+T.equal(rt:get(G .. "hyd_gpm", 0) + rt:get(G .. "hyd_gpm", 3), 0, "20 s: all doors closed, no flow")
+rt:set("laminar/B747/hydraulics/spare_gpm", 3, 1)
+rt:set(LEVER, 2)
+run(3)
+T.equal(rt:get(G .. "hyd_gpm", 0), 18, "retracting: the nose and body gear take 18 gpm from system 1")
+T.check(math.abs(rt:get(G .. "hyd_gpm", 3) - 1) < 1e-6, "the wing gear the 1 gpm system 4 gives")
+T.check(rt:get(ACF, 1) < 1, "3 s: the right body gear (X-Plane 1) travelling")
+T.equal(rt:get(ACF, 3), 1, "the right wing gear (X-Plane 3) still down, its doors opening slowly")
+T.check(rt:get(G .. "door", 3) < 0.2, "its door at " .. rt:get(G .. "door", 3))
+rt:set("laminar/B747/hydraulics/spare_gpm", 3, 99)
 
 -- up again, then system 4 lost and DN: the wing gear (X-Plane 3, 4) stays up;
 -- GEAR DISAGREE 30 s after the lever, the expanded display

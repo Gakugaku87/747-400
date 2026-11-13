@@ -43,6 +43,16 @@ M.GEAR_S = {12, 9, 9, 7, 7}
 M.POWER_PSI = 1000
 M.TILT_PSI = 1500
 M.LOCK = 1e-6
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow each gear's
+-- actuators take while it or its doors move at the normal speed, gpm; with
+-- less from its system (inputs.spare_gpm) they move slower in proportion.
+-- Estimates (no values in the sources): with all engines windmilling the
+-- extension may take up to two and a half minutes (FCTM p.286 (8.8)); the
+-- three gears of system 1 and the two of system 4 take 18 gpm a system,
+-- under what an engine pump gives at flight idle (37.5 gpm at its rated
+-- speed, ATA29_32 p.26, in proportion to N2: B747.19.hyd_model.lua), so
+-- that the normal extension and retraction keep their times
+M.GEAR_GPM = {4, 7, 7, 9, 9}
 
 local function five(v) return {v, v, v, v, v} end
 local function wing(i) return i == M.LW or i == M.RW end
@@ -51,6 +61,9 @@ function M.inputs()
     return {
         lever = M.DN,
         hyd_psi = {3000, 3000},             -- hydraulic systems 1 and 4
+        -- (案 26) the flow systems 1 and 4 can give the gear, gpm (the
+        -- hydraulic model's spare_gpm)
+        spare_gpm = {math.huge, math.huge},
         ac = {true, true, true, true}, dc = {true, true, true, true},
         altn_nose_body = false,             -- ALTN GEAR EXTEND NOSE/BODY pushed (on)
         altn_wing = false,                  -- ALTN GEAR EXTEND WING pushed (on)
@@ -81,6 +94,7 @@ function M.new()
         display = M.DISPLAY_NORMAL,
         gear_disagree = false, gear_door = false, gear_tilt = false,
         gear_monitor = false,               -- (2026-11-04) STATUS GEAR MONITOR
+        hyd_gpm = {0, 0},                   -- (案 26) the flow the gear takes from systems 1 and 4
     }
     return s
 end
@@ -109,6 +123,28 @@ local function toward(x, target, step)
         if x <= target + M.LOCK then return target end
     end
     return x
+end
+
+-- (案 26) the normal system's target for gear i: 1 down, 0 up, nil none
+-- (on the alternate extension, no pressure, the lever OFF, UP carrying
+-- weight)
+local function normal_target(s, inp, i)
+    if s.altn[i] then return nil end
+    local psi = (M.SYSTEM[i] == 1) and inp.hyd_psi[1] or inp.hyd_psi[2]
+    if psi < M.POWER_PSI then return nil end
+    if inp.lever == M.DN then return 1 end
+    if inp.lever == M.UP and not inp.on_ground[i] then return 0 end
+    return nil
+end
+
+-- (案 26) whether gear i's actuators move towards the target: its doors
+-- opening, the gear travelling, its doors closing
+local function normal_moving(s, inp, i, target)
+    if math.abs(s.pos[i] - target) > M.LOCK then
+        if s.door[i] < 1 then return not inp.door_stuck[i] end
+        return not inp.stuck[i]
+    end
+    return s.door[i] > 0 and not inp.door_stuck[i]
 end
 
 function M.update(s, inp, dt)
@@ -141,10 +177,21 @@ function M.update(s, inp, dt)
         if s.altn[i] then any_altn = true end
     end
 
+    -- (案 26) the flow the normal system's moving gears and doors need from
+    -- systems 1 and 4, and the share of it their systems give
+    local need1, need4 = 0, 0
+    for i = 1, 5 do
+        local target = normal_target(s, inp, i)
+        if target and normal_moving(s, inp, i, target) then
+            if M.SYSTEM[i] == 1 then need1 = need1 + M.GEAR_GPM[i] else need4 = need4 + M.GEAR_GPM[i] end
+        end
+    end
+    local f1 = need1 > 0 and math.min(1, inp.spare_gpm[1] / need1) or 1
+    local f4 = need4 > 0 and math.min(1, inp.spare_gpm[2] / need4) or 1
+    out.hyd_gpm[1], out.hyd_gpm[2] = need1 * f1, need4 * f4
+
     local moving = false
     for i = 1, 5 do
-        local psi = (M.SYSTEM[i] == 1) and inp.hyd_psi[1] or inp.hyd_psi[2]
-        local powered = psi >= M.POWER_PSI
         local was = s.pos[i]
         if s.altn[i] then
             -- alternate: the nose and body gear fall as their uplocks and
@@ -164,18 +211,18 @@ function M.update(s, inp, dt)
         else
             -- normal: the lever's selector valve and the system's pressure;
             -- OFF or no pressure holds the gear where it is (estimate). A gear
-            -- carrying weight does not come up.
-            local target = nil
-            if powered and inp.lever == M.DN then target = 1
-            elseif powered and inp.lever == M.UP and not inp.on_ground[i] then target = 0 end
+            -- carrying weight does not come up. (案 26) The doors and the
+            -- gear at the share of the flow their system gives
+            local target = normal_target(s, inp, i)
+            local step = dt * ((M.SYSTEM[i] == 1) and f1 or f4)
             if target then
                 if math.abs(s.pos[i] - target) > M.LOCK then
-                    if not inp.door_stuck[i] then s.door[i] = toward(s.door[i], 1, dt / M.DOOR_OPEN_S) end
+                    if not inp.door_stuck[i] then s.door[i] = toward(s.door[i], 1, step / M.DOOR_OPEN_S) end
                     if s.door[i] >= 1 and not inp.stuck[i] then
-                        s.pos[i] = toward(s.pos[i], target, dt / M.GEAR_S[i])
+                        s.pos[i] = toward(s.pos[i], target, step / M.GEAR_S[i])
                     end
                 elseif not inp.door_stuck[i] then
-                    s.door[i] = toward(s.door[i], 0, dt / M.DOOR_CLOSE_S)
+                    s.door[i] = toward(s.door[i], 0, step / M.DOOR_CLOSE_S)
                 end
             end
         end
