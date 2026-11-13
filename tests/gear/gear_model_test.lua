@@ -278,6 +278,58 @@ do
     T.check(out.all_up, "after the takeoff, the lever UP: all up and locked")
 end
 
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the gear's flow: with less
+-- flow from systems 1 and 4 than the moving gears and doors need (18 gpm a
+-- system), they move slower in proportion (estimates; FCTM p.286 (8.8): up
+-- to two and a half minutes on windmilling engine pumps); what they take
+do
+    local s, inp = M.new(), M.inputs()
+    local out = gear_up(s, inp)
+    T.equal(out.hyd_gpm[1] + out.hyd_gpm[2], 0, "up and locked, doors closed: no flow")
+    -- all engines windmilling at about 10 % N2: 3.75 gpm a pump, 3.25 after the leakage
+    inp.spare_gpm[1], inp.spare_gpm[2] = 3.25, 3.25
+    inp.lever = M.DN
+    out = run(s, inp, 1)
+    T.check(math.abs(out.hyd_gpm[1] - 3.25) < 1e-9 and math.abs(out.hyd_gpm[2] - 3.25) < 1e-9,
+        "the gear takes what systems 1 and 4 give (3.25 gpm each)")
+    out = run(s, inp, 2 + M.GEAR_S[N])
+    T.check(not out.all_down and not out.downlocked[LW], "15 s: not down (the normal time 14 s)")
+    -- the wing gear: (2 + 7 s) x 18 / 3.25 = 49.8 s; the nose gear, the
+    -- body gear's doors closing meanwhile: (2 + 12 s) x 18 / 3.25 = 77.5 s
+    out = run(s, inp, 49 - 15)
+    T.check(not out.downlocked[LW], "49 s: the wing gear not yet")
+    out = run(s, inp, 1.5)
+    T.check(out.downlocked[LW] and out.downlocked[RW], "50.5 s: the wing gear down and locked")
+    out = run(s, inp, 76 - 50.5)
+    T.check(not out.downlocked[N], "76 s: the nose gear not yet")
+    out = run(s, inp, 3)
+    T.check(out.all_down, "79 s: all down and locked (up to 150 s: FCTM p.286)")
+    -- an engine pump at flight idle (about 60 % N2: 22.5 gpm, 22 after the
+    -- leakage): the normal times
+    local s2, inp2 = M.new(), M.inputs()
+    gear_up(s2, inp2)
+    inp2.spare_gpm[1], inp2.spare_gpm[2] = 22, 22
+    inp2.lever = M.DN
+    out = run(s2, inp2, 1)
+    T.equal(out.hyd_gpm[1], 18, "an engine pump at flight idle: the gear takes its 18 gpm")
+    out = run(s2, inp2, 2 + M.GEAR_S[N] - 1 + 0.3)
+    T.check(out.all_down, "and comes down in the normal 14 s")
+    out = run(s2, inp2, M.DOOR_CLOSE_S + 0.3)
+    T.equal(out.hyd_gpm[1] + out.hyd_gpm[2], 0, "doors closed: no flow")
+    -- no flow at all: the gear holds where it is, with pressure
+    local s3, inp3 = M.new(), M.inputs()
+    gear_up(s3, inp3)
+    inp3.spare_gpm[1], inp3.spare_gpm[2] = 0, 0
+    inp3.lever = M.DN
+    out = run(s3, inp3, 30)
+    T.check(out.all_up and out.door[N] == 0, "no flow: nothing moves")
+    -- the alternate extension takes none (electric motors, gravity)
+    inp3.altn_nose_body, inp3.altn_wing = true, true
+    out = run(s3, inp3, 25)
+    T.check(out.all_down, "no flow, ALTN: all down")
+    T.equal(out.hyd_gpm[1] + out.hyd_gpm[2], 0, "the alternate extension takes no flow")
+end
+
 -- a flight start with the gear up (an air start): UP is not shown
 do
     local s, inp = M.new(), M.inputs()

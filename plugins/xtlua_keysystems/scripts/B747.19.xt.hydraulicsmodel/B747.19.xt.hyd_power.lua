@@ -50,6 +50,11 @@ B747DR_hyd_fail_edp_in          = find_dataref("laminar/B747/hydraulics/fail/edp
 B747DR_hyd_fail_demand_in       = find_dataref("laminar/B747/hydraulics/fail/demand_pump")
 B747DR_hyd_fail_leak_in         = find_dataref("laminar/B747/hydraulics/fail/leak")
 B747DR_hyd_fail_overheat_in     = find_dataref("laminar/B747/hydraulics/fail/overheat")
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow the gear takes
+-- (the gear module in the xtlua plugin: read every frame, a frame late)
+-- and what each system can give it
+B747DR_hyd_gear_gpm_in          = find_dataref("laminar/B747/gear/hyd_gpm")
+B747DR_hyd_spare_gpm            = find_dataref("laminar/B747/hydraulics/spare_gpm")
 local LEAK_FAIL_S = 120             -- the leak failure drains its system in 120 s (estimate)
 local hyd_leaked = {false, false, false, false}   -- the leak failure on last frame
 
@@ -118,6 +123,7 @@ local function read_inputs(inp, dt)
         inp.dc[n] = B747DR_hyd_elec_dc[n - 1] > 0.5
         inp.ac[n] = B747DR_hyd_elec_ac[n - 1] > 0.5
         inp.demand_gpm[n] = took_psi[n] / math.max(dt, 0.001) * GPM_PER_PSI_S
+        inp.gear_gpm[n] = B747DR_hyd_gear_gpm_in[n - 1]   -- (案 26)
         if leak_s[n] > 0 then inp.qty_use[n] = dt / leak_s[n] else inp.qty_use[n] = 0 end
         -- (2026-11-04) the failures: the pumps, a leak in this system
         inp.edp_failed[n] = B747DR_hyd_fail_edp_in[n - 1] > 0.5
@@ -206,6 +212,8 @@ local function write_outputs(out)
         B747DR_hyd_syn_dem[n - 1] = o.syn_dem
         B747DR_hyd_syn_sov[n - 1] = flag(o.sov_open)
         B747DR_hyd_syn_rsvr_press[n - 1] = flag(o.rsvr_low)
+        -- (案 26) the flow the gear may take (B747.10.xt.gear_act.lua)
+        if math.abs(B747DR_hyd_spare_gpm[n - 1] - o.spare_gpm) > 0.01 then B747DR_hyd_spare_gpm[n - 1] = o.spare_gpm end
     end
     B747DR_hyd_syn_aux = out.syn_aux
     -- the inoperative items: 1 the list without, 2 with THRUST REV (P&W

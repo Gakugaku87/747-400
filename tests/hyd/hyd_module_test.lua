@@ -681,4 +681,16 @@ rt:set(FAIL .. "overheat", 1, 0)
 -- airplane (before, the planet's mean sea-level temperature, 15 C always)
 T.check(rt.bound["sim/weather/aircraft/temperature_ambient_deg_c"] ~= nil, "the outside air temperature at the airplane looked up")
 T.check(rt.bound["sim/physics/earth_temp_c"] == nil, "not the planet's mean sea-level temperature")
+
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow left for the gear
+-- (spare_gpm, read by the gear module) and the gear's take
+-- (laminar/B747/gear/hyd_gpm, written by it) as a load
+local spare = get(HYD .. "spare_gpm", 3)
+T.check(spare > 20, "spare_gpm[3]: system 4 with its engine pump at 65 % N2, " .. spare .. " gpm for the gear")
+local p4 = get(HYD .. "pressure_4")
+rt:set("laminar/B747/gear/hyd_gpm", 3, spare)
+frames(10)
+T.check(get(HYD .. "pressure_4") < p4 - 50, "the gear's take: system 4's pressure lower (" .. p4 .. " -> " .. get(HYD .. "pressure_4") .. ")")
+T.check(math.abs(get(HYD .. "spare_gpm", 3) - spare) < 0.5, "and spare_gpm[3] without the gear's own take")
+rt:set("laminar/B747/gear/hyd_gpm", 3, 0)
 T.done()

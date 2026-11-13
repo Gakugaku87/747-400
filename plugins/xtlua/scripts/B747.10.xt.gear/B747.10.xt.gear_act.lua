@@ -40,6 +40,11 @@ B747DR_gact_fail_tilt           = find_dataref("laminar/B747/gear/fail/truck_til
 -- §17); STATUS GEAR MONITOR and GEAR TILT
 B747DR_gact_fail_sensor         = find_dataref("laminar/B747/gear/fail/position_sensor")
 B747DR_gact_status              = find_dataref("laminar/B747/CAS/status_status")
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow hydraulic systems
+-- 1 and 4 can give the gear (the hydraulics module in xtlua_keysystems:
+-- read every frame, a frame late) and the flow the gear takes from them
+B747DR_gact_hyd_spare           = find_dataref("laminar/B747/hydraulics/spare_gpm")
+B747DR_gact_hyd_gpm             = find_dataref("laminar/B747/gear/hyd_gpm")
 
 -- X-Plane's gear index of the nose, left body, right body, left wing and
 -- right wing gear (acf: 0 nose, 1 right body, 2 left body, 3 right wing,
@@ -93,6 +98,7 @@ function B747_gear_act()
     local h = B747DR_gear_handle
     inp.lever = (h < 0.5 and G.DN) or (h > 1.5 and G.UP) or G.OFF
     inp.hyd_psi[1], inp.hyd_psi[2] = B747DR_pseu_hyd_pressure_1, B747DR_pseu_hyd_pressure_4
+    inp.spare_gpm[1], inp.spare_gpm[2] = B747DR_gact_hyd_spare[0], B747DR_gact_hyd_spare[3]   -- (案 26)
     for i = 1, 4 do
         inp.ac[i] = B747DR_gact_bus_ac[i - 1] > 0.5
         inp.dc[i] = B747DR_gact_bus_dc[i - 1] > 0.5
@@ -143,4 +149,8 @@ function B747_gear_act()
     -- TILT as the caution (p.341)
     put(B747DR_gact_status, STATUS_GEAR_MONITOR, flag(out.gear_monitor))
     put(B747DR_gact_status, STATUS_GEAR_TILT, flag(out.gear_tilt))
+    -- (案 26) the flow the gear takes, for the hydraulic model (none while
+    -- the gear is held where X-Plane has it)
+    put(B747DR_gact_hyd_gpm, 0, init and 0 or out.hyd_gpm[1])
+    put(B747DR_gact_hyd_gpm, 3, init and 0 or out.hyd_gpm[2])
 end

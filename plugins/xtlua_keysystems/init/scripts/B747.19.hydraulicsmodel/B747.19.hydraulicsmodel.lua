@@ -116,6 +116,10 @@ B747DR_hyd_dmd_pmp_sel_pos      = deferred_dataref("laminar/B747/hydraulics/dmd_
 -- lighting module): ENGINE PRESS, DEMAND PRESS and SYS FAULT of systems 1-4,
 -- and the BRAKE SOURCE light (1 = on)
 B747DR_hyd_light_eng_press      = deferred_dataref("laminar/B747/hydraulics/light/eng_press", "array[4]")
+-- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow each system can
+-- give the gear's actuators, gpm (B747.19.hyd_model.lua: after the leakage
+-- and the flight controls); read by the gear module (xtlua)
+B747DR_hyd_spare_gpm            = deferred_dataref("laminar/B747/hydraulics/spare_gpm", "array[4]")
 B747DR_hyd_light_dem_press      = deferred_dataref("laminar/B747/hydraulics/light/dem_press", "array[4]")
 B747DR_hyd_light_sys_fault      = deferred_dataref("laminar/B747/hydraulics/light/sys_fault", "array[4]")
 B747DR_hyd_light_brake_source   = deferred_dataref("laminar/B747/hydraulics/light/brake_source", "number")
