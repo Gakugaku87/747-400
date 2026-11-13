@@ -353,7 +353,10 @@ local p1 = rt:get(PITCH_CMD)
 frames(30)
 T.check(rt:get(PITCH_CMD) < p1 - 0.1, "FLCH up to the MCP altitude, climbing and 20 kt slow: the command down")
 rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
-frames(200)
+-- (2026-11-13, B3) the IAS stepped with the TAS held: the speed laws' rate
+-- (the speed complemented by the inertial acceleration) settles through
+-- its IAS/TAS ratio over GUST_RATIO_S, 2 s
+frames(400)
 p1 = rt:get(PITCH_CMD)
 frames(30)
 T.check(math.abs(rt:get(PITCH_CMD) - p1) < 0.01,

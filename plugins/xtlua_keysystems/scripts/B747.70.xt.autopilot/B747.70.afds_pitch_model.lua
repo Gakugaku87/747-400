@@ -195,6 +195,31 @@ M.SPD_LEVEL_FPM = 100
 -- of it (150 kt: 0.15, 170 kt: 0.17, 250 kt up: 0.25; estimate)
 M.SPD_K_KT = 250
 M.SPD_K_MIN = 0.6
+-- (2026-11-13; the 2026-11-12 review AFDS-3, B3) the speed laws' rate of
+-- the speed in the air's gusts, as the A/T's SPD (B747.70.at_model.lua's
+-- GUST_TAU, 2026-11-10). Estimates: the sources give no filter (ATA22
+-- p.344: the speed reference less the ADC's speed). With the flaps up the
+-- TAS complemented over GUST_TAU s by the inertial acceleration along the
+-- air path (`inp.accel_in`, kt/s: the IRU's flight path acceleration,
+-- ATA34_2 p.280), back in IAS by the IAS/TAS ratio over GUST_RATIO_S; the
+-- rate of that speed (over ACCEL_S, as the IAS's was) is the law's. In
+-- still air it is the IAS's own rate; a gust or a shear comes in over
+-- GUST_TAU. The IAS's rate within GUST_FADE_KT of the speed limits (the
+-- maximum less SPD_MARGIN, the minimum maneuvering speed: FCTM p.301), with
+-- the flaps out (T/O, G/A, the approach: their low speeds' margins; the
+-- A/T keeps the IAS there too, FCTM p.43) and under the time acceleration
+-- (`inp.time_accel`: the acceleration is per X-Plane's second, the frames'
+-- time XTLua's). The law flies that speed, its error and its rate, as the
+-- A/T's SPD does. Before, the IAS and its rate over a second: a knot a
+-- second of it is 3 degrees of path, and in X-Plane's real weather 0.4 to
+-- 1.0 kt rms of IAS kept VNAV SPD's climbs swinging 1.0 to 1.8 degrees of
+-- pitch and 480 to 760 fpm (the KSEA-KLAX records; 0.1 degree in still
+-- air). On tests/lib/energy_sim.lua's climb (300 t, 10,000 ft to FL330) the
+-- gust's share of the pitch 0.23 to 0.28 degree with 0.5 kt rms (0.78 to
+-- 0.97 before), 0.60 to 0.70 with 1.3 kt (1.22 to 1.30); a 10 kt shear over
+-- 10 s 10.6 kt slow at the most and back within 2 kt in 32 s (9.3 kt and 22
+-- s before; the A/T's GUST_TAU the same trade, 2026-11-10)
+M.GUST_TAU, M.GUST_FADE_KT, M.GUST_RATIO_S = 20, 10, 2
 -- T/O (FCOM p.664, p.666): the ground's 8 degrees, the rotation over
 -- ROT_DEG, V2 + TO_ADD up to V2 + TO_MAX_ADD; above the target ABOVE_S
 M.TO_PITCH = 8
@@ -309,6 +334,31 @@ local function a_ft() return M.G_LIMIT * G / FT end   -- the limit, ft/s/s
 -- the flight path (degrees) of a vertical speed (fpm) at v (m/s)
 local function path(fpm, v) return math.deg(math.asin(clamp(fpm * FT / 60 / v, -1, 1))) end
 
+-- (B3) the speed whose rate the speed laws take (GUST_TAU): the IAS
+-- complemented by the inertial acceleration, else the IAS; and whether the
+-- rate is to start again (the complement just left: no step from its
+-- speed to the IAS)
+local function rate_speed(s, inp, dt)
+    local tas = inp.tas or 0
+    if inp.time_accel or not (inp.flaps_up and inp.accel_in and tas > 50 and inp.ias > 30 and dt > 0) then
+        local was = s.gust_v ~= nil
+        s.gust_v = nil
+        return inp.ias, was
+    end
+    if not s.gust_v then
+        s.gust_v, s.gust_r = tas, inp.ias / tas
+        return inp.ias, false
+    end
+    -- the acceleration's step, then the TAS's share of what is left
+    s.gust_v = s.gust_v + inp.accel_in * dt
+    s.gust_v = s.gust_v + (tas - s.gust_v) * math.min(1, dt / M.GUST_TAU)
+    s.gust_r = s.gust_r + (inp.ias / tas - s.gust_r) * math.min(1, dt / M.GUST_RATIO_S)
+    local hi = (inp.v_max or 0) > 0 and inp.v_max - M.SPD_MARGIN - inp.ias or math.huge
+    local lo = (inp.v_min or 0) > 0 and inp.ias - inp.v_min or math.huge
+    local w = clamp(math.min(hi, lo) / M.GUST_FADE_KT, 0, 1)
+    return inp.ias + w * (s.gust_v * s.gust_r - inp.ias), false
+end
+
 function M.new()
     return {cmd = nil, vs0_alt = nil, law = nil, target = nil, cap_vs = nil,
         last_ias = nil, ias_rate = 0, above = 0, mode = nil,
@@ -343,6 +393,8 @@ function M.inputs()
         pli = nil,          -- the PLI, degrees above the pitch (nil: none)
         flaps_up = true,
         windshear = false,
+        accel_in = nil,     -- (B3) the inertial acceleration along the air path, kt/s of TAS (nil: the IAS's rate)
+        time_accel = false, -- (B3) X-Plane's time accelerated (the IAS's rate)
         eo = false,         -- (the FMC's step 9h3b) an engine inoperative
         -- G/S (step 3c)
         gs_dots = 0,        -- the glide slope deviation, dots, plus above the beam
@@ -520,6 +572,7 @@ function M.update(s, inp, dt)
     if law == nil then
         s.cmd, s.law, s.target, s.cap_vs, s.last_vs, s.vs_rate = nil, nil, nil, nil, nil, 0
         s.last_ias, s.ias_rate, s.mode = nil, 0, inp.active and inp.mode or nil
+        s.gust_v, s.rias = nil, nil
         if not (inp.active and inp.mode == "VS") then s.vs0_alt = nil end
         return nil
     end
@@ -527,8 +580,12 @@ function M.update(s, inp, dt)
     -- (kt a second), filtered
     local k = math.min(1, dt / M.ACCEL_S)
     if s.last_vs and dt > 0 then s.vs_rate = (s.vs_rate or 0) + ((inp.vs - s.last_vs) / dt - (s.vs_rate or 0)) * k end
-    if s.last_ias and dt > 0 then s.ias_rate = s.ias_rate + ((inp.ias - s.last_ias) / dt - s.ias_rate) * k end
-    s.last_vs, s.last_ias = inp.vs, inp.ias
+    -- (B3) the speed's on the speed complemented in the gusts (GUST_TAU),
+    -- that speed the speed laws' (s.rias)
+    local rias, restart = rate_speed(s, inp, dt)
+    if restart then s.last_ias = nil end
+    if s.last_ias and dt > 0 then s.ias_rate = s.ias_rate + ((rias - s.last_ias) / dt - s.ias_rate) * k end
+    s.last_vs, s.last_ias, s.rias = inp.vs, rias, rias
     if law == "LETDOWN" then
         -- the nose lowered to the runway from the attitude at the
         -- touchdown (FCOM p.671), on to the pitch-down command that holds
@@ -562,7 +619,8 @@ function M.update(s, inp, dt)
         end
         -- the acceleration that closes the error in SPD_TAU_S on the
         -- target's rate, the flight path of the difference
-        local want = clamp((target - inp.ias) / M.SPD_TAU_S + tr, -M.SPD_ACCEL, M.SPD_ACCEL)
+        -- (B3) on the speed complemented in the gusts (GUST_TAU)
+        local want = clamp((target - (s.rias or inp.ias)) / M.SPD_TAU_S + tr, -M.SPD_ACCEL, M.SPD_ACCEL)
         local lead = path(inp.vs + (s.vs_rate or 0) * M.LEAD_S, v) - path(inp.vs, v)
         local k = M.K_PATH * clamp(inp.ias / M.SPD_K_KT, M.SPD_K_MIN, 1)
         -- the flight path's change that makes that acceleration

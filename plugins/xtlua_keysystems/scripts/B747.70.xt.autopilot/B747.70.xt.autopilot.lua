@@ -754,6 +754,13 @@ local function afds_pitch_inputs(p)
 	p.pli = B747DR_afds_pli_show > 0.5 and B747DR_afds_pli or nil
 	p.flaps_up = simDR_flap_ratio_control < 0.01
 	p.windshear = B747DR_afds_windshear > 0.5
+	-- (2026-11-13; the 2026-11-12 review AFDS-3, B3) the speed laws' rate in
+	-- the air's gusts (the pitch model's GUST_TAU): the inertial acceleration
+	-- along the air path (kt/s, the A/T's path_accel), X-Plane's time
+	-- acceleration
+	p.accel_in = B747_at_model.path_accel(simDR_at_acc_x, simDR_at_acc_y, simDR_at_acc_z,
+		simDR_at_vel_x, simDR_at_vel_y, simDR_at_vel_z, simDR_at_wind_x, simDR_at_wind_y, simDR_at_wind_z)
+	p.time_accel = simDR_at_sim_speed > 1
 	-- (the FMC's step 9h3b) an engine inoperative (the engines' signal:
 	-- B747.40.engine_start_model.lua) for T/O's and G/A's speeds
 	local eo = false
