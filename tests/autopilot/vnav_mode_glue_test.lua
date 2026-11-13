@@ -19,6 +19,9 @@
 -- 9i failed these four.
 local T = dofile("tests/lib/check.lua")("vnav_mode_glue")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local CMD = "laminar/B747/autopilot/button_switch/"
@@ -30,7 +33,7 @@ local PITCH_CMD = "laminar/B747/autopilot/pitch_cmd"
 local PITCH_LAW = "laminar/B747/autopilot/pitch_law"
 local NOTIFY = "laminar/B747/fms/notification"
 local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
-local ALT_IND, VSI = "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm"
+local ALT_IND, VSI = "laminar/B747/airdata/alt_capt", "sim/flightmodel/position/local_vy"
 local MCP_ALT = "laminar/B747/autopilot/heading/altitude_dial_ft"
 local PUSH = "laminar/B747/button_switch/press_altitude"
 local KNOB_UP = "sim/autopilot/altitude_up"
@@ -97,7 +100,7 @@ frames()
 T.equal(rt:get(VNAV_STATE), 1, "valid at 300 ft: armed still")
 rt:set(RA, 1000)
 rt:set(ALT_IND, 2000)
-rt:set(VSI, 2000)
+rt:set(VSI, 2000 / FPM)
 frames()
 T.equal(rt:get(VNAV_STATE), 2, "above 400 ft: engaged")
 T.equal(rt:get(PITCH), 4, "VNAV SPD")
@@ -108,7 +111,7 @@ T.equal(rt:get(AT_FMA), 5, "THR REF")
 -- SPD
 rt:set(RA, 9000)
 rt:set(ALT_IND, 8000)
-rt:set(VSI, 1500)
+rt:set(VSI, 1500 / FPM)
 frames()
 rt:set(MCP_ALT, 6000)
 frames()
@@ -141,7 +144,7 @@ T.equal(rt:get(PITCH), 4, "the next above: VNAV SPD")
 -- below (the FMC's descent, its path under the airplane): still, the push
 -- wanted; pushed: VNAV PTH, IDLE
 rt:set(ALT_IND, 35000)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 rt:set(MCP_ALT, 35000)
 fvn({phase = 2, mode = 2, alt = 35000, at = 3, mach_mode = 1, mach = 0.85})
 settle()
@@ -166,7 +169,7 @@ T.check(rt:get(AT_FMA) == 2 or rt:get(AT_FMA) == 1, "the A/T IDLE (HOLD: the lev
 -- then; on approach 300 ft or more above: the descent goes on (FCOM
 -- p.1261)
 rt:set(ALT_IND, 20000)
-rt:set(VSI, -2500)
+rt:set(VSI, -2500 / FPM)
 frames()
 rt:set(MCP_ALT, 24000)
 settle()
@@ -186,7 +189,7 @@ T.equal(rt:get(PITCH), 6, "on approach, the missed approach's 3,000 ft above: VN
 fvn({on_app = 0})
 rt:set(MCP_ALT, 1000)
 rt:set(ALT_IND, 5000)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 settle()
 fvn({valid = 0})
 frames()
@@ -211,7 +214,7 @@ T.check(rt:get(AT_FMA) == 2 or rt:get(AT_FMA) == 1, "valid again: the FMC's IDLE
 fvn({phase = 3, mode = 2, alt = 200, vs = -800, path_dev = 0, at = 2, on_app = 1, valid = 1})
 rt:set(RA, 1500)
 rt:set(ALT_IND, 1500)
-rt:set(VSI, -800)
+rt:set(VSI, -800 / FPM)
 rt:set(MCP_ALT, 500)
 rt:command(PUSH)
 frames()
@@ -247,7 +250,7 @@ T.equal(rt:get(PITCH), 6, "350 ft above: VNAV PTH, the descent on (no push)")
 fvn({phase = 3, mode = 2, alt = 6000, vs = -2500, path_dev = 0, at = 2, on_app = 0})
 rt:set(RA, 21000)
 rt:set(ALT_IND, 21000)
-rt:set(VSI, -2500)
+rt:set(VSI, -2500 / FPM)
 rt:set(MCP_ALT, 10000)
 rt:command(PUSH)
 frames()
@@ -270,7 +273,7 @@ T.equal(rt:get(PITCH), 5, "settled under the airplane, captured: VNAV ALT")
 -- the altitude it holds 20,500 ft, not 20,000: at 20,300 ft and level (the
 -- vertical speed's filter settled first), the command up
 rt:set(ALT_IND, 20300)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 frames(150)
 local c2 = rt:get(PITCH_CMD)
 frames(30)
@@ -282,7 +285,7 @@ T.check(rt:get(PITCH_CMD) > c2, string.format("200 ft under the 20,500 ft it hol
 -- .840, to Mach). Before, only with VNAV off, and step 9i's arm can last
 local IS_MACH = "sim/cockpit2/autopilot/airspeed_is_mach"
 local DIAL = "laminar/B747/autopilot/ias_dial_value"
-local VVI = "sim/cockpit2/gauges/indicators/vvi_fpm_pilot"
+local VVI = "sim/flightmodel/position/local_vy"
 rt:command(CMD .. "vs_mode")
 frames()
 fvn({valid = 0, phase = 1, mode = 1, alt = 35000})
@@ -295,7 +298,7 @@ rt:set(DIAL, 310)
 rt:set(ALT_IND, 32000)
 rt:set("sim/flightmodel2/position/pressure_altitude", 32000)
 rt:set("sim/flightmodel/misc/machno", 0.842)
-rt:set(VVI, 600)
+rt:set(VVI, 600 / FPM)
 rt:set("laminar/B747/autopilot/ap_monitor/switchingIASMode", 0)
 frames(15)
 T.equal(rt:get(VNAV_STATE), 1, "armed still")

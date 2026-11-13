@@ -14,13 +14,16 @@
 -- altitude here waited for (settle) before the airplane meets it.
 local T = dofile("tests/lib/check.lua")("afds_vnav_alt")
 local xtlua = dofile("tests/lib/xtlua.lua")
+-- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
+-- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
+local FPM = 196.850394
 
 local AP = "plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.xt.autopilot.lua"
 local CMD = "laminar/B747/autopilot/button_switch/"
 local PITCH = "laminar/B747/autopilot/FMA/active_pitch_mode"
 local VNAV_STATE = "laminar/B747/autopilot/vnav_state"
 local RA = "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot"
-local ALT_IND, VSI = "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm"
+local ALT_IND, VSI = "laminar/B747/airdata/alt_capt", "sim/flightmodel/position/local_vy"
 local MCP_ALT = "laminar/B747/autopilot/heading/altitude_dial_ft"
 local PUSH = "laminar/B747/button_switch/press_altitude"
 
@@ -82,14 +85,14 @@ T.equal(rt:get(PITCH), 6, "the descent on the path: VNAV PTH")
 -- descending through 4,060 ft at 1,500 fpm on the path: VNAV ALT at the MCP
 -- altitude
 rt:set(ALT_IND, 4060)
-rt:set(VSI, -1500)
+rt:set(VSI, -1500 / FPM)
 fvn({path_dev = -5})
 frames()
 T.equal(rt:get(PITCH), 5, "60 ft above the MCP altitude: VNAV ALT (FCOM p.645)")
 -- level there, the path gone on down (600 ft above it): the MCP reset to
 -- 1,300 ft without the push, VNAV ALT still; the push, VNAV PTH
 rt:set(ALT_IND, 4000)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 fvn({path_dev = 600})
 frames(30)
 T.equal(rt:get(PITCH), 5, "level 600 ft above the path: VNAV ALT")
@@ -106,12 +109,12 @@ T.equal(rt:get(PITCH), 6, "the selector pushed: VNAV PTH")
 rt:set(MCP_ALT, 4000)
 settle()
 rt:set(ALT_IND, 4060)
-rt:set(VSI, -1500)
+rt:set(VSI, -1500 / FPM)
 fvn({path_dev = -300})
 frames()
 T.equal(rt:get(PITCH), 5, "at the MCP altitude 300 ft under the path: VNAV ALT")
 rt:set(ALT_IND, 4000)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 frames(30)
 rt:set(MCP_ALT, 1300)
 frames(30)
@@ -128,11 +131,11 @@ T.equal(rt:get(PITCH), 6, "the path down to it: VNAV PTH without the push (FCOM 
 rt:set(MCP_ALT, 4000)
 settle()
 rt:set(ALT_IND, 4060)
-rt:set(VSI, -1500)
+rt:set(VSI, -1500 / FPM)
 fvn({path_dev = -300})
 frames()
 rt:set(ALT_IND, 4000)
-rt:set(VSI, 0)
+rt:set(VSI, 0 / FPM)
 rt:set(MCP_ALT, 1300)
 frames()
 rt:set(MCP_ALT, 4000)

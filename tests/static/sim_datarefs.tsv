@@ -438,6 +438,8 @@ sim/flightmodel/position/local_az	number
 sim/flightmodel/position/local_vx	number
 sim/flightmodel/position/local_vy	number
 sim/flightmodel/position/local_vz	number
+sim/flightmodel/position/local_x	number
+sim/flightmodel/position/local_z	number
 sim/flightmodel/position/longitude	number
 sim/flightmodel/position/mag_psi	number
 sim/flightmodel/position/magnetic_variation	number
