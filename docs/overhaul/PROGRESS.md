@@ -49,6 +49,7 @@
     - FUEL JETT SYS（FA-5、4 の勧めどおり今のまま）：投棄の正常な終わりではノズル弁が開いたまま（FCOM p.1469）で FUEL JETT SYS（p.1474）、NOZZLE OFF で消える：`fuel_model_test` に試験。
     - 案 14（SM-1・SM-3）：auto board の step 1 は作られていない fmsL・fmsR の init_CD を待たない、quick start の未定義の名前と無いコマンドを直した、警報のモジュールは電源が無くても init_CD に答える（X-Plane の s305 で、コールド＆ダークで同じフレームに EIU の電源が落ちて時間切れになっていた）。試験 `ai_start_test`（HEAD 8 落ち）。X-Plane（2026-11-13）：s306 2/2、`s305_auto_start` 3/7（step 1・2 を越えて進み、12 秒後も進行中、STANDBY POWER は AUTO。手順は 108 秒で終わり、エンジンは回らない：古い手順の後の段が作り直した系統で終わらない、別の件。N2 の 4 つの検査は注意どまりにした）。
     - 案 11 の残り（C-2）：読めないリバリーの simconfig は、既定のまま使う間、CDU のスクラッチパッドに SIM CONFIG NOT READ（FMC の助言。資料に無いシムのメッセージで文言は推定）。旗は `laminar/B747/simconfig/read_failed`。試験 `simconfig_read_test`・`simconfig_msg_test`（HEAD で落ちる）。X-Plane（2026-11-13）：新しい `s333_simconfig_not_read` 5/5（旗を Web API で 1 にすると左の CDU のスクラッチパッドに SIM CONFIG NOT READ（写真）、CLR で消え、旗 0 で出ない）。
+    - 案 22（D-6）：hitch log は 20 秒以上の止まりも印を付けて書き、1 セッション 300 行の上限をやめて 256 KB を超えたら新しい 128 KB の行だけ残す。ブリッジの `win.xpl` を作り直した。試験 `hitch_log_test.c`（21 項目）・`bridge_hitch_test`。X-Plane（2026-11-13）：05:21 からの読み込みのたびに動き、20 秒以上の止まり 46 回（機体の読み込みの 35〜37 秒）に印、256 KB を超えて新しい 128 KB に切り詰めた。
 
 - **開発 PC での確かめと、キット・道具の改良（2026-11-12 夜。利用者の指示書の §2・§2b）**：
   - 作業ツリー：`overhaul` を `29e89279` まで fast-forward（18 コミット。skip-worktree・未追跡の 3D 一式に当たる変更は無し）。手元の `fmod/747-400.snd`（skip-worktree）の 7,533 行目を `EVENT_END_COND` に直した（`747-400_custom.snd` とバイト単位で同じ。`snd_format_test.lua` が通る）。直す前の写しは残していない（違いはこの 1 語だけ）。
