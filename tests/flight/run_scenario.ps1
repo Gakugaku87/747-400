@@ -55,11 +55,15 @@
 #                                                equals value (up to 6 presses)
 #   wait    {dref, op, value, timeout}           wait for a condition
 #   watch   {dref, [abs], [max], [min],          sample dref every 0.25 s until the
-#            [until: {dref, op, value}],         condition (else for the timeout);
-#            timeout, [level]}                   pass when the condition came and
-#                                                the largest value (absolute with
+#            [spread],                           condition (else for the timeout);
+#            [until: {dref, op, value}],         pass when the condition came and
+#            timeout, [level]}                   the largest value (absolute with
 #                                                abs) is at most max, the least at
-#                                                least min
+#                                                least min, the largest less the
+#                                                least at most spread (2026-11-13);
+#                                                with "rel", min and max are added
+#                                                to the value remembered so
+#                                                (2026-11-13, case 23)
 #   check   {dref, op, value, [cite], [level]}   record pass/fail (level fail|warn)
 #   remember {dref, as}                          keep a value: a wait or check with
 #                                                "rel": "<as>" adds it to its value(s)
@@ -643,11 +647,22 @@ foreach ($step in $spec.steps) {
                     Start-Sleep -Milliseconds 250
                 }
                 $ok = $met -or -not $u
-                if ($null -ne $step.max -and $hi -gt [double]$step.max) { $ok = $false }
-                if ($null -ne $step.min -and $lo -lt [double]$step.min) { $ok = $false }
+                # (2026-11-13, case 23) "rel": min and max from a remembered
+                # value (the altitude before a turn, for one)
+                $base = 0.0
+                if ($step.rel) {
+                    $base = $script:mem[$step.rel]
+                    if ($null -eq $base) { throw "nothing remembered as $($step.rel)" }
+                }
+                if ($null -ne $step.max -and $hi -gt [double]$step.max + $base) { $ok = $false }
+                if ($null -ne $step.min -and $lo -lt [double]$step.min + $base) { $ok = $false }
+                # (2026-11-13) the spread: a change within a stretch whatever
+                # its level (the pitch's swing in the gusts, the review's B3)
+                if ($null -ne $step.spread -and ($null -eq $hi -or ($hi - $lo) -gt [double]$step.spread)) { $ok = $false }
                 $status = if ($ok) { 'pass' } elseif ($step.level -eq 'warn') { 'warn' } else { 'fail' }
                 $why = if (-not $u) { '' } elseif ($met) { " until {0} {1} {2}" -f $u.dref, $u.op, ($uwant -join '..') } else { " ({0} {1} {2} not reached in {3} s)" -f $u.dref, $u.op, ($uwant -join '..'), $timeout }
-                Add-Result $step $status ("{0}{1}: {2} samples, {3:N3} .. {4:N3} (max {5}, min {6}){7}" -f $(if ($step.abs) { '|' + $step.dref + '|' } else { $step.dref }), '', $n, $lo, $hi, $step.max, $step.min, $why) $hi
+                $sp = if ($null -ne $step.spread -and $null -ne $hi) { (" spread {0:N3} (at most {1})" -f ($hi - $lo), $step.spread) } else { '' }
+                Add-Result $step $status ("{0}{1}: {2} samples, {3:N3} .. {4:N3} (max {5}, min {6}){7}{8}" -f $(if ($step.abs) { '|' + $step.dref + '|' } else { $step.dref }), '', $n, $lo, $hi, $step.max, $step.min, $sp, $why) $hi
             }
             'check' {
                 $want = Get-Expected $step

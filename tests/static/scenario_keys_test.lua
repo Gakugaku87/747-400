@@ -115,6 +115,7 @@ local samples = {
     {[[{"name": "x", "steps": [{"do": "check", "dref": "a/b", "value": 1}]}]], "step 1 (check): no 'op'"},
     {[[{"name": "x", "steps": [{"do": "wait", "dref": "a/b", "op": "==", "value": 1, "level": "warning"}]}]], "step 1 (wait): unknown level 'warning'"},
     {[[{"name": "x", "steps": [{"do": "sleep", "seconds": "5"}]}]], "step 1 (sleep): 'seconds' not a number"},
+    {[[{"name": "x", "steps": [{"do": "watch", "dref": "a/b", "spread": "0.4"}]}]], "step 1 (watch): 'spread' not a number"},
     {[[{"name": "x", "steps": [{"do": "check", "dref": "a/b", "op": "==", "value": 1, "stop": "yes"}]}]], "step 1 (check): 'stop' not true or false"},
     {[[{"name": "x", "steps": [{"do": "watch", "dref": "a/b", "until": {"dref": "c/d", "op": "==", "valeu": 1}}]}]], "step 1 (watch): unknown key 'valeu' in 'until'"},
     {[[{"name": "x", "steps": [{"do": "view", "the": 10}]}]], "step 1 (view): needs name, or the and psi"},
@@ -129,7 +130,8 @@ for _, s in ipairs(samples) do
 end
 T.equal(#problems_of(json.decode([[{"name": "x", "description": "d", "reload": true, "flight": {},
     "steps": [{"do": "cmd", "note": "n", "name": "a/b", "duration": 0.2}, {"do": "view", "name": "panel"},
-    {"do": "watch", "dref": "a/b", "max": 2, "until": {"dref": "c/d", "op": "==", "value": 1, "rel": "x"}}]}]])), 0,
+    {"do": "watch", "dref": "a/b", "max": 2, "until": {"dref": "c/d", "op": "==", "value": 1, "rel": "x"}},
+    {"do": "watch", "dref": "a/b", "spread": 0.4, "timeout": 20}]}]])), 0,
     "a good sample: no problem")
 
 -- every scenario and measurement
