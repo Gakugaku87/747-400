@@ -105,6 +105,15 @@ M.SPD_DOWN_KT = {5, 15}
 M.G_C, M.G_MACH, M.G_SCALE_MAX = 4029, 0.66, 8
 M.G_TGT = {{0.66, 5.0}, {0.37, 3.8}, {0.194, 2.7}}
 M.SPD_DOWN_UP = 0.75
+-- (2026-11-14) B5's thrust following the path's change (the inertial V/S's
+-- rate) only with a vertical speed: none under FF_VS_FPM[1], all of it
+-- from FF_VS_FPM[2] (the inertial V/S's size). In ALT's hold in X-Plane's
+-- cruise gusts the V/S stays within 200 fpm (s277 2026-11-13: never over)
+-- and its wiggles moved the levers some 0.04 of their range a minute level
+-- and 0.11 turning (on the record's V/S); the captures it is for come out
+-- the same on tests/lib/energy_sim.lua (at_spd_gain_test's three: +3.3,
+-- +1.1, +1.5 kt; without it +6.5, +3.6, +3.7). Estimate
+M.FF_VS_FPM = {200, 600}
 M.K_VS = 1.2e-5
 -- G/A's THR on the energy's rate (evs, as VNAV's: the speed's change
 -- counts) and faster (estimate: on the V/S at K_VS the levers took 37 s
@@ -150,6 +159,12 @@ M.LIMIT_MARGIN = 5
 -- the ratio's quick changes went against the gusts' (the IAS a little
 -- behind the TAS), which would bring a share of each gust back in
 M.GUST_TAU, M.GUST_FADE_KT, M.GUST_RATIO_S = 20, 10, 2
+-- (2026-11-14) the inertial V/S for the IAS's change with the altitude in
+-- the speed law's damping (gust_speed), over GUST_VS_S: ALT's hold's
+-- wiggles in the gusts (periods of 4 to 10 s) a fifth to a half; a steady
+-- climb's or descent's all of it. 3 s: the captures on energy_sim as B5's
+-- (+3.4, +1.1, +1.6 kt; over 10 s +3.8, +1.5, +1.8). Estimate
+M.GUST_VS_S = 3
 -- (2026-11-07) FLCH's climb: the V/S the thrust is to make is the energy's
 -- rate at the target speed (evs, as VNAV's THR and G/A: the inertial V/S
 -- and the energy the speed gains, which the elevator turns into climb)
@@ -207,6 +222,7 @@ function M.new()
         retard = false,     -- the flare retard's IDLE
         servo = false, cmd = 0,  -- the servo excited, its lever command
         gust_v = nil, gust_i = 0, gust_a = 0, gust_r = 0,  -- servo: the complemented TAS, its IAS and rate, IAS/TAS
+        gust_vs = 0,        -- servo: the inertial V/S over GUST_VS_S (2026-11-14)
         pitch = nil, arm = nil}
 end
 
@@ -443,12 +459,52 @@ function M.path_accel(ax, ay, az, vx, vy, vz, wx, wy, wz)
     return (ax * x + ay * y + az * z) / v * 3600 / 1852
 end
 
+-- (2026-11-14) the IAS's change from the inertial motion: dIAS/dTAS at the
+-- Mach and the pressure altitude, and dIAS/dh at a constant TAS (kt a
+-- foot: in a climb at a constant IAS the TAS grows, and the inertial
+-- acceleration with it), on the impact pressure's CAS (X-Plane's IAS: no
+-- position error) and the ISA's temperature for the speed of sound's
+-- change; without the Mach the IAS/TAS ratio r (at FL250 and 306 kt 7 %
+-- short) and none
+local function isa_t(h) return h < 36089 and 288.15 - 0.0019812 * h or 216.65 end
+local function cas_of(m, d)
+    local qc = d * ((1 + 0.2 * m * m) ^ 3.5 - 1)
+    return 661.4786 * math.sqrt(5 * ((qc + 1) ^ (2 / 7) - 1))
+end
+local function ias_rates(inp, r)
+    if not (inp.mach and inp.mach > 0.1 and inp.alt and inp.tas and inp.tas > 50) then return r, 0 end
+    local m, h = inp.mach, inp.alt
+    local d = delta_of(h)
+    local slope = (cas_of(m + 0.001, d) - cas_of(m - 0.001, d)) / 0.002 * m / inp.tas
+    local t0 = isa_t(h)
+    local up = cas_of(m * math.sqrt(t0 / isa_t(h + 100)), delta_of(h + 100))
+    local dn = cas_of(m * math.sqrt(t0 / isa_t(h - 100)), delta_of(h - 100))
+    return slope, (up - dn) / 200
+end
+
 -- (2026-11-10) SPD's speed and its rate in the air's gusts (GUST_TAU):
 -- with the flaps up, inp.tas (kt) and inp.accel_in (the inertial
 -- acceleration along the air path, kt/s of TAS) the TAS complemented by
--- that acceleration, in IAS by the IAS/TAS ratio, its rate through the
--- glue's half second; within GUST_FADE_KT of the speed limits back to the
--- IAS. Each frame (it runs on in every mode); else the IAS and inp.accel
+-- that acceleration, in IAS by the IAS/TAS ratio; within GUST_FADE_KT of
+-- the speed limits back to the IAS. Each frame (it runs on in every mode);
+-- else the IAS and inp.accel
+-- (2026-11-14) The rate (the speed law's damping) is the IAS's change from
+-- the inertial motion (ias_rates: the inertial acceleration by dIAS/dTAS
+-- and the inertial V/S over GUST_VS_S by dIAS/dh: a climb's or a
+-- descent's, not ALT's wiggles), through the glue's half second. Before, the complemented IAS's own rate: it carried each
+-- gust's share through GUST_TAU (the TAS's leak), and B5's gains' scale
+-- (some 4 at FL390) took that to the levers: in X-Plane's s277 cruise gusts
+-- (FL390, M.86) they travelled 0.188 of their range a minute level and
+-- 0.389 turning (2026-11-13 08:03; 0.040 and 0.075 on 11-10, before B5),
+-- and the user saw the throttles never quite settle in the cruise. On
+-- tests/lib/cruise_sim.lua with the KSEA-KLAX record's gusts at FL390 and
+-- FL370 0.454 to 0.120 (239 t) and 0.565 to 0.183 (307 t), the speed's
+-- spread the same (0.8 kt). In still air the same rate (s262 +0.36 kt,
+-- the +10 kt steps +0.03, +0.75 and +0.27 kt, as with B5's); a shear comes
+-- in over GUST_TAU as the 2026-11-10 design meant: 10 kt over 30 s at
+-- FL370 +5.3 kt at most (+3.6 on the leak; FCOM p.214 (SP.16.14): speed
+-- excursions in turbulence are expected). Estimate: the sources give no
+-- filter
 -- (2026-11-11 review) none under the time acceleration (`inp.time_accel`):
 -- the acceleration is per X-Plane's second, the frames' dt real time (XTLua's
 -- SIM_PERIOD), and the complement fell short of the TAS's change (at 4 x in
@@ -461,6 +517,7 @@ local function gust_speed(s, inp)
     end
     if not s.gust_v then
         s.gust_v, s.gust_i, s.gust_a, s.gust_r = inp.tas, inp.ias, inp.accel, inp.ias / inp.tas
+        s.gust_vs = inp.ivs or 0
         return inp.ias, inp.accel
     end
     -- the acceleration's step, then the TAS's share of what is left
@@ -468,8 +525,11 @@ local function gust_speed(s, inp)
     s.gust_v = s.gust_v + (inp.tas - s.gust_v) * math.min(1, inp.dt / M.GUST_TAU)
     s.gust_r = s.gust_r + (inp.ias / inp.tas - s.gust_r) * math.min(1, inp.dt / M.GUST_RATIO_S)
     local ias = s.gust_v * s.gust_r
-    s.gust_a = s.gust_a + ((ias - s.gust_i) / inp.dt - s.gust_a) * math.min(1, inp.dt / 0.5)
     s.gust_i = ias
+    local slope, dh = ias_rates(inp, s.gust_r)
+    s.gust_vs = s.gust_vs + ((inp.ivs or 0) - s.gust_vs) * math.min(1, inp.dt / M.GUST_VS_S)
+    local a = inp.accel_in * slope + dh * s.gust_vs / 60
+    s.gust_a = s.gust_a + (a - s.gust_a) * math.min(1, inp.dt / 0.5)
     local w = clamp(math.min(inp.v_max - M.LIMIT_MARGIN - inp.ias, inp.ias - (inp.v_min or 0))
         / M.GUST_FADE_KT, 0, 1)
     return inp.ias + w * (ias - inp.ias), inp.accel + w * (s.gust_a - inp.accel)
@@ -553,7 +613,10 @@ function M.servo(s, inp)
         -- .859); on the review's models now 0.6 to 4.5 kt
         if g_lev and s.ff_acc and inp.tas and inp.tas > 50 then
             local v = inp.tas * 0.514444
-            rate = rate + 9.80665 * s.ff_acc / v / 0.514444 / (g_lev * inp.tas / inp.ias)
+            -- (2026-11-14) only with a vertical speed (FF_VS_FPM)
+            local fv = M.FF_VS_FPM
+            local gate = inp.ivs and clamp((math.abs(inp.ivs) - fv[1]) / (fv[2] - fv[1]), 0, 1) or 1
+            rate = rate + gate * 9.80665 * s.ff_acc / v / 0.514444 / (g_lev * inp.tas / inp.ias)
         end
         rate = math.min(rate, cap)
     else

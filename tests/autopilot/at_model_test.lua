@@ -726,6 +726,62 @@ for n = 1, 400 do
     end
 end
 T.near(pt.g.cmd, pt.i.cmd, 1e-12, "the time acceleration: the IAS law in the gust")
+-- (2026-11-14) the speed law's damping on the IAS's change from the
+-- inertial motion: the airplane unmoved in a 2 kt gust of 5 s, the rate
+-- the law takes stays nil (before, the complemented IAS's own rate, which
+-- carried each gust's share through GUST_TAU: some 0.05 kt/s here, and B5's
+-- gains' scale took it to the levers - X-Plane's s277 cruise gusts 4.7
+-- times the levers' travel)
+local pr = gust_pair{}
+local r_max = 0
+for n = 1, 400 do
+    local t = n * DTG
+    gust_step(pr, TAS0 + 2 * math.max(0, math.min(1, t - 2, 7 - t)), 0, DTG)
+    r_max = math.max(r_max, math.abs(pr.g.gust_a))
+end
+T.check(r_max < 0.002, string.format("a 2 kt gust of 5 s, the airplane unmoved: the damping's IAS rate %.4f kt/s at most", r_max))
+-- a steady climb at a constant IAS (FL250, 300 kt, 1,500 fpm): the TAS
+-- grows, the inertial acceleration with it; the IAS's rate from the
+-- inertial motion (dIAS/dTAS and dIAS/dh) stays near nil
+do
+    local D = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.perf_db.lua")
+    local s = A.new()
+    A.update(s, inp{pitch = "VS", spd = true, flaps_up = true})
+    local alt, last_tas
+    for n = 0, 600 do
+        alt = 25000 + 25 * n * DTG
+        local mach = D.cas_to_mach(300, alt)
+        local tas = D.tas(mach, alt, 0)
+        local acc = last_tas and (tas - last_tas) / DTG or 0
+        last_tas = tas
+        A.servo(s, sv{dt = DTG, ias = 300, accel = 0, target = 300, v_max = 365, v_min = 200, flaps_up = true,
+            alt = alt, vs = 1500, ivs = 1500, tas = tas, accel_in = acc, mach = mach, weight = 300000,
+            thrust = 1.4, thrust_ref = 1.6, lever = s.servo and s.cmd or 0.6})
+    end
+    T.check(math.abs(s.gust_a) < 0.02, string.format("a 1,500 fpm climb at 300 kt: the IAS's rate from the inertial motion %+.4f kt/s (dIAS/dh in it)", s.gust_a))
+end
+-- (2026-11-14) B5's thrust following the path's change only with a
+-- vertical speed (FF_VS_FPM): ALT's hold with the V/S wiggling 150 fpm
+-- with a 4 s period in the cruise's gusts (FL390, 270 t), the speed on its
+-- target: the levers' travel over the last 10 s of 40 (before 0.248; now
+-- 0.003, dIAS/dh's share of the wiggle over GUST_VS_S)
+do
+    local s = A.new()
+    A.update(s, inp{pitch = "ALT", spd = true, flaps_up = true})
+    local travel, last = 0, nil
+    for n = 1, 800 do
+        local t = n * DTG
+        A.servo(s, sv{dt = DTG, ias = 252, accel = 0, target = 252, v_max = 290, v_min = 230, flaps_up = true,
+            alt = 39000, vs = 0, ivs = 150 * math.sin(t * 2 * math.pi / 4),
+            tas = 494, accel_in = 0, mach = 0.86, weight = 270000,
+            thrust = 1.4, thrust_ref = 1.6, lever = s.servo and s.cmd or 0.6})
+        if t > 30 then
+            if last then travel = travel + math.abs(s.cmd - last) end
+            last = s.cmd
+        end
+    end
+    T.check(travel < 0.01, string.format("ALT's hold, the V/S wiggling 150 fpm: the levers travel %.4f in 10 s (no feed-forward under 200 fpm)", travel))
+end
 -- the complement runs on outside SPD (HOLD), ready when SPD comes
 local sg = A.new()
 A.update(sg, inp{pitch = "FLCH"})

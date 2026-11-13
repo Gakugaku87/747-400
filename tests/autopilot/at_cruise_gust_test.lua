@@ -13,6 +13,10 @@
 -- seventh as much and the speed sits on the target, its spread the same.
 -- In still air the same as before (a new target); a shear comes in over
 -- GUST_TAU (FCOM p.214: speed excursions in turbulence are expected).
+-- (2026-11-14) This airplane gives the A/T no Mach and no weight: B5's
+-- gains' scale stays 1 here (it hid B5's 4.7 times the levers' travel in
+-- X-Plane's cruise gusts); tests/autopilot/at_spd_gain_test.lua flies the
+-- same record's gusts with the scale on tests/lib/cruise_sim.lua.
 local T = dofile("tests/lib/check.lua")("at_cruise_gust")
 local A = dofile("plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.at_model.lua")
 local KT = 1852 / 3600
