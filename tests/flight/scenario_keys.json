@@ -14,7 +14,7 @@
     "set": { "need": ["dref", "value"], "may": ["rel", "round"] },
     "switch": { "need": ["dref", "value", "cmd"], "may": ["cmd_down"] },
     "wait": { "need": ["dref", "op", "value"], "may": ["timeout", "rel", "level"] },
-    "watch": { "need": ["dref"], "may": ["abs", "max", "min", "until", "timeout", "level"] },
+    "watch": { "need": ["dref"], "may": ["abs", "max", "min", "spread", "until", "timeout", "level", "rel"] },
     "check": { "need": ["dref", "op", "value"], "may": ["rel", "level"] },
     "remember": { "need": ["dref", "as"], "may": [] },
     "sleep": { "need": ["seconds"], "may": [] },
@@ -29,6 +29,6 @@
   "until": { "need": ["dref", "op", "value"], "may": ["rel"] },
   "ops": ["==", "!=", ">", ">=", "<", "<=", "between", "outside", "contains", "matches", "in"],
   "levels": ["warn", "fail"],
-  "numbers": ["seconds", "duration", "timeout", "round", "min", "max", "the", "psi", "fov"],
+  "numbers": ["seconds", "duration", "timeout", "round", "min", "max", "spread", "the", "psi", "fov"],
   "booleans": ["stop", "async", "abs"]
 }
