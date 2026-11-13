@@ -346,8 +346,20 @@ do
     T.check(out.jett_done and out.total <= 125000 + 500, "jettison: stops at the fuel to remain")
     T.check(not out.pump.oj2_fwd and not out.pump.ctr_l, "jettison done: override/jettison and CWT pumps off")
     T.check(out.cas.oj2_fwd, "jettison done: FUEL OVRD 2 FWD until the selector is OFF (FCOM p.1469)")
-    inp.jett_sel = 0
+    -- (2026-11-13; the 2026-11-12 review FA-5, kept as the FCOM words it, the
+    -- user's choice): at the normal end only the pumps stop (FCOM p.1469),
+    -- the nozzle valves stay open: FUEL JETT SYS, the total under the fuel
+    -- to remain with a nozzle valve open (FCOM p.1474), until the NOZZLE
+    -- switches go OFF
+    T.check(out.valve.noz_l == 1 and out.valve.noz_r == 1, "jettison done: the nozzle valves stay open (FCOM p.1469)")
+    T.check(out.total < 125000, "jettison done: the total under the fuel to remain (" .. out.total .. ")")
+    T.check(out.cas.jett_sys, "jettison done, a nozzle valve open: FUEL JETT SYS (FCOM p.1474)")
     inp.nozzle[1], inp.nozzle[2] = false, false
+    out = run(s, inp, 6)
+    T.check(out.valve.noz_l == 0 and out.valve.noz_r == 0, "NOZZLE OFF: the nozzle valves closed")
+    T.check(not out.cas.jett_sys, "NOZZLE OFF: FUEL JETT SYS gone")
+    T.check(out.cas.oj2_fwd, "FUEL OVRD 2 FWD still, the selector at A")
+    inp.jett_sel = 0
     out = run(s, inp, 6)
     T.check(not out.cas.oj2_fwd, "selector OFF: FUEL OVRD gone")
 end
