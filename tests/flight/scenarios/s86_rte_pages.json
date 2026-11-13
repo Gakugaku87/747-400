@@ -109,6 +109,17 @@
     { "do": "view", "note": "機長の ND", "the": -22, "psi": 8, "fov": 20 },
     { "do": "shot", "name": "nd_route" },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
-    { "do": "view", "name": "forward" }
+    { "do": "view", "name": "forward" },
+
+    { "do": "mark", "note": "（2026-11-13、フルレビューの FMC-7・案 20）RTE の VIA の DELETE と TO（FMSPG p.82）" },
+    { "do": "cdu", "note": "RTE、2 ページ目、CLR、DEL、VIA Y71（2L）", "keys": ["RTE", "NEXT", "CLR", "CLR", "CLR", "DEL", "L2"] },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "check", "note": "Y71 の区間は TO の XAC への DIRECT（推定。前は INVALID DELETE）", "dref": "laminar/B747/fms3/Line05_L", "op": "==", "value": "DIRECT               XAC" },
+    { "do": "check", "note": "メッセージなし", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^ *$" },
+    { "do": "cdu", "note": "DEL、DIRECT SPENS（1L）：INVALID DELETE（DIRECT は消せない）", "keys": ["DEL", "L1"] },
+    { "do": "check", "note": "INVALID DELETE", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "INVALID DELETE" },
+    { "do": "cdu", "note": "CLR、ERASE（6L）で元に戻す", "keys": ["CLR", "CLR", "L6"] },
+    { "do": "sleep", "seconds": 0.5 },
+    { "do": "check", "note": "Y71 に戻る", "dref": "laminar/B747/fms3/Line05_L", "op": "==", "value": "Y71                  XAC" }
   ]
 }

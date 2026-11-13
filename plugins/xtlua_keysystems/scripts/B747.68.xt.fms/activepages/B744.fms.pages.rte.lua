@@ -389,6 +389,12 @@ function fmsFunctions.rtevia(fmsO, value)
   local segs = R.segments(R.shown(st))
   local i = rows_on(fmsO.pgNo) + tonumber(value)
   local s = segs[i]
+  -- (2026-11-13; the review FMC-7, 案 20) DELETE: an airway's VIA (FMSPG
+  -- p.82; R.rte_via_delete)
+  if fmsO["scratchpad"] == "DELETE" then
+    entry(fmsO, R.rte_via_delete(st, i, simDR_onGround == 0))
+    return
+  end
   local sp = copy_or_entry(fmsO, s and not s.disc and s.via ~= R.DIRECT and s.via or nil)
   if not sp then return end
   -- after the route's end only (other changes on the LEGS pages: estimate)
@@ -403,6 +409,21 @@ function fmsFunctions.rteto(fmsO, value)
   local s = segs[i]
   local sp = copy_or_entry(fmsO, s and s.to or nil)
   if not sp then return end
+  -- (2026-11-13; the review FMC-7, 案 20) a discontinuity's boxes and a
+  -- DIRECT segment's TO waypoint (a previous leg termination) take an entry
+  -- too (FMSPG p.82), as on the LEGS pages over that leg (R.rte_to_entry);
+  -- before, INVALID ENTRY there. An airway's TO line as before
+  if s and i <= #segs and (s.disc or (s.via == R.DIRECT and s.to)) then
+    local li = s.first
+    if not s.disc then
+      li = s.last
+      while li > s.first and R.is_hold(r.legs[li]) do li = li - 1 end
+    end
+    local before = r.legs[li - 1]
+    local near = (before and before.fix) or r.origin
+    B747_fmc_with_fix(fmsO, sp, near, function(p) entry(fmsO, R.rte_to_entry(st, li, p, simDR_onGround == 0)) end, st)
+    return
+  end
   -- the dashes after the end, or an airway's boxes (FMSPG p.82)
   local boxes = s and not s.disc and s.to == nil and i == #segs
   if i ~= #segs + 1 and not boxes then fmsO["notify"] = "INVALID ENTRY" return end

@@ -542,6 +542,43 @@ function M.legs_delete(st, i)
     if nxt and nxt.fix and i == 1 and st.active and M.is_hold(l) then nxt.dto, nxt.dto_exec = true, true end
 end
 
+-- (2026-11-13; the 2026-11-12 review FMC-7, 案 20) the RTE pages' VIA
+-- DELETE (FMSPG p.82: VIA lines may be deleted, but DIRECT and, airborne,
+-- actions on the active leg): an airway's segment goes DIRECT to its TO
+-- waypoint (the airway's points before it out), an airway entered without
+-- its TO yet (the boxes) goes. Estimates: the source does not say what is
+-- left (DIRECT is the VIA's default with a TO, p.82); a procedure's VIA (a
+-- SID, a STAR, an approach) INVALID DELETE, DEP/ARR changes those.
+-- Before, every VIA's DELETE was INVALID DELETE
+function M.rte_via_delete(st, k, airborne)
+    local r = M.shown(st)
+    local s = M.segments(r)[k]
+    if not s or s.disc or s.via == nil or s.via == M.DIRECT then return M.INVALID_DELETE end
+    if r.legs[s.first].proc then return M.INVALID_DELETE end
+    if airborne and st.active and s.first == 1 then return M.INVALID_DELETE end
+    local e = M.edit(st)
+    if s.to == nil then
+        table.remove(e.legs, s.first)
+        return
+    end
+    -- the segment's TO waypoint's leg (a hold at it after it stays)
+    local to_i = s.last
+    while to_i > s.first and M.is_hold(e.legs[to_i]) do to_i = to_i - 1 end
+    for _ = s.first, to_i - 1 do table.remove(e.legs, s.first) end
+    local l = e.legs[s.first]
+    l.via, l.intc, l.dto, l.crs, l.pt, l.start = M.DIRECT, nil, nil, nil, nil, nil
+end
+
+-- (案 20) a TO entered on the RTE pages over leg `i`: a discontinuity's
+-- boxes or a DIRECT segment's TO waypoint (FMSPG p.82: entries to the TO
+-- line only to dashes, box prompts or a previous leg termination), as on
+-- the LEGS pages over that leg (legs_entry: estimate there); airborne not
+-- the active leg's (DIRECT TO is LEGS' 1L)
+function M.rte_to_entry(st, i, fix, airborne)
+    if airborne and st.active and i == 1 then return M.INVALID_ENTRY end
+    return M.legs_entry(st, i, fix)
+end
+
 -- DIRECT TO (FMSPG p.141-144): a waypoint entered over the active
 -- waypoint, the first leg of the active route: from the airplane's
 -- position direct to it, the legs before it gone (one later in the
