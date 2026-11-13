@@ -222,7 +222,7 @@ M.PT_KT = 210
 -- where a course or heading from a on the true direction crs ends, as
 -- predicted: e's term with the next leg `nxt` (for the intercepts);
 -- `alt` the altitude at a. Sets e.b and e.len
-local function predict(e, l, nxt, env, alt)
+local function predict(e, l, nxt, env, alt, nxt2)
     local a, crs = e.a, e.crs or e.hdg
     local b = nil
     if e.term == "alt" then
@@ -248,6 +248,20 @@ local function predict(e, l, nxt, env, alt)
             b = line_line(a, crs, nxt.from_fix, true_of(env, nxt.crs, nxt.from_fix, nxt.navaid), false)
         elseif nxt.pt == "AF" and nxt.navaid and nxt.rho then
             b = line_circle(a, crs, nxt.navaid, nxt.rho)
+        elseif nxt.pt == "IF" and nxt.fix and nxt2 and nxt2.fix then
+            -- (2026-11-12 review FMC-3) an IF next (an approach's
+            -- transition ending on an intercept, the final approach from
+            -- its IF: RJBB ILS24R Y via MAYAH, (INTC) then BRASS IF, BEBIL
+            -- CF): the course from the IF on, the leg after it (a CF's into
+            -- its fix, through the IF; else the IF to that leg's fix).
+            -- Before, no end: LNAV held the (INTC)'s heading through the
+            -- final approach course (FCOM p.1249: an intercept of the
+            -- course to the next waypoint)
+            if nxt2.pt == "CF" and nxt2.crs then
+                b = line_line(a, crs, nxt2.fix, true_of(env, nxt2.crs, nxt2.fix, nxt2.navaid), false)
+            else
+                b = line_line(a, crs, nxt.fix, (M.course(nxt.fix, nxt2.fix)), false)
+            end
         end
     elseif e.term == "manual" then
         -- no end (FCOM p.1237): a line for the ND
@@ -372,7 +386,7 @@ end
 -- leg before's end; nil when unknown), `nxt` the leg after it, `alt` the
 -- altitude at `prev` (ft); `from` (step 6d3) {pe = the element before, kt
 -- = the turn's speed} for a turn flown over `prev`
-function M.element(l, i, prev, nxt, env, alt, from)
+function M.element(l, i, prev, nxt, env, alt, from, nxt2)
     local e = {leg = i, flyover = l.flyover, turn = l.turn, missed = l.missed, term = "fix", start = prev}
     local pt = l.pt
     if l.dto and l.from then
@@ -408,7 +422,7 @@ function M.element(l, i, prev, nxt, env, alt, from)
         -- (step 6d3) from the turn's end, climbing in the turn
         local a0 = alt
         if from and turn_into(e, from, l.turn) then a0 = alt + e.turn_in.len * (env.grad or M.GRAD) end
-        predict(e, l, nxt, env, a0)
+        predict(e, l, nxt, env, a0, nxt2)
         if e.turn_in then
             local met = met_in_turn(e, alt, env.grad or M.GRAD)
             if met then
@@ -417,7 +431,7 @@ function M.element(l, i, prev, nxt, env, alt, from)
             elseif not e.b and e.term ~= "manual" then
                 -- no end from the turn's end: from the point itself
                 e.a, e.turn_in = prev, nil
-                predict(e, l, nxt, env, alt)
+                predict(e, l, nxt, env, alt, nxt2)
             end
         end
         return e
@@ -428,7 +442,7 @@ function M.element(l, i, prev, nxt, env, alt, from)
             return e
         end
         e.kind, e.term, e.a, e.crs = "course", FROM_FIX[pt], a, true_of(env, l.crs, a, l.navaid)
-        predict(e, l, nxt, env, alt)
+        predict(e, l, nxt, env, alt, nxt2)
         return e
     elseif pt == "AF" and l.navaid and l.rho and l.crs and l.fix then
         -- the DME arc from its boundary radial to its fix (ARINC 424: the
@@ -499,7 +513,7 @@ function M.build(legs, start, env)
             prev, pe = nil, nil
         else
             local from = env.kt and pe and {pe = pe, kt = env.kt(i)} or nil
-            local e = M.element(l, i, prev, legs[i + 1], env, alt, from)
+            local e = M.element(l, i, prev, legs[i + 1], env, alt, from, legs[i + 2])
             out[i] = e
             if e.term == "alt" and e.alt then alt = math.max(alt, e.alt) end
             prev, pe = e.b, e

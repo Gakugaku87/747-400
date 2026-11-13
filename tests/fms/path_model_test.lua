@@ -388,4 +388,24 @@ T.check(dist(NRE91, path[2].b) > dist(NRE91, slow[2].b), string.format("%.2f nm 
 path = M.build({sid[2]}, D337F, {var = env.var, alt = 3000, kt = function() return 250 end, prev = plain[1]})
 T.check(path[1].turn_in and path[1].turn_in.from == D337F, "the first leg after the fix sequenced: the turn from it")
 
+-- (2026-11-12 review FMC-3) an intercept with an IF after it (an approach's
+-- transition ending on (INTC), the final approach from its IF: RJBB ILS24R
+-- Y via MAYAH): the intercept of the course from the IF on (FCOM p.1249);
+-- before, no end (LNAV held the heading through the course)
+do
+    local S0 = {lat = 34.90, lon = 135.80}   -- north-east of the course: heading 209 meets it before the IF
+    local IFX = {ident = "IFX", lat = 34.55, lon = 135.45}
+    local NEXT = M.point(IFX, 239, 5)
+    NEXT.ident = "NEXT"
+    local p2 = M.build({{pt = "IF", fix = S0}, {pt = "VI", crs = 209 + 7, name = "(INTC)"},
+        {pt = "IF", fix = IFX}, {pt = "CF", fix = NEXT, crs = 239 + 7}}, S0, env)
+    local vi = p2[2]
+    T.check(vi.kind == "heading" and vi.term == "intc", "VI before an IF: a heading to an intercept")
+    T.check(vi.b ~= nil, "VI before an IF: its end, the intercept of the CF's course through the IF")
+    T.check(vi.b and on_line(IFX, 239, vi.b), "the end on the course from the IF (239 true)")
+    local p3 = M.build({{pt = "IF", fix = S0}, {pt = "VI", crs = 209 + 7, name = "(INTC)"},
+        {pt = "IF", fix = IFX}, {pt = "TF", fix = NEXT}}, S0, env)
+    T.check(p3[2].b and on_line(IFX, 239, p3[2].b), "a TF after the IF: the IF to its fix")
+end
+
 T.done()
