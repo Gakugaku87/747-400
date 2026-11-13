@@ -220,6 +220,64 @@ do
     T.equal(out.annun, M.IND_FAIL, "all lost: the empty box")
 end
 
+-- (2026-11-13; the 2026-11-12 review FG-7) after an alternate extension's
+-- cycle (no recycling needed: ATA29_32 p.276-278) the lever moved to UP in
+-- the air gives the gear back to the normal system: it retracts and its
+-- doors close (estimate). Before, the gear stayed down for the flight
+do
+    local s, inp = M.new(), M.inputs()
+    gear_up(s, inp)
+    inp.lever = M.OFF
+    inp.altn_nose_body, inp.altn_wing = true, true
+    local out = run(s, inp, 25)
+    T.check(out.all_down, "ALTN with the lever OFF: all down and locked")
+    inp.altn_nose_body, inp.altn_wing = false, false
+    out = run(s, inp, 1)
+    T.equal(out.door[N], 1, "switches back: the doors still open (FCOM p.1513)")
+    inp.lever = M.UP
+    out = run(s, inp, 2 + M.GEAR_S[N] + 0.5)
+    T.check(out.all_up, "the lever moved to UP: the normal system retracts the gear (estimate; before, it stayed down)")
+    out = run(s, inp, M.DOOR_CLOSE_S + 0.5)
+    T.equal(out.door[N] + out.door[LB] + out.door[LW], 0, "and closes the doors")
+    T.equal(out.display, M.DISPLAY_NORMAL, "the normal display again")
+    T.check(not out.gear_door and not out.gear_disagree, "no GEAR DOOR, no GEAR DISAGREE")
+    -- a new push: a new cycle
+    inp.altn_wing = true
+    out = run(s, inp, 25)
+    T.check(out.downlocked[LW] and out.downlocked[RW], "ALTN WING pushed again: a new cycle, the wing gear down")
+    T.check(out.uplocked[N], "the nose gear stays up")
+end
+-- the lever UP all along: the gear stays down (the lever not moved to UP);
+-- moved DN and UP, the gear comes up with the switch still pushed (no new
+-- cycle without a new push)
+do
+    local s, inp = M.new(), M.inputs()
+    gear_up(s, inp)
+    inp.altn_wing = true
+    local out = run(s, inp, 40)
+    T.check(out.downlocked[LW] and out.downlocked[RW], "ALTN WING with the lever UP all along: the wing gear down and it stays")
+    inp.lever = M.DN
+    out = run(s, inp, 0.5)
+    inp.lever = M.UP
+    out = run(s, inp, 2 + M.GEAR_S[LW] + 0.5)
+    T.check(out.uplocked[LW] and out.uplocked[RW], "the lever moved DN and UP: the wing gear retracts, the switch still pushed")
+end
+-- pushed on the ground and back (the doors open): after the takeoff the
+-- gear comes up (before, the nose and body gear stayed down)
+do
+    local s, inp = M.new(), M.inputs()
+    inp.altn_nose_body = true
+    local out = run(s, inp, 1)
+    T.equal(out.door[N], 1, "ALTN NOSE/BODY on the ground: the doors open")
+    inp.altn_nose_body = false
+    out = run(s, inp, 1)
+    T.check(out.all_down, "the gear down")
+    airborne(inp)
+    inp.lever = M.UP
+    out = run(s, inp, 2 + M.GEAR_S[N] + 0.5)
+    T.check(out.all_up, "after the takeoff, the lever UP: all up and locked")
+end
+
 -- a flight start with the gear up (an air start): UP is not shown
 do
     local s, inp = M.new(), M.inputs()

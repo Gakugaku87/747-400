@@ -68,8 +68,10 @@ function M.inputs()
 end
 
 function M.new()
+    -- (2026-11-13, FG-7) altn_on: last frame's alternate switch pushed with
+    -- its motor's power; s.lever: last frame's lever (nil at a start)
     local s = {pos = five(1), door = five(0), altn = five(false), released = five(false),
-        disagree_t = five(0), door_t = 0, tilt_t = 0, up_t = M.UP_BLANK_S}
+        altn_on = five(false), disagree_t = five(0), door_t = 0, tilt_t = 0, up_t = M.UP_BLANK_S}
     s.out = {
         pos = five(1), door = five(0),
         downlocked = five(true), uplocked = five(false),
@@ -89,11 +91,11 @@ function M.set_to(s, positions)
     for i = 1, 5 do
         s.pos[i] = positions[i]
         s.door[i] = 0
-        s.altn[i], s.released[i] = false, false
+        s.altn[i], s.released[i], s.altn_on[i] = false, false, false
         s.disagree_t[i] = 0
         if positions[i] > M.LOCK then all_up = false end
     end
-    s.door_t, s.tilt_t = 0, 0
+    s.door_t, s.tilt_t, s.lever = 0, 0, nil
     s.up_t = all_up and M.UP_BLANK_S or 0
 end
 
@@ -112,15 +114,30 @@ end
 function M.update(s, inp, dt)
     local out = s.out
     -- the alternate extension: each switch, with its motor's power, starts a
-    -- cycle that runs to the end (ATA29_32 p.276-282). The gear stays on it
-    -- for the flight: all doors remain open after an alternate extension
-    -- (FCOM p.1513); the normal system no longer moves that gear (estimate)
+    -- cycle that runs to the end (ATA29_32 p.276-282). All doors remain open
+    -- after an alternate extension (FCOM p.1513); the normal system does not
+    -- move that gear meanwhile (estimate).
+    -- (2026-11-13; the 2026-11-12 review FG-7) a cycle starts as the switch is
+    -- pushed with its motor's power, or as the power comes with the switch
+    -- pushed, and runs once: no recycling is needed after it (p.276-278).
+    -- Once that gear is down and locked, the lever moved to UP in the air
+    -- gives the gear back to the normal system, which retracts it and closes
+    -- its doors (estimate: the sources do not say). Before, the gear stayed
+    -- on the alternate extension for the flight, even after a push on the
+    -- ground
     local nb_power = inp.ac[4] and inp.dc[4]            -- p.270, p.279 figure
     local w_power = inp.ac[1]                           -- p.272, p.281 figure
     local any_altn = inp.altn_nose_body or inp.altn_wing
+    local to_up = inp.lever == M.UP and s.lever ~= nil and s.lever ~= M.UP
+    s.lever = inp.lever
     for i = 1, 5 do
         local pushed = wing(i) and inp.altn_wing or (not wing(i) and inp.altn_nose_body)
-        if pushed and (wing(i) and w_power or (not wing(i) and nb_power)) then s.altn[i] = true end
+        local on = (pushed and ((wing(i) and w_power) or (not wing(i) and nb_power))) or false
+        if on and not s.altn_on[i] then s.altn[i] = true end
+        s.altn_on[i] = on
+        if s.altn[i] and to_up and s.pos[i] >= 1 - M.LOCK and not inp.on_ground[i] then
+            s.altn[i], s.released[i] = false, false
+        end
         if s.altn[i] then any_altn = true end
     end
 
