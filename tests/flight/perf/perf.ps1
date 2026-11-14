@@ -87,7 +87,9 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 $PayloadKg = 40000.0
 # the maximum takeoff weight, for the points' gross weights and SimBrief: the
 # FCOM's for the 109 (PW4056), 394,625 kg (FCOM p.78, L.10.2; the user,
-# 2026-11-06), not the acf's maximum weight (acf_m_max, 850,000 lb)
+# 2026-11-06). Until 2026-11-14 not the acf's maximum weight (acf_m_max,
+# 850,000 lb); since then the custom acf's is the same, 870,000 lb (the
+# user asked for the acf's maximum weight to be the source's)
 $MtowKg = 394625.0
 $MtowSource = 'FCOM p.78 (L.10.2), airplane 109 (the user, 2026-11-06)'
 # the maximum zero fuel and landing weights: none in the aircraft; the FCOM's

@@ -20,7 +20,7 @@ function Near([double]$A, [double]$B, [double]$Tol, [string]$What) { Check ([mat
 $keys = Read-AcfKeys $acfFile
 Check ($keys.Contains('_m_empty')) 'acf _m_empty found'
 Near ([double]::Parse($keys['_m_empty'].value, $inv) * $LB) 183523.4 0.5 'acf empty weight (kg)'
-Near ([double]::Parse($keys['_m_max'].value, $inv) * $LB) 385553.5 0.5 'acf maximum weight (kg)'
+Near ([double]::Parse($keys['_m_max'].value, $inv) * $LB) 394625.4 0.5 'acf maximum weight (kg): 870,000 lb since 2026-11-14 (the FCOM p.78 MTOW of the 109; before 850,000 lb, 385,553.5 kg)'
 Near ([double]::Parse($keys['_m_fuel_max_tot'].value, $inv) * $LB) 173069.1 0.5 'acf fuel capacity (kg)'
 Check ($keys['_tank_name/7'].value -eq 'Horizontal stab') 'acf tank 7 the stabilizer'
 $stations = New-Object double[] 9
