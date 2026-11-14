@@ -23,7 +23,10 @@
 -- CLB/100, 1500, 1500/1500, 1). THR/CRZ CLB/100, FMSPG's, not p.681's
 -- CRZ/100 (the user, 2026-11-02: no source gives the maximum cruise
 -- thrust, the CRZ limit's estimate is the maximum climb table's; the
--- cruise's reference CLB or CRZ as set by maintenance, FMSPG p.33). The
+-- cruise's reference CLB or CRZ as set by maintenance, FMSPG p.33). Since
+-- 2026-11-14 P&W's CRZ/100, as p.681's (the user: "P&W は CRZ に", once
+-- P&W's CRZ limit is the FPPM's maximum cruise EPR: notes/ATA-34-61-FMC.md
+-- §169); GE and RR CLB/100 still (no maximum cruise source for them). The
 -- derates the FCOM's operator's (p.1314: -8/-20 %; the 570 -5/-15 %).
 --
 --   local F = B747_perf_factors_model
@@ -38,6 +41,9 @@ M.DEFAULTS = {drag = 0, ff = 0, mnvr = 1.30, mincrz = 5, rc_clb = 300, thr_crz =
     thr_red = 5, accel = 1000, eo_accel = 1000}
 -- TO 1 and TO 2 by laminar/B747/engines/type (0 PW, 1 GE, 2 RR)
 M.DERATES = {[0] = {8, 20}, [1] = {5, 15}, [2] = {8, 20}}
+-- (2026-11-14) THR/CRZ by laminar/B747/engines/type: P&W CRZ, GE and RR
+-- the DEFAULTS' CLB
+M.THR_CRZ = {[0] = "CRZ", [1] = "CLB", [2] = "CLB"}
 M.INVALID = "INVALID ENTRY"
 
 -- the values: the stored ones over the defaults
@@ -46,6 +52,7 @@ function M.values(stored, engine_type)
     for k, d in pairs(M.DEFAULTS) do v[k] = d end
     local der = M.DERATES[engine_type] or M.DERATES[0]
     v.to1, v.to2 = der[1], der[2]
+    v.thr_crz = M.THR_CRZ[engine_type] or M.DEFAULTS.thr_crz
     if type(stored) == "table" then
         for k in pairs(v) do
             local s = stored[k]

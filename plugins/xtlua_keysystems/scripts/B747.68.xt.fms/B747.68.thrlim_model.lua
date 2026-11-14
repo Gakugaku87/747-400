@@ -149,8 +149,15 @@ function M.update(s, inp)
         if inp.phase == "CLB" then byPhase = "CLB" elseif inp.phase == "CRZ" then byPhase = "CRZ" end
         -- (step 12c1) PERF FACTORS' THR/CRZ CLB: the cruise in the full
         -- climb's (FMSPG p.267: maximum climb thrust; the climb's derates
-        -- gone by then, FCOM p.1273)
-        if byPhase == "CRZ" and inp.crz_clb then byPhase, s.clb = "CLB", 0 end
+        -- gone by then, FCOM p.1273). (2026-11-14) The derate ends at the
+        -- T/C with CRZ too, so a later cruise climb (VNAV's CLB phase to the
+        -- new CRZ ALT, back to CRZ there: ATA34_2 p.664) is in the full
+        -- climb's (estimate: before, with THR/CRZ CRZ a takeoff's CLB 2 came
+        -- back in a cruise climb; P&W's default is CRZ since this day)
+        if byPhase == "CRZ" then
+            s.clb = 0
+            if inp.crz_clb then byPhase = "CLB" end
+        end
     end
     s.phase_prev, s.vnav_prev = inp.phase, inp.vnav
     local thr = inp.thr and (inp.ra or 0) > M.THR_RA

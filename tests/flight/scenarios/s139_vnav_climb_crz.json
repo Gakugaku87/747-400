@@ -48,7 +48,8 @@
     { "do": "check", "note": "VNAV PTH（6）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
     { "do": "check", "note": "FMC は巡航（2）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
     { "do": "check", "note": "A/T は SPD（3）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
-    { "do": "check", "note": "T/C の後も推力制限は CLB（PERF FACTORS の THR/CRZ の既定 CLB/100：2026-11-02 の利用者の決定、FMSPG p.33、p.266–268）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
+    { "do": "check", "note": "T/C の後の推力制限は CRZ（P&W の PERF FACTORS の THR/CRZ の既定は 2026-11-14 から CRZ/100：利用者の決定、ATA34_2 p.664。11-02〜11-13 は CLB）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CRZ" },
+    { "do": "check", "note": "EICAS の行も CRZ", "dref": "laminar/B747/fms/thrlim/eicas", "op": "==", "value": "CRZ" },
     { "do": "watch", "note": "60 秒：17,000 ft を ±150 ft で保つ", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 17150, "timeout": 60 },
     { "do": "snapshot", "note": "巡航", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/fms/vnav/cas", "laminar/B747/fms/vnav/mach", "laminar/B747/fms/vnav/mach_mode", "laminar/B747/autopilot/ias_dial_value", "sim/cockpit2/autopilot/airspeed_is_mach", "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/machno", "laminar/B747/autopilot/flightPhase", "laminar/B747/engines/ref_thr_limit_mode", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
     { "do": "check", "note": "下にも 150 ft まで", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": ">=", "value": 16850 },
@@ -60,11 +61,14 @@
     { "do": "wait", "note": "CRZ ALT は MCP の FL190", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 19000, "timeout": 5 },
     { "do": "wait", "note": "FMC は上昇（1）、VNAV SPD", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 4, "timeout": 15 },
     { "do": "check", "note": "FMC の上昇", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 1 },
+    { "do": "check", "note": "巡航上昇の推力制限は CLB（減格なし：2026-11-14、新しい CRZ ALT に着くまで。ATA34_2 p.664 からの推定）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CLB" },
     { "do": "wait", "note": "FL190 で VNAV PTH（MCP と同じ高度なので VNAV ALT でない：段 9d1）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6, "timeout": 240 },
     { "do": "watch", "note": "60 秒：捕捉の後に FL190 を 300 ft より行き過ぎない（捕捉は 600 ft ほど手前から）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 19300, "timeout": 60 },
     { "do": "check", "note": "19,000 ft の近く", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "op": "between", "value": [18850, 19150] },
     { "do": "check", "note": "VNAV PTH のまま", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6 },
     { "do": "check", "note": "A/T は SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3 },
+    { "do": "wait", "note": "新しい CRZ ALT に着くと（FMC は 50 ft の内で巡航（2）に）推力制限は CRZ に戻る（ATA34_2 p.664。2026-11-14 の 1 回目は捕捉の 30 秒後にまだ 18,950 ft の下で CLB だった）", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "CRZ", "timeout": 60 },
+    { "do": "check", "note": "FMC は巡航（2）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
     { "do": "record_stop" }
   ]
 }
