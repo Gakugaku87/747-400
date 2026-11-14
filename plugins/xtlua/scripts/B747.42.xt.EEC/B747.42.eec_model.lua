@@ -404,6 +404,40 @@ M.TABLE.PW.mct = {
     nai = {alt = {0, 10000, 20000, 30000, 40000, 45000}, v = {-0.01, -0.02, -0.03, -0.04, -0.05, -0.05}},
     nai_wai = {alt = {0, 10000, 20000, 30000, 40000, 45000}, v = {-0.03, -0.04, -0.06, -0.07, -0.08, -0.08}},
 }
+-- (2026-11-14, notes/ATA-34-61-FMC.md §169) Max Cruise EPR, PW4056, all
+-- engines, normal engine bleed for 3 packs on (FPPM p.107, 3.1.1), anti-ice
+-- off: the FPPM's (Boeing D632U002-RZ043, 747-400F/PW4056, FAA) under its
+-- Long Range Cruise tables (p.120-127, 3.2.12-3.2.19; the .85M tables' on
+-- p.128-131 the same within 0.01 EPR and 1 °C): by pressure altitude (ft)
+-- the LIMIT EPR, its MAX TAT (°C) and its decrease for every 10 °C of TAT
+-- hotter than that (each page's: corr); colder the LIMIT EPR (the FPPM has
+-- no colder adjustment, as the FCOM's maximum continuous tables). The
+-- anti-ice decreases each page's: engine 0.03 (6,000-20,000 and 38,000-
+-- 45,000 ft) or 0.04 (22,000-37,000 ft), engine and wing 0.06 (6,000-20,000
+-- ft) or 0.08; between the pages linear (estimate). The CRZ reference thrust
+-- limit (B747.42.ref_thrust_model.lua; before, the maximum climb table:
+-- estimate, §129). The cruise tables' speeds only: the FPPM's gear-down
+-- tables (p.171-177, slower) give a higher limit, not used
+M.TABLE.PW.crz = {
+    alt = {6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000,
+        22000, 23000, 24000, 25000, 26000, 27000, 28000, 29000,
+        30000, 31000, 32000, 33000, 34000, 35000, 36000, 37000,
+        38000, 39000, 40000, 41000, 42000, 43000, 44000, 45000},
+    epr = {1.21, 1.22, 1.23, 1.24, 1.25, 1.26, 1.27, 1.27,      -- p.126-127
+        1.28, 1.29, 1.29, 1.30, 1.33, 1.35, 1.38, 1.42,         -- p.124-125
+        1.44, 1.46, 1.48, 1.51, 1.52, 1.53, 1.55, 1.54,         -- p.122-123
+        1.53, 1.52, 1.51, 1.50, 1.50, 1.49, 1.49, 1.49},        -- p.120-121
+    mt = {38, 35, 33, 30, 28, 25, 23, 21,
+        19, 18, 17, 15, 13, 11, 9, 7,
+        5, 5, 3, 0, -2, -4, -6, -7,
+        -7, -7, -7, -7, -7, -7, -7, -7},
+    corr = {0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06,
+        0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08,
+        0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10,
+        0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12},
+    nai = {alt = {20000, 22000, 37000, 38000}, v = {-0.03, -0.04, -0.04, -0.03}},
+    nai_wai = {alt = {20000, 22000}, v = {-0.06, -0.08}},
+}
 -- Max Continuous %N1, CF6-80C2B1F (PI.23.1-23.3, FCOM p.379-381), 5,000 to
 -- 39,000 ft (held below 5,000: estimate): by pressure altitude the KIAS
 -- rows and the TAT columns (°C, cold to warm) of N1. The packs' adjustment
@@ -657,6 +691,22 @@ function M.lookup_mct(t, tat, alt, kias)
     end
 end
 
+-- (2026-11-14) the maximum cruise table's value at a TAT and pressure
+-- altitude (ft): each altitude's LIMIT EPR less its decrease above its MAX
+-- TAT (as a maximum continuous cell), linear between the altitudes, held at
+-- the ends (estimate: under 6,000 and over 45,000 ft)
+function M.lookup_crz(t, tat, alt)
+    local a = t.alt
+    if alt <= a[1] then return pw_cell(t, 1, tat) end
+    if alt >= a[#a] then return pw_cell(t, #a, tat) end
+    for j = 2, #a do
+        if alt <= a[j] then
+            local v0, v1 = pw_cell(t, j - 1, tat), pw_cell(t, j, tat)
+            return v0 + (v1 - v0) * (alt - a[j - 1]) / (a[j] - a[j - 1])
+        end
+    end
+end
+
 -- X-Plane's idle ratio (M.IDLE): approach idle, or minimum idle in the air
 -- or on the ground, at a pressure altitude (ft)
 function M.idle_ratio(air, alt, approach)
@@ -701,6 +751,13 @@ end
 -- adjustments at a TAT, pressure altitude (ft) and KIAS
 function M.rating_mct(t, inp, tat, alt, kias, nai)
     return M.lookup_mct(t, tat, alt, kias) + adjustment(t, inp, alt, nai)
+end
+
+-- (2026-11-14) the maximum cruise rating with its anti-ice adjustments at a
+-- TAT and pressure altitude (ft): the CRZ reference thrust limit's (no
+-- packs' adjustment: the FPPM gives none)
+function M.rating_crz(t, inp, tat, alt, nai)
+    return M.lookup_crz(t, tat, alt) + adjustment(t, inp, alt, nai)
 end
 
 function M.inputs()
