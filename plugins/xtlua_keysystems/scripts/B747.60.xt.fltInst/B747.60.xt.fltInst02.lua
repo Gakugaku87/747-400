@@ -2218,12 +2218,13 @@ end
 
 -- the FMC's takeoff speeds (6-1/6-2 step 3b; FCOM p.1319-1320): computed
 -- into airspeed/V1_ref, Vr_ref and V2_ref from the TAKEOFF REF flaps (10 or
--- 20), the FMC's gross weight (PERF INIT), the TAKEOFF REF wind (none
--- entered: calm), the OAT, the pressure altitude, THRUST LIM's rating and
--- assumed temperature and the engine type (B747.60.to_speeds_model.lua: the
--- takeoff speed tables, then the FCOM's minimum control speeds). Before:
--- the tables alone, entered with the captain's altimeter and the actual
--- OAT, no speeds outside the tables' regions. 999 (dashes) when the flaps
+-- 20), the FMC's gross weight (PERF INIT), the TAKEOFF REF wind and slope
+-- (none entered: calm, level), the OAT, the pressure altitude, THRUST
+-- LIM's rating and assumed temperature and the engine type
+-- (B747.60.to_speeds_model.lua: the FPPM's takeoff speed tables, then the
+-- FCOM's minimum control speeds). Before: the tables alone, entered with
+-- the captain's altimeter and the actual OAT, no speeds outside the tables'
+-- regions; to 2026-11-14 the slope not used. 999 (dashes) when the flaps
 -- or the weight are missing or no IRU is aligned. The FMC selects them for
 -- the PFD (airspeed/V1, Vr, V2: B744.fms.pages.takeoff.lua).
 dofile("B747.60.to_speeds_model.lua")
@@ -2240,16 +2241,20 @@ B747DR_to_engine_type = find_dataref("laminar/B747/engines/type")
 B747DR_to_thrlim_sel = find_dataref("laminar/B747/fms/thrlim/sel")
 B747DR_to_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
 B747DR_to_thrlim_pct = find_dataref("laminar/B747/fms/thrlim/to_pct")
--- the FMC's gross weight (kg; nil before PERF INIT) and the TAKEOFF REF
--- headwind (kt; a tailwind negative)
+-- the FMC's gross weight (kg; nil before PERF INIT), the TAKEOFF REF
+-- headwind (kt; a tailwind negative) and runway slope (%; U up +, D down -:
+-- the WIND/SLOPE entry's "U1.0", B744.fms.pages.lua)
 local function fms_takeoff_data()
     local d = B747DR_fltinst_fms_data
-    if type(d) ~= "string" then return nil, 0 end
+    if type(d) ~= "string" then return nil, 0, 0 end
     local gw = tonumber(d:match('"grwt"%s*:%s*"%s*([%d.]+)'))
     local dir, kt = d:match('"towind"%s*:%s*"([HT]?)(%d+)')
     local hw = tonumber(kt) or 0
     if dir == "T" then hw = -hw end
-    return gw and gw * 1000 or nil, hw
+    local sd, sv = d:match('"toslope"%s*:%s*"([UD]?)(%d+%.?%d*)')
+    local slope = tonumber(sv) or 0
+    if sd == "D" then slope = -slope end
+    return gw and gw * 1000 or nil, hw, slope
 end
 B747DR_airspeed_flapsRef                              = find_dataref("laminar/B747/airspeed/flapsRef")
 local toIn = {}
@@ -2260,7 +2265,7 @@ function B747_setV1VrV2()
     if B747DR_radio_altitude>1000 then
         B747DR_airspeed_flapsRef=0
     end
-    local gw, hw = fms_takeoff_data()
+    local gw, hw, slope = fms_takeoff_data()
     local aligned = false
     for i = 0, 2 do
         if B747DR_fltinst_irs_mode[i] == 2 then aligned = true end
@@ -2268,7 +2273,7 @@ function B747_setV1VrV2()
     local v1, vr, v2 = 999, 999, 999
     if (flaps == 10 or flaps == 20) and gw ~= nil and aligned then
         local inp = toIn
-        inp.flaps, inp.weight_kg, inp.hw = flaps, gw, hw
+        inp.flaps, inp.weight_kg, inp.hw, inp.slope = flaps, gw, hw, slope
         inp.oat_c, inp.pa_ft = simDR_OAT_degC, simDR_to_press_alt
         local sel = B747DR_to_thrlim_sel
         inp.sel_c = (B747DR_to_thrlim_code >= 100 and sel > -99) and sel or nil
