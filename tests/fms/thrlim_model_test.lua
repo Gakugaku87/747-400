@@ -89,6 +89,18 @@ T.equal(L.update(s, inp{alt_agl = 30000, vnav = true, phase = "CRZ", crz_clb = t
 T.equal(L.update(s, inp{alt_agl = 30000, vnav = true, phase = "CRZ", crz_clb = true}), "CLB", "kept in the cruise")
 T.equal(L.update(s, inp{alt_agl = 30000, phase = "CRZ", flch_up = true, crz_clb = true}), "CLB", "FLCH up: CLB still")
 
+-- (2026-11-14) THR/CRZ CRZ (P&W's default): the climb's derate ends at the
+-- T/C too, so a later cruise climb (VNAV's CLB phase to the new CRZ ALT) is
+-- in the full climb's, and back in CRZ at the new CRZ ALT (ATA34_2 p.664)
+s = L.new()
+L.select_clb(s, 2, true)
+L.update(s, inp{ground = true, flaps = F10})
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F5, vnav = true}), "CLB 2", "THR/CRZ CRZ: the climb's CLB 2")
+T.equal(L.update(s, inp{alt_agl = 31000, vnav = true, phase = "CRZ"}), "CRZ", "the T/C: CRZ")
+T.equal(L.update(s, inp{alt_agl = 31000, vnav = true, phase = "CLB"}), "CLB", "a cruise climb: CLB, not CLB 2 (before, the takeoff's CLB 2 came back)")
+T.equal(L.update(s, inp{alt_agl = 33000, vnav = true, phase = "CRZ"}), "CRZ", "at the new CRZ ALT: CRZ again")
+T.equal(L.update(s, inp{alt_agl = 33000, phase = "CRZ", flch_up = true}), "CLB", "FLCH up from CRZ: CLB (FCOM p.646), not CLB 2")
+
 -- GA: the flaps extended out of UP (FCOM p.672); the THR switch: CLB; the
 -- landing flaps, G/S: GA held (the THR switch, a selection nothing);
 -- flaps 20 again: the THR switch CLB, CON if CON was selected (p.642)
