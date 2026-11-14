@@ -120,8 +120,8 @@ frames(0.5)
 T.equal(A("V1_ref"), 999, "no IRU aligned: dashes (FCOM p.1319)")
 
 -- (6-1/6-2 step 3d) the FCOM's minimum control speeds (PI.18.11): 200 t
--- (ZFW 140 t, fuel 60 t), flaps 20, sea level, 15 C: the tables' 88/102/130
--- raised to VMCG 121, VRMIN 124 and its V2 146 (PI.10.10)
+-- (ZFW 140 t, fuel 60 t), flaps 20, sea level, 15 C: the FPPM's region B
+-- 92/105/130 (p.42) raised to VMCG 121, VRMIN 124 and its V2 146 (PI.10.10)
 rt:set("laminar/B747/irs/mode", 0, 2)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
 rt:set("sim/weather/temperature_ambient_c", 15)
@@ -134,17 +134,47 @@ key("ls_key/L6")
 key("ls_key/L5")                                       -- TAKEOFF REF
 local function refs() return string.format("%d/%d/%d", A("V1_ref"), A("Vr_ref"), A("V2_ref")) end
 T.equal(refs(), "121/124/146", "200 t, flaps 20, 15 C, sea level: VMCG 121, VRMIN 124, its V2 (before 88/102/130)")
+-- (2026-11-14) the FPPM's tables and the TAKEOFF REF slope: 300 t (ZFW 240
+-- t), flaps 20, region B's 129/142/158 (FPPM p.42); 2 % down V1 - 3, 2 % up
+-- V1 + 1 (its Slope/Wind V1 Adjustment table). Before, the slope not used
+key("ls_key/L6")                                       -- INIT/REF INDEX
+key("ls_key/L3")                                       -- PERF INIT
+type_in("240")
+key("ls_key/L3")
+clear()
+key("ls_key/L6")
+key("ls_key/L5")                                       -- TAKEOFF REF
+T.equal(refs(), "129/142/158", "300 t, flaps 20, 15 C, sea level: region B's (FPPM p.42; before the add-on's 123/138/157)")
+type_in("/D2.0")
+key("ls_key/L4")
+clear()
+T.equal(refs(), "126/142/158", "WIND/SLOPE /D2.0: V1 - 3")
+type_in("/U2.0")
+key("ls_key/L4")
+clear()
+T.equal(refs(), "130/142/158", "/U2.0: V1 + 1")
+key("key/del")
+key("ls_key/L4")
+clear()
+key("ls_key/L6")
+key("ls_key/L3")
+type_in("140")
+key("ls_key/L3")
+clear()
+key("ls_key/L6")
+key("ls_key/L5")
+T.equal(refs(), "121/124/146", "200 t again, calm and level")
 -- THRUST LIM's TO 2 (PW: 20 %, PI.10.33-34), then an assumed temperature
 key("ls_key/L6")
 key("ls_key/L4")                                       -- THRUST LIM
 key("ls_key/L4")                                       -- <-20 % TO 2
 frames(0.2)
-T.equal(refs(), "108/111/130", "TO 2: its minimums 108/111, the table's V2 over its V2 for VRMIN")
+T.equal(refs(), "108/111/131", "TO 2: V1 to its VMCG 108, VR its table's 111 (FPPM p.67, region B's 200 t filled: estimate), V2 131")
 type_in("45")
 key("ls_key/L1")                                       -- SEL 45 C: D-TO 2
 frames(0.2)
 T.equal(rt:get("laminar/B747/fms/thrlim/code"), 112, "D-TO 2")
-T.equal(refs(), "108/111/129", "D-TO 2 at 45 C: region C's V2 129, the minimums still at the actual 15 C (AC 25-13)")
+T.equal(refs(), "108/114/129", "D-TO 2 at 45 C: region E's 104/114/129 (filled: estimate), V1 still to the actual 15 C's VMCG 108 (AC 25-13)")
 
 -- (6-1/6-2 step 3d) APPROACH REF: the FMC's 200.0 t, VREF 25 132 and 30
 -- 127 (PI.10.2); an entry shows its own until the page is left

@@ -18,8 +18,9 @@
 
 ----- V-SPEEDS (DATA TABLES) ------------------------------------------------------------
 
--- the takeoff speed tables (the temperature and altitude regions, the V1
--- wind adjustment, V1, VR and V2 by flaps, region and weight): in
+-- the takeoff speed tables (the FPPM's: the temperature and altitude
+-- regions, the V1 slope and wind adjustments, the altitude adjustments,
+-- V1, VR and V2 by thrust rating, flaps, region and weight): in
 -- B747.60.to_speeds_model.lua with the FCOM's minimum control speeds
 -- (6-1/6-2 step 3d)
 -- VREF: the FMC's (B747.68.vref_model.lua, the FCOM's table; 6-1/6-2 step

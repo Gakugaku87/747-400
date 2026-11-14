@@ -33,6 +33,7 @@ ATA38_51_52_56	678025063-ATA-38-51-52-et-56.pdf
 ATA70_80	678025050-ATA-70-80-03-00.pdf
 QRH_CA	953908883-AirChina-B747-400-QRH.pdf
 ACAP	D6-58326-1_747-400_Airport_Planning_Rev_F.pdf
+FPPM	1059530115-74F-FPPM.pdf
 EOF
 
 tail -n +2 "$OUT/SOURCES.tsv" | while IFS=$'\t' read -r id file; do

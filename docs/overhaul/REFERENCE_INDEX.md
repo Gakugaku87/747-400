@@ -41,6 +41,7 @@
 | QRH_CA | 中国国際航空 B747-400 QRH（2008-10-01、中国語と英語。2026-11-02 に利用者がくれた） | 444 | 180 | PW4056、重量はポンド。非常・非正規のチェックリスト、空中性能（PI-QRH 章：p.347 の目次、VREF は p.353 の PI-QRH.10.5、正常・非正規形態の着陸距離 p.355〜、一発不作動 p.363〜）。離陸速度の表は無い |
 | ACAP | Boeing 747-400 Airplane Characteristics for Airport Planning（D6-58326-1 Rev F、2024-12。2026-11-02 に利用者がくれた） | 224 | 157 | 寸法、重量（MTW・MLW など）、離陸・着陸の滑走路長の図（3.3 節〜、エンジン型式ごと）、旋回半径。V 速度は無い |
 | ICAO_EEDB | ICAO Aircraft Engine Emissions Databank のデータシート（`_ref/ICAO_EEDB/`、1 エンジン 1 枚、テキストは `_ref/text/ICAO_EEDB/`。2026-10-30 に利用者が置いた） | 20 枚 | — | PW4056（1PW041・1PW042）、PW4062、CF6-80C2B1F（1GE023・1GE024・2GE045 ほか）、CF6-80C2B5F、RB211-524G・H（-T を含む）。定格推力 F00・バイパス比・全体圧力比、海面静止の LTO の 4 つの推力（100・85・30・7 %）の燃料流量。引用は `ICAO_EEDB 1PW041` の形 |
+| FPPM | Boeing 747-400F Flight Planning and Performance Manual（D632U002-RZ043 Rev 7、2011-03-04。2026-11-14 に利用者がくれた。PDF のファイル名は `1059530115-74F-FPPM.pdf`） | 198 | — | 747-400F/PW4056、FAA、kg、Category J ブレーキ、減推力 TO1 8 %・TO2 20 %。出発前の離陸・着陸の性能（滑走路長・上昇・障害物・タイヤ速度・ブレーキエネルギーの制限、V1・VR・V2、離陸 EPR、トリム、湿った・汚染滑走路、着陸の制限と距離）、飛行計画、巡航（LRC・.85M の表と最大巡航 EPR、上昇の表）。図は画像でなく線のデータ（座標を読める） |
 
 - APU（ATA 49）の整備資料は無い。APU は FCOM 7.14・7.30・7.40 を基準にする。
 - 電源（ATA 24）は LH24 だけ（PW 機）。整備訓練マニュアルには ATA 24 の巻が無い。
@@ -123,6 +124,24 @@
 | 8 | ATS Data Link（ADS、ATC index / uplink / request / report / emergency / log） | 270-366 |
 | 9 | Company Data Link | 367-383 |
 | App. A / B / C | Index / Abbreviations / List of Illustrations | 384-401 / 402-407 / 408-415 |
+
+## FPPM（D632U002-RZ043、747-400F/PW4056）
+
+| 章 | 節 | 内容 | PDF p. |
+|---|---|---|---|
+| 0 Preface | 0.1〜0.4 | Introduction、Revision Record、List of Effective Pages、Bulletin Record | 3-16 |
+| 1 Takeoff and Landing | 1.1 | Text（離陸速度の決め方、減推力、assumed temperature、anti-skid 不作動、ブレーキ不作動、着陸の制限、ブレーキ冷却、CAT III） | 19-24 |
+| | 1.2 | Takeoff：QNH と気圧高度、風、滑走路長の制限（フラップ 10・20）、上昇の制限、障害物、タイヤ速度、VMBE、improved climb、slush/standing water、slippery runway、離陸速度（p.41-42）、clearway・stopway、VMCG・VRMIN（p.43）、離陸 EPR・トリム・燃料投棄の時間（p.44）、燃料の分け方 | 25-46 |
+| | 1.3 | Takeoff Derates：TO1（8 %）p.47-58、TO2（20 %）p.59-70（制限重量の換算、slush、slippery、離陸速度、VMCG・VRMIN、離陸 EPR・トリム） | 47-70 |
+| | 1.4 | Landing：滑走路長と上昇の制限（フラップ 25・30、anti-skid 不作動も）p.71-74、復行の上昇勾配 p.75、quick turnaround p.76、ブレーキ冷却 p.77、着陸距離（フラップ 30・25）p.78-79 | 71-80 |
+| 2 Flight Planning | 2.1〜2.3 | Text、簡易の飛行計画（最適高度、LRC・.85M の区間の燃料と時間、段階上昇、減圧時の代替、待機、酸素）p.87-98、driftdown p.99-104 | 81-104 |
+| 3 Enroute | 3.1〜3.2 | 全発：LRC の最大高度 p.109、340/.84 の上昇（時間・燃料・距離）p.110-、LRC の燃料と時間 p.118-、LRC の表 p.120-127（各ページの下に最大巡航 EPR）、.85M の表 p.128-、風と高度の交換 p.131、降下 p.132、待機 p.133 | 105-134 |
+| | 3.3 | 片発：LRC の高度の能力 p.135、LRC の表 p.136-、代替の燃料と時間 p.144、待機 p.145 | 135-146 |
+| 4 Non-Standard Configuration | 4.1〜4.4 | 脚下げ（上昇の制限、障害物、着陸上昇、driftdown、LRC、上昇、降下、待機、片発） | 147-192 |
+| | 4.5 | Alternate Mode EEC（離陸の制限重量の補正など） | 193-198 |
+
+- 747-400F（貨物機）の資料。離陸の低速の値（VMCG・VRMIN・「VRMIN のときの V2」）は FCOM の PW4056 の表と同じ。巡航と待機の表は FCOM と少し違う（燃料流量が 0〜3.6 % 少なく、EPR が 0.01〜0.03 高い）：notes/ATA-34-61-FMC.md §168。
+- 誤りと欠け：p.67（TO2・フラップ 20 の離陸速度）は A〜G の 340 t の行が無く、A〜E の 200 t などが空欄。p.47（TO1）の着陸上昇制限の 300 t は 213.5（273 前後の誤植）。p.56 の TO1 の「VRMIN のときの V2」は最後の列の見出しが 123 kt（FCOM は 120 kt）。
 
 ## Lufthansa B1（LH24・LH36・LH3460）
 
