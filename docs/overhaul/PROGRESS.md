@@ -2,21 +2,29 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-11-14 昼（クラウドのセッション：FMC の離陸速度を利用者がくれた Boeing の FPPM（747-400F/PW4056）の表に置き換えた。X-Plane の確かめ、`overhaul` への取り込み、巡航の EPR、カスタム acf の最大重量は PC のセッションへ引き継ぐ：下の最初の項目。その前、11-14 朝に巡航の A/T のレバーの揺れを直し、Release `custom-2026.11.14` を公開した）。
+最終更新：2026-11-14 夜（PC のセッション：クラウドのセッションからの引き継ぎ 1〜5 を進めた。FPPM の離陸速度を X-Plane で確かめ、カスタム acf の最大重量を FCOM の MTOW 870,000 lb に、P&W の巡航の推力の基準 CRZ を FPPM の最大巡航 EPR に、利用者の答えで P&W の巡航の既定を CRZ に、CLAUDE.md の資料に FPPM を足した：下の最初の 2 項目。その前、11-14 昼にクラウドのセッションが FMC の離陸速度を FPPM の表に置き換え、11-14 朝に巡航の A/T のレバーの揺れを直して Release `custom-2026.11.14` を公開した）。
 
 ## いまどこか
 
-- **離陸速度を FPPM の表に（2026-11-14 昼、クラウドのセッション。利用者の「まずFMCの離陸速度計算をFPPMベースのものに置き換えよう」。notes/ATA-34-61-FMC.md §168）**：`master` d0d803b の上に 3 コミット。利用者の選択（「overhaul・master に push」）で `overhaul` と `master` に fast-forward で push した。`custom` はまだ（PC で `update_custom_branch.sh`）。X-Plane ではまだ確かめていない。
+- **巡航の推力の基準 CRZ を FPPM の最大巡航 EPR に（2026-11-14 夜、PC のセッション。下の項目の引き継ぎの 4。notes/ATA-34-61-FMC.md §169）**：`83b1244b`（CRZ の値）、`c8847f76`（P&W の巡航の既定を CRZ に）。どちらも `overhaul`・`master`・`custom` に push 済み。
+  - 資料：FPPM の LRC の表（p.120–127）の各ページの下の「Max Cruise EPR」。高度ごとの LIMIT EPR と MAX TAT、MAX TAT より 10 ℃ 暑いごとの減り方（0.06〜0.12）、防氷の減り方（エンジン 0.03・0.04、エンジンと翼 0.06・0.08）。FCOM の最大連続の表（PI.13.1）と同じ形。
+  - 作ったこと：`B747.42.eec_model.lua` の `TABLE.PW.crz`・`lookup_crz`・`rating_crz`、`B747.42.ref_thrust_model.lua` の CRZ（P&W）。GE は最大上昇の表のまま（推定）、RR は前のコードのまま。前の代用より 0.09〜0.18 低い（FL350・ISA・M.85 で 1.64 → 1.53）。巡航の既定（PERF FACTORS の THR/CRZ）は CLB のまま。
+  - 試験：`ref_thrust_model_test` 51 件（29 から +22）。全体 289 本（確認 18,816・落ち 0）、構文 634 本。`tests/lib/cruise_sim.lua` の推力制限の既定を CLB に（X-Plane の空中開始と巡航の既定。前の "CRZ" は CLB と同じ値だった。新しい CRZ のままだと `at_spd_gain_test` の s262 の場合が 1 kt の内に戻るまで 249 秒で落ちた：低い限界のため）。
+  - X-Plane（20:25〜20:51）：新しい `s334_crz_ref_fppm` 30/0（FL350・ISA：35,289 ft・TAT −24.5 ℃ で 1.536、防氷で −0.04・−0.08、CLB で 1.638。EICAS の写真で「CRZ」と緑の 1.54）、新しい `s335_crz_ref_fppm_hot` 12/0（FL290・上空を ISA+20 に：ISA+16・TAT 9.1 ℃ で 1.396。どちらもモデルの値と同じ）、回帰の `s214_epr_climb` 10/0。Log.txt に Lua の誤りなし。気づいたこと：シナリオの海面の気温だけでは上空の ISA の差にならない（海面 35 ℃ で FL287 は ISA+3）。s288・s323・s326 など「暑い日」のシナリオは、上空が名前ほど暑くない（下の「気づいたこと（作業の途中で）」）。
+  - 利用者に聞いたこと（下の「決まったこと（2026-11-14 夜…）」）：巡航の既定を P&W は CRZ に戻すか → 「P&W は CRZ に」。CLAUDE.md の「資料」に FPPM を足すか（引き継ぎの 5）→ 「案の文で足す」（6d157662）。
+  - 巡航の既定を P&W は CRZ に（§169 の後半）：`perf_factors_model` の THR/CRZ の既定をエンジン型式ごとに（P&W CRZ、GE・RR CLB）。VNAV の巡航上昇は前から FMC の段階が CLB なので推力制限は CLB、新しい CRZ ALT で CRZ に戻る（ATA34_2 p.664）。`thrlim_model` は上昇の減格（CLB 1・2）を T/C で CRZ のときも外す（前は CRZ だと離陸の CLB 2 が後の巡航上昇で戻った：推定）。試験：`perf_factors_model_test` 129、`perf_factors_pages_test` 61、`thrlim_model_test` 69（+5）、全体 289 本（確認 18,825）。X-Plane（21:03〜22:20）：`s139` 32/0（T/C の後 CRZ、巡航上昇で CLB、FL190 で CRZ。1 回目 30/1 は確かめの待ちが捕捉の直後で短すぎた：直した）、巡航で VNAV を使う 7 本 `s130` 13/0・`s147` 30/0・`s148` 27/0・`s159` 20/0・`s204` 20/0・`s322` 15/0・`s323` 16/0。Log.txt に Lua の誤りなし。`s198` は確かめを CRZ に直したが、通しの飛行（65 分）なので回していない。
+
+- **離陸速度を FPPM の表に（2026-11-14 昼、クラウドのセッション。利用者の「まずFMCの離陸速度計算をFPPMベースのものに置き換えよう」。notes/ATA-34-61-FMC.md §168）**：`master` d0d803b の上に 3 コミット。利用者の選択（「overhaul・master に push」）で `overhaul` と `master` に fast-forward で push した。同じ日の夜、PC のセッションが下の引き継ぎ 1〜5 を進めた（各項目の「→」）：`custom` を更新し、X-Plane で FPPM の表どおりと確かめた。
   - 資料：利用者がくれた Boeing の FPPM（D632U002-RZ043 Rev 7、747-400F/PW4056、FAA、kg）。REFERENCE_INDEX.md と extract_pdfs.sh に ID `FPPM` で足した。**PDF（`1059530115-74F-FPPM.pdf`）は PC の `_ref/` に置き、`extract_pdfs.sh` を回す**（クラウドには `_ref/` が無い）。
   - 作ったこと：`B747.60.to_speeds_model.lua` の表を FPPM の表（全推力・TO1 8 %・TO2 20 %、フラップ 10・20、区分 A〜M、200〜400 t）と、区分の図（PDF の線から）、勾配と風の V1 の補正、高度の補正（+1・+2 kt）に置き換えた。TAKEOFF REF の勾配も使う（`B747.60.xt.fltInst02.lua`）。最小操縦速度は FCOM の表のまま（FPPM と全行一致）。
   - 前との違い：海面で V1 +3〜6 kt、VR +2〜4 kt、V2 は 1 kt 以内（フラップ 20・300 t：123/138/157 → 129/142/158）。
   - 試験（クラウドの LuaJIT 2.1、代わりの DataRefs.txt：TESTING.md の手順）：`checks 18712`、`passed 288, failed 1`（落ちたのは `tests/kit/mutate_test.lua`：Linux の `os.execute` が終了コード 1 を 256 で返すため。変更の前も同じ）。`to_speeds_model_test` 85 件、`takeoff_speeds_test` 37 件。
   - **PC のセッションへの引き継ぎ（利用者の「ローカルの方に資料揃ってるからローカルClaudeにハンドオフする？」）**：
-    1. `overhaul` を pull し（3 コミットは push 済み）、`bash docs/overhaul/tools/update_custom_branch.sh` で `custom` を更新して push。
-    2. X-Plane で `s82_takeoff_speeds`・`s83_takeoff_ref`・`s213_vspeeds`（TO2・D-TO2 の確かめを「VMCG・VRMIN 以上」に変えた）を回し、TAKEOFF REF の V1・VR・V2 が FPPM の表どおりか（例：ZFW を入れて 300 t・フラップ 20・RJAA の 15 ℃前後で 129/142/158 前後）と Log.txt を確かめる。
-    3. カスタム acf の最大重量（利用者の「カスタムacf側の最大重量の数値を資料側に合わせられない？」）：`P acf/_m_max 8.5E5` を FCOM p.78 (L.10.2) の機番 109 の MTOW 870,000 lb（394,625 kg）に。CLAUDE.md の手順（バックアップ、変更前後の一覧、外の写真）。ACF_DIFF.md の重量の行、TESTING.md §4.7 と `tests/flight/perf/perf.ps1` の「acf の最大重量（850,000 lb）ではない」の文、2026-11-06 の決まり（「acf は変えない」：性能計測のための決まり）を直す。MLW・MZFW は X-Plane の acf に項目が無い。
-    4. 巡航の EICAS の推力の表示（CRZ の基準）を FPPM の最大巡航 EPR に（利用者の「巡航EPRも判明したから巡航中のEICAS推力表示もそちらに準拠させよう」）：今は最大上昇の表で代用（推定、§129）。FPPM の LRC の表の各ページの下に「Max Cruise EPR」（気圧高度ごと。FL350 1.53 など：notes §168 の「気づいたこと」）。気温による変化、MAX TAT との食い違い、FPPM の EPR が FCOM の巡航の表より 0.01〜0.03 高いことを、FCOM（p.830 の CRZ 1.38 の図、11.32 の推力管理）と ATA34_2・LH3460 で確かめてから。
-    5. CLAUDE.md の「資料」に FPPM を足すか（例：「FCOM に無い性能の値は FPPM、食い違えば FCOM」）を利用者に確かめる。
+    1. `overhaul` を pull し（3 コミットは push 済み）、`bash docs/overhaul/tools/update_custom_branch.sh` で `custom` を更新して push。→ 済（PC、20:0x）：`overhaul`・`master` を 512a49ec に進め、`custom` 1fefa7e8 を push。FPPM の PDF は利用者が `_ref/` に置いてあった（19:12）ので、`extract_pdfs.sh` と同じ処理で `_ref/text/FPPM/`（198 ページ）を作った。PC の回帰：`checks 18790`、`passed 289, failed 0`（`mutate_test` も通る。クラウドとの確認の数の差は、PC の `Commands.txt` などで増える分）、構文 634 本。
+    2. X-Plane で `s82_takeoff_speeds`・`s83_takeoff_ref`・`s213_vspeeds`（TO2・D-TO2 の確かめを「VMCG・VRMIN 以上」に変えた）を回し、TAKEOFF REF の V1・VR・V2 が FPPM の表どおりか（例：ZFW を入れて 300 t・フラップ 20・RJAA の 15 ℃前後で 129/142/158 前後）と Log.txt を確かめる。→ 済（20:10〜20:17、カスタム acf）：s82 14/0（約 306.5 t・フラップ 10 で 136/149/166：FPPM p.41 の区分 B の 300 t と 320 t のあいだ）、s83 18/0（H40/U1.0 で V1 136 → 139）、s213 17/0。確かめ用（リポジトリの外の `D:\b747_review\fppm_check`）に ZFW 213.5 t（300.0 t）・フラップ 20・14.7 ℃・135 ft で 129/142/158（FPPM p.42 どおり）。警告は各 1 件で、利用者のジョイスティックがつながっていて `has_joystick` 0 を X-Plane が受け付けなかったもの。Log.txt に Lua の誤りなし。notes/ATA-34-61-FMC.md §168 の X-Plane の行。
+    3. カスタム acf の最大重量（利用者の「カスタムacf側の最大重量の数値を資料側に合わせられない？」）：`P acf/_m_max 8.5E5` を FCOM p.78 (L.10.2) の機番 109 の MTOW 870,000 lb（394,625 kg）に。CLAUDE.md の手順（バックアップ、変更前後の一覧、外の写真）。ACF_DIFF.md の重量の行、TESTING.md §4.7 と `tests/flight/perf/perf.ps1` の「acf の最大重量（850,000 lb）ではない」の文、2026-11-06 の決まり（「acf は変えない」：性能計測のための決まり）を直す。MLW・MZFW は X-Plane の acf に項目が無い。→ 済（988a84e2、push 済み・`custom` b1875391）：`_m_max` 8.5E5 → 8.7E5。バックアップ `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261114_before_m_max`、変更の一覧は ACF_DIFF.md §5。X-Plane は読み込み直しで `acf_m_max` 394,625.47 kg。外の写真（地上のチェースと周回のビュー）と脚のたわみ・姿勢は変更の前後で同じ。同じページの機番 570（GE）は 875,000 lb だが、acf は 1 つなので 109 の値（ACF_DIFF.md）。`perf_offline_test` 323 件。
+    4. 巡航の EICAS の推力の表示（CRZ の基準）を FPPM の最大巡航 EPR に（利用者の「巡航EPRも判明したから巡航中のEICAS推力表示もそちらに準拠させよう」）：今は最大上昇の表で代用（推定、§129）。FPPM の LRC の表の各ページの下に「Max Cruise EPR」（気圧高度ごと。FL350 1.53 など：notes §168 の「気づいたこと」）。気温による変化、MAX TAT との食い違い、FPPM の EPR が FCOM の巡航の表より 0.01〜0.03 高いことを、FCOM（p.830 の CRZ 1.38 の図、11.32 の推力管理）と ATA34_2・LH3460 で確かめてから。→ 済（PC、notes/ATA-34-61-FMC.md §169）：気温による変化は各ページの表のすぐ下にあった（MAX TAT より 10 ℃ 暑いごとに 0.06〜0.12 下げる。FCOM の最大連続の表 PI.13.1 と同じ形で、FPPM の片発の最大連続 EPR の値も FCOM と同じ目盛り）。FCOM p.830 の図の CRZ 1.38・TAT −14 ℃ は FPPM の FL280 と同じ値。0.01〜0.03 は巡航に要る EPR（機体の側）の差で、定格には関係しない。P&W の CRZ を FPPM の表に（GE は最大上昇の表のまま）。前の代用より 0.09〜0.18 低い（FL350・ISA で 1.64 → 1.53）。巡航の既定は CLB のまま。下の「巡航の推力の基準 CRZ」の項目。
+    5. CLAUDE.md の「資料」に FPPM を足すか（例：「FCOM に無い性能の値は FPPM、食い違えば FCOM」）を利用者に確かめる。→ 済（PC）：利用者の答え「案の文で足す」で、資料の優先順位に「FCOM に無い性能の値（離陸速度・最大巡航 EPR など）は FPPM、食い違えば FCOM、GE・RR や旅客機と違う所は推定と書く」を足した（6d157662）。
 
 - **Release `custom-2026.11.14`（2026-11-14 朝、利用者の「Xp切っていいよ。あとそれを反映したリリース作っといて」）**：`custom` `0d18c619`（overhaul `e76833ee`：巡航の A/T の直し）から `make_release.sh` で作った（注釈付きタグ、コミット `185814d9`。1,996 ファイル・779 MB。前の版との違いは `B747.70.at_model.lua` だけ）。GitHub で公開済み（Latest。内蔵ブラウザに利用者のサインインが残っていた）。
   - 確かめ（リポジトリの外の `D:\b747_review\release_check`）：タグの中身を `Aircraft/747-400-release-test` に展開し、3D 一式と GE のリバリー（JAL JA8913。利用者の手元の機体は `747-400-custom-2026.11.13` に入れ替わっていたので、そこから）を重ねて読み込めた：エンジン型式 GE・推力基準 N1、CDU の IDENT は CF6-80C2-B1F・AIRAC 2611、外からの写真（07:5x）、`r01` 3/0（読み込みの後 45 秒待って MENU・L1：前回の 10 秒では L1 が効かなかった）、`s07` 7/0。開発の機体を読み込み直し（`s306` 2/0）、フォルダーを消し、X-Plane を終えた（`sim/operation/quit`）。
@@ -689,11 +697,16 @@
   - 2026-10-28 追記：その後、FMS ブリッジ（notes/ATA-34-61-FMC.md §23）に `laminar/B747/fms/xp/displayed`（XPLMSetDisplayedFMSEntry を X-Plane のスレッドで呼ぶ）ができたので、(b) はプラグイン側が済んでいる。(c) の段 7 も済。推奨は (b)：残りは FMC・CDU 側だけ（LEGS の CTR の印と STEP キー、PLAN の中心の点を `xp/displayed` に書く）。(a) は X-Plane の CDU のページの状態に頼るうえ、XTLua の作業スレッドから X-Plane の FMS に触れる形になる（§23 で X-Plane が落ちた原因と同じ）。利用者は (b) に決めた（2026-10-28：下の「決まったこと（2026-10-28、利用者の回答）」）。
 - （2026-10-28 に決まった：下の「決まったこと（2026-10-28、利用者の回答）」）ND の MAP CTR の縮尺（2026-10-26、5-2 段 5c-3）：MAP CTR では、地図の記号（局・経路の点・TCAS）と X-Plane の地図の層が拡大の MAP と同じ縮尺（465 px＝選んだ範囲）で描かれ、見えるのは機体から 250 単位（182 px、範囲の約 4 割）まで。一方、全周のローズの半径は約 230 px。FCOM p.1143 の図からは、MAP CTR ではローズの半径が範囲に当たるようにも読めるが、明記は無い。実機の MAP CTR で、ローズの円が選んだ範囲（または範囲の半分）を表すかを確かめたい。直すなら、MAP CTR のときだけ X-Plane の地図の範囲を 1 段上げ、記号・TCAS・高度の弧・POS の線の縮尺を半分にする（試しに X-Plane の範囲を 1 段上げると地図の層の縮尺が半分になることは確かめた）。
 
+## 決まったこと（2026-11-14 夜、利用者の回答。PC のセッション）
+
+- 巡航の推力の基準の既定を、P&W は CRZ に戻す（問い「P&W の既定を CRZ に戻しますか？」、選択肢「P&W は CRZ に」「CLB のまま」への答え「P&W は CRZ に」。選択肢の説明：VNAV の巡航で EICAS が CRZ と FPPM の値を出し、A/T の上限も最大巡航推力に。巡航上昇の間は CLB、新しい高度で CRZ（ATA34_2 p.664 からの推定）。GE・RR は CLB のまま）。済（notes/ATA-34-61-FMC.md §169）。
+- CLAUDE.md の「資料」に FPPM を足す（問い「CLAUDE.md の「資料」に FPPM を足しますか？」、答え「案の文で足す」）。済（6d157662）。
+
 ## 決まったこと（2026-11-14、利用者の回答。クラウドのセッション）
 
 - FMC の離陸速度を FPPM（747-400F/PW4056）の表に置き換える（「まずFMCの離陸速度計算をFPPMベースのものに置き換えよう」）。済（§168）。
-- 巡航中の EICAS の推力の表示（CRZ の基準）を FPPM の最大巡航 EPR に合わせる（「巡航EPRも判明したから巡航中のEICAS推力表示もそちらに準拠させよう」）。PC のセッションで。
-- カスタム acf の最大重量を資料（FCOM p.78 の機番 109 の MTOW 394,625 kg）に合わせる（「カスタムacf側の最大重量の数値を資料側に合わせられない？」）。PC のセッションで（外の写真が要る）。
+- 巡航中の EICAS の推力の表示（CRZ の基準）を FPPM の最大巡航 EPR に合わせる（「巡航EPRも判明したから巡航中のEICAS推力表示もそちらに準拠させよう」）。PC のセッションで。→ 済（PC、§169：P&W の CRZ の値）。巡航の既定（PERF FACTORS の THR/CRZ CLB/100）は、PC のセッションの問いへの答え「P&W は CRZ に」で P&W を CRZ/100 にした（上の「11-14 夜」の決まり）。
+- カスタム acf の最大重量を資料（FCOM p.78 の機番 109 の MTOW 394,625 kg）に合わせる（「カスタムacf側の最大重量の数値を資料側に合わせられない？」）。PC のセッションで（外の写真が要る）。→ 済（PC、988a84e2：870,000 lb）。
 - 資料が PC にあるので、残りは PC の Claude に引き継ぐ（「ローカルの方に資料揃ってるからローカルClaudeにハンドオフする？」）。
 - （決まっていない）利用者の問い「_ref/もGitHubにアップロードした方が良い？」には、公開のフォーク（`Gakugaku87/747-400` は public）には上げないよう答えた（著作物の再配布になり、CLAUDE.md の決まりにも反する）。クラウドで読むなら、非公開の別リポジトリに `_ref/text/` だけを置く案を出した。
 
@@ -792,7 +805,7 @@
 - SimBrief の OFP は Pilot ID で最新のものを取る（「SimbriefのPilot ID使って最新OFPを取得するようにできない？」）。試験には利用者の Pilot ID 262051 を使ってよい（「テストのためにフライトプラン作ってほしいタイミングが来たらいつでも言って」：要るときは利用者が SimBrief で計画を作る）。FMS ブリッジが取り、SIM CONFIG 2 ページの 5L で入れる（notes/ATA-34-61-FMC.md §131）。
 - 脚とフラップの抵抗もプラグインで寄せる（「脚とフラップの抵抗もプラグインで寄せよう」）。脚は補正した（FCOM PI.16.3 の EPR と燃料流量から CD 0.0044、胴体の抵抗係数に足す：notes/AERO.md §3.16）。フラップは、目安にした FCOM の速度計異常の表が、同じ条件で FCOM の待機の表と推力で 16 % 違い、detent ごとの目安では同じ揚力でフラップを出すと抵抗が減ることになるので、補正しなかった（利用者に報告）。
 - 実機の一次資料が見つからないとき（最大 CRZ 推力の制限など）は、PMDG や PSX の資料も参考にしてよい（「最大CRZ推力制限など実機の一次資料が見つからない場合はPMDGやPSXの資料も参考にしていいよ」：CLAUDE.md に書いた）。使ったら「PMDG／PSX 由来（実機資料なし）」と、推定とは分けて書く。2026-11-02 に探した範囲（Aerowinx の公開の AOM の抜粋、ウェブ）には最大巡航の値は無かった。
-- 巡航の推力の基準の既定は CLB（「最大巡航推力を正確に導き出せないのなら既定をCLBにしよう」）。CRZ は FCOM に最大巡航の表が無く、最大上昇の表で代用（推定）していた。PERF FACTORS の THR/CRZ の既定を CLB/100 にした（FMSPG p.266–268 の入力の無い FMC と同じ。巡航の基準は整備の設定で CLB か CRZ：FMSPG p.33）。notes/ATA-34-61-FMC.md §129。
+- 巡航の推力の基準の既定は CLB（「最大巡航推力を正確に導き出せないのなら既定をCLBにしよう」）。CRZ は FCOM に最大巡航の表が無く、最大上昇の表で代用（推定）していた。PERF FACTORS の THR/CRZ の既定を CLB/100 にした（FMSPG p.266–268 の入力の無い FMC と同じ。巡航の基準は整備の設定で CLB か CRZ：FMSPG p.33）。notes/ATA-34-61-FMC.md §129。→ 2026-11-14：P&W の CRZ の値は FPPM の最大巡航 EPR になった（§169）。同じ日の夜、利用者の答え「P&W は CRZ に」で、P&W の既定は CRZ/100（GE・RR は CLB/100 のまま）。
 
 ## 決まったこと（2026-10-30、利用者の回答）
 
@@ -1017,6 +1030,7 @@ PLAN.md §3 に書いた。要点：
   - X-Plane の starter は N2 60 % を超えたら放す（空気がまだ回していても）。
 - EEC（2-3 段 2。`B747.42.eec_model.lua`・`B747.42.xt.eec_thrust.lua` に「estimate」と書いてある）：
   - 離陸の定格は FCOM PI の着陸復行の表で代用（FCOM に通常モードの離陸の表が無い。ALTN の離陸と着陸復行の表は同じ推力、PI.15.6）。表は 10,000 ft までなので、その上は 10,000 ft の値のまま。
+  - 巡航の推力の基準 CRZ（2026-11-14、notes/ATA-34-61-FMC.md §169）：P&W は FPPM（747-400F/PW4056）の最大巡航 EPR。推定は、高度の行のあいだの直線、6,000 ft より下と 45,000 ft より上は端の値、防氷の減り方の変わり目（20,000〜22,000 ft、37,000〜38,000 ft）の直線、速さによる違いを入れないこと（巡航の表の速さのまま）、貨物機の資料を旅客機（同じ PW4056）に使うこと。GE の CRZ は最大上昇の表のまま（CF6 の最大巡航の資料なし）。巡航の既定（同じ日の夜から P&W は CRZ）のまわり：VNAV の巡航上昇の間の推力制限 CLB（ATA34_2 p.664 の「着くと CRZ」からの読み）、上昇の減格（CLB 1・2）を T/C で外すこと（FCOM p.1273 の「上昇の間に除かれる」から）。
   - 最大連続の定格（PI.13.1・PI.23.1。高度・速度・TAT の表）は入れず、最大上昇の値で代用。定格の切り替わりの幅（17,000〜18,000 ft、293〜300 kt、22,000〜25,000 ft）は ATA の数値の間を直線で混ぜた。P&W は CF6 と同じ論理とした（P&W の EEC は資料に無い）。
   - レバーのアイドル端の指令は前の値（GE は N1 25 %、P&W は EPR 0.95）。実際のアイドルより低くして、アイドルでは必ず X-Plane のアイドルに戻るようにした。
   - RR は資料が無いので、前の推力の論理のまま（EPR の目盛りが P&W と違うので P&W の表は使わない）。
@@ -1730,6 +1744,7 @@ PLAN.md §3 に書いた。要点：
 
 ## 気づいたこと（作業の途中で）
 
+- **シナリオの海面の気温だけでは、上空の ISA の差にならない**（2026-11-14 夜、`s335_crz_ref_fppm_hot` の 1 回目）：フライトの天気の定義で海面 35 ℃（ISA+20 のつもり）にしても、FL287 の外気温は −38.9 ℃（ISA+3）だった（前の `s10_overspeed` も海面 50 ℃ で 9,000 ft が ISA+13）。X-Plane 12 は 13 の気圧高度ごとの上空の気温を持ち、`sim/weather/region/temperatures_aloft_deg_c[0..12]` は書ける（`update_immediately` 1 と一緒に）。s335 はこれで 13 層を ISA+20 に書き、FL287 は ISA+16 になった。海面の気温だけを変えている「暑い日」のシナリオ（`s288_vnav_spd_trans_accel_heavy_hot`、`s323_vnav_capture_fl330_heavy_isa10`、`s326_eo_takeoff_accel_heavy_hot` など）は、上空が名前ほど暑くない。それぞれの確かめの意味（上空の推力の余りなど）を見直すかは未定（直していない）。
 - **ARRIVALS でその空港の進入を初めて選ぶと、FMC のモジュールの 1 フレームが 0.4〜0.7 秒かかる**（2026-11-12 夜、`s289` の 4 回とも。`Output/B747_hitches.txt` の `xtlua B747.68.xt.fms.lua after_physics 0.72 s`・`0.41 s`・`0.53 s`・`0.44 s`）：合うかどうかの判定（`star_serves`）が進入の脚を読む。CDU の行が変わるのがその分遅れる（シナリオの 0.5 秒後の確認が 3 件落ちた）。同じ XTLua のプラグインの AFDS・表示のモジュールもその間は回らない。直していない（2026-11-12 のレビューで、時間の扱いと一緒に見る）。
 - **`sim/joystick/has_joystick` は読み取り専用**（2026-11-12 夜、X-Plane 12.4.4）：`DataRefs.txt` で書き込み不可（`int n`）、Web API の `is_writable` が false、書くと HTTP 403。TESTING.md §4.6 の「0 にして、終わったら戻す」は、Web API ではできない（直した）。
 - **X-Plane が数十秒止まった直後の 1 フレームで、F/D のピッチと水平安定板のトリムが一度に跳ぶ**（2026-11-12、利用者の PC の飛行試験で 4 回。直していない）：19.9 fps の床のフレームで `laminar/B747/autopilot/pitch_cmd` と `sim/flightmodel2/controls/elevator_trim` が段で動き、A/P が立て直すまで姿勢が大きく乱れた（最大で −0.82 g、V/S −6,874 fpm、約 1,400 ft の降下）。VNAV PTH でも起きたので、速度の則の外。notes/ATA-22.md §45 の `AFDS_DT_MAX`（s145：長い 1 フレームで F/D のピッチと SRM の stab が一度に動いた）と同じ形に見える。`afds_dt()` を通らずに実時間で積む所（stab を動かす SRM など）が残っているのかもしれない（まだ調べていない）。利用者の飛行でも 10 秒前後の止まりが記録されている（`Output/B747_hitches.txt`）。
