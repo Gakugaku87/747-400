@@ -49,7 +49,11 @@ local function lags(delta)
 end
 
 -- o: alt, weight (kg), isa (0), ias0 or mach0, target fn(t, m) -> kt (IAS) ,
--- inop (0), mode ("CRZ"), dt (0.05 real), time_accel (1), seconds,
+-- inop (0), mode (the thrust limit: "CLB", the air starts' in X-Plane and,
+-- with VNAV, the cruise's by default: PERF FACTORS' THR/CRZ CLB, notes/
+-- ATA-34-61-FMC.md §129. Until 2026-11-14 "CRZ", the same values then; CRZ
+-- is the FPPM's maximum cruise EPR since, §169), dt (0.05 real),
+-- time_accel (1), seconds,
 -- wind fn(t) (kt of headwind change: the air's speed added to the TAS), cb(m)
 function M.run(o)
     local alt, w, isa = o.alt, o.weight, o.isa or 0
@@ -91,7 +95,7 @@ function M.run(o)
         local tat = tat_c(alt, isa, mach_now)
         local idle = P.idle_command(mach_now)
         inp.alt, inp.kias, inp.tat = alt, ias, tat
-        local ref = R.reference({type = "PW", mode = o.mode or "CRZ", alt = alt, tat = tat, mach = mach_now, kias = ias,
+        local ref = R.reference({type = "PW", mode = o.mode or "CLB", alt = alt, tat = tat, mach = mach_now, kias = ias,
             packs_on = 3, wai = false, nai = false})
         if not lever then
             -- trimmed: the EPR of the drag, the levers there

@@ -12,8 +12,10 @@
 --   10,000 ft, then linearly back to CLB's at 30,000 and 35,000 ft (the
 --   109: P&W and RR; the 405 and 570, GE: both at 15,000 ft) (FCOM p.1273);
 --   GA the go-around table;
---   CRZ the maximum climb table (estimate: the FCOM has no maximum cruise
---   table);
+--   CRZ (2026-11-14, notes/ATA-34-61-FMC.md §169) P&W the FPPM's Max Cruise
+--   EPR (747-400F/PW4056, p.120-127: B747.42.eec_model.lua's PW.crz) with
+--   its anti-ice decreases; GE the maximum climb table (estimate: no
+--   maximum cruise table for the CF6; before, P&W's too);
 --   CON the maximum continuous table at the airspeed (step 9h1: PI.13.1-
 --   13.2, PI.23.1-23.3; one engine inoperative, also with all engines:
 --   estimate).
@@ -84,6 +86,7 @@ function M.reference(inp)
     end
     if base == "GA" then return E.rating(tables.ga, inp, inp.tat, gaAlt, inp.nai), 0 end
     if base == "CON" then return E.rating_mct(tables.mct, inp, inp.tat, inp.alt, inp.kias or 0, inp.nai), 0 end
+    if base == "CRZ" and tables.crz then return E.rating_crz(tables.crz, inp, inp.tat, inp.alt, inp.nai), 0 end
     local v = E.rating(tables.clb, inp, inp.tat, inp.alt, inp.nai)
     local n = base:sub(1, 3) == "CLB" and tonumber(base:sub(5)) or nil
     if n and M.CLB_DERATE[n] then
