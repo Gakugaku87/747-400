@@ -25,6 +25,7 @@ Boeing 747-400（Sparky744）のシステムとアビオニクスを、実機に
 - 資料の優先順位：
   - 乗員から見える挙動は FCOM、内部ロジックは整備マニュアル（`ATA*`、`LH*`）を優先する。迷ったら利用者に聞く。
   - FCTM と FCOM が食い違えば FCOM を優先する。
+  - FCOM に無い性能の値（離陸速度・最大巡航 EPR など）は FPPM（Boeing の 747-400F/PW4056 の Flight Planning and Performance Manual、ID `FPPM`）を使い、FCOM と食い違えば FCOM を優先する。GE・RR や旅客機と違う所に使うときは推定と書く（2026-11-14 利用者）。
 - APU は整備資料が無いので FCOM を基準にする。
 - エンジン関連は型式に合う資料を使う。PW は FCOM・LH24・LH36、CF6 は FCOM・ATA70_80。RR には資料が無い。
 - 資料の文章は長く転載しない。要約と出典（`FCOM p.801 (6.20.7)` の形）で書く。
