@@ -26,6 +26,25 @@ end
 local function q_of(m, ft) return 0.7 * p_isa(ft) * m * m end
 local function cl_of(t, m, ft) return A.cl(t * 1000, q_of(m, ft)) end
 local function corr(t, ft, m) return A.cd_mach(m, t * 1000, cl_of(t, m, ft)) end
+-- (2026-11-20, N19-FCTL-01) the flaps' pitch down through the stabilizer
+-- (notes/AERO.md §3.23), by the trailing edge angle: none flaps up (and at
+-- flaps 1, the trailing edge up), 1.0 degree at flaps 10 and 3.2 at 20 (the
+-- takeoff against FPPM p.44), 4.0 at 30 (the approach against the
+-- 747-100's NASA_SIM p.342), straight between them
+T.equal(A.stab_flap(0), 0, "flaps up (and 1): none")
+T.equal(A.stab_flap(-1), 0, "below 0: none")
+T.equal(A.stab_flap(nil), 0, "no angle: none")
+T.near(A.stab_flap(10), 1.0, 1e-12, "flaps 10: 1.0 degree leading edge up")
+T.near(A.stab_flap(20), 3.2, 1e-12, "flaps 20: 3.2 degrees")
+T.near(A.stab_flap(30), 4.0, 1e-12, "flaps 30: 4.0 degrees")
+T.near(A.stab_flap(22), 3.2 + 0.2 * 0.8, 1e-12, "flaps 25 (the trailing edge at 22): between 20's and 30's")
+T.near(A.stab_flap(35), 4.0, 1e-12, "past 30: as 30")
+T.near(A.stab_flap(5), 0.5, 1e-12, "flaps 5: half flaps 10's (estimate)")
+T.near(A.stab_flap(15), 2.1, 1e-12, "halfway from 10 to 20: between")
+local mono = true
+for te = 0, 30, 0.5 do if A.stab_flap(te + 0.5) < A.stab_flap(te) - 1e-12 then mono = false end end
+T.check(mono, "never less with more flap")
+
 T.near(cl_of(340, 0.860, 35000), 0.499, 0.001, "340 t FL350 M.860: CL 0.499")
 T.equal(A.cl(300000, 0), nil, "no dynamic pressure (on the ground): no CL")
 -- X-Plane's own CD over the polar (XP_SLOPE from the weight's onset: the

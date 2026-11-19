@@ -436,7 +436,18 @@ function flight_start()
       B747DR_controlOverrides = '{"minin":-22,"maxin":17,"minout":-22,"maxout":17,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/r_elev_outer","dstDref":"sim/flightmodel/controls/hstab2_elv1def"}'; --right_outer_elevator
       B747DR_controlOverrides = '{"minin":-22,"maxin":17,"minout":-22,"maxout":17,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/l_elev_inner","dstDref":"sim/flightmodel/controls/hstab1_elv2def"}'; --left_inner_elevator
       B747DR_controlOverrides = '{"minin":-22,"maxin":17,"minout":-22,"maxout":17,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/r_elev_inner","dstDref":"sim/flightmodel/controls/hstab2_elv2def"}'; --right_inner_elevator
-      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-15,"maxout":15,"scale":-1.0,"srcDref":"sim/flightmodel2/controls/elevator_trim","dstDref":"sim/flightmodel2/controls/stabilizer_deflection_degrees"}'; --trim
+      --stabilizer trim: 1 degree a unit, 0 units = leading edge up 3 degrees,
+      --15 units = leading edge down 12 degrees (ATA22 p.132; NASA_SIM p.328
+      --the same range). The trim (-1..1) is units / 7.5 - 1. Until 2026-11-20
+      --+-15 degrees, 2 a unit (0 degrees at 7.5 units); the custom acf's
+      --stabilizer incidence and flap Cm were tuned with this (notes/AERO.md
+      --§3.23, N19-FCTL-01)
+      B747DR_controlOverrides = '{"minin":-1,"maxin":1,"minout":-3,"maxout":12,"scale":-1.0,"srcDref":"sim/flightmodel2/controls/elevator_trim","dstDref":"sim/flightmodel2/controls/stabilizer_deflection_degrees"}'; --trim
+      --(2026-11-20) the flaps' pitch down X-Plane leaves out (補正: the
+      --fltCtrls module's aero_corr, B747.45.aero_corr_model.lua's stab_flap;
+      --notes/AERO.md §3.23), degrees leading edge up added to the trim's
+      --angle. The stabilizer's units, its indicator and the 3D are the trim's
+      B747DR_controlOverrides = '{"minin":-10,"maxin":10,"minout":-10,"maxout":10,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/stab_corr_deg","dstDref":"sim/flightmodel2/controls/stabilizer_deflection_degrees"}'; --the flaps' correction
       
       
       --ailerons: the control wheel's angle (the pilots', the A/P's and the

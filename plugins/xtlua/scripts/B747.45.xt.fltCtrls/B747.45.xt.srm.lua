@@ -173,10 +173,14 @@ local function trim_of(u) return u / 7.5 - 1 end
 -- 2026-11-02: 6.7 units at 231 kt, 5.0-5.2 at 305-351 kt; aero_flap_drag_
 -- check, s215, LF5): 3.78 + 154,400 / IAS^2, from 4.5 to the 7.5 units an
 -- air start had before, which pitched a 334 kt start up to 13 degrees and
--- 9,800 fpm before the A/P came on (notes/ATA-27.md)
+-- 9,800 fpm before the A/P came on (notes/ATA-27.md). 2026-11-20: the same
+-- stabilizer angles with the stabilizer at 1 degree a unit and the acf's
+-- incidence +4.7 degrees (notes/AERO.md §3.23): 0.26 + 308,800 / IAS^2,
+-- from 1.7 to 7.7 units (before 2 degrees a unit: 3.78 + 154,400 / IAS^2,
+-- 4.5 to 7.5)
 local function air_start_units(ias)
-    if ias < 100 then return 7.5 end
-    return math.max(4.5, math.min(7.5, 3.78 + 154400 / (ias * ias)))
+    if ias < 100 then return 7.7 end
+    return math.max(1.7, math.min(7.7, 0.26 + 308800 / (ias * ias)))
 end
 -- one switch pair from two sources: either, or both the same way
 local function either(a, b)
