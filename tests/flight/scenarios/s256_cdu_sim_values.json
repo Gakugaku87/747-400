@@ -1,6 +1,6 @@
 {
   "name": "s256_cdu_sim_values",
-  "description": "シムの便利機能（2026-11-05 の利用者の依頼、実機に無い）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に開始（機体を読み直す）。Plugins → 747-400 の「CDU: GR WT, ZFW and CG from the sim」が入（初期値）なら、スクラッチパッドが空のまま PERF INIT の ZFW（L3）・GR WT（L1）、TAKEOFF REF の CG（R4）を押すとシムの今の値が入る（ZFW は X-Plane の総重量から燃料を引いた値、CG は X-Plane の % MAC を整数に）。切ると前どおり INVALID ENTRY。重量と CG の窓（Plugins → 747-400 → Weight and balance...）を開いて撮る。CDU を撮る。",
+  "description": "シムの便利機能（2026-11-05 の利用者の依頼、実機に無い）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に開始（機体を読み直す）。Plugins → 747-400 の「CDU: GR WT, ZFW and CG from the sim」が入（初期値）なら、スクラッチパッドが空のまま PERF INIT の ZFW（L3）・GR WT（L1）、TAKEOFF REF の CG（R4）を押すとシムの今の値が入る（ZFW は X-Plane の総重量から燃料を引いた値、CG は X-Plane の重心を実機の % MAC（2026-11-20 から：TCDS A20WE p.14）で整数に）。切ると前どおり INVALID ENTRY。重量と CG の窓（Plugins → 747-400 → Weight and balance...）を開いて撮る。CDU を撮る。",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -48,7 +48,9 @@
     { "do": "cmd", "note": "空のスクラッチパッドで CG（R4）", "name": "laminar/B747/fms1/ls_key/R4" },
     { "do": "sleep", "seconds": 0.5 },
     { "do": "check", "note": "CG にシムの値（整数の %、大きい字）", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "[0-9]{1,2}%$" },
-    { "do": "snapshot", "note": "CG の行とシムの % MAC", "drefs": ["laminar/B747/fms3/Line09_L", "laminar/B747/fms3/Line09_S", "sim/flightmodel2/misc/cg_offset_z_mac"] },
+    { "do": "snapshot", "note": "CG の行とシムの % MAC", "drefs": ["laminar/B747/fms3/Line09_L", "laminar/B747/fms3/Line09_S", "sim/flightmodel2/misc/cg_offset_z_mac", "sim/flightmodel2/misc/cg_offset_z"] },
+    { "do": "check", "note": "CG は実機の % MAC（2026-11-20、N19-WB-02：TCDS A20WE p.14 の MAC 327.8 in・LEMAC は機首から 1168 in。既定の 270 t の積み方で cg_offset_z −0.199 m は 20.6 %。前は X-Plane の cg_offset_z_mac の 30 %）", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "2[01]%$" },
+    { "do": "check", "note": "TRIM はその CG から（270 t・21 %：FPPM p.44 は約 5 1/4。前は 30 % から 2.9 前後）", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^ +[45][.][0-9]" },
     { "do": "shot", "note": "TAKEOFF REF", "name": "takeoff_sim_cg" },
 
     { "do": "mark", "note": "便利機能を切ると前どおり" },

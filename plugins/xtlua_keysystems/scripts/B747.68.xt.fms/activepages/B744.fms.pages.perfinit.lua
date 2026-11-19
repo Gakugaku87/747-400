@@ -58,11 +58,18 @@ end
 -- every frame by update_perf (an XTLua dataref read now and then gives its
 -- previous read's value, the first read 0)
 B747DR_opt_sim_values = find_dataref("laminar/B747/options/cdu_sim_values")
-simDR_fms_cg_mac = find_dataref("sim/flightmodel2/misc/cg_offset_z_mac")
+-- (2026-11-20, GAP_ANALYSIS.md N19-WB-02) the CG's place: X-Plane's offset
+-- (m, aft +: the 270 t default loading -0.21 m with cg_offset_z_mac 30.3)
+-- from the acf's reference CG (ft aft of the nose), in the airplane's % MAC
+-- (B747_fms_mac_pct: TCDS A20WE p.14). Before, X-Plane's % MAC
+-- (cg_offset_z_mac, of its own 10.49 m MAC): about 8 % MAC aft (31.6 for 22)
+simDR_fms_cg_z = find_dataref("sim/flightmodel2/misc/cg_offset_z")
+simDR_fms_cg_ref_ft = find_dataref("sim/aircraft/weight/acf_cgZ_original")
 local sim_on, sim_gw_kg, sim_fuel_kg, sim_cg_mac = false, 0, 0, 0
 local function sim_values_read()
 	sim_on = B747DR_opt_sim_values == 1
-	sim_gw_kg, sim_fuel_kg, sim_cg_mac = simDR_GRWT, simDR_fuel, simDR_fms_cg_mac
+	sim_gw_kg, sim_fuel_kg = simDR_GRWT, simDR_fuel
+	sim_cg_mac = B747_fms_mac_pct(simDR_fms_cg_ref_ft * 12 + simDR_fms_cg_z * 39.3700787)
 end
 -- GR WT ("grwt": X-Plane's total weight) or ZFW ("zfw": it less the fuel),
 -- thousands of kilograms to 0.1; nil with the option off
@@ -71,8 +78,8 @@ function B747_fms_sim_weight(value)
 	local kg = value == "grwt" and sim_gw_kg or sim_gw_kg - sim_fuel_kg
 	return math.floor(kg / 100 + 0.5) / 10
 end
--- the CG now (X-Plane's % MAC with the payload and the fuel) to the whole
--- number; nil with the option off
+-- the CG now (the airplane's % MAC with the payload and the fuel) to the
+-- whole number; nil with the option off
 function B747_fms_sim_cg()
 	if not sim_on then return nil end
 	return math.floor(sim_cg_mac + 0.5)

@@ -63,7 +63,8 @@ key("ls_key/R4")
 T.check(line(9):find("24%%$"), "CG 24 % taken before any weight: " .. line(9))
 T.check(not small(9):find("%d%.%d"), "no trim without a weight: " .. small(9))
 rt:set("laminar/B747/options/cdu_sim_values", 1)
-rt:set("sim/flightmodel2/misc/cg_offset_z_mac", 26.2)
+rt:set("sim/aircraft/weight/acf_cgZ_original", 103.608925)    -- the acf's reference CG (ft aft of the nose)
+rt:set("sim/flightmodel2/misc/cg_offset_z", 0.2686)           -- 26.2 % MAC (the airplane's: TCDS A20WE p.14)
 frames(0.1)
 key("ls_key/R4")
 T.check(line(9):find("26%%$"), "the sim's CG with an empty scratchpad before any weight: no error: " .. line(9))
@@ -170,16 +171,16 @@ key("key/del")
 key("ls_key/R4")
 T.check(small(9):find("%-%-%%"), "CG deleted: dashes: " .. small(9))
 -- (2026-11-05 the user; not the airplane's) an empty scratchpad's CG: the
--- sim's now (X-Plane's % MAC, to the whole number) when Plugins >
+-- sim's now (the airplane's % MAC from X-Plane's CG offset, to the whole number: 2026-11-20 N19-WB-02; before X-Plane's % MAC) when Plugins >
 -- 747-400's "CDU: GR WT, ZFW and CG from the sim" is on
-rt:set("sim/flightmodel2/misc/cg_offset_z_mac", 23.6)
+rt:set("sim/flightmodel2/misc/cg_offset_z", 0.0521)           -- 23.6 % MAC
 key("ls_key/R4")
 invalid("the option off: an empty scratchpad's CG INVALID ENTRY, as before")
 rt:set("laminar/B747/options/cdu_sim_values", 1)
 frames(0.1)
 key("ls_key/R4")
 T.check(line(9):find("24%%$"), "the option on: the sim's 23.6 % MAC, CG 24 %: " .. line(9))
-rt:set("sim/flightmodel2/misc/cg_offset_z_mac", 45)
+rt:set("sim/flightmodel2/misc/cg_offset_z", 1.834)            -- 45.0 % MAC
 frames(0.1)
 key("ls_key/R4")
 invalid("the sim's 45 %: INVALID ENTRY (0 to 40)")

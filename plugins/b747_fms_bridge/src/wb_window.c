@@ -16,14 +16,16 @@
  *   PAYLOAD            m_fixed
  *   EMPTY              sim/aircraft/weight/acf_m_empty (the acf's)
  *   MAXIMUM            acf_m_max (the acf's)
- *   CG                 sim/flightmodel2/misc/cg_offset_z_mac (% MAC, with
- *                      the payload and the fuel)
- *   ZFW CG             zfw_cg_offset_z in % MAC: X-Plane's own MAC, WBW_MAC_PER_M
- *                      % MAC a metre aft (measured on the custom acf,
- *                      2026-11-05: 8 t and 3 t in the stabilizer tank moved
- *                      cg_offset_z 0.857 and 0.257 m aft and cg_offset_z_mac
- *                      8.17 and 2.45: 9.537 % a metre, a 10.49 m MAC; the
- *                      airplane's is 8.33 m, X-Plane's from the acf's wings)
+ *   CG                 sim/flightmodel2/misc/cg_offset_z (m aft of the acf's
+ *                      reference CG, acf_cgZ_original: ft aft of the nose),
+ *                      with the payload and the fuel, in the airplane's % MAC
+ *                      (2026-11-20, GAP_ANALYSIS.md N19-WB-02: TCDS A20WE p.14,
+ *                      p.22, MAC 327.8 in, LEMAC 1258.0 in aft of the datum,
+ *                      the datum 90 in ahead of the nose; the FMC's
+ *                      B747_fms_mac_pct). Before, X-Plane's cg_offset_z_mac
+ *                      (of its own 10.49 m MAC from the acf's wings: about
+ *                      8 % MAC aft of the airplane's)
+ *   ZFW CG             zfw_cg_offset_z the same way
  *
  * (2026-11-05, the user: "passengers' weight and number, cargo and fuel
  * entered here directly") LOAD: the CDU's PAX/CARGO page's load (MENU >
@@ -56,9 +58,9 @@
  */
 #define WBW_MENU_REF 101       /* as b747_fms_bridge.c's */
 #define WBW_TANKS 8
-/* X-Plane's % MAC for a metre of cg_offset_z (+ aft), the custom acf's
-   (measured, above) */
-#define WBW_MAC_PER_M 9.537f
+/* the airplane's MAC and its leading edge aft of the nose, inches (above) */
+#define WBW_MAC_IN 327.8f
+#define WBW_LEMAC_NOSE_IN 1168.0f
 static const char *WBW_TANK[WBW_TANKS] = {"CTR", "MAIN 1", "MAIN 2", "MAIN 3", "MAIN 4", "RES 2", "RES 3", "STAB"};
 static const float WBW_LB_PER_KG = 2.20462262f;
 /* the load's fields (laminar/B747/wb/req_field) */
@@ -70,7 +72,7 @@ static XPLMCommandRef wb_cmd_toggle = NULL;
 static XPLMDataRef wb_ref_open = NULL;
 static XPLMDataRef wb_ref_total = NULL, wb_ref_fuel = NULL, wb_ref_tanks = NULL, wb_ref_payload = NULL;
 static XPLMDataRef wb_ref_empty = NULL, wb_ref_max = NULL;
-static XPLMDataRef wb_ref_cg = NULL, wb_ref_cg_mac = NULL, wb_ref_zfw_cg = NULL;
+static XPLMDataRef wb_ref_cg = NULL, wb_ref_cg_ref = NULL, wb_ref_zfw_cg = NULL;
 static XPLMDataRef wb_ref_ground = NULL;
 static XPLMDataRef wb_ref_req_id = NULL, wb_ref_req_field = NULL, wb_ref_req_value = NULL;
 /* the entry asked for */
@@ -103,10 +105,11 @@ static void wb_num(char *out, size_t n, float v)
     out[j] = 0;
 }
 
-/* the ZFW CG in % MAC, from the CG now and the metres between them */
-static float wb_zfw_mac(void)
+/* a CG offset (m, aft +) from the acf's reference CG in the airplane's % MAC */
+static float wb_mac_pct(float offset_m)
 {
-    return wb_getf(wb_ref_cg_mac) + (wb_getf(wb_ref_zfw_cg) - wb_getf(wb_ref_cg)) * WBW_MAC_PER_M;
+    float arm_in = wb_getf(wb_ref_cg_ref) * 12.0f + offset_m * 39.3700787f;
+    return (arm_in - WBW_LEMAC_NOSE_IN) / WBW_MAC_IN * 100.0f;
 }
 
 /* a weight's row: its name, kilograms and pounds right-aligned */
@@ -247,11 +250,11 @@ static void wb_draw_body(XPLMWindowID w)
     fw_text(x_lb - fw_width("% MAC"), y, FWN_GREY, "% MAC");
     y -= lh;
     fw_text(x0, y, FWN_LIGHT, "CG (payload and fuel)");
-    snprintf(v, sizeof v, "%.1f", wb_getf(wb_ref_cg_mac));
+    snprintf(v, sizeof v, "%.1f", wb_mac_pct(wb_getf(wb_ref_cg)));
     fw_text(x_lb - fw_width(v), y, FWN_GREEN, v);
     y -= lh;
     fw_text(x0, y, FWN_LIGHT, "Zero fuel weight CG");
-    snprintf(v, sizeof v, "%.1f", wb_zfw_mac());
+    snprintf(v, sizeof v, "%.1f", wb_mac_pct(wb_getf(wb_ref_zfw_cg)));
     fw_text(x_lb - fw_width(v), y, FWN_GREEN, v);
     y -= lh / 2;
     fw_rect(x0, y, x_lb, y + 1, FWN_RULE);
@@ -485,7 +488,7 @@ static void wb_start(XPLMMenuID m)
     wb_ref_empty = XPLMFindDataRef("sim/aircraft/weight/acf_m_empty");
     wb_ref_max = XPLMFindDataRef("sim/aircraft/weight/acf_m_max");
     wb_ref_cg = XPLMFindDataRef("sim/flightmodel2/misc/cg_offset_z");
-    wb_ref_cg_mac = XPLMFindDataRef("sim/flightmodel2/misc/cg_offset_z_mac");
+    wb_ref_cg_ref = XPLMFindDataRef("sim/aircraft/weight/acf_cgZ_original");
     wb_ref_zfw_cg = XPLMFindDataRef("sim/flightmodel2/misc/zfw_cg_offset_z");
     wb_ref_ground = XPLMFindDataRef("sim/flightmodel/failures/onground_any");
     wb_ref_open = int_ref("laminar/B747/wb/window_open", wb_open_get, wb_open_set);
