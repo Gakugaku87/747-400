@@ -3012,3 +3012,27 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
   - 試験：`perf_factors_model_test` 129 件（P&W CRZ/100、GE・RR・型式なし CLB/100、P&W に入れた CLB が勝つ）、`perf_factors_pages_test` 61 件（ページの CRZ/100、CLB/ の入力で CLB/100）、`thrlim_model_test` 69 件（+5：CLB 2 の離陸、T/C で CRZ、巡航上昇で CLB、着くと CRZ、FLCH で CLB）。全体 289 本（確認 18,825）、構文 634 本。
   - X-Plane のシナリオ：`s139_vnav_climb_crz` の T/C の後の確かめを CRZ に（と EICAS の行）、巡航上昇で CLB・FL190 に着くと CRZ を足した。`s198_line_flight_rjaa_rjbb` の巡航の確かめを CRZ に（通しの飛行で 65 分かかるので今回は回していない：s139 と同じ論理）。
   - X-Plane（2026-11-14 21:03〜22:20、カスタム acf、P&W）：`s139` 32/0（T/C の後 CRZ・EICAS の行 CRZ、巡航上昇で CLB、FL190 で CRZ と FMC の巡航。1 回目は 30/1：捕捉は 600 ft ほど手前から始まり、捕捉の 30 秒後はまだ 18,950 ft の下で FMC が上昇の段階だったので、CRZ の待ちを高度が落ち着いた後に移した）。巡航で VNAV を使う回帰：`s130_fmc_crz_step` 13/0、`s147_vnav_spd_intervention` 30/0、`s148_vnav_speed_reversion` 27/0（310 t）、`s159_rta_speed` 20/0、`s204_auto_step_climb` 20/0、`s322_vnav_capture_fl310_heavy` 15/0（347.6 t）、`s323_vnav_capture_fl330_heavy_isa10` 16/0（347.6 t）。警告はどれも利用者のジョイスティックの 1 件だけ。Log.txt に Lua の誤りなし。
+
+## 170. 利用者の飛行で気づいた CDU と EICAS の 3 件（2026-11-19：クラウドのセッション、利用者の写真と問い。直していない）
+
+X-Plane も `_ref/` も無いクラウドのセッションで、コードとノートから原因を読んだ。直すのは PC のセッションで、FCOM の本文を確かめてから。3 件とも、フルレビューの依頼（[REVIEW_2026-11-19_request.md](../REVIEW_2026-11-19_request.md)）の型の例。
+
+### 1. APPROACH REF の滑走路の行が □（利用者の問い「滑走路表示が四角になってるのは？」。型 H）
+
+- 写真：APPROACH REF（GROSS WT 248.0、25° 148KT、30° 142KT）の 4L が「□□□□□□□」と「□□□□□FT□□□□M」。
+- 原因：本家のコードの固定の伏せ字のまま（`activepages/B744.fms.pages.approach.lua:52` の大きい字 `*****  ****`、`:72` の小さい字 ` *******`、`:73` の `FT`・`M`。CDU の `*` は □ に見える）。経路につながっていない。前からの残り：notes/ATA-34-61-CDU.md の CDU-28 と APPROACH REF の行（「滑走路と長さの行は固定の伏せ字」）、§16（段 3c で、到着の滑走路が要るので段 5 へ回した）、PROGRESS.md の 6-1・6-2 段 3 の「滑走路は残り」。
+- 実機：目的地の滑走路と長さ（FT と M）（FCOM p.1409–1412。p.1411 に滑走路長）。どの滑走路を出すか（ARRIVALS で選んだもの、進入の滑走路）と、選んでいないときの出方（空白か）は、FCOM の本文で確かめる。
+- 使えるもの：有効な経路の目的地と進入の滑走路（`B747_fmc_route` の `rte.dest.ident`・`rte.appr.rwy`。`B747.68.xt.fms.lua` の LOC の更新が同じものを使う）、滑走路の長さ（`B747_navdb.runway_length`：REF NAV DATA の LENGTH と同じ。CIFP に長さが無いので両端の閾値の間と displaced の推定）。
+
+### 2. LEGS の速度だけの制限の点で、予測の高度が空白（利用者の問い「高度欄が空欄になるのは正常な動作なの？」。型 I）
+
+- 写真：ACT RTE 1 LEGS 1/4 の GE023・GE022・GE016・GE017・GE020（4 NM ずつ）の右が「210/」だけで、高度が空白。
+- 原因：`activepages/B744.fms.pages.legs.lua:306` の `pred_text` が、速さの制限のある脚（`l.spd`）では予測を何も返さない。§48（段 8d1、2026-10-31）の決め「速さの制限のある点には出さない」で、出典は書いていない。高度だけの制限の点では、予測の速さを大きい字の「/ALT」の前に小さい字で出している（対の形は作ってある）。
+- 実機（見込み、要確認）：§48 が引く FCOM p.1332 の要点は「点の速さと高度の予測は小さい字」。速さの制限「210/」の後に予測の高度を小さい字で出すと見ている。FCOM p.1332 の本文と図で確かめてから直す。速さと高度の両方の制限がある点（予測なし）はそのまま。
+- 直すときの試験：`tests/fms/pred_glue_test.lua`（今は「速さと高度の制限の ZZV には無し」がある）に、速さだけの制限の点を足す。
+
+### 3. EICAS の推力の基準が「CRZ +47C」（写真から気づいたこと。型 J）
+
+- 写真：巡航（FL341 の付近）で、推力の基準の行が「CRZ +47C」。
+- 原因：`B747.68.xt.fms.lua:2612` は、`thrlimState.d`（SEL が外気温より高い）なら、どのモードにも SEL の温度を付ける。空中の `d` は「SEL > OAT で、TO/GA で消していない」（`B747.68.thrlim_model.lua:141`）なので、離陸の後の CLB・CRZ でも残る。「D-」を付けるのは TO だけ（`M.label`）。
+- 資料（§76）：ATA34_2 p.651–652・LH3460 p.96（SEL で TO の制限が下がればモードの前に D）、FCOM p.831 の例「TAT +15C D-TO 1 +38C」。離陸の後も温度を出すかは、この例からは分からない（離陸の間だけと見ている：FCOM の EICAS の推力の表示の本文と、THRUST LIM のページの空中の SEL で確かめる）。
