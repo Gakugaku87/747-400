@@ -51,70 +51,86 @@ fmsPages["CMC"].getNumPages=function(self)
 end
 
 
-fmsPages["PLFAULTS"]=createPage("PLFAULTS")
-fmsPages["PLFAULTS"].getPage=function(self,pgNo,fmsID)
-  if pgNo==1 then
+-- (N19-WARN-03) PRESENT LEG FAULTS: the EICAS STATUS messages the EIUs can
+-- latch in their non-volatile memory, as the EIUs show them
+-- (laminar/B747/CAS/status_nvm, the warning system's), each with ERASE>
+-- (LH24 p.64-65; LH_MAN p.75): four a page on 1L-4L, "*STATUS:" above each
+-- (shown on EICAS now), its name and ERASE> on the line. The right key
+-- erases it from the EIUs and the EICAS: one more on its ERASE counter
+-- (laminar/B747/CAS/status_erase_count[slot]), which the warning system
+-- reads. 6L <RETURN. Not made (N19-CMC-01, -02): the other flight deck
+-- effects, the fault codes (the sources give DRIVE DISC 2's only), the < of
+-- the correlated CMCS messages, 5L <ERASE STATUS (what it does: no source),
+-- REPORT>, HELP>, the fault records; nothing shown without such a message
+-- (estimate). Before: development pages (THROTTLE TESTS, STALL TESTS).
+-- notes/ATA-31-warning.md §13.
+B747DR_cmc_status_nvm           = find_dataref("laminar/B747/CAS/status_nvm")
+B747DR_cmc_status_erase_count   = find_dataref("laminar/B747/CAS/status_erase_count")
+-- the latchable STATUS messages: their slot in laminar/B747/CAS/status_status
+-- and their name (B747.87.xt.warning.lua's B747_CASstatusMsg, those with a
+-- latch class: keep the two the same; tests/warning/cmc_erase_page_test.lua)
+local CMC_LATCHABLE = {
+  {8, "HYD OVHT SYS 1"}, {9, "HYD OVHT SYS 2"}, {10, "HYD OVHT SYS 3"}, {11, "HYD OVHT SYS 4"},
+  {25, "DRIVE DISC 1"}, {26, "DRIVE DISC 2"}, {27, "DRIVE DISC 3"}, {28, "DRIVE DISC 4"},
+  {95, "BODY GR STRG SYS"},
+}
+local CMC_PER_PAGE = 4
+local CMC_BLANK = "                        "
+local cmc_erase_sent = {}      -- slot -> the last value written to its counter
 
-    return {
-              
-      "    THROTTLE TESTS   1/2",
-      " ../B747/engine/throttle",
-      string.format("%02.2f", B747DR_throttle[0]).."  "..string.format("%02.2f", B747DR_throttle[1]).."  "..string.format("%02.2f", B747DR_throttle[2]).."  "..string.format("%02.2f", B747DR_throttle[3]).."  ",
-      "    ../throttle_reversor",
-      string.format("%02.2f", B747DR_throttle_reversor[0]).."  "..string.format("%02.2f", B747DR_throttle_reversor[1]).."  "..string.format("%02.2f", B747DR_throttle_reversor[2]).."  "..string.format("%02.2f", B747DR_throttle_reversor[3]).."  ",
-      "   ../throttle_ratio_all",
-      string.format("%02.2f", simDR_throttle_ratio_all).."                        ",
-      "actuators/throttle_ratio",
-      string.format("%02.2f", simDR_throttle_ratio[0]).."  "..string.format("%02.2f", simDR_throttle_ratio[1]).."  "..string.format("%02.2f", simDR_throttle_ratio[2]).."  "..string.format("%02.2f", simDR_throttle_ratio[3]).."  ",
-      "          ../engines/TRA",
-      string.format("%02.2f", B747DR_throttle_resolver_angle[0]).."  "..string.format("%02.2f", B747DR_throttle_resolver_angle[1]).."  "..string.format("%02.2f", B747DR_throttle_resolver_angle[2]).."  "..string.format("%02.2f", B747DR_throttle_resolver_angle[3]).."  ", 
-      "------------------------",
-      "<RETURN                 "
-    }
-  elseif pgNo==2 then 
-    return {
-              
-      "    THROTTLE TESTS   2/3",
-      "     ../engine/ENGN_thro",
-      string.format("%02.2f", simDR_engn_thro[0]).."  "..string.format("%02.2f", simDR_engn_thro[1]).."  "..string.format("%02.2f", simDR_engn_thro[2]).."  "..string.format("%02.2f", simDR_engn_thro[3]).."  ",
-      " ../engine/ENGN_thro_use",
-      string.format("%02.2f", simDR_engn_thro_use[0]).."  "..string.format("%02.2f", simDR_engn_thro_use[1]).."  "..string.format("%02.2f", simDR_engn_thro_use[2]).."  "..string.format("%02.2f", simDR_engn_thro_use[3]).."  ",
-      "/engine/acf_throtmax_FWD",
-      string.format("%02.2f", simDR_throttle_max).."                        ",
-      "                        ",
-      "                        ",
-      "                        ",
-      "                        ",
-      "------------------------",
-      "<RETURN                 "
-    } 
-  elseif pgNo==3 then  
-    local numStalled=0
-    for i=0,320 do
-      if simDR_stalled_elements[i]>0 then
-        numStalled=numStalled+1
-      end
-    end
-      return {
-              
-  "      STALL TESTS    3/3",
-  "                        ",
-  "STALLED ELEMENTS        ",
-  "                        ",
-  "    "..numStalled,
-  "                        ",
-  "                        ",
-  "                        ",
-  "                        ",
-  "                        ",
-  "                        ", 
-  "------------------------",
-  "<RETURN                 "
-      }
+-- the latchable messages shown now, in slot order (estimate: no source
+-- gives the page's order)
+local function cmc_faults()
+  local list = {}
+  for _, m in ipairs(CMC_LATCHABLE) do
+    if B747DR_cmc_status_nvm[m[1]] > 0.5 then list[#list + 1] = m end
   end
+  return list
 end
-fmsPages["PLFAULTS"].getNumPages=function(self)
-  return 3
+local function cmc_num_pages(list) return math.max(1, math.ceil(#list / CMC_PER_PAGE)) end
+
+fmsPages["PLFAULTS"]=createPage("PLFAULTS")
+fmsPages["PLFAULTS"].latchable=CMC_LATCHABLE
+fmsPages["PLFAULTS"].getNumPages=function(self) return cmc_num_pages(cmc_faults()) end
+fmsPages["PLFAULTS"].getPage=function(self,pgNo,fmsID)
+  local list = cmc_faults()
+  local n = cmc_num_pages(list)
+  local p = math.min(math.max(pgNo or 1, 1), n)
+  local out = {}
+  for i = 1, 13 do out[i] = CMC_BLANK end
+  out[1] = string.format("  PRESENT LEG FAULTS %d/%d", p, n)
+  for k = 1, CMC_PER_PAGE do
+    local m = list[(p - 1) * CMC_PER_PAGE + k]
+    if m then out[1 + 2 * k] = string.format("%-18s%6s", m[2], "ERASE>") end
+  end
+  out[13] = "<RETURN                 "
+  return out
+end
+fmsPages["PLFAULTS"].getSmallPage=function(self,pgNo,fmsID)
+  local list = cmc_faults()
+  local p = math.min(math.max(pgNo or 1, 1), cmc_num_pages(list))
+  local out = {}
+  for i = 1, 13 do out[i] = CMC_BLANK end
+  for k = 1, CMC_PER_PAGE do
+    if list[(p - 1) * CMC_PER_PAGE + k] then out[2 * k] = "*STATUS:                " end
+  end
+  out[10] = "------------------------"
+  return out
+end
+
+for k = 1, CMC_PER_PAGE do
+  fmsFunctionsDefs["PLFAULTS"]["R" .. k]={"cmcerase",k}
+end
+-- ERASE> next to the k-th message of the page shown
+function fmsFunctions.cmcerase(fmsO, k)
+  local list = cmc_faults()
+  local p = math.min(math.max(fmsO.pgNo or 1, 1), cmc_num_pages(list))
+  local m = list[(p - 1) * CMC_PER_PAGE + k]
+  if not m then return end
+  local slot = m[1]
+  local v = math.max(cmc_erase_sent[slot] or 0, B747DR_cmc_status_erase_count[slot]) + 1
+  cmc_erase_sent[slot] = v
+  B747DR_cmc_status_erase_count[slot] = v
 end
 
 fmsFunctionsDefs["PLFAULTS"]["L6"]={"setpage","CMC"}

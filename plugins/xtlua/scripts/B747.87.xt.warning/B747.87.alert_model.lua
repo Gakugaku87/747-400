@@ -481,9 +481,13 @@ function M.update(s, inp, dt)
 
     -- STATUS messages: the newest on top, 11 lines a page; the cue while one
     -- has not been shown on the STATUS page, outside its inhibits (FCOM
-    -- p.1528, p.1545, p.1549)
+    -- p.1528, p.1545, p.1549). (N19-WARN-03) inp.status_active is the EIUs'
+    -- list, latched messages included, oldest first
+    -- (B747.87.status_nvm_model.lua): messages first seen in the same update
+    -- (the EIUs' start) keep that order, the later on top (LH_MAN p.52);
+    -- before, by name
     local status_now = {}
-    for _, name in ipairs(inp.status_active) do status_now[name] = true end
+    for i, name in ipairs(inp.status_active) do status_now[name] = i end
     for name in pairs(s.status_seen) do
         if not status_now[name] then s.status_seen[name] = nil end
     end
@@ -500,7 +504,7 @@ function M.update(s, inp, dt)
     table.sort(status_list, function(a, b)
         local ra, rb = s.status_seen[a], s.status_seen[b]
         if ra.since ~= rb.since then return ra.since > rb.since end
-        return a < b
+        return status_now[a] > status_now[b]
     end)
     local status_pages = {}
     for p = 1, math.max(1, math.ceil(#status_list / M.LINES)) do

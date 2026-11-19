@@ -435,3 +435,61 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - **STATUS のラッチ**（LH_MAN p.52・p.78・p.82）：STATUS にはラッチするもの（EIU の NVM：NVM・NVM-A（空中で起きたとき）・NVM-G（地上））があり、条件が消えても残り、CMC の ERASE で消す。分かっているのは DRIVE DISC（LH24 p.64）、ELEC IDG n VALVE（NVM-A）、HYD の過熱（空中で NVM：ATA29_32 p.100）。FCOM の駐機後の手順は STATUS を記録する（p.152）（N19-WARN-03）。ALT ALERT SYS は STATUS（N19-WARN-04）。
 - AUTOPILOT DISC：AOM の音は siren（FCOM の 570 と同じ、109 は wailer）。
 
+## 13. STATUS のラッチ（EIU の NVM）と CMC の ERASE（N19-WARN-03、2026-11-20）
+
+### 13.1 資料
+
+- LH_MAN p.52：STATUS には「ラッチしない」ものと「ラッチする」ものがある。ラッチしないものは条件が消えると STATUS ページから消える。ラッチするものは EIU の不揮発メモリ（NVM）に入り、条件が消えても残る。消すには特別な手順が要る。並びはどちらも同じ扱いで、新しいものが上。整備がその飛行段階の故障を後で見るため。STATUS は CMC にも行く。
+- LH_MAN p.78（FIM の Fault Code Index の前書き、図 37）：NVM はその故障が空中でも地上でも起きればラッチ、NVM-A は空中で起きたときだけ、NVM-G は地上で起きたときだけ。直したあと EICAS から消すには CMC の ERASE を使う。直したと確かめるまで消さない（注記）。
+- LH_MAN p.75・p.81・p.82：PRESENT LEG FAULTS で、ラッチできるメッセージの行に ERASE>（本当にラッチしたかは Fault Code Index で見る）。行の上の「*」は今 EICAS に出ている FDE。ELEC IDG 2 VALVE（STATUS）は NVM-A（fault code 24 11 30 00）。
+- LH_MAN p.53（図 24）：STATUS は白。ラッチの有無で見た目は変わらない。
+- LH24 p.64–65：DRIVE DISC # は、IDG を切り離して周波数が 100 Hz 未満になると EIU に記憶され、IDG を戻しても補助 EICAS に出たまま。消し方は CMC MENU → PRESENT LEG FAULTS → その STATUS（図は 4L の「*STATUS: 24 11 11 00」と「DRIVE DISC 2　ERASE>」）の ERASE>。EICAS から消える。IDG を戻していなくても消せる（注意）。5L に <ERASE STATUS があるが、働きの説明は無い。
+- ATA29_32 p.100：作動油の温度が 104 °C を超えると HYDIM が advisory と STATUS を出し、STATUS は空中モードのとき NVM に入る → HYD OVHT SYS n は NVM-A。
+- ATA29_32 p.626：BODY GR STRG SYS の STATUS は不揮発メモリにある（種類の記載なし）。
+- FCOM p.152（NP.21.58）：駐機の後、STATUS を確かめて整備記録に書く。FCOM p.1545・p.1549：STATUS ページと cue（ラッチの記載なし）。乗員から見える違いは、条件が消えても STATUS ページに残ることだけ。
+- 表に無い STATUS（N19-WARN-05 で足すとき、この種類で）：ELEC IDG n VALVE（NVM-A、LH_MAN p.82）、ENG n SPEED CARD（NVM に入る、STBY バスが無いと抑止：ATA70_80 p.342）、FMC LEFT/RIGHT（整備のためラッチ：ATA34_2 p.702、LH3460 p.116。EIU の NVM かは書いていない）、CDU LEFT/CENTER/RIGHT（「CDU のラッチした故障」：ラッチは CDU の側に読める）。
+- SRM の側でラッチする STATUS（EIU の NVM かどうかは資料から分からない）：AILERON LOCKOUT（ATA27 p.110：memory message、SRM の電源投入か SRM のリセットボタンで解除＝SRM のラッチ）、STAB TRIM UNSCHD（ATA27 p.458：memory message、止まってもラッチしたまま、故障は CMC に）、RUDDER RATIO（ATA27 p.647：latching status、監視は latched）。
+
+### 13.2 前
+
+- STATUS は全部、条件が消えた更新で消えた。DRIVE DISC は IDG を戻すと消えた（`B747.03.xt.elec_buses.lua` の注記：CMC の ERASE が無いので単純化）。EIU の電源が切れると、STATUS の一覧ごと作り直していた。
+- CMC の PRESENT LEG FAULTS は開発用の THROTTLE TESTS・STALL TESTS（N19-CMC-01）。
+
+### 13.3 作り
+
+- 種類（`B747.87.xt.warning.lua` の `B747_CASstatusMsg` の `latch`）。資料が EIU の記憶と言うものだけ：
+
+| STATUS | 種類 | 根拠 |
+|---|---|---|
+| HYD OVHT SYS 1–4 | NVM-A | ATA29_32 p.100 |
+| DRIVE DISC 1–4 | NVM（種類の名は無く、段階の条件も書いていないので無条件：推定） | LH24 p.64 |
+| BODY GR STRG SYS | NVM（同上：推定） | ATA29_32 p.626 |
+
+- 残りの STATUS は種類が分からない（資料に無い）ので、前のまま条件とともに消える。SRM のモデルがラッチするもの（AILERON LOCKOUT、STAB TRIM UNSCHD、RUDDER RATIO、STAB TRIM、STAB AUTO TRIM）は SRM のラッチのまま（EIU の NVM にしないので ERASE> は出ない）。
+- EIU の NVM（`B747.87.status_nvm_model.lua`、X-Plane なしの純粋なモデル）。メッセージごとに：
+  - ラッチ：条件があり、種類の段階にあり（NVM はいつも、NVM-A は空中、NVM-G は地上。空地は PSEU）、この発生をまだ消していない。地上で始まり離陸の後も続く NVM-A は、空中でラッチする（推定：ATA29_32 p.100 の「空中モードのとき NVM に」の読み）。
+  - 表示：ラッチしている、または条件があってこの発生を消していない。
+  - ERASE：ラッチを外す。条件がまだあれば、その条件がいったん消えるまで出さない（LH24 p.64 の注意：IDG を戻さなくても消える。LH_MAN p.78 の注記も、消すと故障が残っていても出なくなる読み。ほかのメッセージも同じ：推定）。ラッチしていない（段階が違う）ラッチできるメッセージの ERASE> も同じ（推定）。
+  - 並び：出た順（NVM に入ったものは電源断の後もその順）。STATUS ページは新しいものが上（LH_MAN p.52）。同じ更新で出たもの（EIU の起動）は、前は名前順、今はこの順（`B747.87.alert_model.lua` の STATUS の部分）。
+- 残るもの：EIU の電源断（不揮発）、飛行段階、エンジンの停止・始動、auto board と quick start（`B747_alerts_reset`）。消えるもの：CMC の ERASE、X-Plane の新しいフライト（`flight_start`。シムの新しい機体として：推定。実機には当たるものが無い）。ERASE で消した印も電源断の後に残す（推定）。EIU が動いていない間はラッチしない（条件を読めない）し、ERASE> も効かない。
+- 電源が戻ると、ラッチしたものは STATUS ページに戻り、STATUS cue は新しいメッセージとして出る（前の作りで条件のあるメッセージがそうだったのと同じ。資料に無い：推定）。
+- CMC の PRESENT LEG FAULTS（`B744.fms.pages.cmc.lua`。LH24 p.65、LH_MAN p.75 の形）：EIU が出しているラッチできる STATUS を、1L–4L に 4 つずつ（スロットの順：推定）、上の小字に「*STATUS:」、行に名前と ERASE>。右の LSK で ERASE、6L <RETURN、5L の上に区切りの線。無いときは表題と <RETURN だけ（推定）。作らないもの（N19-CMC-01・02）：ほかの FDE（警報・注意・advisory）、fault code（資料にあるのは DRIVE DISC 2 の 24 11 11 00 と ELEC IDG 2 VALVE の 24 11 30 00 だけ）、相関した CMCS メッセージの <、5L の <ERASE STATUS（働きの記載なし）、REPORT>・HELP>、故障の記録。開発用の THROTTLE TESTS・STALL TESTS はこのページから外した（N19-CMC-01 のうちこのページの表示）。
+- 受け渡し（新しい dataref、警報の init スクリプト `B747.87.warning02.lua` で作る）：
+  - `laminar/B747/CAS/status_nvm[n]`（n は status_status のスロット）：警報系統が書く。ラッチできるメッセージについて 0 出ていない、1 出ていてラッチしていない、2 ラッチ。EIU が動いていない間は全部 0。
+  - `laminar/B747/CAS/status_erase_count[n]`：CMC が ERASE> の度に 1 足す（読みの遅れがあっても進むよう、自分の書いた値と読んだ値の大きい方から）。警報系統が毎フレーム読み、増えた分を次の更新で ERASE にする（別のプラグインの dataref の読みは 1 回前の値：memory）。
+- CMC の一覧（スロットと名前）は警報系統の表の写し。`tests/warning/cmc_erase_page_test.lua` が両方を比べる。
+
+### 13.4 試験
+
+- `tests/warning/status_nvm_model_test.lua`（31）：種類ごとのラッチ、条件が消えても残る、ERASE（条件があるときは次の発生まで出ない）、電源断で残るもの、並び。
+- `tests/warning/status_nvm_module_test.lua`（31）：警報のモジュールと CMC のページを同じ dataref で。DRIVE DISC 2 が IDG を戻しても残る・EIU の電源断の後に戻る、HYD OVHT SYS 1 が地上ではラッチせず空中でラッチ、ERASE> で消える、EIU が止まっている間の ERASE は効かない、新しいフライトで空。前のコードでは、CMC のページより前の 13 のうち 11 が落ち（DRIVE DISC 2 が IDG を戻すと消える、HYD OVHT SYS 1 が空中でもラッチしない、status_nvm が無い）、CMC のページで止まる。
+- `tests/warning/cmc_erase_page_test.lua`（45）：PRESENT LEG FAULTS の行、2 ページ、ERASE> の数え、CMC の一覧と警報の表が同じ。前のコードでは THROTTLE TESTS のページで落ちる。
+- 古い試験は変えていない（同じ更新で出た STATUS の並びを見る試験は無かった）。
+
+### 13.5 X-Plane で見ること
+
+- s02（電源のパネル）：DRIVE DISC 4 を押した後、STATUS ページに DRIVE DISC 4。IDG を戻しても（地上の整備）残る。`laminar/B747/CAS/status_nvm[28]` が 2。
+- CMC（機長の CDU、MENU → <CMC → <PRESENT LEG FAULTS）：「*STATUS:」と「DRIVE DISC 4　ERASE>」、その右の LSK（1 つだけなら 1R）で STATUS ページから消える。
+- EIU の電源を全部落として戻す（エンジンを止め、外部電源・APU・BATTERY を切って入れ直す）：ラッチしたものが STATUS ページに戻る。
+- 新しいシナリオ s343_status_latch（取り込みで s342 から振り直した：番号が n19-afds03・n19-eng05 の新しいシナリオと重なったため）（地上）：上の流れをまとめた。
+

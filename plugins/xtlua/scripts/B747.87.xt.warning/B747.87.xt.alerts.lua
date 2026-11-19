@@ -11,8 +11,13 @@
 -- The panel draws page p, line n from CAS/gen_<level>_msg_NNN with
 -- NNN = 11 (p - 1) + n - 1 (the custom acf pages 1-10, the stock acf 1-2),
 -- and the STATUS page the same way from CAS/gen_status_msg_NNN (custom acf).
+-- (N19-WARN-03) The STATUS messages go through the EIUs' non-volatile memory
+-- (B747.87.status_nvm_model.lua), which outlives their power and the alert
+-- model; the CMC's ERASE comes in as pushes counted per STATUS slot.
 dofile("B747.87.alert_model.lua")
 local A = B747_alert_model
+dofile("B747.87.status_nvm_model.lua")
+local N = B747_status_nvm_model
 
 B747DR_CAS_canc_count           = find_dataref("laminar/B747/CAS/canc_count")
 B747DR_CAS_rcl_count            = find_dataref("laminar/B747/CAS/rcl_count")
@@ -39,6 +44,12 @@ B747DR_alert_engine_type        = find_dataref("laminar/B747/engines/type")
 B747DR_alert_synoptic_display   = find_dataref("laminar/B747/dsp/synoptic_display")
 B747DR_STAT_msg_page            = find_dataref("laminar/B747/STAT/msg_page")
 B747DR_STAT_num_msg_pages       = find_dataref("laminar/B747/STAT/num_msg_pages")
+-- (N19-WARN-03) for the CMC's PRESENT LEG FAULTS (B744.fms.pages.cmc.lua,
+-- the other plugin): per STATUS slot of a latchable message 0 not shown,
+-- 1 shown and not latched, 2 latched (0 while the EIUs do not run); and the
+-- CMC's ERASE> pushes, counted per slot
+B747DR_alert_status_nvm         = find_dataref("laminar/B747/CAS/status_nvm")
+B747DR_alert_status_erase_count = find_dataref("laminar/B747/CAS/status_erase_count")
 
 local ALERT_PERIOD_S = 0.1     -- estimate: the sources give no rate (the old code ran every 2 s)
 local START_MAX_S = 300        -- the start inhibit ends 5 min after START is pulled (FCOM p.1587)
@@ -66,12 +77,24 @@ add_messages(B747_alert_messages.warning, "warning")
 add_messages(B747_alert_messages.caution, "caution")
 add_messages(B747_alert_messages.advisory, "advisory")
 add_messages(B747_alert_messages.memo, "memo")
--- the STATUS messages: their slot in CAS/status_status and their name
+-- the STATUS messages: their slot in CAS/status_status, their name and
+-- their latch class (nil: not latchable); the latchable ones apart, for the
+-- CMC
 local status_messages = {}
+local latchable = {}
 for i = 1, #B747_alert_messages.status do
     local m = B747_alert_messages.status[i]
-    status_messages[#status_messages + 1] = {index = m.DRindex, name = m.name}
+    local e = {index = m.DRindex, name = m.name, latch = m.latch}
+    status_messages[#status_messages + 1] = e
+    if m.latch then latchable[#latchable + 1] = e end
 end
+-- (N19-WARN-03) the EIUs' non-volatile memory: kept through their power
+-- loss and B747_alerts_reset, new with a new flight (B747_status_nvm_reset)
+local status_nvm = N.new()
+local status_flags = {}        -- the STATUS conditions raised now, as status_messages
+local erase_counts = {}        -- STATUS slot -> last value of its ERASE counter
+local erase_pending = {}       -- names erased by the CMC, for the next update
+local nvm_written = {}         -- STATUS slot -> value written to CAS/status_nvm
 
 local alert_state = A.new()
 local alert_inputs = A.inputs()
@@ -133,11 +156,18 @@ local function read_inputs(inp, t)
     for _, m in ipairs(messages) do
         if arrays[m.array][m.index] > 0.5 then active[#active + 1] = m.entry end
     end
+    -- (N19-WARN-03) the STATUS list is the EIUs': the conditions raised now
+    -- and what their NVM keeps (latched in the air or on the ground: the
+    -- PSEU), after the CMC's erasures
+    for i = #erase_pending, 1, -1 do
+        N.erase(status_nvm, erase_pending[i])
+        erase_pending[i] = nil
+    end
+    for i, m in ipairs(status_messages) do status_flags[i] = B747DR_CAS_status_status[m.index] > 0.5 end
+    local nvm_list = N.update(status_nvm, status_messages, status_flags, B747DR_alert_pseu_air == 0)
     local status_active = inp.status_active
     for i = #status_active, 1, -1 do status_active[i] = nil end
-    for _, m in ipairs(status_messages) do
-        if B747DR_CAS_status_status[m.index] > 0.5 then status_active[#status_active + 1] = m.name end
-    end
+    for i = 1, #nvm_list do status_active[i] = nvm_list[i] end
     inp.status_page_shown = B747DR_alert_synoptic_display == STATUS_PAGE
 
     inp.on_ground = B747DR_alert_pseu_air == 0
@@ -195,6 +225,34 @@ local function write_status(pages, num_pages)
     if B747DR_STAT_msg_page > num_pages then B747DR_STAT_msg_page = num_pages end
 end
 
+-- (N19-WARN-03) the latchable messages' state for the CMC: shown, latched,
+-- or 0 for all while the EIUs do not run (off)
+local function write_nvm(off)
+    for _, m in ipairs(latchable) do
+        local v = off and N.NOT_SHOWN or N.state(status_nvm, m.name)
+        if nvm_written[m.index] ~= v then
+            nvm_written[m.index] = v
+            B747DR_alert_status_nvm[m.index] = v
+        end
+    end
+end
+
+-- (N19-WARN-03) the CMC's ERASE> pushes since the last frame, per latchable
+-- message: kept for the next update while the EIUs run (on), dropped while
+-- not. Read every frame (a read of the other plugin's dataref gives the
+-- value of the read before); a counter that goes back counts none
+local function count_erases(on)
+    for _, m in ipairs(latchable) do
+        local v = B747DR_alert_status_erase_count[m.index]
+        local last = erase_counts[m.index]
+        erase_counts[m.index] = v
+        if on and last ~= nil and v > last then erase_pending[#erase_pending + 1] = m.name end
+    end
+    if not on then
+        for i = #erase_pending, 1, -1 do erase_pending[i] = nil end
+    end
+end
+
 -- each line goes to the slot of its level, the other levels' slots blank
 local function write_lines(pages)
     for slot = 0, SLOTS - 1 do
@@ -225,15 +283,23 @@ local function write_outputs(out, t)
     B747DR_warning_siren = flag(out.aural.siren)
     B747DR_warning_wailer = flag(out.aural.wailer)
     write_status(out.status_pages, out.status_num_pages)
+    write_nvm(false)
     B747DR_CAS_status_cue = flag(out.status_cue)
     if B747DR_CAS_status_cue_text ~= STATUS_CUE_TEXT then B747DR_CAS_status_cue_text = STATUS_CUE_TEXT end
 end
 
--- a new flight: no messages seen yet
+-- a new flight: no messages seen yet (the EIUs' NVM stays: below)
 function B747_alerts_reset()
     alert_state = A.new()
     start_since, start_over = {}, {}
     pushes.cancel, pushes.recall, pushes.master_reset = 0, 0, 0
+end
+
+-- (N19-WARN-03) a new X-Plane flight: the EIUs' NVM empty
+-- (B747.87.xt.warning.lua's flight_start)
+function B747_status_nvm_reset()
+    status_nvm = N.new()
+    for i = #erase_pending, 1, -1 do erase_pending[i] = nil end
 end
 
 -- every frame while the EIUs have power
@@ -241,6 +307,7 @@ function B747_alerts()
     count_pushes("cancel", B747DR_CAS_canc_count)
     count_pushes("recall", B747DR_CAS_rcl_count)
     count_pushes("master_reset", B747DR_master_reset_count)
+    count_erases(true)
     alert_on = true
     alert_period = alert_period + SIM_PERIOD
     if alert_period < ALERT_PERIOD_S then return end
@@ -254,15 +321,18 @@ end
 
 -- every frame while the EIUs are not running (no power, or starting): the
 -- lines blank, the lights and the aurals off, pushes do nothing, and the
--- messages start again when they run
+-- messages start again when they run; the NVM keeps what it latched
 function B747_alerts_off()
     count_pushes("cancel", B747DR_CAS_canc_count)
     count_pushes("recall", B747DR_CAS_rcl_count)
     count_pushes("master_reset", B747DR_master_reset_count)
     pushes.cancel, pushes.recall, pushes.master_reset = 0, 0, 0
+    count_erases(false)
     if not alert_on then return end
     alert_on = false
     B747_alerts_reset()
+    N.power_off(status_nvm)
+    write_nvm(true)
     alert_period = 0
     write_lines({})
     B747DR_CAS_msg_page = 1

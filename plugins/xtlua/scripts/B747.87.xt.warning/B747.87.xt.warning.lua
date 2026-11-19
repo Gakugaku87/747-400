@@ -586,6 +586,13 @@ B747_CASmemoMsg   = {
 -- STATUS messages, on the secondary EICAS STATUS page (FCOM p.1545, p.1549).
 -- FCOM has no list (they are in the DDG); these come from the maintenance
 -- manuals. The systems raise them in laminar/B747/CAS/status_status[DRindex].
+-- (N19-WARN-03) latch: the class of a message the EIUs latch in their
+-- non-volatile memory until the CMC's ERASE (NVM in the air or on the
+-- ground, NVM-A in the air, NVM-G on the ground: LH_MAN p.52, p.78), given
+-- only where a source says it latches in the EIUs; the others go with their
+-- condition (B747.87.status_nvm_model.lua; notes/ATA-31-warning.md §13).
+-- The CMC's PRESENT LEG FAULTS page lists the latchable ones by slot and
+-- name (B744.fms.pages.cmc.lua: keep the two the same)
 local B747_CASstatusMsg = {
     {DRindex = 0, name = "HYD PRESS ENG 1"},      -- ATA29_32 p.137
     {DRindex = 1, name = "HYD PRESS ENG 2"},
@@ -595,10 +602,10 @@ local B747_CASstatusMsg = {
     {DRindex = 5, name = "HYD PRESS DEM 2"},
     {DRindex = 6, name = "HYD PRESS DEM 3"},
     {DRindex = 7, name = "HYD PRESS DEM 4"},
-    {DRindex = 8, name = "HYD OVHT SYS 1"},
-    {DRindex = 9, name = "HYD OVHT SYS 2"},
-    {DRindex = 10, name = "HYD OVHT SYS 3"},
-    {DRindex = 11, name = "HYD OVHT SYS 4"},
+    {DRindex = 8, name = "HYD OVHT SYS 1", latch = "NVM-A"},   -- in NVM in the air (ATA29_32 p.100)
+    {DRindex = 9, name = "HYD OVHT SYS 2", latch = "NVM-A"},
+    {DRindex = 10, name = "HYD OVHT SYS 3", latch = "NVM-A"},
+    {DRindex = 11, name = "HYD OVHT SYS 4", latch = "NVM-A"},
     {DRindex = 12, name = "HYD RSVR PRESS 1"},
     {DRindex = 13, name = "HYD RSVR PRESS 2"},
     {DRindex = 14, name = "HYD RSVR PRESS 3"},
@@ -612,10 +619,10 @@ local B747_CASstatusMsg = {
     {DRindex = 22, name = "BLEED ISLN L"},        -- ATA30_32_35_36 p.24
     {DRindex = 23, name = "BLEED ISLN R"},
     {DRindex = 24, name = "BLEED ISLN APU"},
-    {DRindex = 25, name = "DRIVE DISC 1"},        -- LH24 p.64
-    {DRindex = 26, name = "DRIVE DISC 2"},
-    {DRindex = 27, name = "DRIVE DISC 3"},
-    {DRindex = 28, name = "DRIVE DISC 4"},
+    {DRindex = 25, name = "DRIVE DISC 1", latch = "NVM"},  -- LH24 p.64 (stored in the EIUs; class not named: estimate)
+    {DRindex = 26, name = "DRIVE DISC 2", latch = "NVM"},
+    {DRindex = 27, name = "DRIVE DISC 3", latch = "NVM"},
+    {DRindex = 28, name = "DRIVE DISC 4", latch = "NVM"},
     {DRindex = 29, name = "CABIN ALT AUTO A"},    -- ATA21 p.454
     {DRindex = 30, name = "CABIN ALT AUTO B"},
     {DRindex = 31, name = "OUTFLOW VLV L"},       -- ATA21 p.444
@@ -682,7 +689,7 @@ local B747_CASstatusMsg = {
     {DRindex = 92, name = "STAB AUTO TRIM"},
     {DRindex = 93, name = "STAB SPEED TRIM"},     -- ATA27 p.486, p.523 (4-1 step 2c)
     {DRindex = 94, name = "SPEEDBRAKE AUTO"},     -- ATA27 p.184, p.205 (4-1 step 3)
-    {DRindex = 95, name = "BODY GR STRG SYS"},    -- ATA29_32 p.626, p.630 (4-2 step 4)
+    {DRindex = 95, name = "BODY GR STRG SYS", latch = "NVM"},  -- ATA29_32 p.626, p.630 (4-2 step 4); in NVM, class not named (estimate)
     {DRindex = 96, name = "PEDAL STEERING"},      -- ATA29_32 p.600
     {DRindex = 97, name = "BRAKE TEMP SYS"},      -- ATA29_32 p.428 (4-2 step 5)
     {DRindex = 98, name = "TIRE PRESS SYS"},      -- ATA29_32 p.376
@@ -1041,9 +1048,13 @@ end
 --function aircraft_unload() end
 simDRTime=find_dataref("sim/time/total_running_time_sec")
 local lastUpdate=0;
-function flight_start() 
+function flight_start()
     lastUpdate=simDRTime
     B747_flight_start_warning()
+    -- (N19-WARN-03) a new X-Plane flight: the EIUs' latched STATUS messages
+    -- go (estimate: the sim's new airplane; on the aircraft nothing but the
+    -- CMC's ERASE clears them). The auto board and the quick start keep them
+    B747_status_nvm_reset()
 
 end
 
