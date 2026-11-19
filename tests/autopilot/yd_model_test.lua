@@ -5,7 +5,8 @@
 -- ground, the ground operation, the fade-in and fade-out, the power-up in
 -- the air, the fault INOP mode with its autorecovery (an IRU into NAV, a
 -- fault under 5 s) and the switch cycled, the IRUs off, the power, and the
--- authority by the valid IRUs and ADCs.
+-- authority by the valid IRUs and ADCs; the command (§40) and its turn
+-- coordination (GAP N19-AFDS-03, §64).
 local T = dofile("tests/lib/check.lua")("yd_model")
 local Y = dofile("plugins/xtlua_keysystems/scripts/B747.19.xt.hydraulicsmodel/B747.19.yd_model.lua")
 
@@ -193,6 +194,68 @@ do
     inp.air = true
     out = run(s, inp, 1)
     T.check(out.cmd[LWR] == 0 and out.cmd[UPR] < 0, "the lower's fault: no command from it, the upper fading in")
+end
+
+-- GAP N19-AFDS-03: the turn coordination (ATA22 p.87: the YDM's turn
+-- coordination block on the roll angle; the 747-100's turn coordinator,
+-- NASA_SIM p.279, p.593, p.598: 0.69 degree of rudder per degree a second
+-- of the roll angle's rate, flaps down only). The -400's YDM has no flap
+-- input (ATA22 p.66, p.69): the gain 0.69 up to 150 kt, above it with the
+-- square of the impact pressure (an estimate)
+T.equal(Y.tc_gain(150), 0.69, "N19-AFDS-03: the turn coordination's gain at 150 kt: 0.69 (the -100's)")
+T.equal(Y.tc_gain(120), 0.69, "at 120 kt: no more than the -100's 0.69")
+T.near(Y.tc_gain(250), 0.0855, 0.002, "at 250 kt: 0.69 over the impact pressure's 2.84 squared, 0.086")
+T.check(Y.tc_gain(160) < 0.69 and Y.tc_gain(200) < Y.tc_gain(180) and Y.tc_gain(350) < 0.03, "falling with the speed above 150 kt")
+do
+    local inp = Y.inputs()
+    inp.p = 2
+    T.near(Y.roll_angle_rate(inp), 2, 1e-12, "wings level, rolling right 2 degrees a second: the roll angle's rate +2")
+    -- a steady level turn at 25 degrees of bank and 6 of pitch, 80 m/s: the
+    -- body roll rate is -turn rate x sin(pitch), the roll angle stands
+    local w = math.deg(9.80665 * math.tan(math.rad(25)) / 80)
+    local th, ph = math.rad(6), math.rad(25)
+    inp.roll, inp.pitch = 25, 6
+    inp.p, inp.q, inp.r = -w * math.sin(th), w * math.sin(ph) * math.cos(th), w * math.cos(ph) * math.cos(th)
+    T.near(Y.roll_angle_rate(inp), 0, 1e-12, "a steady turn: the roll angle's rate 0 (the body roll rate " .. ("%.2f"):format(inp.p) .. ")")
+    T.near(Y.sideslip_rate(inp, 80), 0, 1e-12, "and no sideslip rate")
+    local s, i2 = ready(true)
+    i2.cas, i2.tas, i2.gs = 150, 80, 80
+    run(s, i2, 6)
+    i2.roll, i2.pitch, i2.p, i2.q, i2.r = inp.roll, inp.pitch, inp.p, inp.q, inp.r
+    local out = run(s, i2, 0.1)
+    T.near(out.cmd[UPR], 0, 1e-9, "a steady turn: no rudder from the yaw dampers")
+    inp.pitch = 90
+    T.check(math.abs(Y.roll_angle_rate(inp)) < 100, "pitch 90: the tangent held, a finite rate")
+end
+do
+    local s, inp = ready(true)
+    inp.cas, inp.tas, inp.gs = 150, 80, 80
+    run(s, inp, 6)
+    inp.p = 2.5
+    local out = run(s, inp, 0.1)
+    T.near(out.tc, 0.69 * 2.5, 1e-9, "150 kt, rolling right 2.5 degrees a second: the turn coordination 1.7 degrees right")
+    T.near(out.cmd[UPR], 0.69 * 2.5, 1e-9, "the upper rudder 1.7 degrees right, into the roll (before, none at 0 AOA)")
+    T.near(out.cmd[LWR], 0.69 * 2.5, 1e-9, "the lower the same")
+    inp.alpha = 6
+    out = run(s, inp, 0.1)
+    T.near(out.cmd[UPR], 0.69 * 2.5 + 2 * 2.5 * math.sin(math.rad(6)), 1e-9,
+        "at 6 degrees of AOA the damping adds its own: the sideslip rate's -p sin(alpha), 2.2 degrees")
+    inp.alpha, inp.p = 0, -10
+    out = run(s, inp, 0.1)
+    T.equal(out.cmd[UPR], -4, "rolling left 10 degrees a second: summed before the authority, 4 degrees left")
+    inp.iru, inp.adc = 1, 1
+    out = run(s, inp, 0.1)
+    T.equal(out.cmd[UPR], -1, "1 IRU and 1 ADC: 1 degree")
+    inp.iru, inp.adc, inp.p = 3, 2, 2.5
+    inp.cas, inp.tas, inp.gs = 250, 130, 130
+    out = run(s, inp, 0.1)
+    T.near(out.cmd[UPR], Y.tc_gain(250) * 2.5, 1e-9, "250 kt: 0.21 degree (the -100's flaps up: none)")
+    inp.adc = 0
+    out = run(s, inp, 0.1)
+    T.near(out.tc, Y.tc_gain(Y.K_NO_ADC_KT) * 2.5, 1e-9, "no ADC: the gain at 250 kt (estimate)")
+    inp.adc, inp.air, inp.cas, inp.tas = 2, false, 150, 80
+    out = run(s, inp, 2.5)
+    T.check(out.mode[UPR] == Y.FADE_OUT and math.abs(out.cmd[UPR] - 0.69 * 2.5 / 2) < 0.05, "landed: faded out with the damping, half after 2.5 s")
 end
 
 T.done()

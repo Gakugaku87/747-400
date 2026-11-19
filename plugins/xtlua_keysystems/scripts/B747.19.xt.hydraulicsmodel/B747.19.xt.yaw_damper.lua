@@ -11,7 +11,8 @@
 -- rudder after the ratio changers: ATA27 p.656). Before, a law of its own
 -- (the heading's 0.9 s average below 5 degrees of bank, the sideslip
 -- through a PID above, gains by the MCP altitude) scaled by the ratio
--- changers.
+-- changers. GAP N19-AFDS-03: the turn coordination on the roll angle's
+-- rate (the pitch rate in too), in the same command.
 dofile("B747.19.yd_model.lua")
 local YD = B747_yd_model
 B747DR_yd_bus_stby              = find_dataref("laminar/B747/electrical/bus/stby_main")
@@ -32,6 +33,7 @@ simDR_yd_alpha                  = find_dataref("sim/flightmodel/position/alpha")
 simDR_yd_pitch                  = find_dataref("sim/flightmodel/position/theta")
 simDR_yd_roll                   = find_dataref("sim/flightmodel/position/phi")
 simDR_yd_p                      = find_dataref("sim/flightmodel/position/P")
+simDR_yd_q                      = find_dataref("sim/flightmodel/position/Q")
 simDR_yd_r                      = find_dataref("sim/flightmodel/position/R")
 simDR_yd_ny                     = find_dataref("sim/flightmodel/forces/g_side")
 local yd_state = YD.new()
@@ -57,7 +59,7 @@ local function yd_read(inp)
     inp.fault[2] = B747DR_yd_fail[1] > 0.5
     inp.cas, inp.tas, inp.gs = simDR_yd_cas, simDR_yd_tas, simDR_yd_gs
     inp.alpha, inp.pitch, inp.roll = simDR_yd_alpha, simDR_yd_pitch, simDR_yd_roll
-    inp.p, inp.r, inp.ny = simDR_yd_p, simDR_yd_r, simDR_yd_ny
+    inp.p, inp.q, inp.r, inp.ny = simDR_yd_p, simDR_yd_q, simDR_yd_r, simDR_yd_ny
 end
 
 function yaw_damper_system(doCompute)
