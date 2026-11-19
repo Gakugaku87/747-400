@@ -4574,6 +4574,9 @@ do
       or (kind == "ACCEPT" and U.accept_word(s.resp) or U.reject_word(s.resp))
     if not word then return false end
     verify[fmsID] = {i = i, kind = kind, word = word, state = nil}
+    -- (2026-11-20, GAP N19-ATC-03) REJECT selected: no LOAD any more
+    -- (FMSPG p.290)
+    if kind == "REJECT" then s.rej = true end
     return true
   end
   -- REJECT DUE TO on a CDU: perf, wx, free (four lines)
@@ -4691,6 +4694,45 @@ do
   end
   -- the message list cleared (ACARS's clear)
   function B747_fms_atc_uplinks_clear() ul, verify, due, down, scanned, sending = {}, {}, {}, {}, 0, {} end
+end
+-- (2026-11-20, GAP N19-ATC-03 stage A; notes/ATA-34-61-FMC.md §175.5) an
+-- ATC uplink's LOAD (B747.68.atc_load_model.lua; CPDLC p.202-203; FMSPG
+-- p.290, p.293; FCOM p.760-761, p.1433-1434): LOAD> on the uplink's last
+-- page while it has loadable elements (the RTA's on the airplanes with
+-- RTA), neither RTE 1 nor RTE 2 has a modification and REJECT has not been
+-- selected (nor sent); LOAD the elements into the active route's
+-- modification (EXEC, ERASE) and RTA PROGRESS's, UNABLE TO LOAD CLEARANCE
+-- or PARTIAL CLEARANCE LOADED (FMC alerts) when not all loaded. The
+-- elements read once from the uplink's text (kept in its state)
+dofile("B747.68.atc_load_model.lua")
+do
+  local L = B747_atc_load_model
+  local function items(i, s)
+    if s.load == nil then s.load = L.items(B747_fms_atc_msg_field(i, "msg") or "") end
+    return s.load
+  end
+  -- the airplane's RTA (not the 570's: FCOM p.1375)
+  local function has_rta() return B747DR_fms_engine_type ~= 1 end
+  function B747_fms_atc_load_offered(i)
+    local s = B747_fms_atc_uplink(i)
+    if not s or s.rej or s.acked == "REJECT" then return false end
+    if B747_fmc_route.mod ~= nil or B747_fmc_route2.mod ~= nil then return false end
+    return L.loadable(items(i, s), has_rta())
+  end
+  -- LOAD: the message (nil when all loaded)
+  function B747_fms_atc_load(i)
+    if not B747_fms_atc_load_offered(i) then return nil end
+    local s = B747_fms_atc_uplink(i)
+    local crz = B747_cdu_model.parse_alt((string.gsub(fmsModules["data"]["crzalt"] or "", "%s+$", "")))
+    local res = L.load(items(i, s), {R = B747_route_model, st = B747_fmc_route, T = B747_rta_model,
+      rta = B747_fms_rta_avail() and B747_fms_rta() or nil, has_rta = has_rta(),
+      ppos = {lat = simDR_latitude, lon = simDR_longitude}, airborne = simDR_onGround == 0, crz_alt = crz,
+      var = function(lat, lon) return B747_navdb.variation(B747_fmc_navdb, lat, lon) end})
+    if res.route then B747_fmc_route_changed() end
+    if res.rta then B747_fms_preds_now() end
+    if res.msg then B747_cdu_fmc_event(res.msg, true) end
+    return res.msg
+  end
 end
 -- (6-1/6-2 step 12g2a; notes/ATA-34-61-FMC.md §116) the ATC requests
 -- (B747.68.atc_request_model.lua): the ATC REQUEST pages' request and ATC

@@ -7,8 +7,11 @@
 -- REJECT (5L) and ACCEPT (5R) while a response is due, LOG (6R). Shown,
 -- the uplink is reviewed (NEW to OPEN or OLD); (step 12g2a) 1L <REQUEST
 -- when it answers a request; (step 12g3c) 6R REPORT> for a report
--- request, 3R ARM> for LEVEL, REACHING, PASSING. Not here yet: LOAD;
--- PRINT (no printer: blank, an estimate).
+-- request, 3R ARM> for LEVEL, REACHING, PASSING; (2026-11-20, GAP
+-- N19-ATC-03 stage A) 4R LOAD> on the last page while the uplink has
+-- loadable data, no route modification and no REJECT (FCOM p.760-761;
+-- FMSPG p.290: B747_fms_atc_load_offered), the page as it is after LOAD
+-- (an estimate). Not here: PRINT (no printer: blank, an estimate).
 -- VERIFY RESPONSE: 1L the response (WILCO, ROGER, AFFIRM, UNABLE, NEGATIVE,
 -- STANDBY), the reasons and free text below, RESPONSE SEND> (SENDING,
 -- SENT, RESEND> without the acknowledgement in time: 2026-11-20
@@ -59,6 +62,11 @@ fmsPages["ATCUPLINK"].getPage=function(self,pgNo,fmsID)
     local acc = U.accept_word(s.resp) and "ACCEPT>" or ""
     out[11] = rej .. string.rep(" ", 24 - #rej - #acc) .. acc
   end
+  -- (2026-11-20, GAP N19-ATC-03) 4R LOAD> on the last page (FCOM p.760's
+  -- figure: beside STANDBY; FMSPG p.290)
+  if pgNo == np and B747_fms_atc_load_offered(i) then
+    out[9] = string.sub(out[9], 1, 24 - 5) .. "LOAD>"
+  end
   -- (step 12g3c) a report request: 6R REPORT> (FCOM p.759); an armable
   -- one: 3R ARM> or ARMED on the last page once OLD or ACCEPTED (FCOM
   -- p.761; FMSPG p.292)
@@ -90,6 +98,7 @@ fmsFunctionsDefs["ATCUPLINK"]["L5"]={"atcuplink","REJECT"}
 fmsFunctionsDefs["ATCUPLINK"]["R5"]={"atcuplink","ACCEPT"}
 fmsFunctionsDefs["ATCUPLINK"]["R6"]={"atcuplink","LOG"}
 fmsFunctionsDefs["ATCUPLINK"]["R3"]={"atcuplink","ARM"}
+fmsFunctionsDefs["ATCUPLINK"]["R4"]={"atcuplink","LOAD"}
 -- STANDBY, REJECT, ACCEPT on the last page while a response is due
 function fmsFunctions.atcuplink(fmsO, value)
   local i = acarsSystem.getCurrentMessage(fmsO.id)
@@ -106,6 +115,13 @@ function fmsFunctions.atcuplink(fmsO, value)
     if st ~= "OLD" and st ~= "ACCEPTED" then return end
     local err = B747_atc_report_model.arm(rep, fmsO["scratchpad"] ~= "DELETE")
     if err then fmsO["notify"] = err elseif fmsO["scratchpad"] == "DELETE" then fmsO["scratchpad"] = "" end
+    return
+  end
+  -- (2026-11-20, GAP N19-ATC-03) 4R LOAD on the last page: the loadable
+  -- elements into the active route (and RTA PROGRESS); the messages are
+  -- the FMC's (FCOM p.1433-1434); the page stays (estimate)
+  if value == "LOAD" then
+    if fmsO.pgNo == U.pages(lines_of(i)) then B747_fms_atc_load(i) end
     return
   end
   if value == "REQUEST" then
