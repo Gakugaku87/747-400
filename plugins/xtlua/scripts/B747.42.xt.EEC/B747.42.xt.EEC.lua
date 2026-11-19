@@ -793,7 +793,13 @@ function ecc_spd()
 			if eccPid[i].output~=nil then
 				local tValue=round(eccPid[i].output*100)/100
 				if simDR_engine_running[i] ==1 then
-					if simDR_prop_mode[i]==1 and eec_control[i] then
+					if simDR_prop_mode[i]==1 and B747DR_engineType==0 and simDR_reverser_deploy_ratio[i]>0.01 then
+						-- (2026-11-20, N19-ENG-03) P&W: forward thrust only once
+						-- the sleeves are stowed, idle while they move (PW_PPM
+						-- p.250, p.552). Before, the forward control at once
+						B747_eec_reset_throttle(i)
+						simDR_engn_thro_use[i]=0
+					elseif simDR_prop_mode[i]==1 and eec_control[i] then
 						simDR_engn_thro_use[i]=B747_eec_throttle(i)
 					elseif simDR_prop_mode[i]==1 then
 						B747_eec_reset_throttle(i)
@@ -803,13 +809,18 @@ function ecc_spd()
 						if simDR_reverser_deploy_ratio[i] >0.98 then
 							-- (ENG-31) GE: the ECU's reverse thrust, 90 % of the
 							-- maximum rated at full reverse (ATA70_80 p.206,
-							-- p.208-209); P&W and RR the lever as before
+							-- p.208-209); (2026-11-20, N19-ENG-03) P&W: the EEC's
+							-- N1 mode, 87 % N1 at full reverse (PW_PPM p.204,
+							-- p.250); RR the lever as before
 							if B747DR_engineType==1 then
 								simDR_engn_thro_use[i]=B747_eec_reverse_throttle(i)
+							elseif B747DR_engineType==0 then
+								simDR_engn_thro_use[i]=B747_eec_reverse_pw_throttle(i)
 							else
 								simDR_engn_thro_use[i]=B747DR_throttle_reversor[i]*-1
 							end
 						else
+							B747_eec_reset_reverse(i)
 							simDR_engn_thro_use[i]=0
 						end
 					end

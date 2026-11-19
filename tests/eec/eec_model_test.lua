@@ -657,4 +657,40 @@ T.near(E.reverse_throttle(0.5), 0.45, 1e-9, "half the reverse lever: half (a dir
 T.near(E.reverse_throttle(1.4), 0.9, 1e-9, "past full reverse: 90 %")
 T.near(E.reverse_throttle(-0.2), 0, 1e-9, "a forward lever value: none")
 
+-- (2026-11-20, N19-ENG-03) the PW4000's reverse: the N1 mode, 87 % N1 at
+-- full reverse (PW_PPM p.204, p.250), straight from the idle end, biased by
+-- Tt2 as the corrected speed (estimate)
+T.near(E.pw_reverse_n1(1, 15), 87, 1e-9, "P&W reverse: full at 15 °C: 87 % N1 (PW_PPM p.250)")
+T.near(E.pw_reverse_n1(0, 15), E.PW_REV.idle_n1, 1e-9, "reverse idle: the idle end")
+T.near(E.pw_reverse_n1(0.5, 15), (87 + E.PW_REV.idle_n1) / 2, 1e-9, "half the lever: half way (a direct function of TLA: p.204)")
+T.near(E.pw_reverse_n1(1, -15), 87 * math.sqrt(258.15 / 288.15), 1e-9, "-15 °C: the corrected speed's N1, lower")
+T.check(E.pw_reverse_n1(1, 35) > 87, "35 °C: higher")
+T.near(E.pw_reverse_n1(1.3, 15), 87, 1e-9, "past full: 87")
+-- the loop (its own N1 loop, PWREV) on a stand-in engine (the shown N1 = 22 + 95
+-- x the throttle through a 1.2 s lag and a 0.3 s one, about the ground's
+-- spool in X-Plane: s341 2026-11-20, N1 46 to 99 in 3.5 s at 0.64): to 87
+-- from reverse idle without much overshoot, and back down at reverse idle
+do
+    local s = E.new()
+    local th, a, n1, dt = 0, 0, 22, 1 / 30
+    local peak, t87 = 0, nil
+    for k = 1, math.floor(15 / dt) do
+        local target = E.pw_reverse_n1(1, 15)
+        th = E.thrust_control(s, "PWREV", 2, target, n1, th, E.pw_reverse_n1(0, 15), dt, nil, 1.0, false)
+        a = a + (th - a) * dt / 1.2
+        n1 = n1 + (22 + 95 * a - n1) * dt / 0.3
+        peak = math.max(peak, n1)
+        if not t87 and n1 >= 86 then t87 = k * dt end
+    end
+    T.check(t87 and t87 < 6, string.format("P&W reverse loop: 86 %% N1 in %.1f s (under 6)", t87 or -1))
+    T.check(peak < 90, string.format("the peak %.1f %% under 90 (87 + 3)", peak))
+    T.near(n1, 87, 1, string.format("after 15 s: %.1f %% N1", n1))
+    for _ = 1, math.floor(10 / dt) do
+        th = E.thrust_control(s, "PWREV", 2, E.pw_reverse_n1(0, 15), n1, th, E.pw_reverse_n1(0, 15), dt, nil, 1.0, false)
+        a = a + (th - a) * dt / 1.2
+        n1 = n1 + (22 + 95 * a - n1) * dt / 0.3
+    end
+    T.equal(th, 0, "reverse idle again: throttle 0")
+end
+
 T.done()
