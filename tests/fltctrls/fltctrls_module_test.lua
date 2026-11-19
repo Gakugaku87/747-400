@@ -518,6 +518,8 @@ rt:set("laminar/B747/airspeed/V1", 150)
 rt:set(IAS, 0)
 for i = 0, 3 do rt:set("laminar/B747/fuel/fuel_control/toggle_sw_pos", i, 1) end
 rt:set("laminar/B747/engines/display_N1", 1, 98)
+-- (2026-11-20, N19-WARN-01) engines 2 and 3 with their thrust levers advanced
+for i = 1, 2 do rt:set("laminar/B747/engine/throttle", i, 1) end
 rt:set("laminar/B747/gear/steering/body_unlocked", 1)
 frames(0.2)
 T.equal(get(WARNING, 4), 1, "body gear unlocked, engine 2 at takeoff thrust: CONFIG GEAR CTR")
@@ -529,6 +531,7 @@ rt:set("laminar/B747/gear/steering/body_unlocked", 0)
 frames(0.2)
 T.equal(get(WARNING, 4), 0, "locked: none")
 rt:set("laminar/B747/engines/display_N1", 2, 0)
+for i = 1, 2 do rt:set("laminar/B747/engine/throttle", i, 0) end
 rt:set("laminar/B747/airspeed/V1", 0)
 
 -- CONFIG GEAR (GEAR-17; FCOM p.1557-1558): in flight with a gear not down
@@ -616,6 +619,7 @@ T.near(get(FCU .. "flap_pos"), 20, 1e-6, "lever 20: the flaps' position 20")
 rt:set("sim/flightmodel2/wing/flap1_deg", 0, 15.1)
 rt:set("laminar/B747/airspeed/V1", 150)
 rt:set("laminar/B747/engines/display_N1", 1, 70)
+for i = 1, 2 do rt:set("laminar/B747/engine/throttle", i, 1) end   -- the levers advanced (N19-WARN-01)
 rt:set("laminar/B747/airspeed/flapsRef", 10)
 frames(0.2)
 T.equal(get(WARNING, 2), 0, "flaps 20 (X-Plane's wing at 15.1 degrees), engine 2 at N1 70: no CONFIG FLAPS (the FMC's 10 not compared)")
@@ -665,6 +669,7 @@ T.near(get(IND), G.indicator(G.NOSE_UP, true), 1e-6, "repaired: the nose up band
 rt:set("laminar/B747/engines/display_N1", 1, 0)
 frames(11)
 T.equal(get(WARNING, 2), 0, "the thrust gone 10 s: CONFIG FLAPS gone")
+for i = 1, 2 do rt:set("laminar/B747/engine/throttle", i, 0) end
 
 -- the greenband nose gear pressure switch failed (ATA27 p.510, ATA31
 -- p.201-202, FCOM p.958): reading AFT CG against the nose up band or FWD

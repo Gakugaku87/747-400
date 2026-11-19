@@ -504,12 +504,41 @@ rt:set(DEPLOY, 1, 0.5)                                          -- the cowls mov
 frames(0.2)
 T.equal(get(THRO, 1), 0, "GE: the reverser in transit: idle (p.208)")
 rt:set(DEPLOY, 1, 1)
--- P&W: the lever as before, X-Plane's maximum 0.8 (the custom acf's)
+-- (2026-11-20, N19-ENG-03) P&W: the EEC's N1 mode in reverse, 87 % N1 at
+-- full reverse (PW_PPM p.204, p.250; the loop's numbers in
+-- eec_model_test.lua): from idle X-Plane's throttle opens under the N1's
+-- rate (not at once to the lever's); reverse idle and the sleeves moving:
+-- idle; back in forward, idle until the sleeves are stowed (p.552). Before,
+-- the reverse throttle the lever's (0.6 for -0.6, 1 at full at once)
+local user_was = get(USER, 1)
 rt:set("laminar/B747/engines/type", 0)
-rt:set(REVL, 1, -0.6)
+rt:set(REVL, 1, -0.01)                                          -- reverse idle first
 frames(0.5)
+T.equal(get(THRO, 1), 0, "P&W: reverse idle: throttle 0")
 T.near(get(REVMAX), 0.8, 1e-6, "P&W: X-Plane's maximum reverse throttle back to the acf's 0.8")
-T.near(get(THRO, 1), 0.6, 1e-6, "P&W: the reverse throttle the lever's (no sources)")
+rt:set(REVL, 1, -1)                                             -- full reverse
+frames(0.1)
+local th1 = get(THRO, 1)
+frames(0.1)
+T.check(th1 > 0 and th1 < 1 and get(THRO, 1) > th1,
+    string.format("P&W full reverse from idle, the shown N1 %.1f: the throttle opens gradually (%.3f, then %.3f)",
+        get(ENG .. "display_N1", 1), th1, get(THRO, 1)))
+rt:set(REVL, 1, -0.01)
+frames(2)
+T.equal(get(THRO, 1), 0, "P&W: back to reverse idle: throttle 0")
+rt:set(REVL, 1, -1)
+rt:set(DEPLOY, 1, 0.5)                                          -- the sleeves moving
+frames(0.2)
+T.equal(get(THRO, 1), 0, "P&W: the sleeves in transit: idle (PW_PPM p.250)")
+-- stowing (forward again) with the thrust lever advanced: idle until stowed
+rt:set(REVL, 1, 0)
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
+rt:set(USER, 1, 0.8)
+frames(1)
+T.equal(get(THRO, 1), 0, "P&W: the sleeves still stowing, the lever advanced: idle (PW_PPM p.552)")
+rt:set(USER, 1, user_was)
+rt:set(DEPLOY, 1, 1)
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)
 rt:set("laminar/B747/engines/type", 1)
 rt:set(REVL, 1, 0)
 rt:set(DEPLOY, 1, 0)

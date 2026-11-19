@@ -126,6 +126,47 @@ rt:set(JET_ALL, 0)
 rt:set("laminar/B747/hydraulics/pressure_1", 3000)
 frames(3)
 
+-- (2026-11-20) an A/T landing: the flare retard's IDLE closed the airplane's
+-- thrust levers (laminar/B747/engine/throttle), X-Plane's throttle (the
+-- hardware's) left at 0.5: the reverse thrust levers can be raised (FCOM
+-- p.893). Before, the hold did nothing (s340: X-Plane's throttle 0.5 from
+-- the air start, the reversers never out)
+local FWD = "laminar/B747/engine/throttle"
+rt:set(JET_ALL, 0.5)
+for i = 0, 3 do rt:set(FWD, i, 0) end
+frames(1)
+let_go = hold("sim/engines/thrust_reverse_hold", 2)
+for i = 0, 3 do T.equal(rt:get(JET, i), -1, "X-Plane's throttle 0.5, the airplane's levers closed: engine " .. (i + 1) .. " at full reverse") end
+T.equal(rt:get(MODE, 1), 3, "X-Plane's throttle 0.5: in reverse")
+let_go()
+frames(1)
+rt:set(JET_ALL, 0)
+frames(3)
+T.equal(rt:get(MODE, 1), 1, "levers down: stowed")
+-- the airplane's levers forward (the A/T's SPD or the hand): no reverse
+rt:set(JET_ALL, 0.5)
+for i = 0, 3 do rt:set(FWD, i, 0.3) end
+frames(1)
+let_go = hold("sim/engines/thrust_reverse_hold", 1)
+T.equal(rt:get(MODE, 1), 1, "the airplane's levers at 0.3: no reverse (the interlock, FCOM p.893)")
+T.check(rt:get(JET, 1) >= 0, "the airplane's levers at 0.3: no reverse lever (" .. rt:get(JET, 1) .. ")")
+let_go()
+frames(1)
+rt:set(JET_ALL, 0)
+for i = 0, 3 do rt:set(FWD, i, 0) end
+frames(3)
+-- one engine's hold with X-Plane's throttle at 0.5, the airplane's lever closed
+rt:set(JET_ALL, 0.5)
+frames(1)
+let_go = hold("sim/engines/thrust_reverse_hold_2", 4)
+T.check(rt:get(JET, 1) < -0.9, "engine 2's hold, X-Plane's throttle 0.5: towards full reverse (" .. rt:get(JET, 1) .. ")")
+T.equal(rt:get(MODE, 1), 3, "engine 2 in reverse")
+let_go()
+frames(1)
+rt:set(JET_ALL, 0)
+frames(3)
+T.equal(rt:get(MODE, 1), 1, "engine 2 stowed")
+
 -- GE: engine 4 stopped, its reverser does not move; hydraulics do not matter
 rt:set("laminar/B747/engines/type", 1)
 rt:set("sim/flightmodel/engine/ENGN_running", 3, 0)

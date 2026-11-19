@@ -881,10 +881,36 @@ end
 -- REV). As X-Plane's throttle, the share of the engine's maximum thrust
 -- (the maximum rated, B747_setMaxThrust): REV_SHARE at full reverse,
 -- straight with `lever` (0 reverse idle, 1 full) (estimate: X-Plane's
--- thrust as its throttle). P&W and RR: no sources (X-Plane's as before)
+-- thrust as its throttle). P&W: below. RR: no sources (X-Plane's as before)
 M.REV_SHARE = 0.9
 function M.reverse_throttle(lever)
     return M.REV_SHARE * clamp(lever, 0, 1)
+end
+
+-- (2026-11-20, GAP_ANALYSIS.md N19-ENG-03) the PW4000's reverse thrust:
+-- the EEC in the N1 mode (its EPR sensing is not accurate in reverse: PW_PPM
+-- p.196, p.204), the N1 a direct function of the lever (p.204) biased by Tt2
+-- (p.196), MAX REV 87 % N1 (p.250); idle fuel flow while the sleeves move,
+-- more reverse thrust only once they are deployed, forward thrust only
+-- once they are stowed (p.250, p.550-552: the glue). The N1 for `lever` (0
+-- reverse idle, 1 full): straight from idle_n1 to max_n1, as the corrected
+-- speed (times the square root of Tt2 / 288.15 K) (estimates: the line,
+-- idle_n1, the bias's form). Before, X-Plane's throttle the lever's: the
+-- shown N1 99 % and EPR 1.45 at full reverse, near the max EPR's red
+-- (s341, 2026-11-20: notes/ATA-70-80.md §23)
+M.PW_REV = {max_n1 = 87, idle_n1 = 25}
+-- its loop (thrust_control's key "PWREV", on the shown N1): the GE's N1
+-- loop's slopes at 0.35 (about three times the gains) with the reference
+-- rising 30 % a second through a 0.8 s lag: on a stand-in engine (the
+-- shown N1 22 + 95 x the throttle through 1.2 s and 0.3 s lags, about
+-- X-Plane's on the ground: s341) 86 % in about 4.5 s from reverse idle
+-- without overshoot, where the GE's own took 9.6 s (estimates)
+M.THRUST.PWREV = {lag = 0.8, up = 30, down = 15,
+    at = {35, 45, 60, 75, 90, 100},
+    slope = {7, 35, 39.2, 35, 28, 26.95}}                          -- N1 % for each unit of throttle
+function M.pw_reverse_n1(lever, tt2_c)
+    local n1 = M.PW_REV.idle_n1 + (M.PW_REV.max_n1 - M.PW_REV.idle_n1) * clamp(lever, 0, 1)
+    return n1 * math.sqrt(math.max((tt2_c or 15) + 273.15, 200) / 288.15)
 end
 
 -- approach idle of each engine, and the idle messages: ENG n LOW IDLE

@@ -337,9 +337,30 @@ end
 function B747_eec_reverse_throttle(engine)
     return E.reverse_throttle(-B747DR_throttle_reversor[engine])
 end
+-- (2026-11-20, GAP_ANALYSIS.md N19-ENG-03) P&W in reverse with both sleeves
+-- deployed: the EEC's N1 mode (B747_eec_model.pw_reverse_n1: 87 % at full
+-- reverse, biased by Tt2: the TAT), held on the shown N1 by the thrust
+-- control on its own N1 loop (B747_eec_model.THRUST.PWREV: its rates and
+-- slopes, the gains for the pressure ratio: estimates) from X-Plane's
+-- throttle, in its
+-- own state, started again whenever the sleeves are not deployed (the glue
+-- in B747.42.xt.EEC.lua). The lever from reverse idle (X-Plane's -0.01:
+-- B747.40.xt.engines.lua) to full. Before, X-Plane's throttle the lever's
+local rev_state = E.new()
+local REV_IDLE_LEVER = 0.02
+function B747_eec_reverse_pw_throttle(engine)
+    local lever = (-B747DR_throttle_reversor[engine] - REV_IDLE_LEVER) / (1 - REV_IDLE_LEVER)
+    local target, idle = E.pw_reverse_n1(lever, simDR_TAT), E.pw_reverse_n1(0, simDR_TAT)
+    local delta = math.max(0.1, simDR_epr_ambient_pa / 101325)
+    return E.thrust_control(rev_state, "PWREV", engine + 1, target, B747DR_display_N1[engine], simDR_engn_thro_use[engine],
+        idle, math.min(SIM_PERIOD, EEC_DT_MAX), nil, delta, false)
+end
+function B747_eec_reset_reverse(engine)
+    E.reset_thrust_control(rev_state, engine + 1)
+end
 -- X-Plane's maximum reverse throttle (sim/aircraft/engine/acf_throtmax_REV):
 -- GE 1, the ECU's share above giving the thrust; P&W the custom acf's 0.8
--- as before (no sources for the PW4000's reverse); RR its own
+-- as before (the N1 control above sets the throttle under it); RR its own
 -- (B747.42.xt.EEC.RR.lua)
 local REV_MAX = {[0] = 0.8, [1] = 1.0}
 function B747_eec_reverse_max()

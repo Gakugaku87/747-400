@@ -67,6 +67,21 @@ local B747_rev_held_all             = false    -- the all-engine reverse command
 -- reverser out, until the thrust levers come forward (B747_prop_mode)
 local B747_rev_idle_engine          = {[0] = false, false, false, false}
 local REV_IDLE                      = -0.01    -- X-Plane's throttle_jet_rev_ratio at reverse idle (as canx_revHold)
+-- (2026-11-20) the reverse thrust levers can be raised only when the
+-- forward thrust levers are closed (FCOM p.893 (7.20.23), p.859): the
+-- airplane's levers (laminar/B747/engine/throttle: the A/T's servo or the
+-- hand, B747.42.xt.EEC.lua), read every frame by B747_prop_mode (an XTLua
+-- read now and then gives that dataref's previous read). Before, X-Plane's
+-- throttle only (the hardware's or the keyboard's lever), so after an A/T
+-- landing (the flare retard's IDLE closes the airplane's levers) with that
+-- lever left forward, the reverse commands did nothing (s340, 2026-11-20:
+-- X-Plane's throttle at 0.5, the airplane's levers at 0)
+B747DR_eng_fwd_lever            = find_dataref("laminar/B747/engine/throttle")
+local FWD_CLOSED                    = 0.05     -- as THRUST LEVER CLOSED (B747.45.xt.fltCtrls.lua)
+local fwd_closed                    = {[0] = true, true, true, true}
+local function fwd_levers_read()
+    for e = 0, 3 do fwd_closed[e] = B747DR_eng_fwd_lever[e] < FWD_CLOSED end
+end
 
 --local B747_igniter_status = {0, 0, 0, 0}
 
@@ -339,7 +354,7 @@ function B747_thrust_rev_hold_max_1_CMDhandler(phase, duration)
 		-- AIRCRAFT MUST BE ON THE GROUND
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 1 THROTTLE LEVER IS NOT AT IDLE
 
-		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[0] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
+		if B747DR_reverser_lockout == 0 and (simDR_engine_throttle_jet[0] < 0.05 or fwd_closed[0]) then											-- AIRCRAFT IS ON THE GRUOND
 
 				if B747_reverser_can_deploy(0) then simDR_prop_mode[0] = 3 end  -- power and ground (B747.40.xt.reverser.lua)
 				if B747_reverser_can_deploy(0) then simDR_engine_throttle_jet[0] = B747_animate_value(simDR_engine_throttle_jet[0],-1,-1,1,1) end
@@ -371,7 +386,7 @@ function B747_thrust_rev_hold_max_2_CMDhandler(phase, duration)
 		-- AIRCRAFT MUST BE ON THE GROUND
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 2 THROTTLE LEVER IS NOT AT IDLE
 
-		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[1] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
+		if B747DR_reverser_lockout == 0 and (simDR_engine_throttle_jet[1] < 0.05 or fwd_closed[1]) then											-- AIRCRAFT IS ON THE GRUOND
 				if B747_reverser_can_deploy(1) then simDR_prop_mode[1] = 3 end
 				if B747_reverser_can_deploy(1) then simDR_engine_throttle_jet[1] = B747_animate_value(simDR_engine_throttle_jet[1],-1,-1,1,1) end
 				B747_hold_rev_on_engine[1] = 1
@@ -401,7 +416,7 @@ function B747_thrust_rev_hold_max_3_CMDhandler(phase, duration)
 		-- AIRCRAFT MUST BE ON THE GROUND
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 3 THROTTLE LEVER IS NOT AT IDLE
 
-		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[2] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
+		if B747DR_reverser_lockout == 0 and (simDR_engine_throttle_jet[2] < 0.05 or fwd_closed[2]) then											-- AIRCRAFT IS ON THE GRUOND
 				if B747_reverser_can_deploy(2) then simDR_prop_mode[2] = 3 end
 				if B747_reverser_can_deploy(2) then simDR_engine_throttle_jet[2] = B747_animate_value(simDR_engine_throttle_jet[2],-1,-1,1,1) end
 				B747_hold_rev_on_engine[2] = 1
@@ -433,7 +448,7 @@ function B747_thrust_rev_hold_max_4_CMDhandler(phase, duration)
 		-- AIRCRAFT MUST BE ON THE GROUND
 		-- PREVENTS "REVERSE" MODE WHEN ENGINE 4 THROTTLE LEVER IS NOT AT IDLE
 
-		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet[3] < 0.05 then											-- AIRCRAFT IS ON THE GRUOND
+		if B747DR_reverser_lockout == 0 and (simDR_engine_throttle_jet[3] < 0.05 or fwd_closed[3]) then											-- AIRCRAFT IS ON THE GRUOND
 				if B747_reverser_can_deploy(3) then simDR_prop_mode[3] = 3 end
 				if B747_reverser_can_deploy(3) then simDR_engine_throttle_jet[3] = B747_animate_value(simDR_engine_throttle_jet[3],-1,-1,1,1) end
 				B747_hold_rev_on_engine[3] = 1
@@ -497,15 +512,17 @@ function B747_thrust_rev_hold_max_all_CMDhandler(phase, duration)
     if phase < 2 then
 	    
 		-- AIRCRAFT MUST BE ON THE GROUND
-		-- PREVENTS "REVERSE" MODE WHEN ANY THROTTLE LEVER IS NOT AT IDLE
+		-- each engine whose forward thrust lever is closed (the airplane's,
+		-- or X-Plane's at idle as before) or already in reverse (FCOM
+		-- p.893); before, all of X-Plane's throttles at idle
 
-		if B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet_all <= 0.0 then											-- AIRCRAFT IS ON THE GRUOND
-				if B747_reverser_can_deploy(0) then simDR_prop_mode[0] = 3 end  -- power and ground (B747.40.xt.reverser.lua)
-				if B747_reverser_can_deploy(1) then simDR_prop_mode[1] = 3 end
-				if B747_reverser_can_deploy(2) then simDR_prop_mode[2] = 3 end
-				if B747_reverser_can_deploy(3) then simDR_prop_mode[3] = 3 end
+		if B747DR_reverser_lockout == 0 then											-- AIRCRAFT IS ON THE GRUOND
 				for e = 0, 3 do  -- not the engines whose reverser cannot deploy (was throttle_jet_rev_ratio_all = -1)
-					if B747_reverser_can_deploy(e) then simDR_engine_throttle_jet[e] = -1 end
+					local closed = fwd_closed[e] or simDR_engine_throttle_jet[e] <= 0.0
+					if closed and B747_reverser_can_deploy(e) then  -- power and ground (B747.40.xt.reverser.lua)
+						simDR_prop_mode[e] = 3
+						simDR_engine_throttle_jet[e] = -1
+					end
 				end
 				B747_hold_rev_on_all = 1
 		--else
@@ -728,6 +745,7 @@ local LastSpeedBrake=0
 local clearingReverse=false
 local lastThrottleAll=0
 function B747_prop_mode()
+    fwd_levers_read()
     if simDR_radarAlt1 > 25.1 then
         callEngineReverse[0]=0
         callEngineReverse[1]=0
@@ -768,7 +786,7 @@ function B747_prop_mode()
         --    callEngineReverse[i]=-1
           --  print("alt do clear prop mode "..i.." with "..B747DR_display_N1[i])
           -- 
-        elseif (callEngineReverse[i]==1 and B747DR_reverser_lockout == 0 and simDR_engine_throttle_jet_all<=0) or simDR_thrust_rev_deploy_ratio[i]>0.01 and not(clearingReverse) then
+        elseif (callEngineReverse[i]==1 and B747DR_reverser_lockout == 0 and (simDR_engine_throttle_jet_all<=0 or fwd_closed[i])) or simDR_thrust_rev_deploy_ratio[i]>0.01 and not(clearingReverse) then
             simDR_prop_mode[i] = 3
             -- (the A/T: the A/T model's, the FMC's step 9f1; the old
             -- unbound writes of VNAV's state and the flight phase removed:

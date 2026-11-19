@@ -137,6 +137,7 @@ B747DR_cfg_flap_pos             = find_dataref("laminar/B747/flt_ctrls/fcu/flap_
 B747DR_cfg_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
 simDR_tocw_pitch                = find_dataref("sim/flightmodel/position/theta")
 B747DR_tocw_engine_type         = find_dataref("laminar/B747/engines/type")
+simDR_tocw_rev_deploy           = find_dataref("sim/flightmodel2/engines/thrust_reverser_deploy_ratio")
 B747DR_airspeed_flapsRef        = find_dataref("laminar/B747/airspeed/flapsRef")
 simDR_ind_airspeed_kts_pilot    = find_dataref("laminar/B747/gauges/indicators/airspeed_kts_pilot")
 
@@ -835,15 +836,21 @@ function B747_fltCtrols_EICAS_msg()
     -- FLAPS 96, or 86 with the FMC's flaps) on engines 2 and 3 both for
     -- FLAPS, SPOILERS and STAB, X-Plane's wheels on the ground, nothing
     -- without a V1, and CONFIG FLAPS also against the FMC's takeoff flaps
-    -- (WARN-11). A reverser out is no takeoff thrust (estimate).
+    -- (WARN-11). (2026-11-20, N19-WARN-01) Each engine's thrust lever too
+    -- (the airplane's: not closed, AOM_JP p.10) and its reverser stowed and
+    -- not in reverse (estimate); before, any reverse lever up for all
+    -- engines, so a stow from full reverse armed it (s341)
     local tw = tocw_inputs
     tw.on_ground = B747DR_fcu_pri_gnd == 1
     tw.ias_kt = simDR_ind_airspeed_kts_pilot
     tw.v1_kt = B747DR_airspeed_V1
     tw.pitch_deg = simDR_tocw_pitch
     tw.fuel_run = num_fuel_ctrl_sw_on
-    for i = 1, 4 do tw.n1[i] = B747DR_display_N1[i - 1] end
-    tw.reverse = simDR_engine_throttle_jet_all < 0
+    for i = 1, 4 do
+        tw.n1[i] = B747DR_display_N1[i - 1]
+        tw.lever[i] = B747DR_sb_thrust_lever[i - 1]
+        tw.reverser[i] = simDR_sb_prop_mode[i - 1] == 3 or simDR_tocw_rev_deploy[i - 1] > 0.01
+    end
     tw.engine_type = B747DR_tocw_engine_type
     -- the flaps in a takeoff position: the trailing edge at 10 or 20 (the
     -- FCU's position in the detents' numbers: X-Plane's wing flap angles

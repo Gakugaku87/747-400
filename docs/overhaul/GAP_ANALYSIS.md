@@ -868,6 +868,10 @@ Lua の値だけでは直せず、カスタム acf のパネル定義を変え�
 | N19-WB-02 | 挙動の誤り | S | CDU の CG の自動入力と重量の窓が X-Plane の `cg_offset_z_mac`（X-Plane の MAC 10.49 m）を使う。実機の % MAC に換算する（acf の _cgZ 1243.3 in は実機の 23.0 % MAC） | TCDS_747 p.14 | `B744.fms.pages.perfinit.lua:61,76-79`, `B744.fms.pages.lua:1689`, `plugins/b747_fms_bridge/src/wb_window.c:59-61,107-110,250-254` |
 | N19-FCTL-01 | 挙動の誤り | M | 安定板が 1 unit 2°（0 units ＝ +15°）。747-100 でも 1 unit 1°（0 units ＝ 前縁上げ 3°、範囲 +3〜−12°）。SRM のトリムの速さも units/s を °/s として持つので 2 倍で動く。段 3 の離陸トリム（AERO.md §3.23）と一緒に、測ってから直す | NASA_SIM p.42, p.247, p.328, p.442; ATA22 p.132 | `B747.19.xt.hydraulicsmodel.lua:439`, `B747.45.srm_model.lua:44-56`, `B747.45.xt.srm.lua:169` |
 
+- 段 3 の進み（2026-11-20、PC のセッション「段1-3実装」）：
+  - N19-ENG-03：済。P&W の逆推力は EEC の N1 モード（最大 87 % N1、Tt2 の補正、スリーブが動く間はアイドル、格納しきるまで前進推力なし）。あわせて、逆推力のレバーの連動を 747 の前進レバーで（FCOM p.893：A/T で着陸すると逆推力が出なかった）。notes/ATA-70-80.md §23。
+  - N19-WARN-01：済。エンジン 2・3 ごとに、N1・747 のレバーが閉じていない・逆推力が格納済みで判定。notes/ATA-31-warning.md §11。
+
 ### 7.2 中
 
 | ID | 種別 | 規模 | 内容 | 根拠 | 該当コード |
