@@ -22,7 +22,7 @@
     { "do": "wait", "note": "MCP の速さの巻き取りが終わる", "dref": "laminar/B747/autopilot/speed/target", "op": "==", "value": -1, "timeout": 20 },
     { "do": "snapshot", "note": "初期化の後", "drefs": [ "laminar/B747/autopilot/ias_dial_value", "sim/cockpit2/autopilot/airspeed_dial_kts", "laminar/B747/flt_ctrls/stab_trim/units", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
     { "do": "check", "note": "MCP の速さは今の速さ（前は min（今の速さ、Vmc + 10）で約 214 kt に下がった：notes/ATA-22.md §45）", "dref": "laminar/B747/autopilot/ias_dial_value", "op": "between", "value": [295, 345] },
-    { "do": "check", "note": "安定板は速さから（334 kt で約 5.2 units。前は 7.5 units：notes/ATA-27.md §18）", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "op": "between", "value": [4.5, 6.5] },
+    { "do": "check", "note": "安定板は速さから（334 kt で約 3.0 units：2026-11-20 から 1 unit 1° で 0.26 + 308,800 ÷ IAS²、notes/AERO.md §3.23。1 unit 2° のときは約 5.2 units、その前は 7.5 units：notes/ATA-27.md §18）", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "op": "between", "value": [2.0, 4.0] },
     { "do": "check", "note": "A/P の ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9 },
     { "do": "watch", "note": "60 秒：高度は 26,500 ft まで（前は 8 秒で 26,300 ft・+9,800 fpm、29,600 ft まで上がった）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 26500, "timeout": 60 },
     { "do": "watch", "note": "続く 30 秒：速さは 290 kt より上（前は 229 kt まで落ちた）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "min": 290, "timeout": 30 },

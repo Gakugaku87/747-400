@@ -217,6 +217,11 @@ B747DR_srm_cutout_sw            = deferred_dataref("laminar/B747/flt_ctrls/stab_
 B747DR_srm_altn_sw              = deferred_dataref("laminar/B747/flt_ctrls/stab_trim/altn_sw", "number")
 B747DR_srm_fail_stab_actuator   = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_actuator", "array[2]")
 B747DR_srm_fail_stab_runaway    = deferred_dataref("laminar/B747/flt_ctrls/fail/stab_runaway", "array[2]")
+-- (2026-11-20) the flaps' pitch down X-Plane leaves out, as degrees of the
+-- stabilizer leading edge up (補正: B747.45.xt.aero_corr.lua writes it, the
+-- hydraulics' control mapping adds it to X-Plane's stabilizer; notes/AERO.md
+-- §3.23)
+B747DR_ac_stab_corr             = deferred_dataref("laminar/B747/flt_ctrls/stab_corr_deg", "number")
 -- the speedbrakes (B747.45.xt.speedbrake.lua; step 3): the auto speedbrake
 -- actuator does not move (1)
 B747DR_sb_fail                  = deferred_dataref("laminar/B747/flt_ctrls/fail/auto_speedbrake", "number")

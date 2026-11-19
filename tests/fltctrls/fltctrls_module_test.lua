@@ -70,6 +70,13 @@ T.near(get("laminar/B747/gauges/indicators/flap_deployed_ratio"), 1 / 6, 1e-6, "
 rt:set(LEVER, 2 / 6)
 frames(9.5)
 for i = 0, 3 do T.near(get(FCU .. "te_deg", i), 5, 1e-6, "lever 5: TE panel " .. i .. " at 5 degrees") end
+-- (2026-11-20) the flaps' pitch down through X-Plane's stabilizer (補正,
+-- B747.45.xt.aero_corr.lua: the model's stab_flap by the FCU's trailing
+-- edge angle; notes/AERO.md §3.23)
+local ACM = dofile("plugins/xtlua/scripts/B747.45.xt.fltCtrls/B747.45.aero_corr_model.lua")
+local STAB_CORR = "laminar/B747/flt_ctrls/stab_corr_deg"
+T.near(get(STAB_CORR), ACM.stab_flap(5), 1e-6, "flaps 5: the stabilizer's correction at TE 5 (" .. ACM.stab_flap(5) .. " degrees)")
+T.check(get(STAB_CORR) > 0, "flaps 5: some")
 T.equal(get(FCU .. "slat", 1), 1, "group B out")
 T.equal(get(FCU .. "te_moving"), 0, "TE at rest")
 T.equal(get(FCU .. "te_down"), 1, "TE out: to the demand pumps")
@@ -89,6 +96,13 @@ T.equal(get(FCU .. "te_mode", 0), 0, "pressure back: primary")
 frames(10)
 T.equal(get(CAUTION, 30), 0, "no FLAPS PRIMARY")
 T.near(get(FCU .. "te_deg", 1), 10, 1e-6, "flaps 10")
+T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "flaps 10: the stabilizer's correction (" .. ACM.stab_flap(10) .. " degrees)")
+rt:set("laminar/B747/debug/aero_corr_off", 1)
+frames(0.1)
+T.equal(get(STAB_CORR), 0, "aero_corr_off 1: no stabilizer correction")
+rt:set("laminar/B747/debug/aero_corr_off", 0)
+frames(0.1)
+T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "aero_corr_off 0: back")
 
 -- load relief (FCOM p.954; ATA27 p.288-289): lever 30, 30->25 at 178 kt,
 -- 25->20 at 203 kt; back 20->25 at 195 kt, 25->30 at 170 kt; >FLAP RELIEF
@@ -359,7 +373,9 @@ rt:set("sim/operation/failures/rel_elv_trim_run", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 fly(0, 0, 1)
 -- the flight's start: X-Plane's trim followed on the ground; an air start
--- keeps 7.5 units (X-Plane trims for its own trim there: 0.5 at FL350)
+-- with no airspeed yet keeps 7.7 units (X-Plane trims for its own trim
+-- there: 0.5 at FL350). 7.7: the stabilizer angle of the 7.5 units before
+-- 2026-11-20 (1 degree a unit since, the acf's incidence +4.7)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:callout("flight_start")
@@ -371,10 +387,10 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:callout("flight_start")
 rt:set(TRIM, 0.5)
 frames(1)
-T.near(units(), 7.5, 1e-6, "an air start: X-Plane's trim 0.5 not followed (7.5 units)")
-T.near(get(TRIM), 0, 1e-6, "X-Plane's trim written back to 0")
+T.near(units(), 7.7, 1e-6, "an air start: X-Plane's trim 0.5 not followed (7.7 units)")
+T.near(get(TRIM), 7.7 / 7.5 - 1, 1e-6, "X-Plane's trim written back to 7.7 units")
 frames(4)
-T.near(units(), 7.5, 1e-6, "after the start's 3 s: still 7.5 units")
+T.near(units(), 7.7, 1e-6, "after the start's 3 s: still 7.7 units")
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 
@@ -711,11 +727,13 @@ rt:set("laminar/B747/fmc/elevator_trim", 0)
 frames(0.2)
 
 -- an air start: the stabilizer for level flight at the speed (estimate:
--- 3.78 + 154,400 / IAS^2 units, 4.5 to 7.5), not the 7.5 units of before
--- (a 334 kt start pitched up to 13 degrees before the A/P came on)
+-- 0.26 + 308,800 / IAS^2 units, 1.7 to 7.7, since 2026-11-20 at 1 degree
+-- a unit; before 3.78 + 154,400 / IAS^2, 4.5 to 7.5, the same angles),
+-- not a fixed 7.5 units (a 334 kt start pitched up to 13 degrees before
+-- the A/P came on)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
-for _, c in ipairs({{334, 3.78 + 154400 / 334 ^ 2}, {231, 3.78 + 154400 / 231 ^ 2}, {150, 7.5}}) do
+for _, c in ipairs({{334, 0.26 + 308800 / 334 ^ 2}, {231, 0.26 + 308800 / 231 ^ 2}, {150, 7.7}}) do
     rt:set("sim/flightmodel/position/indicated_airspeed", c[1])
     rt:callout("flight_start")
     frames(1)

@@ -1,7 +1,9 @@
 -- Drag the custom acf cannot give X-Plane, added through a drag figure X-Plane
 -- reads every step (補正: CLAUDE.md allows system-side corrections for
 -- aerodynamics the acf cannot reproduce; notes/AERO.md §3.16). The 3D and
--- the displays keep the actual values; only X-Plane's drag changes.
+-- the displays keep the actual values; only X-Plane's drag changes. Since
+-- 2026-11-20 also the flaps' pitch down, through the stabilizer's angle
+-- (stab_flap: notes/AERO.md §3.23).
 --
 --   local A = B747_aero_corr_model       -- in XTLua, after dofile
 --   local A = dofile(".../B747.45.aero_corr_model.lua")   -- in the tests
@@ -265,6 +267,54 @@ function M.fuse_cd(acf_cd, gear, mach, weight, q)
     local cd = M.CD_GEAR * gear
     if mach and weight then cd = cd - M.cd_mach(mach, weight, M.cl(weight, q)) end
     return math.max(acf_cd + cd / M.CD_PER_FUSE_CD, 0)
+end
+
+-- (2026-11-20, N19-FCTL-01) The flaps' pitch down X-Plane leaves out (補正):
+-- the stabilizer X-Plane flies is moved leading edge up by these degrees
+-- with the flaps out. With the stabilizer at 1 degree a unit (0 units 3
+-- degrees leading edge up, 15 units 12 down: ATA22 p.132) and the custom
+-- acf's stabilizer incidence set for the cruise (+3.7 degrees: 4.36 units
+-- at FL370, M.85 and 237 t; the 747-100's 3.9 to 4.6 at FL350, M.85, 227 t:
+-- NASA_SIM p.340), X-Plane balanced the takeoff and the approach several
+-- units nose down of the sources: its flaps pitch the airplane down less
+-- than the real ones (notes/AERO.md §3.23). The acf's flap pitching moment
+-- (_flap1_cm, _flap2_cm) goes with X-Plane's flap angle (15.1 degrees at
+-- flaps 20, 30 at 30: the hydraulics' B747_xp_flap) and could not give both
+-- (at -1.2 flaps 20 came right and 30 4.3 units too far nose up, and the
+-- approach's attitude 1.4 degrees above the FCOM-fitted one: 2026-11-20); it
+-- stays the acf's -0.39. Moving the stabilizer instead keeps X-Plane's tail
+-- load, so the attitudes fitted to the FCOM (§3.10, §3.12) stay. By the
+-- trailing edge flaps' angle (the FCU's, degrees; flaps 1 has the trailing
+-- edge up: none), straight between the points:
+--   * 10 and 20: the takeoff with max takeoff thrust at 280 t, 13.4 and 26.5
+--     % MAC (aero_takeoff_trim_280_13/_29 and their _f10, B747_rotate.lua's
+--     2.5 degrees a second at the FPPM's VR): X-Plane's balance in the
+--     climb after (V2 + 23 to 29 kt, 1,000 to 1,400 ft) against the FPPM's
+--     takeoff trim (p.44: by the weight and the centre of gravity only,
+--     every flap setting: p.22; so the 747-100's AFM, NASA_SIM p.442), the
+--     two centres of gravity's mean: with 4 degrees flaps 20 came +0.4 and
+--     +1.3 units, flaps 10 +2.5 and +3.5;
+--   * 30: the approach, gear down, 150 kt, 245 t, 20.6 %: 7.03 units with 4
+--     degrees, the 747-100's 7.3 (256 t, 150 kt, 21 %: NASA_SIM p.342; the
+--     -100's: a starting point);
+--   * 5: straight from none to flaps 10's (estimate).
+-- The takeoff's part may hold X-Plane's thrust line too close under the
+-- centre of gravity (N19-AERO-01: about 1 unit at takeoff thrust; to measure
+-- again once that is fixed). The stabilizer's units (the SRM, its
+-- indicator, the EICAS, the greenband) and the 3D keep the trim's own
+-- values
+M.STAB_FLAP = {{0, 0}, {10, 1.0}, {20, 3.2}, {30, 4.0}}
+
+-- the degrees (leading edge up) at a trailing edge flap angle
+function M.stab_flap(te)
+    local t = M.STAB_FLAP
+    if not te or te <= t[1][1] then return t[1][2] end
+    for i = 2, #t do
+        if te <= t[i][1] then
+            return t[i - 1][2] + (te - t[i - 1][1]) / (t[i][1] - t[i - 1][1]) * (t[i][2] - t[i - 1][2])
+        end
+    end
+    return t[#t][2]
 end
 
 return M
