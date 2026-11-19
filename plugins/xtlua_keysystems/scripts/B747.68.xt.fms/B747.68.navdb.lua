@@ -321,7 +321,7 @@ function M.find(db, ident, lat, lon, airports)
     end
     local a = M.airport(db, ident)
     if a then list[#list + 1] = a end
-    local rwy = match(ident, "^RW%d%d[LRC]?$")
+    local rwy = match(ident, "^RW%d%d[LRCT]?$")
     for _, icao in ipairs(airports or {}) do
         for _, r in ipairs(M.terminal(db, icao, ident) or {}) do list[#list + 1] = r end
         local c = rwy and M.cifp(db, icao)
@@ -513,12 +513,18 @@ function M.cifp(db, icao)
 end
 
 -- a runway's length in feet (REF NAV DATA's LENGTH: FCOM p.1356): from its
--- threshold to the other end's, with both displaced parts (estimate: the
--- CIFP has no length); nil without the other end in the CIFP
-local OTHER_SIDE = {L = "R", R = "L", C = "C", [""] = ""}
+-- threshold to the other end's, with both displaced parts; nil without the
+-- other end in the CIFP. The CIFP has no Runway Length field: this is
+-- ARINC 424's (p.95, 5.57: the runway's overall length regardless of
+-- displaced thresholds, no stopway, overrun or clearway) from the runway
+-- records' landing thresholds (p.91 note 5) and displacements (p.100,
+-- 5.69: the runway's end to its threshold). (2026-11-20, GAP N19-NAV-07)
+-- before "estimate"; (N19-NAV-02) a runway in degrees true, RW08T and
+-- RW26T (ARINC 424 p.94, 5.46), too: before, nil
+local OTHER_SIDE = {L = "R", R = "L", C = "C", T = "T", [""] = ""}
 function M.runway_length(c, id)
     local rw = c and c.runways[id]
-    local num, side = match(id or "", "^RW(%d%d)([LCR]?)$")
+    local num, side = match(id or "", "^RW(%d%d)([LCRT]?)$")
     if not (rw and num) then return nil end
     local other = c.runways[string.format("RW%02d%s", (tonumber(num) + 17) % 36 + 1, OTHER_SIDE[side])]
     if not other then return nil end

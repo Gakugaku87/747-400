@@ -14,7 +14,7 @@ for _, cdu in ipairs({"cdu1", "cdu2"}) do
     for n = 0, 15 do types["sim/cockpit2/radios/indicators/fms_" .. cdu .. "_text_line" .. n] = "string" end
 end
 local rt = xtlua.new{types = types}
-rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
+local fms = rt:load("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.xt.fms.lua")
 rt:set("laminar/B747/simconfig", '{"SIM":{"weight_display_units":"KGS","kgs_to_lbs":2.20462},'
     .. '"PLANE":{"thrust_ref":"EPR","engines":"PW4056","model":"747-400"},'
     .. '"FMC":{"INIT":{"active":"","op_program":"TEST","drag_ff":"+0.0/-0.0"}}}')
@@ -88,6 +88,19 @@ T.equal(line(5), "DIRECT             DELTA", "then DIRECT DELTA")
 key("func_key/legs")
 T.equal(line(3), "(600)              /600A", "LEGS: the heading to 600 ft (FCOM p.1249), its altitude")
 T.check(small(2):find("^ 337` HDG"), "its heading 337 (FCOM p.1249: 180` HDG): " .. small(2))
+-- (2026-11-20, GAP N19-NAV-02) the same heading charted in degrees true
+-- ("337T": ARINC 424 p.85): T after it, as a true course (FCOM p.1331)
+do
+    local hdgLeg = nil
+    for _, l in ipairs(fms.ns.B747_route_model.shown(fms.ns.B747_fmc_route).legs) do
+        if l.name == "(600)" then hdgLeg = l end
+    end
+    hdgLeg.crs_true = true
+    frames(0.3)
+    T.check(small(2):find("^ 337`T HDG"), "a heading in degrees true: 337`T HDG: " .. small(2))
+    hdgLeg.crs_true = nil
+    frames(0.3)
+end
 T.equal(line(5), "(INTC)                  ", "the intercept")
 T.equal(line(7), "ZZV            230/3000A", "ZZV at or above 3000, 230 kt (the SID's constraint)")
 T.check(xpfms():find("DEPRWY RW34L") and xpfms():find("\n28 %(600%) DRCT 0%.000000 [^\n]*\n28 %(INTC%) DRCT 0%.000000 [^\n]*\n3 ZZV DRCT "),
