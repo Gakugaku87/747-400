@@ -2,7 +2,8 @@
 # Dump every reference PDF in _ref/ to text, one file per page plus one
 # whole-document file with page markers, and a per-page stats table.
 #   usage: docs/overhaul/tools/extract_pdfs.sh "<aircraft dir>"   (Git Bash; uses Git for Windows' xpdf pdftotext)
-# The Word reference (CMCS: 12_Scribd_ATA45_NEW_CMCS.docx, 2026-11-19) goes
+# A Word reference (.docx: the 2026-11-19 CMCS one, removed with APU_MTM and
+# OMS on 2026-11-20 as not the 747's, the user) goes
 # by docx_to_text.ps1 into the same form.
 set -u
 AC="$1"
@@ -45,10 +46,8 @@ TCDS_RB211	06_EASA_TCDS_E.062_Issue03_RB211-524.pdf
 NASA_SIM	07_NASA_CR-114494_D6-30643_Vol2_Jumbo_Jet_Simulation_Modeling_Data.pdf
 NASA_HQ	08_NASA_CR-2144_Aircraft_Handling_Qualities_Data.pdf
 VT_SPECS	09_VirginiaTech_B747_Specs_Airfoil_Notes.pdf
-APU_MTM	10_Scribd_49-APU_Maintenance_Training_Manual.pdf
 AC_SPECS	11_AircraftCommerce_747-400_Series_Specifications.pdf
 LH_MAN	13_Scribd_Lufthansa_B747-400_Manuals.pdf
-OMS	14_Scribd_Overview_Onboard_Maintenance_Systems.pdf
 COMM	15_Scribd_747-400_Communications_System_Manual.pdf
 CPDLC	16_ROSAP_CPDLC_Procedures_Honeywell_2011.pdf
 PW_PPM	17_Scribd_B744_PW4000_Power_Plant_Manual.pdf

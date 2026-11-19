@@ -6,7 +6,9 @@
 # manual page break (estimate of the printed pages). Paragraphs and table
 # cells end a line. Nothing needs installing (Windows PowerShell 5.1).
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File docx_to_text.ps1 -Id CMCS -File 12_Scribd_ATA45_NEW_CMCS.docx
+#   powershell -NoProfile -ExecutionPolicy Bypass -File docx_to_text.ps1 -Id <ID> -File <name>.docx
+#   (first used for the 2026-11-19 CMCS document, removed on 2026-11-20 as
+#   not the 747's: no .docx reference is left)
 param(
     [Parameter(Mandatory = $true)][string]$Id,
     [Parameter(Mandatory = $true)][string]$File
