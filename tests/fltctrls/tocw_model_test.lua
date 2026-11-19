@@ -95,9 +95,37 @@ do
     inp.fuel_run = 2
     out = run(s, inp, DT)
     T.check(not out.gear_ctr and not out.stab, "two FUEL CONTROL switches in RUN: none")
-    inp.fuel_run, inp.reverse = 4, true
+    inp.fuel_run, inp.reverser[3] = 4, true
     out = run(s, inp, 0.2)
-    T.check(not out.armed, "a reverser out: not takeoff thrust (estimate)")
+    T.check(not out.armed, "engine 3's reverser out: not takeoff thrust (estimate)")
+end
+
+-- (2026-11-20, N19-WARN-01) each engine's thrust lever and reverser: a stow
+-- straight from full reverse on the landing roll (s341: the reverse levers
+-- down, the sleeves closing, the shown N1 80 with the thrust levers closed)
+-- does not arm it; a lever advanced with the N1 does (AOM_JP p.10)
+do
+    local s, inp = ready()
+    inp.flaps_to, inp.speedbrake_not_down = false, true     -- flaps 30, the speedbrakes up
+    inp.v1_kt = 999                                          -- no V1 after a landing: pitch 0
+    inp.n1[2], inp.n1[3] = 80, 80
+    inp.lever = {0, 0, 0, 0}
+    inp.reverser = {true, true, true, true}
+    local out = run(s, inp, 0.5)
+    T.check(not out.armed and not out.flaps, "full reverse, N1 80, the thrust levers closed: not armed")
+    inp.reverser = {false, false, false, false}             -- stowed, the engines still turning fast
+    out = run(s, inp, 2)
+    T.check(not out.armed and not out.flaps and not out.spoilers, "stowed with the N1 at 80, the thrust levers closed: no CONFIG FLAPS or SPOILERS (before: armed)")
+    inp.lever[2] = 0.9                                       -- engine 2's lever advanced (a touch-and-go)
+    out = run(s, inp, 0.2)
+    T.check(out.armed and out.flaps and out.spoilers, "engine 2's lever advanced with N1 80: armed, CONFIG FLAPS and SPOILERS")
+    inp.lever[2], inp.lever[3] = 0, 0.9
+    inp.reverser[3] = true                                   -- engine 3's reverser still unlocked
+    out = run(s, inp, 0.2)
+    T.check(not out.armed, "engine 3's lever up but its reverser out: not takeoff thrust")
+    inp.reverser[3] = false
+    out = run(s, inp, 0.2)
+    T.check(out.armed, "engine 3 alone, lever up, stowed: armed")
 end
 
 T.done()

@@ -11,7 +11,14 @@
 --
 -- The warning is armed on the ground below V1 with three or more FUEL
 -- CONTROL switches in RUN and engine 2 or 3 at takeoff thrust: its N1
--- indication above 66.5 (P&W), 66.7 (RR) or 75.0 (GE) (ATA27 p.730). Without
+-- indication above 66.5 (P&W), 66.7 (RR) or 75.0 (GE) (ATA27 p.730), with
+-- its thrust lever in the takeoff range (AOM_JP p.10: "engine 2 or 3 thrust
+-- lever"; here not closed, estimate) and its reverser stowed (estimate).
+-- (2026-11-20, GAP_ANALYSIS.md N19-WARN-01) Before, the N1 alone with any
+-- reverse lever up for all engines: a stow straight from full reverse
+-- armed it on the landing roll (the reverse levers down, the sleeves still
+-- closing, the shown N1 80): >CONFIG FLAPS and >CONFIG SPOILERS with the
+-- master WARNING (s341, notes/ATA-31-warning.md §11). Without
 -- a V1 the takeoff inhibit starts at 5 degrees of pitch instead (ATA31
 -- p.180, p.188). A message goes at once when the configuration is put
 -- right, and 10 s after the takeoff thrust goes (ATA27 p.730).
@@ -20,6 +27,7 @@ local M = setmetatable({}, {})
 B747_tocw_model = M
 
 M.N1_TO = {[0] = 66.5, [1] = 75.0, [2] = 66.7}   -- the engine type: 0 P&W, 1 GE, 2 RR
+M.LEVER_CLOSED = 0.05    -- a thrust lever closed (as THRUST LEVER CLOSED, B747.45.xt.fltCtrls.lua)
 M.HOLD_S = 10
 M.PITCH_DEG = 5
 M.V1_NONE = 999      -- the FMC's V1 when none is selected (B744.fms.pages.takeoff.lua)
@@ -33,7 +41,8 @@ function M.inputs()
         pitch_deg = 0,
         fuel_run = 0,                -- FUEL CONTROL switches in RUN
         n1 = {0, 0, 0, 0},           -- the N1 indications of engines 1-4
-        reverse = false,             -- a reverser out: no takeoff thrust (estimate)
+        lever = {1, 1, 1, 1},        -- the thrust levers of engines 1-4 (0 closed, 1 full)
+        reverser = {false, false, false, false},  -- engines 1-4: a reverser not stowed or its reverse lever up
         engine_type = 0,
         -- the configuration
         flaps_to = true,             -- the flaps in a takeoff position
@@ -53,7 +62,10 @@ end
 function M.update(s, inp, dt)
     local out = s.out
     local thr = M.N1_TO[inp.engine_type] or M.N1_TO[0]
-    local takeoff_thrust = (inp.n1[2] > thr or inp.n1[3] > thr) and not inp.reverse
+    local function at_takeoff(e)
+        return inp.n1[e] > thr and inp.lever[e] >= M.LEVER_CLOSED and not inp.reverser[e]
+    end
+    local takeoff_thrust = at_takeoff(2) or at_takeoff(3)
     -- below V1; without a V1 until the rotation (5 degrees of pitch)
     local before_v1
     if inp.v1_kt > 0 and inp.v1_kt < M.V1_NONE then before_v1 = inp.ias_kt < inp.v1_kt
