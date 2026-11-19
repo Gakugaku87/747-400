@@ -603,7 +603,9 @@ function M.update(s, path, air, armed, engaged)
         if mode == "path" and ref_dtk then
             s.roll = steer(ref_xt, ref_dtk, ff, air, hdir or turn_dir(s, e, wrap180(ref_dtk - air.trk)), bank)
         elseif mode == "heading" then
-            local hdg = ((e.mag or 0) + (air.var or 0)) % 360
+            -- (2026-11-20, GAP N19-NAV-02) a heading charted in degrees
+            -- true (ARINC 424 p.85: "085T") as it is
+            local hdg = e.true_hdg and e.hdg or ((e.mag or 0) + (air.var or 0)) % 360
             s.roll = steer_hdg(hdg, air, turn_dir(s, e, wrap180(hdg - air.hdg)))
         else
             s.roll = steer_hdg(s.hold or air.hdg, air)

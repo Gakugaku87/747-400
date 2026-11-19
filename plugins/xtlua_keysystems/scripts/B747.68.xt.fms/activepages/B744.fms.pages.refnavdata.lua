@@ -61,7 +61,7 @@ end
 
 -- a runway of the destination (FMSPG p.171; ATA34_2 p.547)
 local function dest_runway(ident)
-  local id = string.match(ident, "^RW%d%d[LCR]?$")
+  local id = string.match(ident, "^RW%d%d[LCRT]?$")
   local dest = id and R.shown(B747_fmc_route).dest
   if not dest then return nil end
   local N, db = db_N()
@@ -146,7 +146,7 @@ function fmsFunctions.refnavident(fmsO, value)
     return
   end
   -- another runway (the origin's, which the route's lookup finds too)
-  if string.match(sp, "^RW%d%d[LCR]?$") then fmsO["notify"] = "NOT IN DATA BASE" return end
+  if string.match(sp, "^RW%d%d[LCRT]?$") then fmsO["notify"] = "NOT IN DATA BASE" return end
   if not string.match(sp, "^%w%w?%w?%w?%w?$") then fmsO["notify"] = "NOT IN DATA BASE" return end
   -- the database's points, not the crew's waypoints of the route (step 7e3a)
   local list = R.candidates(B747_fmc_route, sp, simDR_latitude, simDR_longitude, true)

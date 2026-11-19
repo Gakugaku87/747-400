@@ -168,8 +168,11 @@ end
 -- ND's line and LNAV's course 3 degrees off the localizer (the line from
 -- beside each fix: the perf session's KSEA-KLAX flight, the user).
 -- Estimate: the sources give the navaid's MAG VAR (FCOM p.1304, ATA34_2
--- p.547), not which variation a procedure's course takes
-local function true_of(env, mag, p, nav)
+-- p.547), not which variation a procedure's course takes. (2026-11-20,
+-- GAP N19-NAV-02) `is_true`: a course charted in degrees true ("085T":
+-- ARINC 424 p.85; the procedure model's crs_true, theta_true) as it is
+local function true_of(env, mag, p, nav, is_true)
+    if is_true then return mag % 360 end
     local v = nav_var(nav)
     if v == nil then v = env.var and env.var(p.lat, p.lon) or 0 end
     return (mag + (v or 0)) % 360
@@ -210,9 +213,15 @@ local HOLD = {HA = "alt", HF = "fix", HM = "manual"}
 -- degrees off it, away from the turn) for PT_TIME minutes (PANS-OPS
 -- category C-E: 1 min 15 s), a 180 degree turn its way, back on the
 -- reciprocal of the leg's course to the inbound course; the outbound leg
--- as long as keeps the turn PT_MARGIN nm inside the leg's distance (its
--- "remain within": ARINC 424's route distance; PT_LIMIT without one)
+-- PT_OUT minutes (2026-11-20, GAP N19-NAV-06: ARINC 424 p.200, Att. 5
+-- 3.11, a PI leg's "one minute outbound leg is implied from the fix to
+-- the initial 45 degree turn"), shorter when that would take the turn
+-- past PT_MARGIN nm inside the leg's distance (its "remain within":
+-- ARINC 424's route distance; PT_LIMIT without one). Before, the outbound
+-- leg as long as that limit allowed (RJSM's GABII, 15 nm: about 8 nm out
+-- at 220 kt for 3.7)
 M.PT_TIME = 1.25
+M.PT_OUT = 1
 M.PT_LIMIT = 10
 M.PT_MARGIN = 1
 -- the speed of a procedure turn's end on the route (the ND's symbol's, as
@@ -234,7 +243,7 @@ local function predict(e, l, nxt, env, alt, nxt2)
     elseif e.term == "radial" then
         e.navaid = l.navaid
         if l.navaid and l.theta then
-            e.radial = true_of(env, l.theta, l.navaid, l.navaid)
+            e.radial = true_of(env, l.theta, l.navaid, l.navaid, l.theta_true)
             b = line_line(a, crs, l.navaid, e.radial, true)
         end
     elseif e.term == "dist" then
@@ -243,9 +252,9 @@ local function predict(e, l, nxt, env, alt, nxt2)
         -- the next leg's course: a CF's into its fix, an FA/FC/FD/FM's
         -- from its fix; an AF's arc
         if nxt.pt == "CF" and nxt.fix and nxt.crs then
-            b = line_line(a, crs, nxt.fix, true_of(env, nxt.crs, nxt.fix, nxt.navaid), false)
+            b = line_line(a, crs, nxt.fix, true_of(env, nxt.crs, nxt.fix, nxt.navaid, nxt.crs_true), false)
         elseif FROM_FIX[nxt.pt] and nxt.from_fix and nxt.crs then
-            b = line_line(a, crs, nxt.from_fix, true_of(env, nxt.crs, nxt.from_fix, nxt.navaid), false)
+            b = line_line(a, crs, nxt.from_fix, true_of(env, nxt.crs, nxt.from_fix, nxt.navaid, nxt.crs_true), false)
         elseif nxt.pt == "AF" and nxt.navaid and nxt.rho then
             b = line_circle(a, crs, nxt.navaid, nxt.rho)
         elseif nxt.pt == "IF" and nxt.fix and nxt2 and nxt2.fix then
@@ -258,7 +267,7 @@ local function predict(e, l, nxt, env, alt, nxt2)
             -- final approach course (FCOM p.1249: an intercept of the
             -- course to the next waypoint)
             if nxt2.pt == "CF" and nxt2.crs then
-                b = line_line(a, crs, nxt2.fix, true_of(env, nxt2.crs, nxt2.fix, nxt2.navaid), false)
+                b = line_line(a, crs, nxt2.fix, true_of(env, nxt2.crs, nxt2.fix, nxt2.navaid, nxt2.crs_true), false)
             else
                 b = line_line(a, crs, nxt.fix, (M.course(nxt.fix, nxt2.fix)), false)
             end
@@ -398,7 +407,7 @@ function M.element(l, i, prev, nxt, env, alt, from, nxt2)
     elseif pt == "CF" and l.fix and l.crs then
         -- the course into the fix, from abeam the point before it
         -- (estimate), else its distance (or 5 nm) back along it
-        local c = true_of(env, l.crs, l.fix, l.navaid)
+        local c = true_of(env, l.crs, l.fix, l.navaid, l.crs_true)
         local a = nil
         if prev then
             local _, at = M.track(l.fix, c, prev)
@@ -415,9 +424,12 @@ function M.element(l, i, prev, nxt, env, alt, from, nxt2)
         end
         e.term, e.a = COURSE[pt] or HEADING[pt], prev
         if COURSE[pt] then
-            e.kind, e.crs = "course", true_of(env, l.crs, prev, l.navaid)
+            e.kind, e.crs = "course", true_of(env, l.crs, prev, l.navaid, l.crs_true)
         else
-            e.kind, e.hdg, e.mag = "heading", true_of(env, l.crs, prev), l.crs
+            e.kind, e.hdg, e.mag = "heading", true_of(env, l.crs, prev, nil, l.crs_true), l.crs
+            -- (N19-NAV-02) a heading in degrees true: LNAV flies e.hdg
+            -- itself, not e.mag by the airplane's variation
+            if l.crs_true then e.true_hdg = true end
         end
         -- (step 6d3) from the turn's end, climbing in the turn
         local a0 = alt
@@ -441,21 +453,21 @@ function M.element(l, i, prev, nxt, env, alt, from, nxt2)
             e.kind, e.term = "none", FROM_FIX[pt]
             return e
         end
-        e.kind, e.term, e.a, e.crs = "course", FROM_FIX[pt], a, true_of(env, l.crs, a, l.navaid)
+        e.kind, e.term, e.a, e.crs = "course", FROM_FIX[pt], a, true_of(env, l.crs, a, l.navaid, l.crs_true)
         predict(e, l, nxt, env, alt, nxt2)
         return e
     elseif pt == "AF" and l.navaid and l.rho and l.crs and l.fix then
         -- the DME arc from its boundary radial to its fix (ARINC 424: the
         -- course field the radial it starts on)
         e.kind, e.center, e.r, e.dir = "arc", l.navaid, l.rho, l.turn == "L" and "L" or "R"
-        e.a = M.point(l.navaid, true_of(env, l.crs, l.navaid, l.navaid), l.rho)
+        e.a = M.point(l.navaid, true_of(env, l.crs, l.navaid, l.navaid, l.crs_true), l.rho)
         e.b = l.fix
     elseif HOLD[pt] and l.fix then
         -- a hold (step 7a): around its fix, the inbound course (true) and
         -- the turn direction (right unless left), its legs' time or
         -- distance; `hold` how it ends, `exit` armed by the crew
         e.kind, e.a, e.b, e.len = "hold", l.fix, l.fix, 0
-        e.inbd, e.dir = true_of(env, l.crs or 0, l.fix, l.navaid), l.turn == "L" and "L" or "R"
+        e.inbd, e.dir = true_of(env, l.crs or 0, l.fix, l.navaid, l.crs_true), l.turn == "L" and "L" or "R"
         e.time, e.dist, e.alt, e.hold, e.exit = l.time, l.dist, l.alt, HOLD[pt], l.exit
         return e
     elseif pt == "PI" and l.fix and l.crs then
@@ -464,7 +476,7 @@ function M.element(l, i, prev, nxt, env, alt, from, nxt2)
         -- outbound course (45 degrees the other way from pc), limit its
         -- distance
         e.kind, e.a, e.fix, e.len = "pturn", l.fix, l.fix, 0
-        e.pc, e.dir = true_of(env, l.crs, l.fix, l.navaid), l.turn == "L" and "L" or "R"
+        e.pc, e.dir = true_of(env, l.crs, l.fix, l.navaid, l.crs_true), l.turn == "L" and "L" or "R"
         e.out = (e.pc + (e.dir == "R" and 45 or -45)) % 360
         e.limit = l.dist or M.PT_LIMIT
         -- where it ends at PT_KT (the next leg starts there; LNAV flies its
@@ -552,7 +564,9 @@ function M.pturn(e, kt)
     -- the 45 degree leg's side (b): its farthest point |centre| + r
     local a, b = 0.70711 * (d45 + r), 0.70711 * (d45 - r)
     local lim = math.max(e.limit - M.PT_MARGIN, r)
-    local dout = math.max(0, math.sqrt(math.max(0, (lim - r) ^ 2 - b ^ 2)) - a)
+    -- (N19-NAV-06) one minute out (ARINC 424 p.200), within the limit
+    local dout = math.min(M.PT_OUT / 60 * math.max(kt, 60),
+        math.max(0, math.sqrt(math.max(0, (lim - r) ^ 2 - b ^ 2)) - a))
     local f = e.fix
     local o = M.point(f, e.out, dout)
     local p = M.point(o, e.pc, d45)

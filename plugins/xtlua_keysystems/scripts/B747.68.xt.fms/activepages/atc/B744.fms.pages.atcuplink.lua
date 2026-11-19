@@ -11,9 +11,10 @@
 -- PRINT (no printer: blank, an estimate).
 -- VERIFY RESPONSE: 1L the response (WILCO, ROGER, AFFIRM, UNABLE, NEGATIVE,
 -- STANDBY), the reasons and free text below, RESPONSE SEND> (SENDING,
--- SENT; NO COMM, NO ATC COMM), STATUS ACCEPTED once acknowledged, 6L
--- <UPLINK or <REJECT DUE TO. Estimates: the lines of the text and of the
--- status.
+-- SENT, RESEND> without the acknowledgement in time: 2026-11-20
+-- N19-ATC-04; NO COMM, NO ATC COMM), STATUS ACCEPTED once acknowledged (the
+-- CDU then back on the uplink: FMSPG p.297), 6L <UPLINK or <REJECT DUE TO.
+-- Estimates: the lines of the text and of the status.
 local U = B747_atc_uplink_model
 local function hhmm(i)
   local t = B747_fms_atc_msg_field(i, "time") or ""
@@ -141,10 +142,12 @@ fmsPages["ATCVERIFYRESP"].getPage=function(self,pgNo,fmsID)
   local extra = U.wrap(rest, 24)
   for k = 1, math.min(#extra, 6) do out[3 + k] = string.format("%-24s", extra[k]) end
   local r
-  if v.state then r = v.state
+  -- (2026-11-20, GAP N19-ATC-04) no network acknowledgement in time:
+  -- RESEND> (FCOM p.765), the datalink's state before it
+  if v.state and v.state ~= "RESEND" then r = v.state
   elseif not B747_fms_atc_ready() then r = "NO COMM"
   elseif not B747_fms_atc_logon().comm then r = "NO ATC COMM"
-  else r = "SEND>" end
+  else r = v.state == "RESEND" and "RESEND>" or "SEND>" end
   out[11] = string.format("%24s", r)
   out[13] = v.kind == "REJECT" and "<REJECT DUE TO          " or "<UPLINK                 "
   return out
@@ -156,7 +159,7 @@ fmsPages["ATCVERIFYRESP"].getSmallPage=function(self,pgNo,fmsID)
   if not v then return out end
   out[1] = string.format("%24s", "1/1 ")
   if v.state == "SENT" and v.kind ~= "STANDBY" then out[2] = string.format("%24s", "STATUS") end
-  out[10] = string.format("%24s", (not v.state and not B747_fms_atc_ready()) and "DATA LINK" or "RESPONSE")
+  out[10] = string.format("%24s", ((not v.state or v.state == "RESEND") and not B747_fms_atc_ready()) and "DATA LINK" or "RESPONSE")
   out[12] = "------------------------"
   return out
 end

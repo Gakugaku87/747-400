@@ -29,7 +29,9 @@ rt:set("sim/aircraft/weight/acf_m_empty", 183500)
 for i = 0, 7 do rt:set("sim/flightmodel/weight/m_fuel", i, 0) end
 rt:frame(1 / 30)
 ns.calc_CGMAC()
-T.equal(ns.fmsModules["data"].cg_mac, "23", "the empty airplane at 1243.32 in: 23 % MAC (before 25)")
+-- (2026-11-20, N19-WB-03) the FMC's CG (TAKEOFF REF shows it on the 405
+-- only: tests/fms/wb_n19_test.lua)
+T.equal(ns.B747_fms_wbs_cg(), 23, "the empty airplane at 1243.32 in: 23 % MAC (before 25)")
 T.near(ns.wb.cg_mac, (1243.32 - 1168.0) / 3.278, 1e-6, "its CG to the decimal: " .. string.format("%.2f", ns.wb.cg_mac))
 
 -- calc_stab_trim at 270 t and the default loading's CG of about 22 %
