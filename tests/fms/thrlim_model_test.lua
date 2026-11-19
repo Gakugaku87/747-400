@@ -3,7 +3,7 @@
 -- B747.68.xt.fms/B747.68.thrlim_model.lua; 6-1/6-2 step 9g1, notes/
 -- ATA-34-61-FMC.md §73): TO on the ground with the THRUST LIM page's
 -- rating and the climb armed by the takeoff's reduction (FCOM p.1273,
--- p.1315-1316; 2026-11-19, §170: the 405's and 570's by the takeoff's
+-- p.1315-1316; 2026-11-19, §172: the 405's and 570's by the takeoff's
 -- rating, p.1315); the armed climb at the thrust reduction point with VNAV
 -- (flaps 5 or a height: FCOM p.667), by the THR switch above 400 ft with
 -- VNAV or FLCH (p.642), the derate gone with a TO/GA push before it

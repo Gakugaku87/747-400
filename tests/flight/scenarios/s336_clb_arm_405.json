@@ -1,6 +1,6 @@
 {
   "name": "s336_clb_arm_405",
-  "description": "上昇の減格の待機を FCOM の有効番号で分けた（2026-11-19、notes/ATA-34-61-FMC.md §170）の X-Plane での確認、地上。P&W の貨物機のリバリー（ICL 4X-ICB：simconfig の FREIGHTER、laminar/B747/freighter 1）で RJAA 34L でエンジン運転中に始め（機体を読み直す）、THRUST LIM で選ぶ。405（と 570）は離陸の rating で待機：TO 1 で CLB 1、TO 2 で CLB 2（FCOM p.1315）。assumed temperature では変えない（推定）：TO と SEL 50（推力は約 17 % 減）で CLB のまま、TO 1 と SEL 50（全部で約 23 % 減）で CLB 1。109（P&W の旅客機）ならどちらも CLB 2（減らし方 15 % 以上：FCOM p.1273。s152 と回帰試験）。CDU を撮る。Lua の誤りも確かめる",
+  "description": "上昇の減格の待機を FCOM の有効番号で分けた（2026-11-19、notes/ATA-34-61-FMC.md §172）の X-Plane での確認、地上。P&W の貨物機のリバリー（ICL 4X-ICB：simconfig の FREIGHTER、laminar/B747/freighter 1）で RJAA 34L でエンジン運転中に始め（機体を読み直す）、THRUST LIM で選ぶ。405（と 570）は離陸の rating で待機：TO 1 で CLB 1、TO 2 で CLB 2（FCOM p.1315）。assumed temperature では変えない（推定）：TO と SEL 50（推力は約 17 % 減）で CLB のまま、TO 1 と SEL 50（全部で約 23 % 減）で CLB 1。109（P&W の旅客機）ならどちらも CLB 2（減らし方 15 % 以上：FCOM p.1273。s152 と回帰試験）。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "livery": "ICL 4X-ICB",
   "flight": {

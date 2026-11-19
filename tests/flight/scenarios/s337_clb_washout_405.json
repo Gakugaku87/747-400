@@ -1,6 +1,6 @@
 {
   "name": "s337_clb_washout_405",
-  "description": "上昇の減格の消え方を FCOM の有効番号で分けた（2026-11-19、notes/ATA-34-61-FMC.md §170）の X-Plane での確認、空中。P&W の貨物機のリバリー（ICL 4X-ICB：simconfig の FREIGHTER、laminar/B747/freighter 1）で、銚子沖の海上 FL200・東向き・TAS 205 m/s（約 290 kt）で開始（機体を読み直す、ISA・無風）。A/P と A/T SPD で落ち着かせ、THRUST LIM の CLB> で CLB の reference を覚え、CLB 2> で CLB 2。405（と 570）は 15,000 ft で CLB に戻る（FCOM p.1273）ので、reference は CLB と同じ。109（P&W の旅客機）なら 35,000 ft まで残り、FL200 では推力で 12 % 減（EPR で約 0.1 下：回帰試験）。EICAS の文字は CLB 2 のまま（T/C か乗員の選択まで）。EICAS を撮る。Lua の誤りも確かめる",
+  "description": "上昇の減格の消え方を FCOM の有効番号で分けた（2026-11-19、notes/ATA-34-61-FMC.md §172）の X-Plane での確認、空中。P&W の貨物機のリバリー（ICL 4X-ICB：simconfig の FREIGHTER、laminar/B747/freighter 1）で、銚子沖の海上 FL200・東向き・TAS 205 m/s（約 290 kt）で開始（機体を読み直す、ISA・無風）。A/P と A/T SPD で落ち着かせ、THRUST LIM の CLB> で CLB の reference を覚え、CLB 2> で CLB 2。405（と 570）は 15,000 ft で CLB に戻る（FCOM p.1273）ので、reference は CLB と同じ。109（P&W の旅客機）なら 35,000 ft まで残り、FL200 では推力で 12 % 減（EPR で約 0.1 下：回帰試験）。EICAS の文字は CLB 2 のまま（T/C か乗員の選択まで）。EICAS を撮る。Lua の誤りも確かめる",
   "reload": true,
   "livery": "ICL 4X-ICB",
   "flight": {

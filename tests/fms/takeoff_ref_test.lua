@@ -254,7 +254,7 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
--- (2026-11-19, notes/ATA-34-61-FMC.md §170) the armed climb by the FCOM's
+-- (2026-11-19, notes/ATA-34-61-FMC.md §172) the armed climb by the FCOM's
 -- effectivity: the 109 (a P&W passenger) by the takeoff's whole reduction
 -- (the EEC's, with an assumed temperature: 27 % CLB 2, FCOM p.1273); the
 -- 405 (a P&W freighter: laminar/B747/freighter) and 570 (GE: engines/type 1)
