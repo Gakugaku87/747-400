@@ -2,9 +2,21 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-11-14 夜（PC のセッション：クラウドのセッションからの引き継ぎ 1〜5 を進めた。FPPM の離陸速度を X-Plane で確かめ、カスタム acf の最大重量を FCOM の MTOW 870,000 lb に、P&W の巡航の推力の基準 CRZ を FPPM の最大巡航 EPR に、利用者の答えで P&W の巡航の既定を CRZ に、CLAUDE.md の資料に FPPM を足し、それを入れた Release `custom-2026.11.14.2` を公開した：下の最初の 3 項目。その前、11-14 昼にクラウドのセッションが FMC の離陸速度を FPPM の表に置き換え、11-14 朝に巡航の A/T のレバーの揺れを直して Release `custom-2026.11.14` を公開した）。
+最終更新：2026-11-19（クラウドのセッション：利用者の問い「20000ftを超えてもディレート推力がCLBに戻らなかった」から、上昇の減格（CLB 1・2）の消え方と待機の選び方を FCOM の有効番号どおりに分けた。枝 `claude/derate-thrust-clb-spec-g202hh` の draft PR まで。X-Plane の確かめは開発 PC へ：下の最初の項目）。その前は 2026-11-14 夜（PC のセッション：クラウドのセッションからの引き継ぎ 1〜5 を進めた。FPPM の離陸速度を X-Plane で確かめ、カスタム acf の最大重量を FCOM の MTOW 870,000 lb に、P&W の巡航の推力の基準 CRZ を FPPM の最大巡航 EPR に、利用者の答えで P&W の巡航の既定を CRZ に、CLAUDE.md の資料に FPPM を足し、それを入れた Release `custom-2026.11.14.2` を公開した：下の最初の 3 項目。その前、11-14 昼にクラウドのセッションが FMC の離陸速度を FPPM の表に置き換え、11-14 朝に巡航の A/T のレバーの揺れを直して Release `custom-2026.11.14` を公開した）。
 
 ## いまどこか
+
+- **上昇の減格（CLB 1・2）を FCOM の有効番号で分けた（2026-11-19、クラウドのセッション。利用者の「FCOMの決まり通りに直そう」。notes/ATA-34-61-FMC.md §170）**：`a465b93`（コード・試験・シナリオ）と、この記録のコミット。枝 `claude/derate-thrust-clb-spec-g202hh` の draft PR（宛先 master）。`overhaul`・`master`・`custom` にはまだ入れていない。
+  - 発端：利用者の「20000ftを超えてもディレート推力がCLBに戻らなかった」。P&W の旅客機（109）は FCOM p.1273 (11.32.3) どおり、CLB 1 は 30,000 ft、CLB 2 は 35,000 ft で CLB に戻るので、FL200 ではまだ推力で 5・12 % 減（直す前から仕様どおり）。EICAS と THRUST LIM の「CLB 1」「CLB 2」は高度では変わらず、T/C か乗員の CLB> まで残る。
+  - 直したこと：FCOM が 109 と 405・570 で分けている 2 つを、プロジェクトの決まり（EFFECTIVITY_405.md：405 は貨物機、570 は GE）どおりに。消え方（`B747.42.ref_thrust_model.lua`）：405・570（GE か `laminar/B747/freighter` 1）は 15,000 ft で CLB、109 は前のまま。待機させる上昇（`B747.68.thrlim_model.lua`）：405・570 は TO 1 で CLB 1、TO 2 で CLB 2（FCOM p.1315）、109 は前のまま離陸の減らし方。前はどちらもエンジン型式だけ（消え方）か全型式 109（選び方）で、P&W の貨物機（ICL 4X-ICB）は 109 の値、GE は assumed temperature や運航者の % で待機が変わった。推定：405・570 の TO で CLB、assumed temperature で変えない、10,000 ft から直線。
+  - 試験（クラウドの LuaJIT 2.1、代わりの DataRefs.txt）：`ref_thrust_model_test` 56（+5）、`thrlim_model_test` 81（+12）、`eec_module_test` 192（+2）、`takeoff_ref_test` 70（+4）、`scenario_keys_test` 812（+4：新しいシナリオ 2 本）。全体 `checks 18774`・`passed 288, failed 1`（直す前 18747・288/1。落ちたのは両方とも `mutate_test`：Linux の終了コード）。構文 634 本。
+  - 気づいたこと（直していない）：GE の assumed temperature の N1 が TO の N1 より高くなる（海面・15 ℃ で SEL 30〜50 は 105〜107 % N1、TO は 103.9 %：§170 の最後）。
+  - **開発 PC のセッションへの引き継ぎ**：
+    1. PR を入れるかは利用者が決める。入れたら `overhaul`・`master` をそろえ、`bash docs/overhaul/tools/update_custom_branch.sh` で `custom` を更新して push。
+    2. 回帰：`bash tests/run.sh` が `checks 18852`・`passed 289, failed 0`（11-14 の 18,825 に +27）か。構文 634 本。
+    3. X-Plane（カスタム acf）：新しい `s336_clb_arm_405`（地上、ICL 4X-ICB の P&W 貨物機：TO 1・TO 2・D-TO・D-TO 1 の待機）と `s337_clb_washout_405`（FL200：CLB 2 の reference が CLB と同じ、EICAS の行は CLB 2）。回帰に `s141_vnav_takeoff`・`s152_eicas_thrust_ref`・`s154_eo_takeoff_thrlim`・`s184_page_auto_570_takeoff`（GE）。Log.txt の Lua の誤り。ICL 4X-ICB のリバリーが開発 PC で読めるか（テクスチャが無くても simconfig は読む）。
+    4. FCOM の原文で確かめる（このセッションは notes の要約で作った）：p.1273 (11.32.3) で 405・570 も 10,000 ft から直線で戻すか、p.1315 で 405・570 の TO が CLB を待機させるか・assumed temperature で変わらないか。違えば直す（推定の印も外す）。
+    5. GE の assumed temperature の N1 を直すかを利用者に聞く（資料：FCOM PI の CF6 の assumed temperature の表があるか）。
 
 - **Release `custom-2026.11.14.2`（2026-11-14 夜、利用者の「Release作って〜」）**：`custom` `a0927ada`（overhaul `1643b637`：FPPM の離陸速度、acf の最大重量、P&W の CRZ の値と既定）から `make_release.sh` で作った（注釈付きタグ、コミット `26f84dde`。1,996 ファイル・779 MB。前の版との違いは 8 ファイル：acf、EEC の 2 つ、離陸速度の 3 つ、PERF FACTORS と推力制限のモデル）。GitHub で公開済み（Latest、題「747-400 custom 2026-11-14.2（飛行用）」）。内蔵ブラウザの GitHub のサインインが切れていたので、利用者にサインインしてもらった。
   - 確かめ（リポジトリの外の `D:\b747_review\release_check`、22:29〜22:55）：タグの中身を `Aircraft/747-400-release-test` に展開し、3D 一式と GE のリバリー（JAL JA8913。利用者の機体は `747-400-custom-2026.11.14` に入れ替わっていたので、そこから：`prepare_release_test.sh` を直した）を重ねた。`r01` 4/0（エンジン型式 GE、acf の最大重量 394,625 kg、CDU の IDENT CF6-80C2-B1F・AIRAC 2611、外からの写真）、既定のリバリー（P&W）で `v_300t_f20` 5/0（300 t・フラップ 20 で 129/142/158）・`s07` 7/0・`s334` 30/0。開発の機体を読み込み直し（`s306` 2/0）、フォルダーを消し、X-Plane を終えた。Log.txt に Lua の誤り・機体の E/ の行なし。
@@ -700,6 +712,10 @@
   - 2026-10-28 追記：その後、FMS ブリッジ（notes/ATA-34-61-FMC.md §23）に `laminar/B747/fms/xp/displayed`（XPLMSetDisplayedFMSEntry を X-Plane のスレッドで呼ぶ）ができたので、(b) はプラグイン側が済んでいる。(c) の段 7 も済。推奨は (b)：残りは FMC・CDU 側だけ（LEGS の CTR の印と STEP キー、PLAN の中心の点を `xp/displayed` に書く）。(a) は X-Plane の CDU のページの状態に頼るうえ、XTLua の作業スレッドから X-Plane の FMS に触れる形になる（§23 で X-Plane が落ちた原因と同じ）。利用者は (b) に決めた（2026-10-28：下の「決まったこと（2026-10-28、利用者の回答）」）。
 - （2026-10-28 に決まった：下の「決まったこと（2026-10-28、利用者の回答）」）ND の MAP CTR の縮尺（2026-10-26、5-2 段 5c-3）：MAP CTR では、地図の記号（局・経路の点・TCAS）と X-Plane の地図の層が拡大の MAP と同じ縮尺（465 px＝選んだ範囲）で描かれ、見えるのは機体から 250 単位（182 px、範囲の約 4 割）まで。一方、全周のローズの半径は約 230 px。FCOM p.1143 の図からは、MAP CTR ではローズの半径が範囲に当たるようにも読めるが、明記は無い。実機の MAP CTR で、ローズの円が選んだ範囲（または範囲の半分）を表すかを確かめたい。直すなら、MAP CTR のときだけ X-Plane の地図の範囲を 1 段上げ、記号・TCAS・高度の弧・POS の線の縮尺を半分にする（試しに X-Plane の範囲を 1 段上げると地図の層の縮尺が半分になることは確かめた）。
 
+## 決まったこと（2026-11-19、利用者の回答。クラウドのセッション）
+
+- 上昇の減格の消え方と、待機させる上昇の選び方を、FCOM の有効番号の決まりどおりにする（問い「直すなら、決まりどおり『P&W の旅客機は①、P&W の貨物機と GE は②』に、消え方と選び方の両方をそろえるのがよいと思います。①と②を SIM CONFIG などで選べる設定にする手もあります。どうしますか？」への答え「FCOMの決まり通りに直そう」。①は 109 の 30,000・35,000 ft と減らし方の規則、②は 405・570 の 15,000 ft と TO 1→CLB 1・TO 2→CLB 2）。済（notes/ATA-34-61-FMC.md §170）。選べる設定にはしない。
+
 ## 決まったこと（2026-11-14 夜、利用者の回答。PC のセッション）
 
 - 巡航の推力の基準の既定を、P&W は CRZ に戻す（問い「P&W の既定を CRZ に戻しますか？」、選択肢「P&W は CRZ に」「CLB のまま」への答え「P&W は CRZ に」。選択肢の説明：VNAV の巡航で EICAS が CRZ と FPPM の値を出し、A/T の上限も最大巡航推力に。巡航上昇の間は CLB、新しい高度で CRZ（ATA34_2 p.664 からの推定）。GE・RR は CLB のまま）。済（notes/ATA-34-61-FMC.md §169）。
@@ -874,6 +890,7 @@ PLAN.md §3 に書いた。要点：
 
 ## 推定で作った部分
 
+- 上昇の減格の 405・570（2026-11-19、notes/ATA-34-61-FMC.md §170、`B747.68.thrlim_model.lua`・`B747.42.ref_thrust_model.lua` に「estimate」）：405・570（GE か貨物機）で、TO（減格なし）が CLB を待機させること、assumed temperature で待機する上昇を変えないこと（FCOM p.1315 の要約は TO 1・TO 2 だけ）、10,000 ft から 15,000 ft へ直線で戻すこと（要約は「15,000 ft で CLB」だけ）、RR の貨物機も 405 とすること。開発 PC で FCOM の原文を確かめる（「いまどこか」の最初の項目の引き継ぎ 4）。
 - V 速度（FMC 6-1・6-2 段 3d、`B747.60.to_speeds_model.lua`・`B747.68.vref_model.lua`、notes/ATA-34-61-FMC.md §128・§168）：2026-11-14 から離陸速度は FPPM（747-400F/PW4056）の表。推定は、GE・RR も PW4056 の表、表の空欄（離陸できない重い・暑い所と p.67 の欠け）を同じ区分の重さのあいだか隣の区分の差で埋め、VR を V2 − 3 kt 以下・V1 を VR 以下に抑えたこと、重さの 200〜400 t の外は端、図の 10,000 ft より上・−2,000 ft より下・右端より暑い所は端、減推力の % のあいだは表のあいだ（20 % より大きいと 20 % の表）。前の推定（2026-11-02〜11-13）：離陸速度の表そのもの（資料が無く、もとの表）、表の 3 か所と区分 B の線の 36.84℃ の点。今も：表の % のあいだの減格は最小操縦速度のあいだ（最後の表より大きい % は最後の表）、RB211 は PW4056 の表、VREF の標高は FMC の着陸高度（無ければ 0）、PERF INIT の前の VREF は機体の重量、VREF の表の外は端の傾き、最小値の切り上げ。
 - A/T（6-4・FMC の段 9f1、`B747.70.at_model.lua` と `B747.70.xt.autopilot.lua` に「estimate」）：運転中のエンジンの判定（N1 15 %：前の monitor のまま）、地上で 30 kt 未満になったら 50 kt の禁止を解くこと、EEC の IDLE で遅いときに推力を足すのを電波高度 100 ft の上だけにしたこと（9f2 からは使わない）。9f2：servo の速さ（3D のレバーの 50° に 10°/s を 0.2/s）、則のゲイン（SPD 0.002/s/kt と 0.06/kt/s、減は半分、THR 1.2e-5/s/fpm（G/A はエネルギーの率に 3e-5 で、2,000 fpm より上で戻す：2026-11-02、notes/ATA-34-61-FMC.md §130）、THR REF 0.33/s/EPR・0.003/s/%N1）、手が止まってから指令に戻るまでの 1 秒、VNAV の降下の遅いときの SPD から IDLE に戻る 5 kt、FLCH の降下で IDLE を見せず stop で HOLD。FLCH の上昇の THR で、速さが目標以上の間は目標の速さでのエネルギーの率を使うことと、それを目標の 5 kt 下で 0 にする幅（2026-11-08、notes/ATA-34-61-FMC.md §152）。巡航のガストの補い（2026-11-10、notes/ATA-34-61-FMC.md §162）：フラップ UP の SPD の速さを慣性の加速度で補うこと、GUST_TAU 20 秒、最大速度の限界と最小機動速度から補いを外す GUST_FADE_KT 10 kt、IAS/TAS の比のならし 2 秒、IRU の加速度（X-Plane の OpenGL の加速度を空気に対する経路へ射影）を使うこと。
 - FMC の VNAV（6-1・6-2 段 9b・9c、`B747.68.vnav_model.lua` と `B747.70.xt.autopilot.lua` に「estimate」）：段階の切り替えの閾値（CRZ ALT の 50 ft と 500 ft、MCP の高度が 200 ft 下）、経路への戻し（1 ft につき 1 fpm、経路の V/S より最大 1,000 fpm 急。段 9c で 3 fpm・1,500 fpm から下げた）、上昇の制限の選び方（2026-11-08 から、SID の脚と、上昇中は手続きの無い脚を前の予測の T/C まで、予測の前は経路の残りの半分まで、到着・進入の脚は入れない：notes/ATA-34-61-FMC.md §151。前は SID が無ければ、どの段階でも E/D までの道のりの半分）、経路の 200 ft 下からの A/T SPD（2026-11-09 から 50 ft の内に戻るまで：notes/ATA-34-61-FMC.md §157）、離陸の推力の基準を電波高度 1,000 ft まで保つこと（段 9f の THR REDUCTION まで）、A/T を active にするのは VNAV の engage の時だけ、フラップを上げ始めた判定（地上の角度から 0.02 の比）。
@@ -2631,3 +2648,6 @@ X-Plane（カスタム acf）：`s07_cruise_ff`（FL350 の ALT HOLD：最後の
   - X-Plane：`s172` 11/11、新しい `s289_arr_change_wsss` 55/55（1 回目 49/52：確認の間の取り方）、雨の音（Log.txt、降水の比、音声の出力の大きさ）、Release `custom-2026.11.12` の読み込み 7/7 と、そのフォルダーでの `s289` 55/55・`s285` 25/25。
   - キットと道具の 11 項目（「いまどこか」の 1 つ目）。`has_joystick` が書けないことが分かり、警告の形にした。X-Plane でキットを確かめた（Release の写しからの起動し直しと一覧、開発の作業ツリーでの殺した回の復帰と一覧）。回帰 258 本（確認 17,058 件）・構文 601 本。
   - Fable 5 体のレビュー（第 1 波）を始めた。
+- 2026-11-19（クラウドのセッション。X-Plane も `_ref/` も無い所で）：利用者の問い「20000ftを超えてもディレート推力がCLBに戻らなかったんだけどこれってどういう仕様になってるの」に、P&W の旅客機（109）は FCOM p.1273 どおり CLB 1 が 30,000 ft、CLB 2 が 35,000 ft で戻る（FL200 では 5・12 % 減）、EICAS の「CLB 1/2」は T/C か乗員の選択まで残る、と答えた。続く問い「確かDerate-Climbのキャンセルの仕方ってオプションが2通りあったよね？」に、FCOM の 109 と 405・570 の 2 通りと、コードの当て方のずれ（P&W の貨物機が 109、選び方は全型式 109）を答え、「FCOMの決まり通りに直そう」で直した（notes/ATA-34-61-FMC.md §170、「いまどこか」の最初の項目）。
+  - LuaJIT は Ubuntu の apt の 2.1。X-Plane の `DataRefs.txt` の代わりに、XPlane2Blender の 12.08 の写しへ `tests/static/sim_datarefs.tsv` の名前と型を足し、`-` の名前を外したもの（`sim_datarefs_test` 34 件が通る）。
+  - 新しいシナリオ `s336_clb_arm_405`・`s337_clb_washout_405` は開発 PC で回す。
