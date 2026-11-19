@@ -1,5 +1,5 @@
 {
-  "name": "s342_pw_eec_altn_n1",
+  "name": "s344_pw_eec_altn_n1",
   "description": "P&W の EEC の ALTN は N1 モード（2026-11-20、GAP_ANALYSIS.md N19-ENG-05、notes/ATA-70-80.md §25）の X-Plane での確認、空中、P&W。銚子沖の 10,000 ft（270 t）で開始し、A/T を外してレバーを 0.55 に固定。EEC 2 が自分で N1 モードに移る（lockup：その時の推力のまま、N1 は 20 秒変わらない。PW_PPM p.197-198、FCOM p.877）、ENG 2 EEC MODE、A/T は使えない、ALTN 灯（N2 > 50 %：PW_PPM p.199）。レバーを進めると推力が従い、戻すと元の N1 へ（delta N1 を保つ）。故障が消えてもスイッチを使うまで N1 モードのまま（p.198）。EEC MODE 2 を ALTN にすると lockup が外れ、約 100 rpm/秒（2.8 % N1/秒）で予定の N1 へ上がる（手動で選ぶと推力が増える：FCOM p.877）。NORM に戻すと EPR モード、A/T をまた使える。機体を読み直す",
   "reload": true,
   "flight": {
