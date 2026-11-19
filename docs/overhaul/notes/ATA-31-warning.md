@@ -423,3 +423,12 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - 確かめ方（案）：P&W で、フラップ 30・スピードブレーキの自動で着陸し、接地から 60 kt まで逆推力いっぱい → reverse idle → 格納、と、いっぱいから直接格納の 2 通り。記録：`laminar/B747/engines/display_N1`・`display_EPR`・`display_EPR_max`・`EPR/red_on`、`throttle_jet_rev_ratio_all`、逆推力の扉の比、`thrust_dry_n`、`laminar/B747/CAS/warning_status[2]`〜`[7]`、master WARNING。EICAS の写真。今の逆推力のシナリオ `s12_reverser` は止まったまま（パーキング・ブレーキ）で、着陸の滑走は見ていない（試験の穴）。
 - 直し方の候補（確かめてから）：「逆推力でない」をレバーでなく逆推力の扉（格納しきるまで）や N1 の下がり方でも見る、着陸の後の抑止を資料どおりに、など。
 - 型：フルレビューの依頼（[REVIEW_2026-11-19_request.md](../REVIEW_2026-11-19_request.md)）の型 J（その段階・モードだけの判定が、ほかの段階で働く：離陸の判定が着陸の滑走で）の例。
+
+## 12. 2026-11-19 の資料から（段取りの段 2。担当の報告の要約は [SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 8・9、GAP は GAP_ANALYSIS.md §7 の N19-WARN）
+
+- 資料：EICAS_WS（Atlas Air の訓練スライド、2000、全ページ画像）、AOM_JP（日本語の運用規程 15-18、FCOM より古い版）、LH_MAN（Lufthansa の整備文書の使い方）、TCDS_747 Note 12・13（EICAS の 7 種類）。並び・CANC/RCL・beeper の 4 回・音が消える条件・始動の抑止・離陸の抑止（80 kt〜rotation+20 s/400 ft、RTO 75 kt、V1〜V1+25 s/400 ft）は FCOM と今の作りと一致。
+- **離陸形態警報**（AOM_JP p.10）：siren の条件は地上・V1 以下・FUEL CONTROL 3 本以上 RUN・**「エンジン 2 または 3 のスラストレバーが離陸範囲」**（FCOM p.1557 は thrust、ATA27 p.730 は N1 表示）。今の作りは表示の N1 と全エンジン共通の逆推力のレバー → §11 の候補 1（着陸の滑走で武装）を直す N19-WARN-01。着陸の後と逆推力の間の抑止は、どの資料にも無い。
+- **CONFIG GEAR**（AOM_JP p.10・p.23）：800 ft 以下でレバーが原因のものは master リセットで siren と灯が止まる（フラップが原因のものは止まらない）。今は全部リセット不可（N19-WARN-02）。OVRD は siren を止める（ATA31 と同じ、FCOM はメッセージが消える：§9 の 10 番の材料、作りは FCOM のまま）。Stall Warning は「In Flight」（AOM p.12：§9 の 11 番の出典）。
+- **STATUS のラッチ**（LH_MAN p.52・p.78・p.82）：STATUS にはラッチするもの（EIU の NVM：NVM・NVM-A（空中で起きたとき）・NVM-G（地上））があり、条件が消えても残り、CMC の ERASE で消す。分かっているのは DRIVE DISC（LH24 p.64）、ELEC IDG n VALVE（NVM-A）、HYD の過熱（空中で NVM：ATA29_32 p.100）。FCOM の駐機後の手順は STATUS を記録する（p.152）（N19-WARN-03）。ALT ALERT SYS は STATUS（N19-WARN-04）。
+- AUTOPILOT DISC：AOM の音は siren（FCOM の 570 と同じ、109 は wailer）。
+

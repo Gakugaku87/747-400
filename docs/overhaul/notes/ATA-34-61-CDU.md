@@ -525,3 +525,8 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 ## 10. 段取り（2026-10-26）
 
 - 6-2 は 6-1 と 1 本の段取りで進める（notes/ATA-34-61-FMC.md §10）。§8 の進め方の 1 は段 2、2 は段 3、3 は段 5〜7、4 は段 5・9、5 は段 8・11・12 に当たる。当面の小修正（CDU-09・10・28・33）は段 1。
+
+## 2026-11-19 の資料から（段取りの段 2。[SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 9、GAP は N19-CMC・N19-CDU）
+
+- CMC の CDU 画面（LH_MAN p.46–86、747-400 の実例）：CMC-L MENU 1/2 は今のコードと一致、2/2 は <EXISTING FAULTS・<FAULT HISTORY。PRESENT LEG FAULTS は FDE ごとに 2 行（「*STATUS: 22 10 82 00」と「<NO LAND 3」）、ラッチする STATUS に ERASE>、MSG の画面は「*RA-L FAIL (NO BUS OUTPUT)」「MSG:34077 ATA:34-33」と日時・フェーズ・HRD/INT。今の <PRESENT LEG FAULTS は開発用の表示のまま（N19-CMC-01）。故障の記録は無い（N19-CMC-02）。CMCS（787）と OMS（一般論）は使わない。
+
