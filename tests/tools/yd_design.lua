@@ -15,8 +15,9 @@
 -- -K beta' through a first-order actuator of TAU s, no aileron, and
 -- prints for each K (degrees of rudder per degree per second; default a
 -- range) the dutch roll's period and damping ratio from an initial 2
--- degrees of sideslip, and the rudder per degree of bank that holds a
--- steady level turn without sideslip (the turn coordination).
+-- degrees of sideslip, and for a steady level turn the sideslip per degree
+-- of bank without rudder and the rudder that takes it away (the turn
+-- coordination; the yaw damping's moment balanced).
 -- With CLOSED=1 in the environment the input is the pedals' and trim's
 -- (rud_in, a ratio) instead of the rudders: fitted on a stretch with the
 -- yaw dampers ON, K 0's line is then the closed loop's dutch roll (the
@@ -237,10 +238,16 @@ for _, K in ipairs(KS) do
     for _, e in ipairs(ev) do if math.abs(e[2]) <= 0.05 then others[#others + 1] = ("%.3f"):format(e[1]) end end
     print(("K %.2f: %s; real %s; the rudder up to %.2f deg for 2 deg of sideslip"):format(K, txt, table.concat(others, " "), maxd))
 end
--- the turn coordination: a steady level turn at 1 degree of bank, no
--- sideslip: r = 57.3 g sin(phi) / TAS, then beta' = 0 gives the rudder
-local g = 9.80665
-local r1 = math.deg(g * math.sin(math.rad(1)) / tas)
-local d1 = -(B[3] * r1 + B[4] * 1) / B[5]
-print(("turn coordination: %.4f deg of rudder per degree of bank (yaw rate %.3f deg/s per degree); r' then %.4f, p' %.4f"):format(
-    d1, r1, R[3] * r1 + R[5] * d1, P[3] * r1 + P[5] * d1))
+-- the turn coordination: a steady level turn at 1 degree of bank (p = 0;
+-- beta', p' and r' all 0, the aileron from the roll's balance). Without
+-- rudder it keeps a sideslip; the rudder that takes it away balances the
+-- yaw rate's damping. (Until 2026-11-20 this solved beta' = 0 alone with
+-- r = g sin(phi) / TAS and printed "0.0205 deg of rudder per degree" for
+-- s125: that left out the yaw moments: notes/ATA-22.md §64.)
+local cb, cr = R[1] - R[4] * P[1] / P[4], R[3] - R[4] * P[3] / P[4]     -- the yaw's balance, the aileron eliminated
+local b_r = -cr / cb
+local r0 = -B[4] / (B[1] * b_r + B[3])
+local dr = -cr / (R[5] - R[4] * P[5] / P[4])                             -- with beta 0: rudder per deg/s of yaw rate
+local r1 = -B[4] / (B[3] + B[5] * dr)
+print(("turn coordination: a steady turn without rudder %.4f deg of sideslip per degree of bank (yaw rate %.3f deg/s); without sideslip %.4f deg of rudder per degree"):format(
+    b_r * r0, r0, dr * r1))

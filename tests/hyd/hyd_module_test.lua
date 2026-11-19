@@ -667,6 +667,38 @@ T.check(get(YDM, 0) == 6 and get(YD_UPR) == 0, "YD: the upper's failure: the fau
 rt:set("laminar/B747/flt_ctrls/fail/yaw_damper", 0, 0)
 frames(0.2)
 T.check(get(YDM, 0) == 3 and get(YD_UPR) == 1, "YD: a short fault: autorecovery, the fade-in")
+-- GAP N19-AFDS-03: the turn coordination's inputs through the glue. At
+-- 150 kt rolling right 2.5 degrees a second: each rudder 0.69 x 2.5 degrees
+-- right of its 4 (before, none at 0 AOA); a steady turn at 60 degrees of
+-- bank and 20 of pitch (the body roll rate -turn rate x sin(pitch), the
+-- pitch rate read too): none
+local YDU, YDL = "laminar/B747/flt_ctrls/yaw_damper_upr", "laminar/B747/flt_ctrls/yaw_damper_lwr"
+rt:set("laminar/B747/airdata/valid", 0, 1)
+rt:set("laminar/B747/airdata/valid", 2, 1)
+rt:set("sim/flightmodel/position/indicated_airspeed", 150)
+rt:set("sim/flightmodel/position/true_airspeed", 80)
+rt:set("sim/flightmodel/position/groundspeed", 80)
+frames(6)
+T.check(get(YDM, 0) == 4 and get(YDM, 1) == 4, "YD: both in the flight mode")
+rt:set("sim/flightmodel/position/P", 2.5)
+frames(1)
+T.near(get(YDU), 0.69 * 2.5 / 4, 0.01, "N19-AFDS-03: rolling right 2.5 deg/s at 150 kt: the upper rudder 1.7 degrees right (" .. get(YDU) .. ")")
+T.near(get(YDL), 0.69 * 2.5 / 4, 0.01, "and the lower (" .. get(YDL) .. ")")
+do
+    local w = math.deg(9.80665 * math.tan(math.rad(60)) / 80)
+    local th, ph = math.rad(20), math.rad(60)
+    rt:set("sim/flightmodel/position/phi", 60)
+    rt:set("sim/flightmodel/position/theta", 20)
+    rt:set("sim/flightmodel/position/P", -w * math.sin(th))
+    rt:set("sim/flightmodel/position/Q", w * math.sin(ph) * math.cos(th))
+    rt:set("sim/flightmodel/position/R", w * math.cos(ph) * math.cos(th))
+    frames(3)
+    T.near(get(YDU), 0, 0.005, "a steady turn at 60 degrees of bank, 20 of pitch: no rudder (the pitch rate in: " .. get(YDU) .. ")")
+end
+for _, d in ipairs({"phi", "theta", "P", "Q", "R", "indicated_airspeed", "true_airspeed", "groundspeed"}) do
+    rt:set("sim/flightmodel/position/" .. d, 0)
+end
+frames(1)
 
 
 -- (2026-11-04) the overheat failure (notes/ATA-29.md §11): system 2's
