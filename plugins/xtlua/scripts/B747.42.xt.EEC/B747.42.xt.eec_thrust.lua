@@ -189,6 +189,7 @@ function B747_eec_reference(engine)
     refIn.packs_on, refIn.wai, refIn.nai = inp.packs_on, inp.wai, inp.nai[engine + 1]
     refIn.mach = simDR_epr_mach
     refIn.kias = inp.kias
+    refIn.freighter = inp.freighter     -- (2026-11-19) the 405's climb derate washout
     refIn.mode = B747_eec_thrlim_mode()
     refIn.to_pct = B747DR_eec_thrlim_to_pct
     local sel = B747DR_eec_thrlim_sel

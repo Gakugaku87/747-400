@@ -254,6 +254,26 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
+-- (2026-11-19, notes/ATA-34-61-FMC.md §172) the armed climb by the FCOM's
+-- effectivity: the 109 (a P&W passenger) by the takeoff's whole reduction
+-- (the EEC's, with an assumed temperature: 27 % CLB 2, FCOM p.1273); the
+-- 405 (a P&W freighter: laminar/B747/freighter) and 570 (GE: engines/type 1)
+-- by the takeoff's rating, TO 1's CLB 1 (FCOM p.1315)
+rt:set("laminar/B747/engines/to_reduction", 27)
+frames(0.2)
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "the 109's TO 1 of 27 % in all: CLB 2 armed")
+rt:set("laminar/B747/freighter", 1)
+frames(0.2)
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "a P&W freighter (the 405): TO 1's CLB 1")
+rt:set("laminar/B747/freighter", 0)
+rt:set("laminar/B747/engines/type", 1)
+frames(0.2)
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "GE (the 570): TO 1's CLB 1")
+rt:set("laminar/B747/engines/type", 0)
+frames(0.2)
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "a P&W passenger again: CLB 2")
+rt:set("laminar/B747/engines/to_reduction", 0)
+
 -- (2026-11-19, notes/ATA-34-61-FMC.md §170 3) the assumed temperature on
 -- the EICAS's line with the takeoff's limit only (FCOM p.831: "for reduced
 -- thrust takeoff"; the THRUST LIM page in the air has no SEL, p.1337-1339):

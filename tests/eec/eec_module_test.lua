@@ -97,6 +97,14 @@ rt:set("laminar/B747/fms/thrlim/code", 22)
 frames(0.2)
 T.check(get(ENG .. "ref_thr_limit_mode") == "CLB 2" and get(ENG .. "display_EPR_ref", 1) < 1.565,
     "the number 22: CLB 2 for the EEC, its reference " .. get(ENG .. "display_EPR_ref", 1))
+-- (2026-11-19) a P&W freighter (laminar/B747/freighter 1): the 405's CLB 2
+-- gone at 15,000 ft, at 30,000 ft CLB's 1.57 (FCOM p.1273)
+rt:set("laminar/B747/freighter", 1)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 1), 1.57, 0.005, "a P&W freighter's CLB 2 at 30,000 ft: CLB's 1.57 (the 405's washout)")
+rt:set("laminar/B747/freighter", 0)
+frames(0.2)
+T.check(get(ENG .. "display_EPR_ref", 1) < 1.565, "a passenger's again: a little less")
 -- (2026-11-05 review) CRZ, the number 30, for P&W, GE and RR: a reference
 -- in range and no Lua error. A reviewer read P&W's and RR's cruise table
 -- lookups (find_closest_weight/altitude) as raising one every frame; they

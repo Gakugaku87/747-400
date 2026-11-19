@@ -3069,6 +3069,30 @@ X-Plane も `_ref/` も無いクラウドのセッションで、コードとノ
   3. 原因に合わせて直す：先読みの時間を測った遅れから決める、LNAV の則に航跡の差の減衰を足す、内側のロールのループの利得を直す、のどれか。資料は旋回の形（ATA34_2 p.615、p.626）だけで、許される行き過ぎの量は無い。目安（例：針路の行き過ぎ 1° 未満、脚からのずれ 0.02 NM 未満）は利用者に聞く。
 - 型：前のフルレビューの型 E（モードの入り・切り替え・捕捉の過渡）に近い。2026-11-19 のフルレビュー（型 F〜J：[REVIEW_2026-11-19_request.md](../REVIEW_2026-11-19_request.md)）とは別の調べとして行う。
 
+## 172. 上昇の減格（CLB 1・2）を FCOM の有効番号で分ける（2026-11-19：利用者の問い「20000ftを超えてもディレート推力がCLBに戻らなかったんだけどこれってどういう仕様になってるの」から、「FCOMの決まり通りに直そう」。クラウドのセッション）
+
+- 資料（このセッションには `_ref/` が無いので、notes の要約による。原文は開発 PC で確かめる：PROGRESS.md の引き継ぎ）：
+  - FCOM p.1273 (11.32.3)：109 は 10,000 ft まで推力で CLB 1 が 10 %、CLB 2 が 20 % 減。そこから直線で戻り、CLB 1 は 30,000 ft、CLB 2 は 35,000 ft で CLB と同じ。405・570 は両方 15,000 ft で CLB（notes/ATA-22-AT.md §4.6）。FMSPG p.33 (2-21) も 15,000 ft。
+  - 待機させる上昇の選び方：109 は離陸の減らし方（5 % 未満 CLB、15 % 未満 CLB 1、それ以上 CLB 2：FCOM p.1273）。405・570 は TO 1 で CLB 1、TO 2 で CLB 2（FCOM p.1315）。
+  - プロジェクトの有効番号の決まり（EFFECTIVITY_405.md、2026-10-27）：機体は 109。405 の項目は `laminar/B747/freighter` が 1 のとき。FCOM が 109 と 570 で分ける項目は GE を 570 に。EEC の CON（approach idle）も「GE か freighter」を 405・570 としている（`B747.42.eec_model.lua`）。
+- 利用者の問いの答え（直す前から仕様どおりの所）：P&W の旅客機（109）は、FL200 ではまだ CLB 1 が 5 %、CLB 2 が 12 % 減（ISA・320 kt の上昇で EPR は CLB 1.43 に対して 1.39・1.33）。EICAS と THRUST LIM の「CLB 1」「CLB 2」は高度では変わらず、VNAV の T/C（段階が CRZ）か乗員の選択（THRUST LIM の CLB>）まで残る。
+- 前：消え方はエンジン型式だけで分けていた（P&W は 109、GE は 570）。P&W の貨物機（リバリーでは ICL 4X-ICB）も 109 の 30,000・35,000 ft だった。選び方は型式にかかわらず 109 の減らし方の規則だったので、GE と P&W の貨物機でも、assumed temperature や運航者の % で待機する上昇が変わった。
+- 作ったもの：
+  - `B747.42.ref_thrust_model.lua`：`M.CLB_GONE` を有効番号で分けた（`e109` 30,000・35,000 ft、`e405` 15,000・15,000 ft）。405・570 は「GE か freighter」。入力に `freighter`（つなぎ `B747_eec_reference` が EEC の入力 `inp.freighter` を渡す）。RR は前のまま（この関数を通らない。古い式で 10,000→15,000 ft、資料なし）。
+  - `B747.68.thrlim_model.lua`：`M.armed_clb`（109 は `auto_clb` の減らし方、405・570 は離陸の rating のまま）。入力 `by_rating`（状態 `s.by_rating`）。THRUST LIM の TO・TO 1・TO 2 の選択と、地上の毎フレームの待機の両方に効く。乗員が地上で選んだ上昇はそのまま（FCOM p.1316）。
+  - FMS（`B747.68.xt.fms.lua`）：`laminar/B747/freighter` を読み、`by_rating` を「エンジン型式 1（GE）か freighter 1」に。
+- 推定：405・570 で TO（減格なし）が CLB を待機させること。assumed temperature（D-TO・D-TO 1・D-TO 2）で待機する上昇を変えないこと（FCOM p.1315 の要約は TO 1・TO 2 だけ）。405・570 も 10,000 ft から 15,000 ft へ直線で戻すこと（GE では前から。要約は「15,000 ft で CLB」だけ）。RR の貨物機も 405 とすること（RR は資料が無く P&W と同じ扱い：EFFECTIVITY_405.md）。
+- 試験（クラウドの LuaJIT 2.1、代わりの DataRefs.txt）：
+  - `ref_thrust_model_test` 56 件（+5：GE の CLB 2 は 12,500 ft で 10 % 減、P&W の貨物機の CLB 2 は 12,500 ft で 10 % 減・CLB 1 は 15,000 ft で CLB・CLB 2 は 20,000 ft で CLB、旅客機の CLB 2 は 12,500 ft で 18 % 減）。
+  - `thrlim_model_test` 81 件（+12：405・570 の TO 1→CLB 1、TO 2→CLB 2、20 % の TO 1 でも CLB 1、TO で CLB、D-TO の 20 % で CLB、D-TO 1 の 27 % で CLB 1、フラップ 5 で CLB 1、乗員の CLB 2 が残る、109 の D-TO 20 % は CLB 2）。
+  - `eec_module_test` 192 件（+2：P&W の貨物機の CLB 2 は 30,000 ft で CLB の 1.57、戻すと少し下）。`takeoff_ref_test` 70 件（+4：FMS のつなぎ。TO 1 で減らし方 27 % のとき、P&W の旅客機は CLB 2、貨物機と GE は CLB 1）。新しい確かめは直す前のコードで落ちる（確かめた）。
+  - 全体：直す前 `checks 18747`・`passed 288, failed 1`、直した後 `checks 18774`・`passed 288, failed 1`（+27。落ちたのはどちらも `tests/kit/mutate_test.lua`：Linux の終了コード。2026-11-14 のクラウドのセッションと同じ）。開発 PC では `checks 18852`・`passed 289, failed 0` になるはず（11-14 の 18,825 に +27）。構文 634 本。
+  - 代わりの DataRefs.txt：XPlane2Blender の X-Plane 12.08 の写しに、`tests/static/sim_datarefs.tsv`（開発 PC の X-Plane 12.4.4 の型）の名前を足して型を合わせ、`-` の名前を外した（developer.x-plane.com の一覧は使わなかった）。`sim_datarefs_test` 34 件が通る。リポジトリには入れていない。
+- X-Plane のシナリオ（開発 PC で回す。このセッションには X-Plane が無い）：
+  - 新しい `s336_clb_arm_405`（地上、ICL 4X-ICB）：TO 1 で CLB 1、TO 2 で CLB 2、TO と SEL 50 で D-TO・CLB のまま、TO 1 と SEL 50 で D-TO 1・CLB 1、SEL を消して TO 1・CLB 1。CDU を撮る。
+  - 新しい `s337_clb_washout_405`（FL200、ICL 4X-ICB）：CLB 2 の reference が CLB と同じ、EICAS の行は CLB 2 のまま。EICAS を撮る。
+- 気づいたこと（直していない）：GE の assumed temperature の N1 が TO の N1 より高くなる。`ref_thrust_model` の D- は GA の表を TAT＝SEL で引いた値をそのまま使う。CF6 の表の %N1 は外気温が高いほど上がる（その気温での回転数）ので、海面・TAT 15 ℃ で SEL 30〜50 は 106.5〜105.3 % N1 と、TO の 103.9 % より上になる（減らし方 −8〜−4 %）。SEL 60 で 2 % 減。P&W（EPR）は暑いほど下がるので減る。GE の D- の作り方（表の N1 を今の気温に直すなど）は資料で確かめてから。
+
 ## 173. 2026-11-19 の資料から（段取りの段 2。担当の報告の要約は [SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 3・10・12・13、GAP は GAP_ANALYSIS.md §7 の N19-NAV・N19-ATC・N19-WB）
 
 - **航法データ（ARINC424 424-17）**：今の CIFP の読み方はほぼ ARINC どおり。高度の記述の記号（+、-、@、B、C、G〜J、V〜Y）の解釈（`proc_model.lua:165-176`）は全部正しい（「推定」を外せる：N19-NAV-07）。Route Type、RWxxB・ALL、missed の判定、GP の角度、CA・FA・VA・HA の at or above も合う。滑走路の長さ（`runway_length`：両端の LTP の間＋両側の displaced）は ARINC の Runway Length の定義（p.95–96）と同じものを計算している（RJAA 34L 4,004 m・RKSI 34R 4,002 m など、公表値との差 0.3 % 以内）：§170 の 1 の推定は裏付けられた。直すもの：fly-over の「B」（N19-NAV-01、中）、真方位「085T」（N19-NAV-02）、推奨航法施設の種類（N19-NAV-03）。速さの制限の記述（at／以下／以上：p.141）を読まないのは、FCOM p.1332 の「速さの制限は以下とみなす」で正しい。速さだけの制限（航法データの「-230」など）を FMC がどう表示するかは資料に無い（FMSPG p.127 は手の入力は高度の制限があるときだけ）：§170 の 2 の表示は FCOM の規則どおりのまま。
