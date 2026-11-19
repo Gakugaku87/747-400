@@ -875,6 +875,7 @@ Lua の値だけでは直せず、カスタム acf のパネル定義を変え�
   - N19-ENG-01・N19-ENG-02（高）と N19-ENG-04・N19-ENG-06（中）：済（16e396c8）。notes/ATA-70-80.md §24。
   - FMC（771923a5、notes/ATA-34-61-FMC.md §175）：済 N19-NAV-01・02・03・06・07・08、N19-ATC-01・02・04・05、N19-WB-03・04・05、N19-CDU-01。今のまま（資料を確かめた）N19-NAV-04・NAV-05・ATC-06。N19-ATC-03 は段 A（文が決まった要素の LOAD）を作っている、段 B（経路の許可など）は利用者に聞く。
   - N19-FCTL-01：測った（notes/AERO.md §3.23）。1 unit 1° は離陸・進入の資料に合うが、巡航を合わせるにはフラップの縦揺れのモーメントの合わせ込みも要る：利用者に進め方を聞いている。
+  - N19-WARN-03：済（ブランチ n19-warn03、X-Plane の s342 は未）。STATUS を EIU の NVM でラッチ：HYD OVHT SYS 1–4 は NVM-A（ATA29_32 p.100）、DRIVE DISC 1–4・BODY GR STRG SYS は NVM（種類の名は資料に無く推定：LH24 p.64、ATA29_32 p.626）。CMC の PRESENT LEG FAULTS に ERASE>（開発用の THROTTLE TESTS は外した。ほかの FDE と故障の記録は N19-CMC-01・02 のまま）。ほかの STATUS は種類が資料に無く今のまま（SRM がラッチする AILERON LOCKOUT・STAB TRIM UNSCHD・RUDDER RATIO も）。notes/ATA-31-warning.md §13。
   - 新しく見つけたもの（GAP の表の外）：A/T で着陸すると逆推力が出ない（直した：b134fbf1）、FMC が 60 秒ごとに X-Plane の重心を上書きする（本家から。直していない：AERO.md §3.23 の「気づいたこと」）。
 
 ### 7.2 中

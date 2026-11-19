@@ -238,8 +238,10 @@ local function write_cas(out)
         B747DR_CAS_advisory_status[ADV_BUS_ISLN + n - 1] = flag(cas.bus_isln[n])
         B747DR_CAS_advisory_status[ADV_DRIVE + n - 1] = flag(cas.drive[n])
         B747DR_CAS_advisory_status[ADV_DRIVE_DISC + n - 1] = flag(cas.drive_disc[n])
-        -- the EIUs keep DRIVE DISC n until the CMC erases it; here it goes
-        -- with the drive reset (simplified: there is no CMC erase)
+        -- DRIVE DISC n while the IDG is disconnected; the EIUs latch it and
+        -- keep it after the drive reset until the CMC's ERASE (LH24 p.64;
+        -- N19-WARN-03: B747.87.status_nvm_model.lua). Before, it went with
+        -- the reset
         B747DR_elec_CAS_status[STATUS_DRIVE_DISC + n - 1] = flag(cas.drive_disc[n])
         B747DR_elec_CAS_status[STATUS_ELEC_DRIVE + n - 1] = flag(out.status.drive[n])
     end
