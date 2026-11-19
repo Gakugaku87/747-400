@@ -261,6 +261,24 @@ T.equal(small(3), string.rep(" ", 24 - #cons1 - #spd_of(r.pts[1])) .. spd_of(r.p
 T.equal(small(5), string.rep(" ", 24 - #spd_of(r.pts[2]) - 1 - #alt_of(r.pts[2])) .. spd_of(r.pts[2]) .. "/" .. alt_of(r.pts[2]),
     "(INTC) without a constraint: speed/altitude: " .. small(5))
 T.equal((small(7):gsub("%s+$", "")), "", "ZZV with 230/3000A: none: " .. line(7))
+-- (2026-11-19, notes/ATA-34-61-FMC.md §170 2) a speed constraint alone
+-- ("210/", as a procedure's): large before the altitude's five places, the
+-- predicted altitude there in small font (FCOM p.1330's figure and p.1332:
+-- constraints large, predictions small). Before, "210/" at the end and no
+-- prediction (§48)
+legsR[2].spd = 210
+fms.ns.B747_fms_preds_now()
+frames(1)
+local rS = fms.ns.B747_fms_preds()
+T.equal(line(5):sub(-9), "210/     ", "(INTC) with 210 alone: 210/ before the altitude's places: " .. line(5))
+T.equal(small(5), string.rep(" ", 24 - #alt_of(rS.pts[2])) .. alt_of(rS.pts[2]),
+    "(INTC) with 210 alone: its predicted altitude after the slash, small: " .. small(5))
+T.equal(#alt_of(rS.pts[2]), 5, "the predicted altitude's five places")
+legsR[2].spd = nil
+fms.ns.B747_fms_preds_now()
+frames(1)
+T.equal(small(5), string.rep(" ", 24 - #spd_of(r.pts[2]) - 1 - #alt_of(r.pts[2])) .. spd_of(r.pts[2]) .. "/" .. alt_of(r.pts[2]),
+    "(INTC) without it again: speed/altitude: " .. small(5))
 key("func_key/next_pg")
 key("func_key/next_pg")
 T.check(line(5):find("^RW16R") and small(5):find("240"), "the runway (the E/D): its speed: " .. small(5))
