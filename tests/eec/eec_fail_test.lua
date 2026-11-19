@@ -28,9 +28,14 @@ end
 
 -- the automatic reversion of engine 2 in cruise: the same command at once
 -- (the thrust does not change), ENG 2 EEC MODE, the A/T disconnects and is
--- inhibited, the ALTN light; the schedule held while the ambient changes
-for _, kind in ipairs({"GE", "PW"}) do
-    local st, i = cruise(kind)
+-- inhibited, the ALTN light; the schedule held while the ambient changes.
+-- (2026-11-20, N19-ENG-05) The P&W (and the RR, its tables) as the GE
+-- before: the PW4000 reverts to its N1 mode, its lockup holding the N1
+-- then (PW_PPM p.196-198): the P&W here is the RR's path (rr), the P&W's
+-- N1 mode in eec_altn_test.lua and below
+for _, kind in ipairs({"GE", "RR"}) do
+    local st, i = cruise(kind == "RR" and "PW" or kind)
+    i.rr = kind == "RR"
     local o = E.update(st, i, DT)
     local before = o.command[2]
     i.fail_altn[2] = true
@@ -56,6 +61,32 @@ for _, kind in ipairs({"GE", "PW"}) do
     o = E.update(st, i, DT)
     T.check(not o.altn[2] and not o.altn_light[2] and not o.at_inhibit, kind .. " repaired: normal mode")
     T.near(o.command[2], o.command[1], 1e-9, kind .. " repaired: the normal schedule again")
+end
+-- (N19-ENG-05) the P&W: the N1 mode's lockup holds the N1 at the reversion
+-- (the thrust does not change), the N1 then biased by Tt2 only (PW_PPM
+-- p.196, p.198); the crew's ALTN ramps the lockup out at 100 rpm a second;
+-- repaired and NORM: the EPR mode
+do
+    local st, i = cruise("PW")
+    i.n1 = {82, 82, 82, 82}
+    E.update(st, i, DT)
+    i.fail_altn[2] = true
+    local o = E.update(st, i, DT)
+    T.check(o.n1_mode[2] and o.altn[2] and o.at_disconnect and o.at_inhibit and o.altn_light[2],
+        "PW automatic reversion: the N1 mode, ENG 2 EEC MODE, the A/T off, the ALTN light")
+    T.near(o.command[2], 82, 1e-9, "PW automatic reversion: the N1 command is the N1 then (the thrust does not change)")
+    i.tat = 20
+    o = E.update(st, i, DT)
+    T.near(o.command[2], 82 + E.pw_altn_n1(25, 20) - E.pw_altn_n1(25, -25), 1e-9,
+        "PW warmer: the schedule's Tt2 bias, the lockup's delta held")
+    local was = o.command[2]
+    i.altn[2] = true
+    o = E.update(st, i, DT)
+    T.near(o.command[2], was + E.PW_ALTN.ramp * DT, 1e-9, "PW ALTN selected: the lockup ramped out")
+    i.altn[2], i.fail_altn[2] = false, false
+    o = E.update(st, i, DT)
+    T.check(not o.altn[2] and not o.n1_mode[2] and not o.altn_light[2] and not o.at_inhibit, "PW repaired, NORM: the EPR mode")
+    T.near(o.command[2], o.command[1], 1e-9, "PW repaired: the normal schedule again")
 end
 
 -- the GE's ALTN light for the automatic reversion needs 50 % N2 (the ECU's

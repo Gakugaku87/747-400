@@ -371,13 +371,21 @@ do
     i.altn = {true, true, true, true}
     o = E.update(st, i, DT)
     T.check(not o.at_inhibit, "ALTN: GE with all four EECs in the alternate mode can use the A/T again")
-    -- P&W: LIM PROT near the max, A/T only with all four in the normal mode
+    -- P&W: LIM PROT near the max, A/T only with all four in the normal mode.
+    -- (2026-11-20, N19-ENG-05) its alternate mode controls N1: LIM PROT as
+    -- the EPR measured comes near the max (FCOM p.900: the thrust
+    -- approaching the maximum rating; before, the EPR command at full
+    -- forward); the N1 mode itself in eec_altn_test.lua
     i.type, i.tat = "PW", 15
     i.idle = {0.95, 0.95, 0.95, 0.95}
     i.lever = {1, 1, 1, 1}
+    i.actual = {1.4, 1.4, 1.4, 1.4}
     o = E.update(st, i, DT)
     T.check(o.at_inhibit, "ALTN: P&W with any EEC in the alternate mode: no A/T")
-    T.check(o.lim_prot[1], ">ENG 1 LIM PROT: P&W command near the max EPR (corner day: at the max)")
+    T.check(not o.lim_prot[1], "no >ENG 1 LIM PROT: P&W's EPR well under the max (the N1 command beyond it)")
+    i.actual = {1.505, 1.505, 1.505, 1.505}
+    o = E.update(st, i, DT)
+    T.check(o.lim_prot[1], ">ENG 1 LIM PROT: P&W's EPR near the max EPR (1.51)")
     i.altn = {false, false, false, false}
     o = E.update(st, i, DT)
     T.check(not o.at_inhibit and not o.lim_prot[1], "P&W: back in the normal mode")
