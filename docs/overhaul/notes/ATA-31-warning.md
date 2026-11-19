@@ -410,3 +410,16 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - 前のコード：N1 90（CONFIG FLAPS は 96、FMC のフラップがあれば 86）、FLAPS・SPOILERS・STAB はエンジン 2 と 3 の**両方**、空地は X-Plane の車輪、10 秒の保持なし、CONFIG FLAPS は FMC の離陸フラップとの一致も求めていた（資料に無い）。
 - 推定：逆推力が出ていれば離陸推力にしない（資料に無いが、RTO の逆推力で鳴らないように前のまま）。
 - 作らないもの：enable inop と CONFIG WARN SY（故障の窓のとき）、試験（MAWEA・CMC）、siren のリセット不可（警報の音の側）。
+
+## 11. 着陸の滑走で鳴った MASTER WARNING（2026-11-19：利用者の「RKSI34Rへの着陸でリバースでもEPR計が赤表示になっていたしなぞのMASTER WARNING音が鳴ってた」。調べていない）
+
+- 報告（2026-11-19、クラウドのセッション）：RKSI 34R に着陸し、逆推力を使った滑走で、EPR が赤（notes/ATA-70-80.md §23）と、何の警報か分からない MASTER WARNING の音。EICAS にどのメッセージが出たか、逆推力をどう操作したか（キーの hold・toggle、ハードウェアの軸）、いつ鳴ったか（逆推力の間、レバーを戻した時、その後）、A/P で着陸したかは聞いていない。PC のセッションでまず聞く。
+- 候補 1（いちばん疑わしい。コードから読んだ見込み）：離陸形態警報（§10、`B747.45.tocw_model.lua`）が着陸の滑走で武装した。
+  - 武装の条件（§10）：地上（PSEU）、V1 未満（V1 が無ければピッチ 5° 以下）、FUEL CONTROL 3 本以上 RUN、エンジン 2 か 3 の N1 表示が 66.5（P&W）を超え、逆推力でない。着陸の滑走はこのうち「推力」以外を満たす。
+  - 「逆推力でない」は推定で、レバー（`sim/cockpit2/engine/actuators/throttle_jet_rev_ratio_all` < 0）で見る（`B747.45.xt.fltCtrls.lua`）。レバーを前のアイドルへ戻した瞬間に外れるが、エンジンはまだ回っていて、逆推力の扉が閉じる間に前向きの推力と N1 表示が上がりうる（表示の N1・EPR は正味の推力から作るので、逆推力の間は低い：notes/ATA-70-80.md の ENG-33 の残り）。
+  - 武装すると、フラップ 30（離陸位置でない）で >CONFIG FLAPS、スピードブレーキのレバーが上がったままなら >CONFIG SPOILERS が、master WARNING と siren つきで出る。推力が下がっても 10 秒残る（ATA27 p.730）。
+  - 実機の側：ATA31 p.188 の enable は、地上で RA ≤ 15 ft なども条件で、着陸の滑走でも立ちうる。逆推力・着陸の後の扱い（抑止）を ATA27 p.729–730、ATA31 p.180・p.188–194 で読み直す。逆推力の手順は FCOM p.148（NP.21.54：60 kt までに戻し始め、地上滑走の速さまでに reverse idle、その後いっぱいに下げる）。
+- 候補 2：A/P で着陸して、滑走で A/P を外した後の >AUTOPILOT DISC（master WARNING と音。操縦輪の解除スイッチの 2 回目で消える：FCOM p.655、notes/ATA-22.md の表）。これは実機どおりの動き。EICAS の赤い文字で見分ける。
+- 確かめ方（案）：P&W で、フラップ 30・スピードブレーキの自動で着陸し、接地から 60 kt まで逆推力いっぱい → reverse idle → 格納、と、いっぱいから直接格納の 2 通り。記録：`laminar/B747/engines/display_N1`・`display_EPR`・`display_EPR_max`・`EPR/red_on`、`throttle_jet_rev_ratio_all`、逆推力の扉の比、`thrust_dry_n`、`laminar/B747/CAS/warning_status[2]`〜`[7]`、master WARNING。EICAS の写真。今の逆推力のシナリオ `s12_reverser` は止まったまま（パーキング・ブレーキ）で、着陸の滑走は見ていない（試験の穴）。
+- 直し方の候補（確かめてから）：「逆推力でない」をレバーでなく逆推力の扉（格納しきるまで）や N1 の下がり方でも見る、着陸の後の抑止を資料どおりに、など。
+- 型：フルレビューの依頼（[REVIEW_2026-11-19_request.md](../REVIEW_2026-11-19_request.md)）の型 J（その段階・モードだけの判定が、ほかの段階で働く：離陸の判定が着陸の滑走で）の例。
