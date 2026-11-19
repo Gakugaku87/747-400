@@ -794,6 +794,29 @@ B747DR_wb_load_freighter = deferred_dataref("laminar/B747/wb/load_freighter", "n
 local WB_PAX = {"paxFirstClassA", "paxBusClassB", "paxEconClassC", "paxEconClassD", "paxEconClassE"}
 local WB_PAX_MAX = {23, 80, 77, 104, 132}     -- this page's zones (upstream: 416 seats)
 local WB_FREIGHT = {"freightZoneA", "freightZoneB", "freightZoneC", "freightZoneD", "freightZoneE"}
+-- (2026-11-20, GAP N19-WB-05) the main deck zones' limits, kg: A and E the
+-- 747-400 BCF's sections' (NTSB_WBM p.23: B.A. 228-525 7,838 kg, 2218-2365
+-- 2,041 kg; the sim's zones A-E are those sections: B747.68.xt.fms.lua's
+-- arms), B, C and D upstream's (under the sections' 32,318, 52,281 and
+-- 56,907); the 747-400F's own are not in the sources. Before, A 11,289 and
+-- E 3,763 (upstream's pallets of 3,763 kg), over the sections'
+local WB_FREIGHT_MAX = {7838, 30104, 22578, 45156, 2041}
+local WB_FREIGHT_TOTAL = 7838 + 30104 + 22578 + 45156 + 2041  -- 107,717 kg (before 112,890)
+-- a freight weight (kg) round the zones a kilogram at a time, each to its
+-- limit (upstream's round robin), at most their total: the five zones
+local function freight_spread(x)
+	local z = {0, 0, 0, 0, 0}
+	x = math.max(0, math.min(WB_FREIGHT_TOTAL, x))
+	while x > 0 do
+		local any = false
+		for k = 1, 5 do
+			if x > 0 and z[k] < WB_FREIGHT_MAX[k] then z[k], x, any = z[k] + 1, x - 1, true end
+		end
+		if not any then break end
+	end
+	return z
+end
+B747_fms_freight_spread = freight_spread
 local WB_CARGO = {"cargoFwd", "cargoAft", "cargoBulk"}
 local WB_CARGO_MAX = {26490, 22938, 6749}     -- this page's limits, kg (upstream's: setdata below)
 local WB_PAX_KG_MIN, WB_PAX_KG_MAX = 40, 200  -- kg a passenger with baggage (estimate: a sanity range)
@@ -856,7 +879,10 @@ local function wb_request(f, v)
 		if not wb_freighter() then wb_set_pax(B747_fms_pax_spread(v + 0.5)) end
 	elseif f >= 1 and f <= 5 then
 		if wb_freighter() then
-			wb_entry(WB_FREIGHT[f], string.format("%d", math.floor(v * wb_units() + 0.5)))
+			-- (2026-11-20, N19-WB-05) at most the zone's limit: zone A's
+			-- entry over it is the page's total round the zones (before,
+			-- the window's 12,000 kg in zone A spread over all five)
+			wb_entry(WB_FREIGHT[f], string.format("%d", math.floor(math.min(v, WB_FREIGHT_MAX[f]) * wb_units() + 0.5)))
 		else
 			-- (L1 above 23 is a total: zone A's at most 23 here)
 			wb_entry(WB_PAX[f], string.format("%d", math.min(math.floor(v + 0.5), WB_PAX_MAX[f])))
@@ -1680,13 +1706,25 @@ function fmsFunctions.setdata(fmsO,value)
 	-- it. DELETE: dashes (before: no entry until the PAX/CARGO page set one).
 	-- (2026-11-05 the user, not the airplane's) an empty scratchpad: the
 	-- sim's CG now with the option on (perfinit's B747_fms_sim_cg)
+	-- (2026-11-20, GAP N19-WB-03) the 405 (FCOM p.1320): DELETE of the
+	-- crew's CG back to the WBS CG, small (dashes before the WBS inputs);
+	-- the line selected with an empty scratchpad (the sim's option off) its
+	-- WBS CG large
 	if del then
+		local w = B747_fms_is_405() and B747_fms_wbs_cg() or nil
+		local gw = tonumber(fmsModules["data"].grwt)
+		cg_lineLg = ""
+		if w ~= nil and w >= 0 and w <= 40 then
+			setFMSData(value, string.format("%d", w))
+			if gw then calc_stab_trim(gw, string.format("%d", w)) else setFMSData("stab_trim", "    ") end
+			return
+		end
 		setFMSData(value, "--")
 		setFMSData("stab_trim", "    ")
-		cg_lineLg = ""
 		return
 	end
 	local cg = fmsO["scratchpad"] == "" and B747_fms_sim_cg() or nil
+	if cg == nil and fmsO["scratchpad"] == "" and B747_fms_is_405() then cg = B747_fms_wbs_cg() end
 	if cg ~= nil and (cg < 0 or cg > 40) then cg = nil end
 	if cg == nil then cg = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 40) end
 	if cg == nil then fmsO["notify"] = "INVALID ENTRY" return end
@@ -2003,15 +2041,18 @@ function fmsFunctions.setdata(fmsO,value)
 		weight_factor = 1
 	end
 
-	if string.match(fmsO["scratchpad"], "%d") and not string.match(fmsO["scratchpad"], "%u") and math.abs(tonumber(fmsO["scratchpad"])) <= (11160 * weight_factor) then
+	-- (2026-11-20, GAP N19-WB-05) zone A's limit WB_FREIGHT_MAX[1] (before
+	-- 11,160 here and 11,289 below); more than it: the freight round the
+	-- zones (upstream's)
+	if string.match(fmsO["scratchpad"], "%d") and not string.match(fmsO["scratchpad"], "%u") and tonumber(fmsO["scratchpad"]) ~= nil and math.abs(tonumber(fmsO["scratchpad"])) <= (WB_FREIGHT_MAX[1] * weight_factor + 0.5) then
 		setFMSData(value, math.abs(string.format("%5d", fmsO["scratchpad"])) / weight_factor)
 		calc_pax_cargo()
 	elseif fmsO["scratchpad"] == "F" then  --Add FULL FREIGHT
-		setFMSData("freightZoneA", "11289")
-		setFMSData("freightZoneB", "30104")
-		setFMSData("freightZoneC", "22578")
-		setFMSData("freightZoneD", "45156")
-		setFMSData("freightZoneE", "3763")
+		setFMSData("freightZoneA", string.format("%d", WB_FREIGHT_MAX[1]))
+		setFMSData("freightZoneB", string.format("%d", WB_FREIGHT_MAX[2]))
+		setFMSData("freightZoneC", string.format("%d", WB_FREIGHT_MAX[3]))
+		setFMSData("freightZoneD", string.format("%d", WB_FREIGHT_MAX[4]))
+		setFMSData("freightZoneE", string.format("%d", WB_FREIGHT_MAX[5]))
 		setFMSData("paxFirstClassA", "")
 		setFMSData("paxBusClassB", "")
 		setFMSData("paxEconClassC", "")
@@ -2034,57 +2075,28 @@ function fmsFunctions.setdata(fmsO,value)
 		setFMSData("paxEconClassE", "")
 		calc_pax_cargo()
 	elseif string.len(fmsO["scratchpad"]) < 1 then
-		setFMSData(value, "11160")
+		-- an empty scratchpad: zone A full (before 11,160)
+		setFMSData(value, string.format("%d", WB_FREIGHT_MAX[1]))
 		calc_pax_cargo()
-	elseif string.match(fmsO["scratchpad"], "%d") and not string.match(fmsO["scratchpad"], "%u") and tonumber(fmsO["scratchpad"]) > (11289 * weight_factor) then  --Add FREIGHT by round-robin through all zones
+	elseif string.match(fmsO["scratchpad"], "%d") and not string.match(fmsO["scratchpad"], "%u") and tonumber(fmsO["scratchpad"]) ~= nil and tonumber(fmsO["scratchpad"]) > (WB_FREIGHT_MAX[1] * weight_factor + 0.5) then  --Add FREIGHT by round-robin through all zones
 		setFMSData("freightZoneA", "")
 		setFMSData("freightZoneB", "")
 		setFMSData("freightZoneC", "")
 		setFMSData("freightZoneD", "")
 		setFMSData("freightZoneE", "")
 
-		local x = tonumber(string.format("%6d", fmsO["scratchpad"] / weight_factor)) --convert to base units of KGS
-		local zoneA = 0
-		local zoneB = 0
-		local zoneC = 0
-		local zoneD = 0
-		local zoneE = 0
-		
-		if x > 112890 then  --112,900 KGS is the MAX Revenue Payload.  112,890 KGS is the defined average pallet weight (3763) * 30 pallets
-			x = 112890
-		end
-		repeat
-			if x > 0 and zoneA < 11289 then
-				zoneA = zoneA + 1
-				x = x - 1
-			end
-			if x > 0 and zoneB < 30104 then
-				zoneB = zoneB + 1
-				x = x - 1
-			end
-			if x > 0 and zoneC < 22578 then
-				zoneC = zoneC + 1
-				x = x - 1
-			end
-			if x > 0 and zoneD < 45156 then
-				zoneD = zoneD + 1
-				x = x - 1
-			end
-			if x > 0 and zoneE < 3763 then
-				zoneE = zoneE + 1
-				x = x - 1
-			end
-			--print("X = "..x.." ZoneA = "..zoneA.." ZoneB = "..zoneB.." ZoneC = "..zoneC.." ZoneD = "..zoneD.." ZoneE = "..zoneE)
-		until not (x > 0)  -- (2026-11-06 review) as the passengers' round robin
-		
-		fmsModules["data"].freightZoneA = string.format("%5d", zoneA)
-		fmsModules["data"].freightZoneB = string.format("%5d", zoneB)
-		fmsModules["data"].freightZoneC = string.format("%5d", zoneC)
-		fmsModules["data"].freightZoneD = string.format("%5d", zoneD)
-		fmsModules["data"].freightZoneE = string.format("%4d", zoneE)
-		
+		-- (N19-WB-05) at most the zones' limits together (before 112,890:
+		-- 30 pallets of 3,763 kg)
+		local z = freight_spread(tonumber(string.format("%6d", fmsO["scratchpad"] / weight_factor))) --convert to base units of KGS
+
+		fmsModules["data"].freightZoneA = string.format("%5d", z[1])
+		fmsModules["data"].freightZoneB = string.format("%5d", z[2])
+		fmsModules["data"].freightZoneC = string.format("%5d", z[3])
+		fmsModules["data"].freightZoneD = string.format("%5d", z[4])
+		fmsModules["data"].freightZoneE = string.format("%4d", z[5])
+
 		fmsO["scratchpad"] = ""
-		
+
 		calc_pax_cargo()
 	elseif string.match(fmsO["scratchpad"], "%d") and string.match(fmsO["scratchpad"], "P") then
 		local digits = math.abs(tonumber(string.match(fmsO["scratchpad"], "%d+")))
@@ -2093,8 +2105,9 @@ function fmsFunctions.setdata(fmsO,value)
 
 		if chars == "P" then
 			weight_per_unit = 3763 * weight_factor
-			if digits > 3 then
-				digits = 3
+			-- (N19-WB-05) two pallets (before three: over 7,838 kg)
+			if digits > 2 then
+				digits = 2
 			end
 		end
 		
@@ -2107,10 +2120,10 @@ function fmsFunctions.setdata(fmsO,value)
 
 		fwt = math.abs(tonumber(fmsO["scratchpad"])) / weight_factor  --store LBS in KGS
 		
-		if fwt > 11289 then
-			fwt = 11289
+		if fwt > WB_FREIGHT_MAX[1] then
+			fwt = WB_FREIGHT_MAX[1]
 		end
-		
+
 		setFMSData(value, string.format("%5d", fwt))
 		calc_pax_cargo()
 	end
@@ -2253,17 +2266,21 @@ function fmsFunctions.setdata(fmsO,value)
 
 		fwt = math.abs(tonumber(fmsO["scratchpad"])) / weight_factor  --store LBS in KGS
 		
-		if fwt > 3763 then
-			fwt = 3763
+		-- (N19-WB-05) zone E at most 2,041 kg (before 3,763: a pallet,
+		-- "1P" still taken as one and limited)
+		if fwt > WB_FREIGHT_MAX[5] then
+			fwt = WB_FREIGHT_MAX[5]
 		end
-		
+
 		setFMSData(value, string.format("%4d", fwt))
 		calc_pax_cargo()
 	else
 		fmsO["notify"] = "INVALID ENTRY"
 	end
    elseif value == "freightPayload" then
-	if string.match(fmsO["scratchpad"], "%d") then --and not string.match(fmsO["scratchpad"], "%u") then
+	-- (2026-11-20) a number only: "12A" made math.abs(nil) below (an
+	-- error stops the whole plugin)
+	if string.match(fmsO["scratchpad"], "%d") and tonumber(fmsO["scratchpad"]) ~= nil then --and not string.match(fmsO["scratchpad"], "%u") then
 		local weight_factor = 1
 
 		if simConfigData["data"].SIM.weight_display_units == "LBS" then
@@ -2283,46 +2300,15 @@ function fmsFunctions.setdata(fmsO,value)
 		setFMSData("freightZoneD", "")
 		setFMSData("freightZoneE", "")
 
-		local x = math.abs(tonumber(fmsO["scratchpad"]) / weight_factor) * 1000  --convert to base units of KGS
-		local zoneA = 0
-		local zoneB = 0
-		local zoneC = 0
-		local zoneD = 0
-		local zoneE = 0
-		
-		if x > 112890 then  --112,900 KGS is the MAX Revenue Payload.  112,890 KGS is the defined average pallet weight (3763) * 30 pallets
-			x = 112890
-		end
-		
-		repeat
-			if x > 0 and zoneA < 11289 then
-				zoneA = zoneA + 1
-				x = x - 1
-			end
-			if x > 0 and zoneB < 30104 then
-				zoneB = zoneB + 1
-				x = x - 1
-			end
-			if x > 0 and zoneC < 22578 then
-				zoneC = zoneC + 1
-				x = x - 1
-			end
-			if x > 0 and zoneD < 45156 then
-				zoneD = zoneD + 1
-				x = x - 1
-			end
-			if x > 0 and zoneE < 3763 then
-				zoneE = zoneE + 1
-				x = x - 1
-			end
-			--print("X = "..x.." ZoneA = "..zoneA.." ZoneB = "..zoneB.." ZoneC = "..zoneC.." ZoneD = "..zoneD.." ZoneE = "..zoneE)
-		until (x <= 0)
-		
-		fmsModules["data"].freightZoneA = string.format("%5d", zoneA)
-		fmsModules["data"].freightZoneB = string.format("%5d", zoneB)
-		fmsModules["data"].freightZoneC = string.format("%5d", zoneC)
-		fmsModules["data"].freightZoneD = string.format("%5d", zoneD)
-		fmsModules["data"].freightZoneE = string.format("%4d", zoneE)
+		-- (N19-WB-05) at most the zones' limits together (before 112,890:
+		-- 30 pallets of 3,763 kg)
+		local z = freight_spread(math.floor(math.abs(tonumber(fmsO["scratchpad"]) / weight_factor) * 1000 + 0.5))  --convert to base units of KGS
+
+		fmsModules["data"].freightZoneA = string.format("%5d", z[1])
+		fmsModules["data"].freightZoneB = string.format("%5d", z[2])
+		fmsModules["data"].freightZoneC = string.format("%5d", z[3])
+		fmsModules["data"].freightZoneD = string.format("%5d", z[4])
+		fmsModules["data"].freightZoneE = string.format("%4d", z[5])
 		
 		fmsO["scratchpad"] = ""
 		

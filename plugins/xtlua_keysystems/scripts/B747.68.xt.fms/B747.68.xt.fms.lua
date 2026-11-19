@@ -504,14 +504,25 @@ wb = {
 		passenger_zoneE_distance	= 1950.00, --162.5 feet (132 Economy Class seats)
 		
 		--Payload/Cargo Zone moment arm distances are an approximation using the middle of the Zone as a reference
-		fwd_lower_cargo_distance	= 650.00,  --54.16 feet (5 pallets [5035 KGS] or 16 LD1/LD3 [1588 KGS] containers or combination totalling 26,490 KGS).
-		aft_lower_cargo_distance	= 1675.00,  --139.58 feet (4 pallets or 14 LD1/LD3 containers or combination totalling 22,938 KGS).
-		bulk_lower_cargo_distance	= 1935.00,  --161.25 feet (6,749 KGS).  In the tail of the aircraft beneath the rear galley.
-		freight_zoneA_distance		= 290.00,  --24.16 feet (3 pallets [3763 KGS] or equivalent totalling 11,289 KGS).
+		-- (2026-11-20, GAP N19-WB-04) the lower holds' volumetric centroids,
+		-- NTSB_WBM p.32 (Telair WBM 25-55-66 for the 747-400 BCF; its lower
+		-- holds taken for every 747-400's, and the net at B.A. 1920 of its
+		-- two: estimate; the net at 1980: AFT 1732.0, BULK 2064.2), B.A.
+		-- less 90 in (the nose, as B747_fms_mac_pct):
+		-- FWD 725.5, AFT 1702.0, BULK 2014.6. Before 650, 1675, 1935 (B.A.
+		-- 740, 1765, 2025: upstream's middles of the holds)
+		fwd_lower_cargo_distance	= 635.50,  --B.A. 725.5 (5 pallets [5035 KGS] or 16 LD1/LD3 [1588 KGS] containers or combination totalling 26,490 KGS).
+		aft_lower_cargo_distance	= 1612.00,  --B.A. 1702.0 (4 pallets or 14 LD1/LD3 containers or combination totalling 22,938 KGS).
+		bulk_lower_cargo_distance	= 1924.60,  --B.A. 2014.6 (6,749 KGS).  In the tail of the aircraft beneath the rear galley.
+		-- (2026-11-20, GAP N19-WB-05) the main deck's zones A-E as the BCF's
+		-- sections (NTSB_WBM p.23: B.A. 228-525, 525-1000, 1000-1480,
+		-- 1480-2218, 2218-2365), A and E at most the sections' 7,838 and
+		-- 2,041 kg (B744.fms.pages.lua's B747_FREIGHT_ZONE_MAX)
+		freight_zoneA_distance		= 290.00,  --24.16 feet (2 pallets [3763 KGS] or equivalent, at most 7,838 KGS: before 3 pallets, 11,289).
 		freight_zoneB_distance		= 690.00,  --57.50 feet (8 pallets [3763 KGS] or equivalent totalling 30,104 KGS).
 		freight_zoneC_distance		= 1135.00,  --94.58 feet (6 pallets [3763 KGS] or equivalent totalling 22,578 KGS).
 		freight_zoneD_distance		= 1750.00,  --145.83 feet (12 pallets [3763 KGS] or equivalent totalling 45,156 KGS).
-		freight_zoneE_distance		= 2220.00,  --185.00 feet (1 pallet [3763 KGS] or equivalent totalling 3763 KGS).
+		freight_zoneE_distance		= 2220.00,  --185.00 feet (at most 2,041 KGS: before 1 pallet, 3763 KGS).
 
 		--Calculated Results
 		stab_trim = 0,
@@ -558,6 +569,18 @@ B747_MAC_IN, B747_LEMAC_NOSE_IN = 327.8, 1258.0 - 90.0
 function B747_fms_mac_pct(arm_in)
 	return (arm_in - B747_LEMAC_NOSE_IN) / B747_MAC_IN * 100
 end
+-- (2026-11-20, GAP N19-WB-03) the CG the FMC made from the WBS inputs (the
+-- PAX/CARGO load and the fuel: calc_CGMAC at a GR WT or ZFW entry), % MAC,
+-- nil before one; TAKEOFF REF shows it on the 405 (FCOM p.1320). (Its
+-- local in a block: the main chunk is at Lua's 200 locals)
+do
+	local wbsCG = nil
+	function B747_fms_wbs_cg()
+		if wbsCG == nil then return nil end
+		return math.floor(wbsCG + 0.5)
+	end
+	function B747_fms_set_wbs_cg(v) wbsCG = v end
+end
 
 function calc_CGMAC()
 
@@ -603,9 +626,20 @@ function calc_CGMAC()
 	local CG_MAC			= B747_fms_mac_pct(CG)
 		
 	wb.cg_mac 				= CG_MAC
-	
-	fmsModules["data"].cg_mac 		= string.format("%2.0f", wb.cg_mac)
-	calc_stab_trim(GW, CG_MAC)
+
+	-- (2026-11-20, GAP N19-WB-03) TAKEOFF REF's CG and TRIM (FCOM p.1320):
+	-- a crew's CG kept, its trim for this weight; else the 405's (a
+	-- freighter: B747_fms_is_405) this one, the FMC's from the WBS inputs,
+	-- small with a caret; the 109's and 570's dashes until the crew enters
+	-- one. Before, every airplane's TAKEOFF CG took this one, and the next
+	-- GR WT or ZFW overwrote a crew's CG and trim
+	B747_fms_set_wbs_cg(CG_MAC)
+	if type(cg_lineLg) == "string" and string.len(cg_lineLg) > 0 then
+		calc_stab_trim(GW, fmsModules["data"].cg_mac)
+	elseif B747_fms_is_405() then
+		fmsModules["data"].cg_mac 		= string.format("%2.0f", wb.cg_mac)
+		calc_stab_trim(GW, CG_MAC)
+	end
 
 	simDR_cg_adjust = CG_shift * -1  --Value is flipped from what is in the XP slider
 	
@@ -2554,6 +2588,9 @@ local THRLIM_CODE = {TO = 1, CLB = 2, CRZ = 3, CON = 4, GA = 5}
 -- (2026-11-19) a freighter (the simconfig's aircraft type): with GE the
 -- FCOM's 405 and 570, the climb armed by the takeoff's rating (FCOM p.1315)
 B747DR_fms_freighter = find_dataref("laminar/B747/freighter")
+-- the FCOM's 405 (a freighter: EFFECTIVITY_405.md; read every frame by
+-- update_thrlim, so a page's read is fresh)
+function B747_fms_is_405() return B747DR_fms_freighter == 1 end
 -- (step 9h3) the engines inoperative (the engines' N2 under the ENG FAIL
 -- speed: B747.40.engine_start_model.lua), sensed in the air (on the
 -- ground before the start all four are)
