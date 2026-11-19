@@ -80,6 +80,13 @@ T.check(line("L", 1):find("THRUST LIM"), "<FMC: the FMC's last page, THRUST LIM 
 key("L", "func_key/fix")
 key("L", "ls_key/L5")
 T.check(not line("L", 1):find("THRUST LIM") and not line("L", 1):find("MENU"), "ACMS: " .. line("L", 1))
+-- (2026-11-20, GAP N19-CDU-01) no MAINT> (the ACMS main menu: ATA31
+-- p.358-359), 1R not the FMC's MAINTENANCE INDEX
+T.check(line("L", 3):find("^<REPORTS") and not line("L", 3):find("MAINT"), "ACMS: no MAINT>: " .. line("L", 3))
+key("L", "ls_key/R1")
+T.check(line("L", 1):find("ACMS") and not line("L", 1):find("MAINTENANCE"), "1R: still ACMS: " .. line("L", 1))
+T.equal(pad("L"), "KEY/FUNCTION INOP", "a blank key: KEY/FUNCTION INOP (the sim's)")
+clear("L")
 key("L", "func_key/fix")
 key("L", "ls_key/L1")
 T.check(line("L", 1):find("THRUST LIM"), "<FMC after ACMS: THRUST LIM, not ACMS: " .. line("L", 1))
