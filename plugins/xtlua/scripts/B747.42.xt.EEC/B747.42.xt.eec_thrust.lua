@@ -60,6 +60,21 @@ local eec_last_time = nil
 -- N2 for the overspeed protection, before the display rounds it (the P&W
 -- display shows whole percent); B747_eec_set_n2 in the GE and P&W files
 local rotor_n2 = {0, 0, 0, 0}
+-- (N19-ENG-05) the EPR whose N1 (B747_epr_model.n1, the shown N1's above
+-- 70 %) is n1 at the present Mach and TAT: halving between 0.5 and 1.9
+-- (the N1 is flat under EPR 0.9: the low end there)
+local command_epr = {0, 0, 0, 0}
+local function epr_of_n1(n1)
+    local P, mach, tat = B747_epr_model, simDR_epr_mach, simDR_TAT
+    local lo, hi = 0.5, 1.9
+    if P.n1(hi, mach, tat) <= n1 then return hi end
+    for _ = 1, 20 do
+        local mid = (lo + hi) / 2
+        if P.n1(mid, mach, tat) < n1 then lo = mid else hi = mid end
+    end
+    return (lo + hi) / 2
+end
+B747_eec_epr_of_n1 = epr_of_n1          -- (for the tests)
 
 local function flap_degrees(ratio)
     local x = ratio * (#FLAP_DETENTS - 1)
@@ -106,7 +121,17 @@ function B747_eec_update()
         if inp.type == "GE" then inp.actual[n] = B747DR_display_N1[n - 1]
         else inp.actual[n] = B747DR_display_EPR[n - 1] end
     end
+    -- (N19-ENG-05) the RR keeps its alternate mode on EPR (no sources); the
+    -- P&W's is the N1 mode
+    inp.rr = B747DR_engineType == 2
     eec_out = E.update(eec_state, inp, dt)
+    -- (N19-ENG-05) a P&W engine in its N1 mode: the EICAS's command EPR
+    -- (laminar/B747/engines/TRA, FCOM p.834) the EPR of its N1 command at
+    -- the present Mach and TAT (estimate: the FCOM does not say what the
+    -- indicator shows in the alternate mode)
+    for n = 1, 4 do
+        if eec_out.n1_mode[n] then command_epr[n] = epr_of_n1(eec_out.command[n]) end
+    end
 
     local approach = false
     for n = 1, 4 do
@@ -134,9 +159,12 @@ function B747_eec_update()
 end
 
 -- engine 0-3: the N1 (GE) or EPR (P&W, RR) the lever commands, the one the
--- thrust control aims at, and the maximum rated one
+-- thrust control aims at (N1 for a P&W in its N1 mode), and the maximum
+-- rated one. (N19-ENG-05) The command of a P&W in its N1 mode: the EPR of
+-- its N1 command (for the EICAS)
 function B747_eec_command(engine)
     if eec_out == nil then return 0 end
+    if eec_out.n1_mode[engine + 1] then return command_epr[engine + 1] end
     return eec_out.command[engine + 1]
 end
 
@@ -274,7 +302,7 @@ end
 local N_A, N_B = 3.5, 1.6
 local THR_MIN = 0.2
 local C_RANGE = {50, 600}
-local SLOPE_MIN = {PW = 0.2, GE = 15}       -- EPR, N1 % for each unit of throttle
+local SLOPE_MIN = {PW = 0.2, GE = 15, PWN1 = 15}   -- EPR, N1 % for each unit of throttle
 local SLOPE_GE_FLOOR_KN = 2                 -- (2026-11-11 review) see plant_slope
 local function thrust_per_throttle(f, thr, delta)
     local c = (N_A - N_B * delta) * f / math.max(THR_MIN, thr)
@@ -297,6 +325,12 @@ local function plant_slope(key, engine, delta)
         -- no overshoot and 16 to 20 s)
         local lo = math.max(SLOPE_GE_FLOOR_KN, f - 0.5)
         dydf = B747_ge_n1_of_thrust((lo + 1) * 1000) - B747_ge_n1_of_thrust(lo * 1000)
+    elseif key == "PWN1" then
+        -- (N19-ENG-05) the P&W in its N1 mode: the EPR model's N1 (the
+        -- shown N1's above 70 %; under that the shown N1 is the older
+        -- formula's: estimate) through its EPR
+        local P, M, tat = B747_epr_model, simDR_epr_mach, simDR_TAT
+        dydf = P.n1(P.epr(f + 0.5, delta, M), M, tat) - P.n1(P.epr(f - 0.5, delta, M), M, tat)
     else
         local M = simDR_epr_mach
         dydf = (B747_epr_model.epr(f + 0.5, delta, M) - B747_epr_model.epr(f - 0.5, delta, M)) / 1.0
@@ -312,17 +346,26 @@ B747_eec_plant_slope = plant_slope      -- (for the tests)
 -- above ROLL_GS (estimate: rolling, not held on the brakes)
 simDR_eec_groundspeed           = find_dataref("sim/flightmodel/position/groundspeed")
 local ROLL_GS = 30 * 0.514444       -- m/s
+-- (N19-ENG-05) a P&W in its N1 mode on its N1 loop (key PWN1: the shown N1,
+-- the idle end of the N1 schedule); the model starts the control again from
+-- X-Plane's throttle as the mode changes
 function B747_eec_throttle(engine)
     if eec_out == nil then return 0 end
     local test = test_throttle(engine)
     if test ~= nil then return test end
     local key = eec_inputs.type
-    local actual = B747DR_display_EPR[engine]
-    if key == "GE" then actual = B747DR_display_N1[engine] end
     local n = engine + 1
+    local actual = B747DR_display_EPR[engine]
+    local idle
+    if eec_out.n1_mode[n] then
+        key, actual, idle = "PWN1", B747DR_display_N1[engine], E.pw_altn_n1(0, simDR_TAT)
+    else
+        if key == "GE" then actual = B747DR_display_N1[engine] end
+        idle = idle_command(key)
+    end
     local delta = math.max(0.1, simDR_epr_ambient_pa / 101325)
     local roll = B747DR_eec_pseu_pri_gnd == 1 and simDR_eec_groundspeed > ROLL_GS
-    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], idle_command(key),
+    return E.thrust_control(eec_state, key, n, eec_out.target[n], actual, simDR_engn_thro_use[engine], idle,
         math.min(SIM_PERIOD, EEC_DT_MAX), plant_slope(key, engine, delta), delta, roll)
 end
 
@@ -378,8 +421,10 @@ local THRUST_SHORT = {GE = 0.2, PW = 0.005}
 -- raised every engine's maximum for as long
 function B747_eec_thrust_short()
     if eec_out == nil or B747DR_eec_test_open_in > 0.5 then return false end
-    local key = eec_inputs.type
     for engine = 0, 3 do
+        -- (N19-ENG-05) a P&W in its N1 mode on N1, as the GE
+        local key = eec_inputs.type
+        if eec_out.n1_mode[engine + 1] then key = "GE" end
         local actual = B747DR_display_EPR[engine]
         if key == "GE" then actual = B747DR_display_N1[engine] end
         if simDR_engine_running[engine] == 1 and simDR_engn_thro_use[engine] >= 0.999

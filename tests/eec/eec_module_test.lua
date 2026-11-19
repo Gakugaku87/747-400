@@ -209,10 +209,23 @@ rt:set("sim/cockpit2/controls/flap_ratio", 0)
 frames(6)
 T.near(get(IDLE), 1.07, 0.001, "idle: minimum idle on the ground, 5 s after touchdown")
 
--- alternate mode: EEC MODE 2 to ALTN with the A/T on
+-- alternate mode: EEC MODE 2 to ALTN with the A/T on. (2026-11-20,
+-- N19-ENG-05) engine 2 running at the max EPR (1.51), its alternate mode
+-- the N1 mode (PW_PPM p.196-198): LIM PROT as its EPR is at the max (FCOM
+-- p.900; before, the EPR command at full forward), the thrust control's
+-- target its N1 from the N1 then, ramped at 100 rpm a second, the EICAS's
+-- command EPR (TRA) that N1's EPR
 local CAUTION = "laminar/B747/CAS/caution_status"
+local EP = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
+local was_running = get("sim/flightmodel/engine/ENGN_running", 1)
+local was_baro = get("sim/weather/aircraft/barometer_current_pas")
+rt:set("sim/weather/aircraft/barometer_current_pas", 101325)
 rt:set("sim/flightmodel2/position/pressure_altitude", 0)
 rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
+rt:set("sim/flightmodel/engine/ENGN_running", 1, 1)
+rt:set("sim/cockpit2/engine/indicators/engine_speed_rpm", 1, 3500)
+rt:set("sim/flightmodel/engine/ENGN_N2_", 1, 95)               -- X-Plane's, under the shown
+rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 1, EP.thrust(1.51, 1, 0) * 1000)
 for i = 0, 3 do rt:set(USER, i, 1.0) end
 frames(3)
 rt:set("laminar/B747/engines/autothrottle_active", 1)
@@ -220,13 +233,21 @@ rt:set("laminar/B747/engines/autothrottle_fail", 0)
 frames(0.2)
 T.equal(get(ADV, 314), 0, "ALTN: no ENG 2 EEC MODE in the normal mode")
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "ALTN: the A/T is not touched in the normal mode")
+local n1_2 = get(ENG .. "display_N1", 1)
+T.near(get(ENG .. "display_EPR", 1), 1.51, 0.002, "engine 2 at the max EPR")
 rt:set("laminar/B747/button_switch/position", 8, 0)
 frames(0.2)
 T.equal(get(ADV, 314), 1, "ALTN: ENG 2 EEC MODE")
 T.equal(get(ADV, 313), 0, "ALTN: no ENG 1 EEC MODE")
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 1, "ALTN: the A/T disconnects (its fail: the A/T model in the autopilot module takes it off, the FMC's step 9f1)")
-T.equal(get(CAUTION, 76), 1, ">ENG 2 LIM PROT: P&W full forward in the alternate mode")
+T.equal(get(CAUTION, 76), 1, ">ENG 2 LIM PROT: P&W's EPR at the max in the alternate mode")
 T.equal(get(CAUTION, 75), 0, "no >ENG 1 LIM PROT in the normal mode")
+T.near(ns.B747_eec_target(1), n1_2 + 100 / 36 * 0.2, 0.1,
+    string.format("ALTN 2: the N1 mode's target from the N1 then (%.1f %%), ramped at 100 rpm a second", n1_2))
+T.near(get(ENG .. "TRA", 1), ns.B747_eec_epr_of_n1(ns.B747_eec_target(1)), 0.005,
+    "the EICAS's command EPR (TRA): its N1 command's EPR")
+T.check(get(ENG .. "TRA", 1) > 1.51 and get(ENG .. "TRA", 1) < 1.55, "a little over the max EPR " .. get(ENG .. "TRA", 1))
+T.near(ns.B747_eec_epr_of_n1(EP.n1(1.40, 0, 15)), 1.40, 1e-4, "the EPR of an N1: the EPR model's back")
 rt:set("laminar/B747/engines/autothrottle_fail", 0)       -- the crew re-arms the A/T
 frames(0.2)
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 1, "ALTN: P&W A/T not usable while an EEC is in the alternate mode")
@@ -236,6 +257,12 @@ frames(0.2)
 T.equal(get(ADV, 314), 0, "ALTN: back in the normal mode")
 T.equal(get(CAUTION, 76), 0, "no LIM PROT in the normal mode")
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "the A/T can be armed again with all EECs normal")
+T.near(get(ENG .. "TRA", 1), 1.51, 0.005, "NORM: the EPR command again")
+rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 1, 0)
+rt:set("sim/flightmodel/engine/ENGN_N2_", 1, 0)
+rt:set("sim/flightmodel/engine/ENGN_running", 1, was_running)
+rt:set("sim/weather/aircraft/barometer_current_pas", was_baro)
+frames(1)
 
 -- overspeed protection: the thrust control aims at the command until a rotor
 -- nears its red line; >ENG n RPM LIM from the EEC. N2 is set for one frame
