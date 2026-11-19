@@ -254,4 +254,34 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
+-- (2026-11-19, notes/ATA-34-61-FMC.md §170 3) the assumed temperature on
+-- the EICAS's line with the takeoff's limit only (FCOM p.831: "for reduced
+-- thrust takeoff"; the THRUST LIM page in the air has no SEL, p.1337-1339):
+-- D-TO 1 +47C on the ground and in the air before the climb's limit, then
+-- CLB 1 and CRZ without it. Before, "CLB 1 +47C" and "CRZ +47C" (the
+-- user's cruise)
+local EICAS = "laminar/B747/fms/thrlim/eicas"
+clear()                                                -- TAKEOFF SPEEDS DELETED from before
+type_in("47")
+key("ls_key/L1")
+frames(0.2)
+T.equal(rt:get(EICAS), "D-TO 1 +47C", "SEL 47 over the OAT 15 with TO 1: D-TO 1 +47C")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)
+frames(0.2)
+T.equal(rt:get(EICAS), "D-TO 1 +47C", "in the air at flaps 20, the takeoff's limit: D-TO 1 +47C")
+rt:set("sim/cockpit2/controls/flap_ratio", 2 / 6)
+frames(0.2)
+T.equal(rt:get(LIM), "CLB 1", "flaps 5 with VNAV: CLB 1")
+T.equal(rt:get(EICAS), "CLB 1", "the climb's limit: CLB 1 without the assumed temperature")
+T.equal(rt:get("laminar/B747/fms/thrlim/code") % 100, rt:get("laminar/B747/fms/thrlim/code"), "the EEC's number without D- (no 100)")
+key("ls_key/L4")
+T.equal(rt:get(LIM), "CRZ", "<CRZ: CRZ")
+T.equal(rt:get(EICAS), "CRZ", "the cruise's limit: CRZ without the assumed temperature")
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+frames(0.2)
+T.equal(rt:get(EICAS), "D-TO 1 +47C", "on the ground again: D-TO 1 +47C")
+
 T.done()

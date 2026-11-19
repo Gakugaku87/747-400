@@ -3047,6 +3047,11 @@ X-Plane も `_ref/` も無いクラウドのセッションで、コードとノ
 - 写真：巡航（FL341 の付近）で、推力の基準の行が「CRZ +47C」。
 - 原因：`B747.68.xt.fms.lua:2612` は、`thrlimState.d`（SEL が外気温より高い）なら、どのモードにも SEL の温度を付ける。空中の `d` は「SEL > OAT で、TO/GA で消していない」（`B747.68.thrlim_model.lua:141`）なので、離陸の後の CLB・CRZ でも残る。「D-」を付けるのは TO だけ（`M.label`）。
 - 資料（§76）：ATA34_2 p.651–652・LH3460 p.96（SEL で TO の制限が下がればモードの前に D）、FCOM p.831 の例「TAT +15C D-TO 1 +38C」。離陸の後も温度を出すかは、この例からは分からない（離陸の間だけと見ている：FCOM の EICAS の推力の表示の本文と、THRUST LIM のページの空中の SEL で確かめる）。
+- 直したこと（2026-11-19 夜、PC のセッション。段取りの段 1）：
+  - FCOM で確かめたこと：p.831 (7.10.3) の 3 Assumed Temperature は「selected assumed temperature (degrees C) for reduced thrust takeoff」。モードの一覧（2）で温度に関わるのは D-TO、D-TO 1、D-TO 2 だけ。空中の THRUST LIM（p.1337–1339 (11.41.13–15)）は GA・CON・CRZ・CLB・CLB 1・CLB 2 で、SEL の欄が無い（「In flight, this display replaces the takeoff thrust limits」）。→ 温度は離陸の推力制限のときだけ。
+  - `B747.68.xt.fms.lua` の EICAS の行（`laminar/B747/fms/thrlim/eicas`）：仮定温度を付けるのは、推力制限が TO（D- が付くとき：TO・TO 1・TO 2）のときだけ。前は SEL が外気温より高いあいだ、CLB・CRZ・CON・GA にも付いた（利用者の巡航の「CRZ +47C」）。離陸の推力制限の空中（浮揚から上昇の制限まで）は前のとおり「D-TO 1 +38C」の形。
+  - 試験：`takeoff_ref_test`（74 件、+8：SEL 47・TO 1 の地上で D-TO 1 +47C、空中のフラップ 20 でも同じ、フラップ 5 と VNAV の CLB 1 で「CLB 1」、<CRZ で「CRZ」、EEC への番号に D- の 100 が無い、地上に戻って D-TO 1 +47C）。
+  - X-Plane（カスタム acf、2026-11-19 23:47〜11-20 00:20）：新しい `s339_eicas_sel_climb` 19/19（4 回目。前の 3 回はシナリオの誤り：SEL 50 の大きな減格で上昇の制限は自動の CLB 2（FCOM p.1273）、FLCH の上昇中は CRZ を選んでもモデルが CLB に戻す）。RJAA 34L で SEL 50 の「D-TO +50C」、離陸の後の空中でも離陸の制限のうちは「D-TO +50C」、FLCH と THR で上昇の制限に移ると「CLB 2」（前は「CLB 2 +50C」）、<CON で「CON」。
 
 ## 171. LNAV の旋回の行き過ぎの残り（2026-11-19：利用者の「あとまだLNAVの旋回で若干行き過ぎる癖が残ってるからそれの調査も記しといて」。調べていない）
 

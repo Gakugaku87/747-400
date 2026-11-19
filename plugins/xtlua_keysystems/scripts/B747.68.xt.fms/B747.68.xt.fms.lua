@@ -2607,9 +2607,14 @@ local function update_thrlim()
   local code = 10 * THRLIM_CODE[s.mode] + ((s.mode == "TO" and s.to) or (s.mode == "CLB" and s.clb) or 0)
     + ((s.mode == "TO" and s.d) and 100 or 0)
   if B747DR_fms_thrlim_code ~= code then B747DR_fms_thrlim_code = code end
-  -- (step 9g4) the EICAS's line: with D- the assumed temperature after
+  -- (step 9g4) the EICAS's line: with D- the assumed temperature after.
+  -- (2026-11-19, notes/ATA-34-61-FMC.md §170 3) with the takeoff's limit
+  -- only (FCOM p.831: the assumed temperature "for reduced thrust
+  -- takeoff"; the THRUST LIM page in the air has no SEL, p.1337-1339).
+  -- Before, with any mode while the SEL stayed above the OAT ("CRZ +47C"
+  -- in the user's cruise)
   local eicas = mode
-  if thrlimState.d and sel then eicas = string.format("%s %+dC", mode, math.floor(sel + 0.5)) end
+  if s.mode == "TO" and s.d and sel then eicas = string.format("%s %+dC", mode, math.floor(sel + 0.5)) end
   if B747DR_fms_thrlim_eicas ~= eicas then B747DR_fms_thrlim_eicas = eicas end
   local selOut = (sel and not thrlimState.no_sel) and sel or -99
   if B747DR_fms_thrlim_sel ~= selOut then B747DR_fms_thrlim_sel = selOut end
