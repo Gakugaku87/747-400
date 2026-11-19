@@ -3,7 +3,8 @@
 -- B747.68.xt.fms/B747.68.thrlim_model.lua; 6-1/6-2 step 9g1, notes/
 -- ATA-34-61-FMC.md §73): TO on the ground with the THRUST LIM page's
 -- rating and the climb armed by the takeoff's reduction (FCOM p.1273,
--- p.1315-1316); the armed climb at the thrust reduction point with VNAV
+-- p.1315-1316; 2026-11-19, §170: the 405's and 570's by the takeoff's
+-- rating, p.1315); the armed climb at the thrust reduction point with VNAV
 -- (flaps 5 or a height: FCOM p.667), by the THR switch above 400 ft with
 -- VNAV or FLCH (p.642), the derate gone with a TO/GA push before it
 -- (p.667); VNAV's phase (the T/C's CRZ: ATA34_2 p.536), FLCH up from CRZ
@@ -137,6 +138,35 @@ T.equal(s.clb, 2, "27 % less thrust in all: CLB 2 armed (15 % or more)")
 T.equal(L.update(s, inp{alt_agl = 500, flaps = F10, sel_up = true}), "D-TO 1", "in the air: D-TO 1")
 T.equal(L.update(s, inp{alt_agl = 600, flaps = F10, sel_up = true, toga = true}), "TO", "a TO/GA push: TO (the derate and D- gone)")
 T.equal(L.update(s, inp{alt_agl = 700, flaps = F10, sel_up = true}), "TO", "and stays TO")
+-- (2026-11-19) the 405 and 570 (a freighter or GE: by_rating): the climb
+-- armed by the takeoff's rating, TO 1 CLB 1 and TO 2 CLB 2 (FCOM p.1315);
+-- TO CLB and the assumed temperature not counted (estimate); the crew's
+-- choice kept as with the 109
+s = L.new()
+T.equal(L.update(s, inp{ground = true, flaps = F10, by_rating = true, to_red = 0}), "TO", "the 405/570 on the ground: TO")
+T.check(L.select_to(s, 1, 5, true) and s.clb == 1, "the 405/570's TO 1: CLB 1 armed")
+L.select_to(s, 2, 15, true)
+T.equal(s.clb, 2, "TO 2: CLB 2 armed")
+L.select_to(s, 1, 20, true)
+T.equal(s.clb, 1, "TO 1 of 20 % (the operator's): CLB 1, not the 109's CLB 2")
+L.select_to(s, 0, 0, true)
+T.equal(s.clb, 0, "TO: CLB")
+T.equal(L.update(s, inp{ground = true, flaps = F10, by_rating = true, sel_up = true, to_red = 20}), "D-TO", "SEL over the OAT with TO: D-TO")
+T.equal(s.clb, 0, "D-TO of 20 % less thrust: CLB still (the 109's CLB 2)")
+L.select_to(s, 1, 5, true)
+T.equal(L.update(s, inp{ground = true, flaps = F10, by_rating = true, sel_up = true, to_red = 27}), "D-TO 1", "D-TO 1")
+T.equal(s.clb, 1, "D-TO 1 of 27 % in all: CLB 1 (the 109's CLB 2)")
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F5, vnav = true, by_rating = true}), "CLB 1", "the flaps at 5 with VNAV: the armed CLB 1")
+s = L.new()
+L.update(s, inp{ground = true, flaps = F10, by_rating = true, to_red = 0})
+L.select_clb(s, 2, true)
+L.select_to(s, 1, 5, true)
+T.check(s.clb == 2 and L.update(s, inp{ground = true, flaps = F10, by_rating = true, to_red = 5}) == "TO 1" and s.clb == 2,
+    "the 405/570: the crew's CLB 2 kept over TO 1's (FCOM p.1316)")
+-- the 109 (by_rating false) unchanged: TO of 20 % (SEL) CLB 2
+s = L.new()
+L.update(s, inp{ground = true, flaps = F10, sel_up = true, to_red = 20})
+T.equal(s.clb, 2, "the 109's D-TO of 20 %: CLB 2 (FCOM p.1273)")
 -- (step 9h3) an engine inoperative: failed in TO, the thrust reduction
 -- inhibited; CON with VNAV and the flaps up at VREF + 98 (FCOM p.1266,
 -- p.1272); the THR switch CON (p.642)

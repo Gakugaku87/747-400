@@ -10,7 +10,8 @@
 --   rating (FCOM p.1273, p.1314);
 --   CLB the maximum climb table; CLB 1 and CLB 2 10 and 20 % less thrust to
 --   10,000 ft, then linearly back to CLB's at 30,000 and 35,000 ft (the
---   109: P&W and RR; the 405 and 570, GE: both at 15,000 ft) (FCOM p.1273);
+--   109: P&W and RR passengers; the 405 and 570, a freighter or GE: both at
+--   15,000 ft) (FCOM p.1273);
 --   GA the go-around table;
 --   CRZ (2026-11-14, notes/ATA-34-61-FMC.md §169) P&W the FPPM's Max Cruise
 --   EPR (747-400F/PW4056, p.120-127: B747.42.eec_model.lua's PW.crz) with
@@ -29,10 +30,14 @@ local M = setmetatable({}, {})
 B747_ref_thrust_model = M
 
 -- the assumed temperature's most (FCOM p.1273); the climb derates' thrust
--- (FCOM p.1273) and the altitudes they wash out between
+-- (FCOM p.1273) and the altitudes they wash out between: the 109 (P&W and
+-- RR passengers) to 30,000 and 35,000 ft; (2026-11-19) the 405 and 570 (a
+-- freighter or GE, as the EEC's CON: B747.42.eec_model.lua) both to
+-- 15,000 ft, from 10,000 ft as the 109's (estimate: the FCOM's 15,000 ft
+-- only; before, by the engine type alone: a P&W freighter the 109's)
 M.SEL_MAX = 0.25
 M.CLB_DERATE = {0.10, 0.20}
-M.CLB_FULL, M.CLB_GONE = 10000, {PW = {30000, 35000}, GE = {15000, 15000}}
+M.CLB_FULL, M.CLB_GONE = 10000, {e109 = {30000, 35000}, e405 = {15000, 15000}}
 
 local function clamp(x, lo, hi)
     if x < lo then return lo elseif x > hi then return hi end
@@ -62,7 +67,8 @@ end
 -- inp: type ("PW" or "GE"), mode (the FMC's: "TO", "D-TO 1", "CLB 2", ...),
 -- to_pct (the takeoff derate, %), sel (the assumed temperature, °C, or
 -- nil), alt (pressure altitude, ft), tat (°C), mach, kias, packs_on, wai,
--- nai (this engine's). Returns the limit and the takeoff's thrust reduction
+-- nai (this engine's), freighter (laminar/B747/freighter: the 405's climb
+-- derate washout). Returns the limit and the takeoff's thrust reduction
 -- (%: 0 in other modes)
 function M.reference(inp)
     local E = B747_eec_model
@@ -90,7 +96,7 @@ function M.reference(inp)
     local v = E.rating(tables.clb, inp, inp.tat, inp.alt, inp.nai)
     local n = base:sub(1, 3) == "CLB" and tonumber(base:sub(5)) or nil
     if n and M.CLB_DERATE[n] then
-        local top = (M.CLB_GONE[inp.type] or M.CLB_GONE.PW)[n]
+        local top = M.CLB_GONE[(ge or inp.freighter) and "e405" or "e109"][n]
         v = less(ge, v, M.CLB_DERATE[n] * M.washout(inp.alt, top), mach)
     end
     return v, 0
