@@ -144480,7 +144480,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.950000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.950000 67.000000 0.000000
+                KEY_FRAME 1.950001 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144493,7 +144495,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.950000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.950000 67.000000 0.000000
+                KEY_FRAME 1.950001 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144506,7 +144510,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.950000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.950000 67.000000 0.000000
+                KEY_FRAME 1.950001 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144519,7 +144525,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.950000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.950000 67.000000 0.000000
+                KEY_FRAME 1.950001 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144538,7 +144546,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.750000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.750000 67.000000 0.000000
+                KEY_FRAME 1.760000 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144551,7 +144561,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.750000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.750000 67.000000 0.000000
+                KEY_FRAME 1.760000 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144564,7 +144576,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.750000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.750000 67.000000 0.000000
+                KEY_FRAME 1.760000 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -144577,7 +144591,9 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.850000 -67.000000 1.000000
-                KEY_FRAME 1.750000 67.000000
+                KEY_FRAME 0.850001 -67.000000 1.000000
+                KEY_FRAME 1.750000 67.000000 0.000000
+                KEY_FRAME 1.760000 67.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
