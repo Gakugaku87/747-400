@@ -92,7 +92,12 @@ M.crz_mach = crz_mach
 -- on the way to x (NM): the lowest of the one passed (sp.base) and those
 -- of the waypoints before x, with incl x's own too (each at or below its
 -- speed at its waypoint and after it: FCOM p.1332; FMSPG p.3.5-3); sp =
--- {base = CAS or nil, {x, spd}...} or nil, nil without one
+-- {base = CAS or nil, {x, spd}...} or nil, nil without one. (2026-11-20,
+-- GAP N19-NAV-05: no change) ARINC 424 p.100 (5.72) has a STAR's speed
+-- limit in force to the next one, a SID's from the one before: the data's
+-- meaning; the FMC takes a procedure's constraints into the waypoints'
+-- constraint fields as the crew's (FCOM p.1332), each at or below at its
+-- waypoint, and the FCOM and FMSPG give no other rule for several
 local function spd_in_force(sp, x, incl)
     if not sp then return nil end
     local lim = sp.base
@@ -563,7 +568,8 @@ function M.predict(s)
     -- (FMC-08) the climb's waypoint speed constraint in force at xq: the
     -- lowest of the climb's legs' not passed there (until passing each:
     -- FMSPG p.3.3-17), not under s.clb_floor (VREF + 100: FCOM p.1326),
-    -- nil without one
+    -- nil without one (N19-NAV-05: ARINC 424 p.100's scope not taken, as
+    -- the descent's: spd_in_force)
     local function clb_spd_at(xq)
         local lim = nil
         for i = 1, math.min(clbLast, #legs) do

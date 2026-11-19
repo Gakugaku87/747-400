@@ -176,7 +176,7 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 | NAV RADIO | NAVRAD | 一部 | 識別子での VOR 入力ができない（識別子を入れると autotune に戻る）。周波数/コースの同時入力もできない。状態は A/M だけ（P/R なし）。ADF の ANT/BFO（A/B 接尾）がなく、状態は "M" 固定。ILS の PARK/A は T/D までの距離だけで決める。ILS TUNE INHIBITED がない | FCOM p.1303-1307; FMSPG p.205-211 | B744.fms.pages.lua:355-513, 2549-2567 |
 | PERF INIT | PERFINIT | 一部 | FUEL は常に sim の燃料量で、見出しは CALC 固定（SENSED/MANUAL なし、手入力は保存されるが使われない）。"GR WT ADV" と `<` 付きの値は 405 の WBS 仕様（109/570 はボックス）。COST INDEX と CRZ CG の範囲検査がない（CRZ CG に文字を入れると描画エラー：CDU-09）。CRZ ALT は標準 FMS 経由で設定する | FCOM p.1307-1312; FMSPG p.94-99 | activepages/B744.fms.pages.perfinit.lua:15-141; B744.fms.pages.lua:1187-1209, 1367-1466 |
 | THRUST LIM（地上） | THRUSTLIM | 一部 | SEL（仮定温度）の範囲検査・"D-" 表示・25 % 上限がない。TO EPR/N1 の行に入力できる（実機は表示のみ）。定格や SEL を変えても TAKEOFF SPEEDS DELETED を出さない。TO 1/TO 2 の % は固定の 10/20。derate を選んでも SEL を消さない | FCOM p.1312-1316; FMSPG p.100-103 | activepages/B744.fms.pages.thrustlim.lua:9-49, 165-173 |
-| TAKEOFF REF | TAKEOFF | 一部 | フラップを入れると V speeds を直接 PFD に出し、大字で表示する（REF 付き小字の計算値→選択の流れがない）。ACCEL HT、E/O ACCEL HT、THR REDUCTION は固定文字で入力できない。WIND/SLOPE がない。滑走路と POS SHIFT は固定の "RW***"/"--00M"。PRE-FLT が固定（未完了ページへの誘導と THRUST LIM> がない）。V1MIN がない。V speeds の入力範囲が 100-200（実機は 100-300：FMSPG） | FCOM p.1316-1321; FMSPG p.104-109 | activepages/B744.fms.pages.takeoff.lua:23-135; B747.60.xt.fltInst02.lua:2783-2812 |
+| TAKEOFF REF | TAKEOFF | 一部 | フラップを入れると V speeds を直接 PFD に出し、大字で表示する（REF 付き小字の計算値→選択の流れがない）。ACCEL HT、E/O ACCEL HT、THR REDUCTION は固定文字で入力できない。WIND/SLOPE がない。滑走路と POS SHIFT は固定の "RW***"/"--00M"。PRE-FLT が固定（未完了ページへの誘導と THRUST LIM> がない）。V1MIN がない。V speeds の入力範囲が 100-200（実機は 100-300：FMSPG）。（2026-11-20、N19-WB-03）CG は 109・570 が乗員の入力までダッシュ、405 が FMC の WBS の CG の小字とキャレット（FCOM p.1320：ATA-34-61-FMC.md §175.2） | FCOM p.1316-1321; FMSPG p.104-109 | activepages/B744.fms.pages.takeoff.lua:23-135; B747.60.xt.fltInst02.lua:2783-2812 |
 
 **離陸・上昇・巡航**
 
@@ -215,7 +215,7 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 | MAINTENANCE INDEX | MAINT | mock-up | <INDEX が ACMS を開く（実機は INIT/REF INDEX） | FCOM p.1239 (11.31.5); FMSPG p.263 | activepages/B744.fms.pages.maint.lua:1-27 |
 | CROSS LOAD・PERF FACTORS・BITE | 各ページ | mock-up | 固定文字。PERF FACTORS の値は TAKEOFF REF の既定値と連動しない | FMSPG p.264-268 | maintcrossload.lua, maintperffactor.lua, maintbite.lua |
 | IRS MONITOR | MAINTIRSMONITOR | yes | 値は IRS 側 | FMSPG p.269 | maintirsmonitor.lua |
-| ACMS・CMC | ACMS・CMC | mock-up | 他の系統（ATA 31・45）の範囲 | FCOM p.1323-1324 | acms.lua, cmc.lua |
+| ACMS・CMC | ACMS・CMC | mock-up | 他の系統（ATA 31・45）の範囲。（2026-11-20、N19-CDU-01）ACMS の 1R の MAINT>（FMC の MAINTENANCE INDEX を開いた）を消した（ATA31 p.358-359：ATA-34-61-FMC.md §175.4） | FCOM p.1323-1324 | acms.lua, cmc.lua |
 | SATCOM | なし | no | <SAT は無効。repo に実機画面の写しがある | FCOM p.717-718 | B744.fms.pages.lua:52 |
 
 - sim 独自のページ（実機にない）：GROUND HANDLING、PAX/CARGO、DOORS、AIRCRAFT CONFIG（SIM CONFIG）、SOUND CONFIG。実機の挙動とは関係しないので、残すかどうかは方針で決める。
@@ -468,7 +468,7 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 | CDU-32 | 挙動の誤り | 低 | S | 109（旅客）では ATC と FMC COMM のキーは KEY/FUNCTION INOP のはずだが、常にデータリンクのページを開く。sim の機能として simconfig で切り替えられるようにする | FCOM p.725, p.1211 | B744.createfms.lua:63-67, 100-104 |
 | CDU-33 | バグ | 高 | S | EMERGENCY REPORT の 2L（DIVERT TO）が `setdata fltdst` になっている。RTE の目的地を書き換えて標準 FMS に送る。DELETE なら出発地・目的地・飛行計画を消す（データリンクの調査より。コードで確認） | FCOM p.729; FMSPG p.348 | activepages/atc/B744.fms.pages.emergency.lua:72; B744.fms.pages.lua:1326-1341 |
 | CDU-34 | バグ | 中 | S | ATC の送信文は共有の 1 本の `acarsMessage` に入る。POS REPORT・EMERGENCY・VERIFY の各ページは描画のたびにここへ書き込み、3 台は毎フレーム描かれる。そのため、他の CDU が出しているページの文が送られる | FCOM p.744-745 | activepages/atc/B744.fms.pages.posreport.lua:20; emergency.lua:52; request.lua:320; whencanwe.lua:118 |
-| CDU-35 | 欠落 | 中 | L | ATC アップリンクの処理（XXXXz ATC UPLINK、VERIFY RESPONSE、REJECT DUE TO、応答の属性、電文の状態、ARM）と、クリアランスの LOAD（現用ルートの MOD、UNABLE TO LOAD/PARTIAL CLEARANCE LOADED）がない | FCOM p.753-765, p.1433-1434; FMSPG p.288-297 | acars/acars.pages.lua:229-342; acars/autoatcProvider.lua:188-268 |
+| CDU-35 | 欠落 | 中 | L | ATC アップリンクの処理（XXXXz ATC UPLINK、VERIFY RESPONSE、REJECT DUE TO、応答の属性、電文の状態、ARM）と、クリアランスの LOAD（現用ルートの MOD、UNABLE TO LOAD/PARTIAL CLEARANCE LOADED）がない（アップリンクの処理は段 12f〜12g で作った：ATA-34-61-FMC.md §114〜。LOAD は 2026-11-20 に段 A を作った：同 §175.5） | FCOM p.753-765, p.1433-1434; FMSPG p.288-297 | acars/acars.pages.lua:229-342; acars/autoatcProvider.lua:188-268 |
 | CDU-36 | 挙動の誤り | 中 | M | ATC キーが常に ATC INDEX を開く（状態による振り分けも長押しの EMERGENCY もない）。LOGON/STATUS の手順が実機と違う（SEND/SENT/REJECTED/RESEND がない、即送信、SELECT OFF が効かない、ATC COMM ESTABLISHED/TERMINATED を出さない）。ACARS の WEATHER/INITIALIZE が ATC のログオン先を変える | FCOM p.728, p.752-758, p.1431, p.1433; FMSPG p.44, p.277-285 | B744.createfms.lua:63-67; activepages/atc/B744.fms.pages.atclogonstatus.lua:3-36; acars/acars.lua:38-59; acars/acars.pages.weatherrequest.lua:49-55 |
 | CDU-37 | 挙動の誤り | 中 | S | データリンクの EICAS 表示：ATC アップリンクに ACARS MESSAGE メモを使う。ATC MESSAGE（メモ＋チャイム）がない。FCOM にない ACARS NO COMM メモを出し続ける。>DATALINK AVAIL/LOST/SYS を立てる処理がない | FCOM p.725, p.775-776; FMSPG p.255 | B747.68.xt.fms.lua:1240-1265; B747.87.xt.warning.lua:241-243, 492-546 |
 | CDU-38 | 欠落 | 中 | M | Hoppie の受信が未実装（解析が空で、読む dataref も誤り）。Hoppie を選んでも AutoATC が必須 | sim 独自 | acars/autoatcHoppieProvider.lua:17-41, 70-75 |
@@ -530,3 +530,13 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 
 - CMC の CDU 画面（LH_MAN p.46–86、747-400 の実例）：CMC-L MENU 1/2 は今のコードと一致、2/2 は <EXISTING FAULTS・<FAULT HISTORY。PRESENT LEG FAULTS は FDE ごとに 2 行（「*STATUS: 22 10 82 00」と「<NO LAND 3」）、ラッチする STATUS に ERASE>、MSG の画面は「*RA-L FAIL (NO BUS OUTPUT)」「MSG:34077 ATA:34-33」と日時・フェーズ・HRD/INT。今の <PRESENT LEG FAULTS は開発用の表示のまま（N19-CMC-01）。故障の記録は無い（N19-CMC-02）。CMCS（787）と OMS（一般論）は使わない。
 
+
+- 2026-11-20 の直しで CDU の表示が変わったもの（GAP_ANALYSIS.md §7、詳しくは ATA-34-61-FMC.md §175）：
+  - RTE LEGS：真方位で描かれた手続きのコース・方位を「085`T」「337`T HDG」（ARINC424 p.85、FCOM p.1331 の T）。
+  - ARRIVALS：進入の種類 F を「FMS」、W・Y を「MLS」（ARINC424 p.73。推定）。RUNWAY の入力に「08T」（真方位の滑走路）。
+  - TAKEOFF REF の CG：109・570 は乗員の入力までダッシュ、405 は FMC の WBS の CG を小字とキャレット、4R で大字、DELETE で小字に戻る（FCOM p.1320）。乗員の CG は GR WT・ZFW を入れ直しても残る。
+  - XXXXz ATC UPLINK：応答の種類を要素ごとの属性の最も高いもので（AT ... EXPECT は ACCEPT だけ、REQUEST FORWARDED などは応答なし：CPDLC p.177-198）、地上の RR があればそれで。
+  - VERIFY RESPONSE：SEND の後はプロバイダーが送るまで SENDING、受け取りで XXXXz ATC UPLINK に戻る（FMSPG p.297）、60 秒で RESEND>（FCOM p.765）と ATC MSG NOT ACKNOWLEDGED。
+  - ATC INDEX：6L の <PRINT LOG を空白（PRINT と同じプリンターの状態：FMSPG p.366。sim にプリンターが無い）。
+  - XXXXz ATC UPLINK：最後のページの 4R に LOAD>（4L の <STANDBY の横：FCOM p.760 の図）。読み込める要素（PROCEED DIRECT TO、AT 点 PROCEED DIRECT TO、CROSS 点 AT 高度、RTA のある機体で CROSS 点 AT 時刻、OFFSET：CPDLC p.202-203）があり、RTE 1・2 に MOD が無く、REJECT を選んでいない間（FMSPG p.290）。押すと現用ルートの MOD（EXEC）か RTA PROGRESS の MOD、読み込めなければ UNABLE TO LOAD CLEARANCE、一部なら PARTIAL CLEARANCE LOADED（FCOM p.1433-1434）。ページはそのまま（推定）。ATA-34-61-FMC.md §175.5（段 A。経路の許可・手続き・ホールドの段 B は未）。
+  - ACMS：1R の MAINT> を消した（ATA31 p.358-359）。

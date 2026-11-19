@@ -291,11 +291,12 @@ function M.set_dest(st, icao)
 end
 
 -- RUNWAY (FCOM p.1289): a runway of the origin in the database ("16R" or
--- "RW16R")
+-- "RW16R"; 2026-11-20, GAP N19-NAV-02: "08T" too, a runway in degrees
+-- true, ARINC 424 p.94)
 function M.set_runway(st, text)
     local r = M.shown(st)
     if not r.origin then return M.INVALID_ENTRY end
-    local id = text:match("^RW(%d%d[LCR]?)$") or text:match("^(%d%d[LCR]?)$")
+    local id = text:match("^RW(%d%d[LCRT]?)$") or text:match("^(%d%d[LCRT]?)$")
     if not id then return M.INVALID_ENTRY end
     local c = st.N.cifp(st.db, r.origin.ident)
     local rw = c and c.runways["RW" .. id]
@@ -1174,7 +1175,8 @@ function M.crs_reversal(st, r)
             if nxt.fix then
                 out = M.course(l.fix.lat, l.fix.lon, nxt.fix.lat, nxt.fix.lon)
             elseif nxt.crs then
-                local var = st.N.variation and st.N.variation(st.db, l.fix.lat, l.fix.lon) or 0
+                -- (N19-NAV-02) a course in degrees true as it is
+                local var = (not nxt.crs_true) and st.N.variation and st.N.variation(st.db, l.fix.lat, l.fix.lon) or 0
                 out = (nxt.crs + (var or 0)) % 360
             end
             if not out then return false end

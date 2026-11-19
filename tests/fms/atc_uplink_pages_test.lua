@@ -114,9 +114,13 @@ local n0 = #sentList()
 key("ls_key/R5")
 T.equal(#sentList(), n0 + 1, "SEND: a downlink through the provider")
 T.check(lastSent():find('"msg":"WILCO"', 1, true) and lastSent():find('"RT":' .. (nid), 1, true), "WILCO to the uplink's ID: " .. lastSent())
-T.equal(line(11), "                    SENT", "SENT (the network's acknowledgement: estimate)")
-T.equal(line(3), "WILCO           ACCEPTED", "STATUS ACCEPTED (FCOM p.764)")
-key("ls_key/L6")
+-- (2026-11-20, N19-ATC-04) SENDING until the provider sends it (one
+-- message each 15 s), then the network's acknowledgement (estimate): the
+-- CDU back on the uplink (FMSPG p.297). Before, SENT and ACCEPTED at once
+T.equal(line(11), "                 SENDING", "SENDING")
+frames(31)                          -- (the logon's REQUEST first: one each 15 s)
+T.check(page("ATC UPLINK"), "acknowledged: the uplink's page (FMSPG p.297)")
+T.equal(fms.ns.B747_fms_atc_verify("fmsL").state, "SENT", "SENT (the network's acknowledgement: estimate)")
 T.equal(line(3), "                ACCEPTED", "the uplink ACCEPTED")
 T.equal(line(9), "                        ", "no responses after")
 key("func_key/crz")
@@ -142,8 +146,8 @@ T.equal(line(4), "DUE TO AIRCRAFT         ", "the reason")
 T.equal(line(13), "<REJECT DUE TO          ", "<REJECT DUE TO")
 key("ls_key/R5")
 T.check(lastSent():find("NEGATIVE DUE TO AIRCRAFT PERFORMANCE TURBULENCE", 1, true), "the reply: " .. lastSent())
-key("ls_key/L6")
-key("ls_key/L6")
+frames(16)
+T.check(page("ATC UPLINK"), "acknowledged: the uplink's page")
 T.equal(line(3), "                REJECTED", "REJECTED")
 
 -- EXPECT: ROGER only; STANDBY keeps it OPEN

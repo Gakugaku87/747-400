@@ -48,7 +48,7 @@ T.near(get(ENG .. "TRA", 0), 1.51, 0.005, "P&W: full forward commands the max EP
 T.near(get(ENG .. "TRA", 3), 1.51, 0.005, "P&W: 48° TLA commands the max EPR")
 -- the idle end the EPR of no net thrust at the Mach (2026-10-31; before
 -- 0.95 at any Mach): standing, 1.00
-T.near(get(ENG .. "TRA", 1), 1.0 + (1.51 - 1.0) * 22 / 46, 0.01, "P&W: 24° TLA commands 22/46 of the way from the idle end (the flat idle to 2°)")
+T.near(get(ENG .. "TRA", 1), 1.0 + (1.25 - 1.0) * 22 / 36, 0.01, "P&W: 24° TLA commands 22/36 of the way from the idle end to the maximum climb EPR 1.25 at 38° (N19-ENG-04, PW_PPM p.196)")
 T.near(get(ENG .. "TRA", 2), 1.0, 0.005, "P&W: idle lever commands the idle end (no net thrust standing: 1.00)")
 rt:set("sim/flightmodel/misc/machno", 0.78)
 frames(0.2)
@@ -73,12 +73,14 @@ rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 280)
 rt:set("laminar/B747/antiice/nacelle/valve_pos", 0, 1)
 for i = 0, 3 do rt:set(USER, i, 0.7) end
 frames(3)
--- (2026-11-13, B2) the maximum EPR the maximum continuous + 0.16 (1.78;
--- 1.74 with engine 1's anti-ice): on the display at most 1.71 (the glue's
--- cap); the lever's one line to it at 48°
-T.near(get(ENG .. "display_EPR_max", 1), 1.71, 0.005, "P&W: max EPR at 30,000 ft, TAT -20: over the climb's (1.78, the display's 1.71; before the maximum continuous 1.622)")
-T.near(get(ENG .. "display_EPR_max", 0), 1.71, 0.005, "P&W: engine 1's anti-ice: 1.74, the display's 1.71")
-T.near(get(ENG .. "TRA", 1), 1.0 + (1.622 + 0.16 - 1.0) * 33 / 46, 0.005, "P&W: 35° TLA commands 33/46 of the way to the max EPR (B2; before, the max above 25,000 ft)")
+-- (2026-11-20, N19-ENG-01) above about 14,100 ft the maximum EPR is the
+-- maximum continuous (PW_PPM p.196): 1.622, 1.582 with engine 1's
+-- anti-ice (the climb's 1.57 + 0.01 under it). Before (B2, 2026-11-13) the
+-- maximum continuous + 0.16: 1.78 (the display's cap 1.71). The lever's one
+-- line to it at 48°
+T.near(get(ENG .. "display_EPR_max", 1), 1.622, 0.005, "P&W: max EPR at 30,000 ft, TAT -20: the maximum continuous (PW_PPM p.196; before 1.78 shown 1.71)")
+T.near(get(ENG .. "display_EPR_max", 0), 1.582, 0.005, "P&W: engine 1's anti-ice: its maximum continuous 1.582 (before 1.74 shown 1.71)")
+T.near(get(ENG .. "TRA", 1), 1.0 + (1.57 - 1.0) * 33 / 36, 0.005, "P&W: 35° TLA commands 33/36 of the way to the maximum climb EPR 1.57 at 38° (N19-ENG-04)")
 -- (step 9g3) CLB's reference the maximum climb table's; CLB 2 at 30,000 ft
 -- still 4 % less thrust (the 109's washout to 35,000 ft)
 rt:set(ENG .. "ref_thr_limit_mode", "CLB")

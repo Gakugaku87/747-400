@@ -56,7 +56,7 @@
       "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]",
       "laminar/B747/engines/display_EGT[0]", "laminar/B747/engines/EGT/white_on[0]", "laminar/B747/engines/EGT/amber_on[0]", "laminar/B747/engines/EGT/red_on[0]" ] },
     { "do": "check", "note": "RPM LIM は出ない", "dref": "laminar/B747/CAS/advisory_status[134]", "op": "==", "value": 0 },
-    { "do": "check", "note": "N2 は赤線（P&W 111.4 %）の下", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 111.4 },
+    { "do": "check", "note": "N2 は赤線（P&W 105.5 %：PW_PPM p.7、2026-11-20 から。前は 111.4）の下", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 105.5 },
     { "do": "check", "note": "EGT は離陸限界（赤）に届かない", "dref": "laminar/B747/engines/EGT/red_on[0]", "op": "==", "value": 0 },
     { "do": "check", "note": "TO/GA を押して 5 分の間は琥珀にならない（FCOM p.872）", "dref": "laminar/B747/engines/EGT/amber_on[0]", "op": "==", "value": 0 },
     { "do": "wait", "note": "全開で最大 EPR に届くと EPR の帯が赤（FCOM p.834、p.873）", "dref": "laminar/B747/engines/EPR/red_on[0]", "op": "==", "value": 1, "timeout": 5 },

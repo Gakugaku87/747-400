@@ -152,8 +152,11 @@ local function leg_title(st, r, i)
   end
   if l.crs and pt ~= "" and pt ~= "TF" and pt ~= "DF" and pt ~= "IF" then
     local n = math.floor(l.crs + 0.5) % 360
-    -- a heading with HDG ("180` HDG"; an FM leg a course: FCOM p.1249)
-    crs = string.format("%03d`", n == 0 and 360 or n) .. (pt:sub(1, 1) == "V" and " HDG" or "")
+    -- a heading with HDG ("180` HDG"; an FM leg a course: FCOM p.1249);
+    -- (2026-11-20, GAP N19-NAV-02) one charted in degrees true ("085T":
+    -- ARINC 424 p.85) with T, as a true course (FCOM p.1331)
+    crs = string.format("%03d`", n == 0 and 360 or n) .. (l.crs_true and "T" or "")
+      .. (pt:sub(1, 1) == "V" and " HDG" or "")
   end
   if not l.fix then dist = "" end
   -- the INTC CRS: the crew's magnetic course

@@ -56,11 +56,11 @@
 | NASA_SIM | Boeing D6-30643 Vol. II「The Simulation of a Jumbo Jet Transport Aircraft, Vol. II: Modeling Data」（NASA CR-114494、Hanke・Nordwall、1970-09） | 636 | 380 | **747-100（JT9D-3）**の空力・操縦系統・推進・脚・A/P（SPZ-1）・ヨーダンパー・AFM の模型データ。-400 にそのまま使えない値は「-100 の値」と書く |
 | NASA_HQ | NASA CR-2144「Aircraft Handling Qualities Data」（Heffley・Jewell、1972-12） | 351 | 233 | 10 機のうち 747（-100）は p.216–248（D6-30643 からの二次資料）。**PDF ＝本のページ＋6** |
 | VT_SPECS | Virginia Tech AOE 4124 の学生の発表（2007 春、747-100 の諸元と翼型） | 19 | 17 | 信頼性は低い。参考だけ |
-| APU_MTM | Airbus の整備訓練資料（A320 系 M35、2006-05）の 49 APU のうち **APS 3200** の部分 | 74 | 40 | **747 の資料ではない**（747-400 の APU は PW901A：AC_SPECS p.1）。数値は使わない |
+| APU_MTM | **削除した（2026-11-20 利用者：747 の資料でない）**。Airbus の整備訓練資料（A320 系 M35、2006-05）の 49 APU のうち **APS 3200** の部分 | 74 | 40 | **747 の資料ではない**（747-400 の APU は PW901A：AC_SPECS p.1）。数値は使わない |
 | AC_SPECS | Aircraft Commerce Issue 51（2007 年 4・5 月）の 747-400 の仕様 | 3 | 0 | 二次資料。型式ごとの重量の選択肢、燃料、APU の型式 |
-| CMCS | Scribd の Word 文書「ATA45 NEW CMCS」（`12_Scribd_ATA45_NEW_CMCS.docx`、7 ページはテキストの区切り） | 7 | — | **787 の資料**。索引だけ |
+| CMCS | **削除した（2026-11-20 利用者：747 の資料でない）**。Scribd の Word 文書「ATA45 NEW CMCS」（`12_Scribd_ATA45_NEW_CMCS.docx`、7 ページはテキストの区切り） | 7 | — | **787 の資料**。索引だけ |
 | LH_MAN | Lufthansa Technical Training「Training Manual B747-400 ATA 00 Maintenance Documents」（Book E、2008-10 / 本文 07.2003） | 120 | 76 | 整備文書の使い方と、FIM・CMCS で故障を切り分ける手順。**CDU の CMC 画面の実例**、STATUS のラッチ（NVM）。PDF ＝資料＋2 |
-| OMS | 教科書の 10 章「On Board Maintenance Systems (ATA 45)」 | 17 | 1 | 機種によらない一般論（例は A330・777）。747-400 の根拠にしない |
+| OMS | **削除した（2026-11-20 利用者：747 の資料でない）**。教科書の 10 章「On Board Maintenance Systems (ATA 45)」 | 17 | 1 | 機種によらない一般論（例は A330・777）。747-400 の根拠にしない |
 | COMM | IAI「Supplement to 747-400 System Schematic Manual」23 章（RT633・RT634、2008-10-30） | 12 | 10 | 改造貨物機の配線図（ACARS、PA、interphone、地上員と上部デッキの呼出、AMU） |
 | CPDLC | Honeywell「CPDLC Procedures」Final Report Rev.2（FAA DTFAWA-10-A-80031、2011-08-31、ROSAP） | 217 | 13 | 研究報告。本文の「B744」の画面は Mark II CMU（LINK2000+）で FANS の FMC ではない。**付録 G が 747-400 の FMS の LOAD の規則**、付録 F が応答の属性（SC-214）。PDF ＝資料＋1 |
 | PW_PPM | KLM E&M「B747-400 Power Plant PW4000」訓練教材（Rev 2015-03、AMM Rev 82） | 636 | 374 | PW4056 の仕様・限界、EEC（TRA の角度、ALTN、制限保護、アイドルの選択、トリム）、燃料・油・点火・表示・始動、ATA 78 逆推力。見開き（偶数が本文）。2 段組のテキストが混ざる・画像だけの本文のページがある |
@@ -423,10 +423,10 @@
 | TCDS_RB211 | p.4–5 型式、p.10 定格と 100 % 回転数、p.11 FAFC、p.15 flat rating、**p.16 TGT、p.17 油温、p.18–19 回転数、p.20 油圧、p.21 油量**、p.23 Note 9–10 |
 | AC_SPECS | p.1 概要・エンジン・MTOW の経緯（APU は PW901A）、**p.2 Family Specifications の表**、p.3 -400F・ER・ERF・D |
 | VT_SPECS | p.2 諸元、p.5 主翼、p.11 CG と中立点、p.13 抵抗極曲線（747-100、学生） |
-| APU_MTM | （A320/APS 3200）Level 2 4–17、説明 18–37、System Management 38–45、写真 46–73 |
+| APU_MTM | **削除した（2026-11-20 利用者：747 の資料でない）**。（A320/APS 3200）Level 2 4–17、説明 18–37、System Management 38–45、写真 46–73 |
 | LH_MAN | 文書の使い方 4–45、**切り分けと CMC の画面 46–74**、実例（IDG・外部電源・BCU）75–96、DC 発電 97–100、AMM 201 101–103、MEL・MMP 104–107、**GCU 2 の論理図 p.111** |
 | COMM | p.4 ACARS、p.5 PA、p.6 service interphone、**p.7 地上員の呼出**、p.8 上部デッキの呼出、p.10–11 AMU、p.12 CVR |
-| OMS／CMCS | 一般論（CMC、BITE、ACARS、データローディング）／787 の CMCF |
+| OMS／CMCS | **削除した（2026-11-20 利用者）**。一般論（CMC、BITE、ACARS、データローディング）／787 の CMCF |
 | EICAS_WS | 概要 3–8、EIU 9–14、音と master 15–23、caution・advisory 24–30、CANC/RCL 31–42、**離陸の抑止 43–49**、始動前 50、置き換え 51–52、memo 53–55 |
 | AOM_JP | p.3–9 概要・音・**抑止**、**p.10–11 離陸・着陸形態警報**、p.12–22 失速・過速・GPWS、p.23–26 操作と表示、**p.27–34 メッセージ一覧** |
 | CB_BA | p.1 パネル、p.2 配置図、p.3–12 系統ごとの CB |

@@ -15,9 +15,12 @@
 --    nil for the conditional legs), from_fix (FA, FC, FD, FM: the fix they
 --    start at), turn (L, R), flyover, navaid (the recommended navaid),
 --    theta, rho (its radial and DME distance), crs (the magnetic course or
---    heading), dist (nm), time (a hold's leg time, minutes), alt, alt2, akind
+--    heading), crs_true, theta_true (true when charted in degrees true:
+--    "085T"), dist (nm), time (a hold's leg time, minutes), alt, alt2, akind
 --    (the constraint: "" at, "A" at or above, "B" at or below, "AB" the
---    block), spd (at or below), vangle (degrees), altterm (the legs ending
+--    block), spd (at or below: FCOM p.1332; the speed limit description,
+--    field 27, at, at or above or at or below: ARINC 424 p.141, not read),
+--    vangle (degrees), altterm (the legs ending
 --    at an altitude: CA, FA, VA, HA), name (a conditional leg's: "(1000)",
 --    "(INTC)", "VECTORS", "NRE180", "NRE/20": FCOM p.1249), faf, map,
 --    missed, center and arc_r (an RF leg's arc: its centre, a point of the
@@ -36,13 +39,41 @@ local PART = {
 }
 -- the approaches' names on the ARRIVALS page (FCOM p.1401: ILS32R, RNV22,
 -- VOR04, NDB32R, GPS32R): the CIFP's type letter as the CDU shows it
--- (estimate for the letters FCOM does not show)
+-- (estimate for the letters FCOM does not show). The letters ARINC 424's
+-- approach route types (p.73: the identifier's first letter, p.75):
+-- (2026-11-20, GAP N19-NAV-08) F the FMS approach FMS, W and Y the MLS
+-- (type A; types B and C) MLS as M; before, the letter itself ("F22")
 local APPROACH_NAME = {I = "ILS", L = "LOC", B = "BCS", R = "RNV", P = "GPS", D = "VOR", V = "VOR", S = "VOR",
-    N = "NDB", Q = "NDB", X = "LDA", U = "SDF", G = "IGS", J = "GLS", T = "TCN", M = "MLS", H = "RNP"}
+    N = "NDB", Q = "NDB", X = "LDA", U = "SDF", G = "IGS", J = "GLS", T = "TCN", M = "MLS", H = "RNP",
+    F = "FMS", W = "MLS", Y = "MLS"}
 
 local function num(s, scale)
     local v = tonumber(s)
     return v and v / (scale or 1) or nil
+end
+
+-- (2026-11-20, GAP N19-NAV-02) a course, heading or radial field (21, 19):
+-- degrees and tenths ("0850"), or whole degrees true with T in the tenths'
+-- place ("085T": ARINC 424 p.85, the procedures charted in degrees true:
+-- Greenland, the Canadian north, Antarctica; 663 legs of AIRAC 2611); its
+-- value and whether true. Before, "085T" read nil (a CA without its
+-- course, an AF's boundary radial lost)
+local function course_field(s)
+    if not s or s == "" then return nil, false end
+    local d = s:match("^(%d%d%d)T$")
+    if d then return tonumber(d), true end
+    return num(s, 10), false
+end
+
+-- (2026-11-20, GAP N19-NAV-03) the recommended navaid's kind from its
+-- section and subsection (fields 16, 17; ARINC 424 p.71, p.82): D and
+-- blank a VHF navaid (VOR, DME, VORTAC, TACAN), D B an NDB, P N a
+-- terminal NDB, P I a localizer; nil (any kind) otherwise
+local function navaid_kind(sec, sub)
+    if sec == "D" then return sub == "B" and "NDB" or "VOR" end
+    if sec == "P" and sub == "N" then return "NDB" end
+    if sec == "P" and sub == "I" then return "LOC" end
+    return nil
 end
 
 -- an altitude field: "FL180" or feet
@@ -152,20 +183,43 @@ local function leg_of(N, db, c, icao, f, via)
             point = N.point(db, id, region, KIND[sec], icao, sec == "P" and sub == "C")
         end
     end
-    local navaid = f[14] ~= "" and N.point(db, f[14], f[15], nil, icao) or nil
+    -- the recommended navaid of its kind (N19-NAV-03; before, the nearest
+    -- with the identifier and region of any kind: an NDB for a VOR's
+    -- radial), else of any kind as before
+    local navaid = nil
+    if f[14] ~= "" then
+        local k = navaid_kind(f[16], f[17])
+        navaid = (k and N.point(db, f[14], f[15], k, icao)) or N.point(db, f[14], f[15], nil, icao)
+    end
     local desc = f.desc or f[9] or ""
+    local crs, crs_true = course_field(f[21])
+    local theta, theta_true = course_field(f[19])
+    -- the turn direction (field 10). Its "turn direction valid" (field 13,
+    -- TDV) not read: ARINC 424 p.82, p.198 (Att. 5 2.6) have TD given for
+    -- every turn of 90 degrees or more and TDV Y with an L or R that forces
+    -- a turn over 135 degrees; TD alone (TDV blank: about 87,000 legs of
+    -- AIRAC 2611, mostly DF, holds, RF, AF and PI) its natural way, kept as
+    -- the way to turn (GAP N19-NAV-04: no change)
+    -- the fly-over waypoints (field 9's second character, ARINC 424 p.79):
+    -- Y, and (2026-11-20, GAP N19-NAV-01) B, a fly-over waypoint ending the
+    -- route type (note 6: 1,746 legs of AIRAC 2611, KSEA's ELMAA5 PEAKK,
+    -- EDDF's ANEK4D DF152); before, B flown by
     local l = {via = via, pt = pt, turn = (f[10] == "L" or f[10] == "R") and f[10] or nil,
-        flyover = desc:sub(2, 2) == "Y", navaid = navaid, theta = num(f[19], 10), rho = num(f[20], 10),
-        crs = num(f[21], 10), dist = num(f[22], 10), spd = num(f[28]), vangle = num(f[29], 100),
+        flyover = desc:sub(2, 2) == "Y" or desc:sub(2, 2) == "B", navaid = navaid, theta = theta,
+        theta_true = theta_true or nil, rho = num(f[20], 10),
+        crs = crs, crs_true = crs_true or nil, dist = num(f[22], 10), spd = num(f[28]), vangle = num(f[29], 100),
         -- field 26: the procedure's transition altitude (an arrival's: its
         -- transition level, DESCENT FORECAST's TRANS LVL: FMSPG p.178)
         ta = alt_field(f[26]),
         faf = desc:sub(4, 4) == "F", map = desc:sub(4, 4) == "M", missed = desc:sub(3, 3) == "M",
         altterm = pt == "CA" or pt == "FA" or pt == "VA" or pt == "HA"}
     -- the altitude constraint (field 23 the description, 24 and 25 the
-    -- altitudes): + at or above, - at or below, B the block (25 to 24), C
-    -- at or above the second; the glide slope codes as at or above or at
-    -- the first (estimate)
+    -- altitudes; ARINC 424 p.86, 5.29): + at or above, - at or below, @ or
+    -- blank at, B the block (25 to 24), C at or above the second; the glide
+    -- slope and vertical angle codes by the first altitude's crossing (G, I,
+    -- X at; H, J, V at or above; Y at or below; the second altitude the
+    -- glide slope's or the angle's). (2026-11-20, GAP N19-NAV-07) before
+    -- "estimate": ARINC 424 confirms each
     local d, a1, a2 = f[23], alt_field(f[24]), alt_field(f[25])
     if a1 then
         if d == "+" or d == "H" or d == "J" or d == "V" then l.alt, l.akind = a1, "A"
@@ -312,7 +366,8 @@ function M.approach_legs(N, db, icao, id, trans)
     -- alone) and the ILS not autotuned (FCOM p.1306-1307: the ILS of a LOC,
     -- VOR, runway approach to an ILS/LOC runway)
     if not rwy then
-        local d = id:match("^%u(%d%d[LCR]?)")
+        -- (N19-NAV-02) T a runway in degrees true (ARINC 424 p.75, p.94)
+        local d = id:match("^%u(%d%d[LCRT]?)")
         if d then rwy = "RW" .. d end
     end
     return out, rwy

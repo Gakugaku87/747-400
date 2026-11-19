@@ -3110,3 +3110,143 @@ X-Plane も `_ref/` も無いクラウドのセッションで、コードとノ
 - 直したこと：全部を実機の % MAC に。`B747_fms_mac_pct(機首からの in)`（`B747.68.xt.fms.lua`）を `calc_CGMAC` と CDU の自動入力（`B744.fms.pages.perfinit.lua`：`acf_cgZ_original` × 12 ＋ `cg_offset_z` × 39.37）が使い、重量の窓（`wb_window.c`）も同じ式（CG と ZFW の CG。前の ZFW の CG は 9.537 %/m の換算）。
 - 効き：TAKEOFF REF の TRIM（`calc_stab_trim` の式は CG の % MAC で計算）。既定の 270 t で前は CG 30・TRIM 2.9 前後、今は CG 21・TRIM 5.1（FPPM p.44 の 270 t・21 % は約 5¼。X-Plane で離陸の後に釣り合うのは約 5 units：AERO.md §3.23）。`calc_stab_trim` の式そのもの（本家から、出典なし）を FPPM の表に置き換えるかは、離陸トリムの測り（AERO.md §3.23、`tests/flight/measure/aero_takeoff_trim_*`）の後に決める。
 - 試験：`cg_mac_test` 7（新：式の両端、空の機体 23 %、270 t・22 % の TRIM 約 4.8）、`takeoff_ref_test` 78（CG の入力を `cg_offset_z` に）。X-Plane（2026-11-20 01:40、橋渡しのプラグインを組み直して起動し直した後）：`s256_cdu_sim_values` 14/14、CDU の CG 21 %（`cg_offset_z` −0.199 m：20.6 %。X-Plane の `cg_offset_z_mac` は 30.4）、TRIM 5.1、重量の窓の CG 20.6・ZFW の CG 23.0（写真）。
+
+## 175. 2026-11-19 の資料からの FMC の直し（2026-11-20、段 3。GAP_ANALYSIS.md §7）
+
+GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、低の段 N19-CDU-01・N19-ATC-04〜06・N19-NAV-02〜08・N19-WB-04・05 の 18 件（利用者の「段 4 のフルレビューの前に全部」）。作業場所は git worktree `D:\b747_fmc`（枝 `fmc-n19`、overhaul の a6aae1a5 から）。X-Plane では試していない（親のセッションが使っていたため）。X-Plane で確かめることは各項目と §175.6 にまとめた。コミット：59ba4c82（航法データ）、e682bb80（重量重心）、e2326a5d（ATC の応答）、202f4a88（ACMS）。N19-ATC-03 の LOAD は、同じ日の後で別の worktree（`D:\b747_atc`、枝 `atc-load`）で段 A を作った（§175.5、コミット 5999f88b）。
+
+### 175.1 航法データ（ARINC 424-17。コミット 59ba4c82）
+
+- **N19-NAV-01 fly-over の「B」**（直した）
+  - 資料：ARINC424 p.79 (5.17、注 6)：Waypoint Description の 2 文字目 B は「fly-over で、SID・STAR の route type、進入の transition、最終進入の終わり」。Y は fly-over、E は route type の終わり（fly-by）。
+  - 前：2 文字目が Y だけ fly-over。B（AIRAC 2611 で 1,746 脚：KSEA ELMAA5 の PEAKK、EDDF ANEK4D の DF152 など）は fly-by で飛び、ND の線と LNAV の旋回の始まりが前倒しだった。
+  - 直したこと：`B747.68.proc_model.lua` の `leg_of` で B も fly-over。
+  - X-Plane：B の点を含む手続き（KSEA の ELMAA5 の RW16L/C/R、PEAKK）で、ND の線と LNAV がその点の上を通ってから曲がること。
+- **N19-NAV-02 真方位の「085T」と滑走路「RWnnT」**（直した）
+  - 資料：ARINC424 p.85 (5.26)：コース・方位の欄は度と 0.1 度、真方位で描かれた手続きは 0.1 度の位置に「T」（例 194T）。p.94 (5.46)：滑走路の識別子の 5 文字目 T は「真方位だけで決めた滑走路」（例 RW17T）。p.75 (5.10)：進入の識別子の 4 文字目にも T。
+  - 前：`tonumber("085T")` が nil で、CA・VA はコースが無く形が無い、AF の境界の radial が無くなる、CF は直線（AIRAC 2611 で 45 空港・663 脚：BGTL、カナダ北部、南極）。滑走路 RW08T は長さ・RUNWAY の入力・REF NAV DATA・進入の滑走路の判定で外れた。
+  - 直したこと：`proc_model` の `course_field`（"085T" は 85 で真方位：`crs_true`・`theta_true`）。`path_model` の `true_of` に真方位の印（CF、CA/CD/CI/CR、VA〜VR、FA〜FM、AF の境界、ホールドの inbound、PI）。LNAV の方位の脚は `e.true_hdg` のとき真方位のまま飛ぶ（前は磁方位として機の偏差を足していた）。CRS REVERSAL AT FA FIX の判定も。LEGS の題名は「085`T」（FCOM p.1331 の真方位の T と同じ形）。滑走路の T を `navdb.runway_length`（RW08T と RW26T）、`find`、`route_model.set_runway`（「08T」）、DEP/ARR、REF NAV DATA、進入の名前からの滑走路で読む。
+  - X-Plane：BGTL（Thule）の WENSA2（RW08T：CA 085T、CI 295T、CF 265T）を選び、LEGS の「085`T」、ND の線、離陸後の LNAV の方位（真方位 085 を保つ）。REF NAV DATA の RW08T の長さ。
+- **N19-NAV-03 推奨航法施設の種類**（直した）
+  - 資料：ARINC424 p.82 (5.23)、p.71 (図 5-1)：推奨航法施設は欄 16・17 の section と subsection で種類が決まる（D と空白は VHF の VOR・DME・VORTAC・TACAN、D B は NDB、P N は空港の NDB、P I は localizer）。
+  - 前：識別子と地域が同じものの中で一番近いもの（種類を問わず）。同じ識別子の NDB と VOR があると、VOR の radial に NDB を使うことがあった。
+  - 直したこと：`navaid_kind` で種類を指定して探し、無ければ前どおり種類を問わず探す。
+- **N19-NAV-04 TDV（Turn Direction Valid）**（直さなかった：今の作りで資料どおり）
+  - 資料：ARINC424 p.82 (5.20、5.22)：TD は「旋回する向き」、TDV は「その向きの旋回が脚の前に要る」印。p.198（Att. 5 の 2.6）：90° 以上の旋回には必ず TD、135° を超える旋回を TD と TDV の組で強いる。ICAO_NDB p.32 も 90° 以上で TD。
+  - 理由：TD だけの脚（2611 で TDV 空白が約 87,000 脚、大半は DF・ホールド・RF・AF・PI で、TD が形を決める）も TD の向きは自然な向きと同じ。TD を旋回の向きとして使う今の作りは 5.20 どおりで、TDV を読んでも飛び方は変わらない見込み。`proc_model` に理由を書いた。
+- **N19-NAV-05 速さの制限の効く範囲**（直さなかった）
+  - 資料：ARINC424 p.100 (5.72)：SID の速さの制限は前の制限の後から自分の脚の終わりまで、STAR と進入は次の制限まで。
+  - 理由：これは航法データの欄の意味。FMC は手続きの制限を乗員の入力と同じ LEGS の制限の欄に入れ（FCOM p.1332）、上昇では「その点を通るまで」（FMSPG p.126 (3.3-17)）、降下では「その点とその後で以下」（FCOM p.1332、FMSPG p.187 (3.5-3)）で扱う。複数の制限の扱いを ARINC の範囲に変える根拠は FCOM・FMSPG に無い。`pred_model` に理由を書いた。速さの制限の記述（欄 27：at・以上・以下、ARINC424 p.141）を読まないのも FCOM p.1332（以下とみなす）どおり。
+- **N19-NAV-06 procedure turn の出航の長さ**（直した）
+  - 資料：ARINC424 p.200（Att. 5 の 3.11）：PI の脚は、点から最初の 45° の旋回までの 1 分の出航を含む（"a one minute outbound leg is implied"）。
+  - 前：出航は、180° の旋回が「remain within」の距離の 1 nm 内側に収まる長さいっぱい（§41 の推定。RJSM の GABII の 15 nm では 220 kt で約 8 nm）。
+  - 直したこと：`path_model` の `M.pturn`：出航は 1 分（`M.PT_OUT`、その時の速さ）、ただし旋回が距離の 1 nm 内側に収まらないときは短く（10 nm・220 kt では 2.85 nm のまま）。45° の脚の 1 分 15 秒と 180° の旋回は推定のまま。
+  - X-Plane：`s98_pturn`（RJSM、GABII の PI 15 nm）で、出航が約 1 分（200 kt で約 3.3 nm）になり、ND の形と LNAV が合うこと（前の 16/16 から形が小さくなる。許容は変えていない）。
+- **N19-NAV-07 「推定」を ARINC の出典に**（直した：コメントだけ）
+  - 高度の記述の記号（ARINC424 p.86 (5.29)：+ 以上、- 以下、@・空白 at、B 窓、C 第 2 高度以上、G・I・X at、H・J・V 以上、Y 以下）は `proc_model` のとおり。滑走路の長さ（p.95 (5.57)：displaced threshold に関係なく滑走路面の全長、stopway などを含まない。CIFP に欄が無いので、landing threshold（p.91 注 5）の間と両側の displaced（p.100 (5.69)）で作る）は `navdb.runway_length` のとおり。コメントの「estimate」を出典に替えた。
+- **N19-NAV-08 進入の種類の文字 F・W・Y**（直した）
+  - 資料：ARINC424 p.73 (5.7)：進入の route type F は FMS 進入、W は MLS（Type A）、Y は MLS（Type B・C）。p.75 (5.10)：進入の識別子の 1 文字目は route type と同じ。
+  - 直したこと：ARRIVALS の名前で F を「FMS」、W・Y を「MLS」（M と同じ）。前は文字のまま（「F22」）。FCOM に例が無い文字なので推定のまま。
+- 試験：新しい `tests/fms/proc_arinc_test.lua`（32 件：メモリ上の仮想空港 ZZCC を真方位で作る。fly-over の B・Y・E、085T・095T・080T、radial の磁方位、VOR と NDB と localizer の選び分け、RW08T の長さ・検索・RUNWAY「08T」、path の真方位と磁方位、ホールドの inbound、LNAV が真方位 085 を保つ、F・W・Y の名前、PI の出航 1 分と 10 nm での短縮。前のコードでは 22 件が落ちる）、`deparr_pages_test` 41 件（LEGS の「337`T HDG」）、`lnav_pturn_test` 18 件（15 nm の出航が 1 分）。
+
+### 175.2 重量重心（コミット e682bb80）
+
+- **N19-WB-03 TAKEOFF REF の CG**（直した）
+  - 資料：FCOM p.1320 (11.40.44)：109・570 は「初めダッシュ」、0〜40 の整数を入れると左にトリムを出す。405 は「FMC が WBS の入力から計算した CG を小さい字とキャレットで」、行選択か入力で大きい字、大きい字を消すと小さい字の WBS の CG に戻る、WBS の入力が無ければダッシュ。
+  - 前：GR WT か ZFW を入れると（`calc_CGMAC`）どの機体でも TAKEOFF REF の CG に FMC の CG が小さい字で入った。乗員の CG とトリムも次の GR WT・ZFW で上書きされた。
+  - 直したこと：`calc_CGMAC` は自分の CG を `B747_fms_wbs_cg()` に持ち、TAKEOFF REF の CG に書くのは 405（`laminar/B747/freighter` が 1：`B747_fms_is_405`、EFFECTIVITY_405.md）で乗員の CG が無いときだけ。乗員の CG があるときは CG を残し、トリムだけ新しい重さで計算し直す。405 では空の scratchpad の 4R（sim の値の入力の選択が切のとき）で WBS の CG を大きい字に、DELETE で小さい字の WBS の CG に戻す。405 のトリムも小さい字で出す（緑の帯の範囲の判定は資料に値が無いので省いた）。
+  - X-Plane：旅客機（109）で ZFW を入れても TAKEOFF REF の CG が「--%」のまま、CG 22 を入れてから ZFW を変えても 22 のまま TRIM が変わる。貨物機（ICL 4X-ICB）で ZFW の後に小さい字の CG とキャレット、4R で大きい字、DELETE で小さい字。
+- **N19-WB-04 下部貨物室の arm**（直した）
+  - 資料：NTSB_WBM p.32（8.1）：容積の重心は FWD 725.5、AFT 1702.0、BULK 2014.6 in（B.A.、網が B.A. 1920 のとき。網が 1980 なら AFT 1732.0、BULK 2064.2）。B.A. は機首の 90 in 前が原点（§174）。
+  - 前：650、1675、1935 in（機首から：B.A. 740、1765、2025。本家の区画の真ん中）。
+  - 直したこと：635.5、1612.0、1924.6 in（機首から）。推定：BCF の手引きの下部貨物室をすべての 747-400 に使う、網は 1920 の表。
+- **N19-WB-05 貨物機の主甲板のゾーン A・E の上限**（直した）
+  - 資料：NTSB_WBM p.23（4.2）：BCF の主甲板の区画の上限は B.A. 228〜525 が 7,838 kg、525〜1000 が 32,318、1000〜1480 が 52,281、1480〜2218 が 56,907、2218〜2365 が 2,041。sim のゾーン A〜E の arm（B.A. 380、780、1225、1840、2310）はこの 5 区画に当たる。
+  - 前：A 11,289 kg（パレット 3 枚）、E 3,763 kg（1 枚）で区画の上限を超えていた。
+  - 直したこと：A 7,838、E 2,041 kg（B〜D は本家の値のまま：区画の上限より小さい）。PAX/CARGO の各入力、FULL（F）、ゾーン A の空の scratchpad、パレットの入力（A は 2 枚まで）、合計を回し入れる入力（`B747_fms_freight_spread`：上限の合計 107,717 kg まで。前は 112,890。新しい上限では前のループが終わらなくなるので、1 か所の関数にした）、重量の窓のゾーンの入力（ゾーンの上限まで。前はゾーン A に 12,000 kg を入れると 5 ゾーンへの回し入れになった）。FREIGHT の合計の入力に文字が混じるとプラグインが止まる誤りも直した。747-400F 自体の値は資料に無い（BCF の値を使う：推定）。
+- 試験：新しい `tests/fms/wb_n19_test.lua`（33 件：109 のダッシュ、乗員の CG が新しい ZFW で残りトリムが 280 t の値に、109 の DELETE、405 の小さい字・行選択で大きい字・入力・DELETE で小さい字、arm 3 つと FWD 10 t の CG、ゾーン E の 3,000 kg と 1 パレット、ゾーン A の 7,000 kg・3 パレット（2 枚）・FULL・120,000 kg の回し入れ・9,000 kg、窓のゾーン A 12,000 kg とゾーン E 2,500 kg）、`cg_mac_test` 7 件（FMC の CG は `B747_fms_wbs_cg`）。
+
+### 175.3 ATC の応答（コミット e2326a5d）
+
+- **N19-ATC-01 応答の種類**（直した）
+  - 資料：CPDLC p.177（付録 F-1.2）：要素ごとの属性（WU は WILCO・UNABLE・STANDBY、AN は AFFIRM・NEGATIVE・STANDBY、R は ROGER など、Y はどの downlink でも、N は不要）、複数の要素の電文は最も高い属性。p.179〜198（表 F-1、SC-214）：EXPECT の類（AT ... EXPECT を含む）は R、指示は WU、CAN YOU ACCEPT は AN、REQUEST FORWARDED・REQUEST AGAIN WITH NEXT UNIT・ERROR・MESSAGE NOT SUPPORTED・REQUEST ALREADY RECEIVED は N。FCOM p.758〜760：連結は「/」で区切って見せる。
+  - 前：本文の先頭の語だけ。「AT 1605Z EXPECT CRUISE CLIMB TO FL350」が WU（REJECT と ACCEPT）、「WHEN READY CLIMB TO FL350」「EXPECT FL350 MAINTAIN FL330」が R、REQUEST FORWARDED・ERROR などが R（ROGER を求めた）。
+  - 直したこと：`B747.68.atc_uplink_model.lua` の `elements`（「/」で分け、区切りの無い文では、数字を含む語（FL350、1605Z、.80）の後に要素の頭の語が来たら新しい要素：推定）と、要素ごとの属性（条件 AT [x]・BY [x]・AFTER PASSING [x]・WHEN READY・WHEN ABLE の後の語で決める）の最も高いもの（WU、AN、R、なしの順）。条件だけの断片（EXPECT FL370 の後の「AT 1600Z」）は数えない。REQUEST FORWARDED ほかは応答なし。REPORT・CONFIRM・WHEN CAN YOU ACCEPT と自由文は前どおり R（FANS-1/A の属性は資料に無い：推定のまま）。
+- **N19-ATC-02 地上側の属性**（直した）
+  - 資料：CPDLC p.177〜178、FMSPG p.290〜291（応答の種類は電文の属性による）。
+  - 前：AutoATC が RR を rr に写していた（`acars/autoatcProvider.lua`）のに使わなかった。
+  - 直したこと：rr が WU（W/U）、AN（A/N）、R、NE・N なら、それを本文の推定より先に使う。Y（どの downlink でも：SC-214 の REPORT・CONFIRM の属性）は FCOM に ACCEPT・REJECT の扱いが無いので本文の推定（推定）。この PC には AutoATC が無いので、LuaJIT の模型でだけ試した。
+- **N19-ATC-04 応答の網の受け取り**（直した）
+  - 資料：FCOM p.765（RESPONSE SEND：SENDING、時間内に網の受け取りが無ければ RESEND、受け取りで SENT、ATC の受け取りで STATUS ACCEPTED）、p.753（NO ACK：時間切れで pending でなくなる）、p.1431（405・570 の ATC MSG NOT ACKNOWLEDGED：ATC への電文を送り網の受け取りが無い）、FMSPG p.297（網の受け取りで VERIFY RESPONSE から XXXXz ATC UPLINK に戻る）。
+  - 前：SEND の次のフレームで SENT と ACCEPTED（プロバイダーは 15 秒に 1 通しか送らないのに）。RESEND も ATC MSG NOT ACKNOWLEDGED も無かった。
+  - 直したこと：応答はプロバイダーが送るまで SENDING（要求と同じ網の受け取りの推定）、送ったら SENT、アップリンクは ACCEPTED か REJECTED、その応答の VERIFY RESPONSE を見ている CDU は ATC UPLINK に戻る。60 秒（ログオンの ACK_S：推定）で受け取りが無ければ 5R が RESEND>、ATC LOG は NO ACK、FMC のメッセージ ATC MSG NOT ACKNOWLEDGED。RESEND は同じ応答を同じ ATC LOG の行で送り直す。送った応答は 1 通ずつ追うので、同じ CDU で STANDBY の後に ROGER を選んでも STANDBY が SENDING のまま残らない（前の作りに受け取りの遅れだけを足すと ATC LOG に残った）。ATC MSG NOT ACKNOWLEDGED は要求・ATC の位置通報・報告・緊急報告の NO ACK でも出す（p.1431 はどの ATC 電文も）。
+  - 有効番号：ATC のデータリンクは 570（GE）と sim の選択（段 12a のとおり）。このメッセージも同じ扱い（405・570 の項目）。
+- **N19-ATC-05 PRINT LOG と PRINT**（直した）
+  - 資料：FMSPG p.366（8.9.2）：ATC INDEX の PRINT LOG と、ATC UPLINK・REQUEST・REPORT・EMERGENCY の PRINT は同じプリンターの状態（PRINT・BUSY・FAIL・PRINTERROR・PRINTING）で出る。FCOM p.727、p.761。
+  - 前：ATC INDEX の 6L は固定の <PRINT LOG で何もしない。ほかのページの PRINT は「プリンターが無い」として空白（推定）。
+  - 直したこと：ATC INDEX の 6L も空白にそろえた（sim にプリンターが無い：推定）。別の案は、全部のページに PRINT・PRINT LOG を出して押しても何も起きない形（資料の画面には近いが、働かないプロンプトになる）。利用者の判断があれば変える。
+- **N19-ATC-06 連結の要素を新しい行から**（直さなかった：資料が足りない）
+  - 資料：FCOM p.758 の図は「MAINTAIN FL310/MAINTAIN」を 1 行に、p.760 の図は「/REPORT REACHING」を新しい行から（その図は文が小さい字、値が大きい字の別の形）。FCOM・FMSPG に決まりの文が無い。`atc_uplink_model` の `wrap` に理由を書いた。
+- 試験：新しい `tests/fms/atc_n19_test.lua`（60 件：要素の分け方、属性 20 通り、地上側の属性 8 通り、FMS のモジュールで地上の R、AT ... EXPECT の ROGER だけ、SENDING から 15 秒後の SENT・ACCEPTED と ATC UPLINK への戻り、オフラインの NO COMM、60 秒で NO ACK・ATC MSG NOT ACKNOWLEDGED・RESEND>、RESEND で同じ ATC LOG の行が SENT・ACCEPTED、ATC INDEX の 6L 空白）、`atc_uplink_pages_test` 68 件（受け取りを 15〜30 秒後に、ATC UPLINK への戻り）。
+- X-Plane（AutoATC か Hoppie が無いと送受信は試せない）：GE のリバリーかデータリンクの選択を入にして、ATC INDEX の 6L が空白。送受信できる環境では、VERIFY RESPONSE の SENDING から約 15 秒で ATC UPLINK に戻り ACCEPTED。
+
+### 175.4 CDU（コミット 202f4a88）
+
+- **N19-CDU-01 ACMS の MAINT>**（直した）
+  - 資料：ATA31 p.338（31-35）：ACMS は DMU の系統で、CDU から使う。p.358〜359（ACMS MAIN MENU の図）：REPORTS、REPROGRAMMING、QAR CONTROL、DATA DISPLAY、ACMS STATUS、HMV TEST SCREENS で、MAINT は無い。FMC の MAINTENANCE INDEX は地上で INIT/REF INDEX の MAINT>（FCOM p.1239）。
+  - 前：ACMS INDEX の 1R の MAINT> が FMC の MAINTENANCE INDEX を開いた。
+  - 直したこと：MAINT> を消し 1R に割り当て無し（押すと sim の空白のキーと同じ KEY/FUNCTION INOP）。ほかのプロンプト（DOC DATA、RT PRINT、STATUS など）は本家の mock-up のまま（ACMS の中身は航空会社ごと：ATA31 p.344。作り直すかは範囲外）。
+  - 試験：`menu_fltno_test` 29 件（MAINT> が無い、1R で ACMS のまま）。
+
+### 175.5 N19-ATC-03 ATC の LOAD（2026-11-20 に段 A を作った。段 B は利用者の判断待ち。コミット 5999f88b）
+
+- 作業場所は git worktree `D:\b747_atc`（枝 `atc-load`、overhaul の 771923a5 から）。X-Plane では試していない（この PC には AutoATC も Hoppie も無く、アップリンクが届かない。親のセッションが X-Plane を使っていた）。
+- 資料：
+  - CPDLC 付録 G（p.202〜203、Honeywell の 747-400 FMS の読み込みの規則）：UM46 は経路の点なら RTE LEGS の AT 制限、UM51〜53 は経路の点なら RTA PROGRESS の時刻、UM64 は左右・NM・99 以下なら RTE のオフセット、UM74 は点を現用ルートの最初の点に（経路にあればそこまで詰め、無ければ後ろに不連続）、UM77 は最初の点が経路にあるとき、2 つ目が経路にあれば間を詰め、無ければ最初の点の直後に入れて不連続。747-400 で読み込めない：UM47・48・75・81。
+  - FMSPG p.290：4R の LOAD> は読み込めるデータがあるとき最後のページだけ、何度でも押せる、RTE 1・RTE 2 に MOD がある間は出ない、REJECT を選ぶと消える。p.293：押した後に読み込めなければ UNABLE TO LOAD CLEARANCE（例：手続きを飛行中のオフセット）、一部だけなら PARTIAL CLEARANCE LOADED。結果は RTE・RTE LEGS・DEPARTURES・ARRIVALS・HOLD・RTA PROGRESS で確かめ、EXEC か ERASE。
+  - FCOM p.760（図：4L STANDBY の横に LOAD>）、p.761（LOAD：押すとルートに読み込む）、p.1433〜1434（PARTIAL CLEARANCE LOADED、UNABLE TO LOAD CLEARANCE：405・570 の FMC alert）。
+  - CPDLC p.31（重複した識別子の選び方の 6・7：前の点に近いもの、無ければ現在位置に近いもの。777・787 の規則だが拠り所に）、p.90・129（連結は書かれた順）、p.128（UM61 CROSS ... AT AND MAINTAIN ... AT [speed] はまだ読み込めない）。
+- 資料の食い違い（前の設計の案のとおり、付録 G と FMSPG p.293 を優先した）：
+  - UM46：付録 G は読み込める、表 2-7（p.32）は 747 で読み込めない → 付録 G（読み込む）。
+  - UM81：付録 G は読み込めない、表 F-1（p.188）は読み込める、FMSPG p.293 は DEPARTURES・ARRIVALS で確かめる → 段 B（読み込めるデータとして数えるが、まだ読み込まない）。
+  - UM53：付録 G の文は「AT OR BEFORE」（誤記）→ AT OR AFTER の A。
+  - 付録 G の UM82（CLEARED TO DEVIATE）の行の規則は UM83 のもの（誤記）→ UM82 は読み込まない。
+  - FMSPG p.293 の PARTIAL の例（点の制限の速度がマッハ）は、速度つきの CROSS（UM61）が付録 G に無く CPDLC p.128 で「まだ読み込めない」ので、作らなかった。
+- 作ったこと：
+  - 純粋な模型 `B747.68.atc_load_model.lua`（新しい）：
+    - 要素：`atc_uplink_model.elements` の要素（「/」と語の並びで分けたもの）。CROSS の点に数字があると（ZB001）その後の AT で要素が分かれるので、CROSS の後の「AT ...」はつなぐ。Hoppie の「@」を外し、小文字と文末のピリオドを許す。
+    - UM74 PROCEED DIRECT TO [点]：経路の点（下流の最初のもの）なら RTE LEGS の DIRECT TO と同じ（`route_model.direct_to`。INTC CRS に出す経路のコースも LEGS と同じ）で、そこまで詰める。無ければ航法データの現在位置に一番近いもの（緯度経度も）を最初に入れ、後ろに不連続。
+    - UM77 AT [点] PROCEED DIRECT TO [点]：最初の点が経路に無ければ読み込めない。2 つ目がその後にあれば間を詰め（DIRECT）、無ければ最初の点に一番近い航法データの点を直後に入れて不連続（`route_model.legs_entry`）。
+    - UM46 CROSS [点] AT [高度]：経路の点の AT 制限（`set_constraint`。LEGS の入力と同じく巡航高度以上は読み込めず、その点の速度の制限は消える）。
+    - UM51〜53 CROSS [点] AT／AT OR BEFORE／AT OR AFTER [時刻]：経路の点なら RTA PROGRESS の MOD（FIX と時刻、B・A）。RTA のある機体（109・405）だけで、570（RTA PROGRESS が無い：FCOM p.1375）では読み込めるデータにしない。ENG OUT の間（RTA PROGRESS が空白）は読み込めない。
+    - UM64 OFFSET [距離] LEFT／RIGHT OF ROUTE：1〜99 NM の整数なら RTE のオフセット（`set_offset`：空中で、現用の脚が手続きでないとき。手続きの上では UNABLE：FMSPG p.293 の例）。
+    - 読み込まない（LOAD> を出さない）：UM47・48・75（747-400 で不可）、UM76・78（時刻・高度の後の DIRECT TO）、UM49・58・61、EXPECT、CLIMB などほか全部、100 NM 以上・KM・EITHER SIDE のオフセット。
+    - 段 B（実機は読み込める見込み、ここではまだ）：CLEARED ...（UM79・80・81）、AT [点] CLEARED ...（UM83）、HOLD AT ...。読み込めるデータとして数え、読み込まない（ほかの要素が読み込めれば PARTIAL）。これだけの電文には LOAD> を出さない。
+    - LOAD：要素を書かれた順に。1 つも読み込めなければ UNABLE TO LOAD CLEARANCE、一部なら PARTIAL CLEARANCE LOADED。DIRECT TO の後の CROSS は新しい経路（MOD）の点を探す。
+  - つなぎ（`B747.68.xt.fms.lua`、新しい `do ... end`）：`B747_fms_atc_load_offered(i)`（読み込める要素がある、RTE 1・2 に MOD が無い、REJECT を選んでいない・REJECTED でない）、`B747_fms_atc_load(i)`（模型で読み込み、経路が変われば `B747_fmc_route_changed`、RTA なら予測を直ちに、メッセージは FMC の alert）。要素はアップリンクの状態に 1 度だけ読んで持つ（毎フレームは読まない）。`B747_fms_atc_choose` で REJECT を選ぶと印を付ける。
+  - ページ（`activepages/atc/B744.fms.pages.atcuplink.lua`）：最後のページの 4R に LOAD>（4L の <STANDBY の横。ACCEPTED などで STANDBY が無ければ 4R だけ）、R4 で LOAD。押した後はページのまま（推定）。
+- 推定：
+  - 自由文からの要素と値の読み取り（時刻は Z つきの HHMMZ・HHMMSSZ で、Z の無い 4 桁は高度。高度は FLnnn・FL nnn・nnnnn FT・FEET・数字だけ。距離は整数に NM か数字だけ）。
+  - 点の探し方（経路の下流の最初のもの、無ければ航法データの近いもの。SELECT DESIRED WPT は出さない）。
+  - 押した後のページ（そのまま）。ACCEPTED・ABORTED の後も LOAD> を出す（FMSPG p.290 が消すのは MOD と REJECT のときだけ）。RTA PROGRESS の MOD は「ルートの MOD」に数えない（LOAD> は消えない）。
+  - 段 B の要素を「読み込めない読み込めるデータ」として PARTIAL に数えること。
+  - 570 で RTA の要素を読み込めるデータにしないこと。
+- 試験：新しい `tests/fms/atc_load_model_test.lua`（91 件：要素の形 38 通り、LOAD> のデータ、DIRECT TO の経路の点・経路に無い点・緯度経度・航法データに無い点、AT ... DIRECT TO の詰めと挿入と最初の点が経路に無いとき、CROSS の制限・巡航高度以上・経路に無い点、RTA の B・A・なし・経路に無い点・ENG OUT、オフセットの空中・地上・SID の上、PARTIAL 3 通り、3 要素の順、現用ルートの無いとき）、新しい `tests/fms/atc_load_pages_test.lua`（62 件：P&W に FMC DATALINK ON、空中で KZAK にログオン。読み込めない 3 通りで LOAD> 無し、DIRECT TO で 4R の LOAD>、押すと MOD・EXEC 灯・ページのまま・LOAD> が消える、MOD RTE 1 LEGS、EXEC の後にまた LOAD>、乗員の MOD の間は出ない、ERASE でまた出る、REJECT を選ぶと消え REJECTED でも出ない、CROSS の制限と RTE LEGS の FL250、WILCO の後（ACCEPTED）も 4R だけ、RTA PROGRESS の MOD と EXEC、オフセットの MOD RTE 1 と R20、UNABLE TO LOAD CLEARANCE、PARTIAL CLEARANCE LOADED、長い電文は最後のページだけ、570 では RTA の電文に LOAD> 無し）。全体は 296 本すべて通る。
+- X-Plane で確かめること（AutoATC か Hoppie で ATC のアップリンクが届く環境で。`autoatc/acars/in` は AutoATC が作る dataref で、この PC では書けないので、シナリオは足していない）：
+  - P&W は SIM CONFIG の FMC DATALINK を ON（GE はそのまま）。ログオンして、空中で「PROCEED DIRECT TO [経路の点]」を受け、最後のページの 4R に LOAD>（4L の STANDBY の横）。押すと EXEC が点き、RTE LEGS が MOD でその点まで詰まり、ND に MOD の経路。EXEC で LNAV がその点へ。
+  - 「CROSS [点] AT FL250」で RTE LEGS の制限、P&W で「CROSS [点] AT OR BEFORE 1740Z」で RTA PROGRESS の MOD、「OFFSET 20NM RIGHT OF ROUTE」で RTE の R20 と ND のオフセットの線。
+  - 航法データに無い点で UNABLE TO LOAD CLEARANCE、連結の一部が読めないとき PARTIAL CLEARANCE LOADED（スクラッチパッドと EICAS の FMC MESSAGE）。
+  - REJECT を押すと LOAD> が消える。CDU を撮る。`Output/B747_xtlua_errors.txt` と Log.txt に Lua の誤りが無いこと。
+  - AutoATC の電文の書き方（自由文の語の並び、「/」の有無、時刻・高度・距離の書き方）が読み取りの推定に合うか。
+- 段 B（作っていない。利用者の判断待ち）：UM79・80・83 の経路の許可（[route clearance] の形が資料に無い：DO-258A が手元に無い。案は SimBrief の取り込みの経路の読み取りを使う）、UM81 の手続き（付録 G と表 F-1・FMSPG p.293 が食い違う）、ホールド（FMSPG p.293 の HOLD）、UM73 の出発の許可。
+
+### 175.6 X-Plane で確かめること（まとめ）
+
+- `s98_pturn`：PI の出航が約 1 分（ND の形、LNAV）。
+- KSEA ELMAA5（PEAKK「EB」）：ND の線と LNAV が PEAKK の上を通る。
+- BGTL WENSA2（RW08T）：LEGS の「085`T」、離陸後に真方位 085 を保つ、RW08T の REF NAV DATA の長さ。
+- TAKEOFF REF の CG：旅客機は ZFW の後もダッシュ、乗員の CG が ZFW の変更で残る。貨物機は小さい字の WBS の CG、4R で大きい字、DELETE で戻る。CDU を撮る。
+- 貨物機の PAX/CARGO：ゾーン A・E の上限（7,838・2,041 kg）、F で全部、重量の窓のゾーン A。
+- ATC（データリンクが入の機体）：ATC INDEX の 6L が空白。ACMS の 1R に MAINT> が無い。応答の SENDING から SENT は AutoATC か Hoppie がある環境で。
+- ATC の LOAD（§175.5、AutoATC か Hoppie でアップリンクが届く環境で）：DIRECT TO・AT ... DIRECT TO・CROSS の高度・OFFSET・（P&W の）CROSS の時刻の 4R の LOAD>、MOD と EXEC、UNABLE TO LOAD CLEARANCE と PARTIAL CLEARANCE LOADED、REJECT で消える。
+- どれも `Output/B747_xtlua_errors.txt` と Log.txt に Lua の誤りが無いこと。

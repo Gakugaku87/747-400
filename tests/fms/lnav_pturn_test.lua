@@ -5,9 +5,10 @@
 -- on a PI leg of the path model, in closed loop with the airplane of
 -- tests/lib/lnav_sim.lua: over the fix outbound, the 45 degree leg, the
 -- 180 degree turn its way, back onto the inbound course (the CF after it
--- captured), within the procedure's distance; right and left; the longer
--- outbound leg of a wider limit; close to the shape on the way out, round
--- the corner onto the 45 degree leg (a fly-by arc) and in the turn.
+-- captured), within the procedure's distance; right and left; a wider
+-- limit's one minute outbound leg (ARINC 424 p.200); close to the shape on
+-- the way out, round the corner onto the 45 degree leg (a fly-by arc) and
+-- in the turn.
 local T = dofile("tests/lib/check.lua")("lnav_pturn")
 local N = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.navdb.lua")
 local R = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.route_model.lua")
@@ -111,8 +112,11 @@ for _ in txt:gmatch("\n28 ~ DRCT") do tilde = tilde + 1 end
 T.check(txt:find("\n11 FFFFF DRCT [^\n]*\n11 FFFFF DRCT [^\n]*\n28 ~ DRCT") and tilde == 9,
     "X-Plane's flight plan: the PI's fix, then its nine points (" .. tilde .. ")")
 
+-- (2026-11-20, GAP N19-NAV-06) a wider limit: the outbound leg one minute
+-- (ARINC 424 p.200: 3.67 nm at 220 kt; before, as long as the 15 nm
+-- allowed, about 8 nm), longer than the 10 nm's (2.85 nm, to stay inside)
 local seen3 = fly_pt("R", 15)
-T.check(seen3.t.dout > seen.t.dout + 4 and seen3.far <= 15 and seen3.far > 13,
-    "15 nm: a longer outbound leg (" .. fmt(seen3.t.dout) .. " nm), within 15 nm (" .. fmt(seen3.far) .. ")")
+T.check(math.abs(seen3.t.dout - 220 / 60) < 0.1 and seen3.t.dout > seen.t.dout and seen3.far < 12,
+    "15 nm: the outbound leg one minute (" .. fmt(seen3.t.dout) .. " nm), well within 15 nm (" .. fmt(seen3.far) .. ")")
 
 T.done()

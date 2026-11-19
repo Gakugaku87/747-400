@@ -282,7 +282,7 @@ fmsFunctionsDefs["ARRIVALS"]["exec"]={"rteexec", ""}
 local function star_serves(icao, star, appr)
   local _, rwy = P.approach_legs(B747_navdb, B747_fmc_navdb, icao, appr)
   if not rwy then
-    local d = appr:match("^%u(%d%d[LCR]?)")
+    local d = appr:match("^%u(%d%d[LCRT]?)")
     rwy = d and "RW" .. d or nil
   end
   if not rwy then return true end

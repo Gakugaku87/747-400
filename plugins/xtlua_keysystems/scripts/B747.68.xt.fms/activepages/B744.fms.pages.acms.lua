@@ -5,7 +5,7 @@ fmsPages["ACMS"].getPage=function(self,pgNo,fmsID)
             
 "       ACMS INDEX       ",
 "                        ",
-"<REPORTS          MAINT>",
+"<REPORTS                ",
 "                        ",
 "<DOC DATA        STATUS>",
 "                        ",
@@ -21,8 +21,12 @@ end
 fmsFunctionsDefs["ACMS"]["L1"]={"setpage","REPORTS"}
 fmsFunctionsDefs["ACMS"]["L2"]={"setpage","DOCDATA"}
 fmsFunctionsDefs["ACMS"]["L3"]={"setpage","DATDISP"}
-      
-fmsFunctionsDefs["ACMS"]["R1"]={"setpage","MAINT"}
+-- (2026-11-20, GAP N19-CDU-01) no MAINT> at 1R: the ACMS is the DMU's
+-- system on the CDU (ATA31 p.338, 31-35), its main menu (p.358-359:
+-- REPORTS, REPROGRAMMING, QAR CONTROL, DATA DISPLAY, ACMS STATUS, HMV
+-- TEST SCREENS) has no MAINT; before, 1R opened the FMC's MAINTENANCE
+-- INDEX (INIT/REF INDEX's MAINT> on the ground: FCOM p.1239). The page's
+-- other prompts are upstream's mock-up (an airline's own: ATA31 p.344)
       
 fmsPages["REPORTS"]=createPage("REPORTS")
 fmsPages["REPORTS"].getPage=function(self,pgNo,fmsID)

@@ -53,6 +53,21 @@ M.MCT_ALT_TOP, M.CLB_ALT = 22000, 25000
 -- FCOM p.873), and passing 300 kt the lever's command fell 0.04 EPR (thrust
 -- -6 %, the levers ran forward some 15 degrees: s285)
 M.PW_MAX_OVER_MCT = 0.16
+-- (2026-11-20, GAP_ANALYSIS.md N19-ENG-01) The P&W's full-forward rating
+-- (about 82 degrees TRA) is the takeoff rating below about 14,100 ft and
+-- the maximum continuous above (PW_PPM p.196): above PW_TO_ALT the maximum
+-- continuous table's (with its adjustments), not under the maximum climb's
+-- plus PW_MCT_OVER_CLB (estimate: the FCOM's maximum continuous tables are
+-- the engine inoperative's, more bleed on each engine, and dip under the
+-- climb's when hot, at 41,000 ft or at 300 kt; the EICAS turns the EPR red
+-- 0.003 under the maximum and white again 0.01 under it, so the climb at
+-- its reference stays white, with a little over: 0.012). Below it as
+-- before (the go-around's, above its table the higher of the table's
+-- held and the climb's or the maximum
+-- continuous plus PW_MAX_OVER_MCT). Before, that at every altitude: the
+-- full forward lever gave up to 0.16 EPR over the maximum continuous in
+-- the climb and the cruise. RR as P&W (no source: estimate)
+M.PW_TO_ALT, M.PW_MCT_OVER_CLB = 14100, 0.012
 -- thrust lever angles, degrees from forward idle (ATA70_80 p.146-151): the
 -- takeoff rating is reached at 48°, the forward stop is 50°; the climb
 -- rating at 35° (ATA70_80 p.208). (2026-11-13, B2) The lever's line: the
@@ -76,6 +91,17 @@ M.TLA_STOP, M.TLA_TO, M.TLA_CLB = 50, 48, 35
 -- T/D started its descent at 316 kt (before the fit the throttle was at
 -- idle in 2 s: 308 kt)
 M.TLA_FLAT_IDLE = 2
+-- (2026-11-20, GAP_ANALYSIS.md N19-ENG-04) the P&W's maximum climb rating
+-- is reached at about 72 degrees TRA, forward idle being about 36 and the
+-- full-forward rating about 82 (PW_PPM p.196): on this lever, whose rating
+-- is reached at TLA_TO from the flat idle, 2 + 46 x (72 - 36) / (82 - 36)
+-- = 38 degrees (estimate: the TRAs straight along the lever). The P&W's
+-- line runs to the maximum climb EPR there, then to the full-forward
+-- rating at TLA_TO (as the CF6's at its CLIMB position). Before (B2,
+-- 2026-11-13) one line from idle to the full-forward rating: with the
+-- maximum continuous over 14,100 ft (N19-ENG-01) the A/T's climb sat the
+-- levers near the forward stop (0.95, s317)
+M.PW_TLA_CLB = M.TLA_FLAT_IDLE + (M.TLA_TO - M.TLA_FLAT_IDLE) * (72 - 36) / (82 - 36)
 
 -- idle (FCOM p.877-878): approach idle in the air while the engine's
 -- nacelle anti-ice is on, the flaps are in a landing position or (570 and
@@ -145,9 +171,12 @@ M.LIM_PROT_EPR = 0.01
 -- its N1 limit caps the command. >ENG n RPM LIM while a limit holds the
 -- engine (allows it no more than RPM_LIM_SHOW above its present value) more
 -- than RPM_LIM_SHOW below the command (FCOM p.901: GE on N2, P&W on N1 or
--- N2). Red lines: CF6 ATA70_80 p.205; P&W those the displays turn red at
--- (no source). Margin, band, gains and threshold: estimates.
-M.REDLINE = {GE = {n1 = 117.5, n2 = 112.5}, PW = {n1 = 111.4, n2 = 111.4}}
+-- N2). Red lines: CF6 ATA70_80 p.205; P&W its EEC's (PW_PPM p.204: below).
+-- Margin, band, gains and threshold: estimates.
+-- (2026-11-20, N19-ENG-02) the P&W EEC's own limits, N1 111.4 % (4,010
+-- rpm) and N2 104 % (10,300 rpm), under the N2 red line 105.5 (PW_PPM
+-- p.204); before, N2 at the display's 111.4
+M.REDLINE = {GE = {n1 = 117.5, n2 = 112.5}, PW = {n1 = 111.4, n2 = 104}}
 M.RPM_MARGIN = 0.5                          -- %
 M.RPM_BAND = 2                              -- %
 M.RPM_GAIN = {GE = 0.6, PW = 0.01}          -- N1 % or EPR for each % of the rotor
@@ -993,7 +1022,12 @@ function M.update(s, inp, dt)
             max = ga + adjustment(tables.ga, inp, ga_alt, nai)
             if inp.alt > ga_alt then
                 local mct_n = mct_pw and (mct_pw + adjustment(tables.mct, inp, inp.alt, nai)) or clb_n
-                max = math.max(max, math.max(clb_n, mct_n) + M.PW_MAX_OVER_MCT)
+                if inp.alt > M.PW_TO_ALT then
+                    -- (N19-ENG-01) the maximum continuous (PW_PPM p.196)
+                    max = math.max(mct_n, clb_n + M.PW_MCT_OVER_CLB)
+                else
+                    max = math.max(max, math.max(clb_n, mct_n) + M.PW_MAX_OVER_MCT)
+                end
             end
         end
         local tla = clamp(inp.lever[n], 0, 1) * M.TLA_STOP
@@ -1054,7 +1088,19 @@ function M.update(s, inp, dt)
                 out.command[n] = c + (top - c) * clamp((tla - M.TLA_CLB) / (M.TLA_TO - M.TLA_CLB), 0, 1)
             end
         else
-            out.command[n] = idle + (top - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (M.TLA_TO - M.TLA_FLAT_IDLE), 0, 1)
+            -- (N19-ENG-04) the P&W's knee at its maximum climb (PW_TLA_CLB):
+            -- the automatic reversion keeps that point as the CF6's
+            local cl = clb_n
+            if auto then
+                if s.soft_clb[n] == nil then s.soft_clb[n] = clb_n end
+                cl = s.soft_clb[n]
+            end
+            local c = math.max(math.min(cl, top), idle)
+            if tla <= M.PW_TLA_CLB then
+                out.command[n] = idle + (c - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (M.PW_TLA_CLB - M.TLA_FLAT_IDLE), 0, 1)
+            else
+                out.command[n] = c + (top - c) * clamp((tla - M.PW_TLA_CLB) / (M.TLA_TO - M.PW_TLA_CLB), 0, 1)
+            end
         end
         out.altn[n] = altn
         if inp.type == "GE" then
