@@ -2370,6 +2370,7 @@ GPS・IRS の EICAS は各担当（FCOM p.1429–1430）。
 - X-Plane の値は毎フレーム読む（`update_perf`。XTLua はときどきしか読まない dataref に前の読みの値を返し、最初の読みは 0：TESTING.md）。
 - 重量と CG の窓（`plugins/b747_fms_bridge/src/wb_window.c`）：Plugins → 747-400 → Weight and balance...（コマンド `laminar/B747/wb/window_toggle`、`laminar/B747/wb/window_open`）。故障の窓と同じ X-Plane の枠の浮動ウィンドウで、X-Plane の今の値を kg と lb で：総重量、ZFW（総重量 - 燃料）、燃料、ペイロード（`m_fixed`）、空虚重量と最大重量（acf の値）、CG（% MAC）、ZFW の CG（% MAC）、タンクごとの燃料（X-Plane のタンク 0〜7：CTR、MAIN 1〜4、RES 2、RES 3、STAB）。
 - ZFW の CG：X-Plane には ZFW の CG の % MAC が無い（`zfw_cg_offset_z` は m）。今の CG の % MAC に、ZFW の CG と今の CG の差（m）× 9.537 % / m を足す。9.537 は X-Plane のこの acf の MAC（10.49 m）の値で、2026-11-05 にカスタム acf で測った：安定板タンクに 8 t・3 t 入れると `cg_offset_z` が 0.857・0.257 m 後ろへ動き、`cg_offset_z_mac` が 8.17・2.45 増えた（実機の MAC は 8.33 m。X-Plane は acf の翼から計算する）。`cgz_ref_to_default` と `cg_offset_z` への Web API の書き込みは X-Plane に戻された（測るのに使えなかった）。
+- （2026-11-20）CG（CDU の自動入力と重量の窓）は実機の % MAC に変えた：§174。上の `cg_offset_z_mac` と 9.537 %/m の換算は前の作り。
 - 試験：`perf_init_test` 38（GR WT・ZFW、ポンド）、`takeoff_ref_test` 62（CG、範囲の外）。X-Plane：`s256_cdu_sim_values`。
 
 ## 149. A/T の SPD の速さの下限：フラップ UP は最小機動速度そのもの（2026-11-07：性能計測のフェーズ1の報告）
@@ -3099,3 +3100,13 @@ X-Plane も `_ref/` も無いクラウドのセッションで、コードとノ
 - **CPDLC**（Honeywell の研究報告 2011）：本文の「B744」の画面は Mark II CMU で FANS の FMC ではない（当てはめない）。付録 G は 747-400 の FMS が読み込める指示の規則（UM46・51〜53・64・73・74・77・79・83：N19-ATC-03 の LOAD の材料。範囲は FMSPG p.293 を優先）、付録 F は応答の属性（WU・AN・R・Y・N、連結は最も高い属性：N19-ATC-01・02）。
 - **重量重心**（TCDS_747、NTSB_WBM・NTSB_STR）：MAC 327.8 in、LEMAC は datum（機首の 90 in 前）の 1258.0 in 後ろ（AERO.md §5）。`calc_CGMAC`（MAC 11.53 m・LEMAC 1129.88 in）と CDU の CG の自動入力（X-Plane の 10.49 m）はこの基準にそろえる（N19-WB-01・02、高）。下部貨物室の arm（N19-WB-04）。TCDS の限界（VMO/MMO 365/0.92、45,100 ft、フラップの速度、推力）は今の FMC・表示と一致。
 
+
+## 174. 重心の % MAC を実機の MAC に（2026-11-20、PC のセッション「段1-3実装」。GAP_ANALYSIS.md N19-WB-01・02、段 3 の高の段）
+
+- 資料：TCDS A20WE（TCDS_747）p.14・p.22：MAC 327.8 in、LEMAC は datum の 1258.0 in 後ろ（-400・-400D・-400F で同じ）。datum は機首の 90 in 前（NTSB_STR p.9：B.A. と胴体の station が同じ）。→ LEMAC は機首から 1168 in、25 % MAC は 1340 in（TCDS の 1340 in と合う）。acf の原点を機首（BS 90）とみる（推定：acf の胴体が z 0.1 ft から始まる）。
+- 前の作り：3 通りの % MAC が混ざっていた（AERO.md §3.23）。
+  - FMC の重量重心（PAX/CARGO：`calc_CGMAC`）：acf の翼根と翼端の弦からの台形の MAC 453.8 in、LEMAC 1129.88 in（X-Plane の既定の重心を 25 % とした推定）。実機の % ＝ 1.384 × 前の % − 11.63（空の機体の 25.0 は実機の 23.0）。
+  - CDU の重心の自動入力（TAKEOFF REF の CG、§148）と重量の窓（橋渡しのプラグイン）：X-Plane の `cg_offset_z_mac`（X-Plane が acf の翼から作る 10.49 m の MAC）。既定の 270 t の積み方で X-Plane の 30.4 % が実機の 20.6 %（約 10 % 後ろ寄り）。
+- 直したこと：全部を実機の % MAC に。`B747_fms_mac_pct(機首からの in)`（`B747.68.xt.fms.lua`）を `calc_CGMAC` と CDU の自動入力（`B744.fms.pages.perfinit.lua`：`acf_cgZ_original` × 12 ＋ `cg_offset_z` × 39.37）が使い、重量の窓（`wb_window.c`）も同じ式（CG と ZFW の CG。前の ZFW の CG は 9.537 %/m の換算）。
+- 効き：TAKEOFF REF の TRIM（`calc_stab_trim` の式は CG の % MAC で計算）。既定の 270 t で前は CG 30・TRIM 2.9 前後、今は CG 21・TRIM 5.1（FPPM p.44 の 270 t・21 % は約 5¼。X-Plane で離陸の後に釣り合うのは約 5 units：AERO.md §3.23）。`calc_stab_trim` の式そのもの（本家から、出典なし）を FPPM の表に置き換えるかは、離陸トリムの測り（AERO.md §3.23、`tests/flight/measure/aero_takeoff_trim_*`）の後に決める。
+- 試験：`cg_mac_test` 7（新：式の両端、空の機体 23 %、270 t・22 % の TRIM 約 4.8）、`takeoff_ref_test` 78（CG の入力を `cg_offset_z` に）。X-Plane（2026-11-20 01:40、橋渡しのプラグインを組み直して起動し直した後）：`s256_cdu_sim_values` 14/14、CDU の CG 21 %（`cg_offset_z` −0.199 m：20.6 %。X-Plane の `cg_offset_z_mac` は 30.4）、TRIM 5.1、重量の窓の CG 20.6・ZFW の CG 23.0（写真）。

@@ -21,9 +21,9 @@
     - 着陸の滑走の 2 件（利用者の RKSI 34R の「リバースでも EPR が赤」「謎の MASTER WARNING」）：X-Plane で再現してから直した。新しい `s340_rollout_reverse`（FCOM p.148 の手順：いっぱい → reverse idle → 地上滑走の速さで格納）14/14、`s341_rollout_reverse_stow`（いっぱいから直接格納）13/13、`s12_reverser` 22/22。
       - 逆推力が出ない（新しく見つけた）：A/T で着陸すると、X-Plane のスロットル（ハードのスロットル）が前に残っていれば、逆推力のコマンドを受け付けなかった。連動は 747 の前進レバー（FCOM p.893）→ 直した（b134fbf1）。
       - EPR の赤（N19-ENG-03）：P&W の逆推力いっぱいで表示の EPR 1.45・N1 99 %（max EPR 1.51、赤まで 0.06）。EEC の N1 モード・最大 87 % N1（PW_PPM p.250）に → 直した（b134fbf1）。今は N1 約 86 %・EPR 1.28。利用者の赤はこれと見る（見込み。再現の回では赤まで届かなかった）。
-      - MASTER WARNING（N19-WARN-01）：いっぱいから直接格納すると、扉が閉じる間の N1 80 で離陸形態警報が武装し、CONFIG FLAPS・SPOILERS と master WARNING → エンジン 2・3 ごとに N1・747 のレバー・逆推力で判定（このコミット）。A/P を外したときの >AUTOPILOT DISC も出るが、実機どおり。
+      - MASTER WARNING（N19-WARN-01）：いっぱいから直接格納すると、扉が閉じる間の N1 80 で離陸形態警報が武装し、CONFIG FLAPS・SPOILERS と master WARNING → エンジン 2・3 ごとに N1・747 のレバー・逆推力で判定（4d92ef7a）。A/P を外したときの >AUTOPILOT DISC も出るが、実機どおり。
       - 利用者の飛行が同じ形だったか（EICAS の文、逆推力の操作）は、下の「利用者に確かめたいこと」に残す。
-    - % MAC（N19-WB-01・02）：実装と LuaJIT の試験は済（`cg_mac_test` 7、`takeoff_ref_test` 78）。橋渡しのプラグイン（重量の窓）の組み直しと X-Plane の `s256_cdu_sim_values` が残り。
+    - % MAC（N19-WB-01・02）：直した（このコミット）。FMC の重量重心・CDU の重心の自動入力・重量の窓を実機の % MAC（TCDS A20WE p.14：MAC 327.8 in、LEMAC は機首から 1168 in）に。既定の 270 t で CDU の CG 30 → 21 %、TRIM 2.9 前後 → 5.1（FPPM p.44 は約 5¼）。橋渡しのプラグインを組み直した。X-Plane の `s256_cdu_sim_values` 16/16（重量の窓の CG 20.6・ZFW の CG 23.0）。notes/ATA-34-61-FMC.md §174。
     - 離陸トリム（AERO.md §3.23）：測るシナリオ 6 本（`tests/flight/measure/aero_takeoff_trim_<重さ>_<重心>`：220・280・340 t × 重心 2 点、フラップ 20・最大推力・FLCH の上昇でオートトリムが落ち着く units を FPPM p.44 と比べる）を作った。まだ回していない。
   - PR #38 の引き継ぎ（下の項目の 1〜5。利用者が master に入れていた：2026-11-20 00:3x に気づいた）：1 は済（overhaul にマージし、master・custom をそろえた）。2〜4 は段 3 の全シナリオの回と一緒に。5 は「利用者に確かめたいこと」へ。シナリオの番号 s336・s337 は、PR の `s336_clb_arm_405`・`s337_clb_washout_405` と段 1 の `s336_eicas_cmd_epr_idle`・`s337_eicas_cmd_epr_idle_rr` で重なる（名前が違うので回せる。直さない）。
 

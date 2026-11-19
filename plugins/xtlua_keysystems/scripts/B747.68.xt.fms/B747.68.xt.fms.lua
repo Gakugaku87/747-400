@@ -547,6 +547,18 @@ function calc_stab_trim(GW, CG_MAC)
 	--print("Trim = "..fmsModules["data"].stab_trim)
 end
 
+-- (2026-11-20, GAP_ANALYSIS.md N19-WB-01, N19-WB-02) a CG in % MAC from its
+-- arm (inches aft of the acf's origin at the nose): TCDS A20WE p.14 and
+-- p.22 (-400, -400D, -400F alike), the MAC 327.8 in and the LEMAC 1258.0 in
+-- aft of the datum, the datum 90 in ahead of the nose (NTSB_STR p.9: the
+-- B.A. and the station the same). The acf's origin at the nose (BS 90):
+-- estimate, its fuselage from z 0.1 ft. The FPPM's tables (p.44) and
+-- TAKEOFF REF's CG are in this % MAC
+B747_MAC_IN, B747_LEMAC_NOSE_IN = 327.8, 1258.0 - 90.0
+function B747_fms_mac_pct(arm_in)
+	return (arm_in - B747_LEMAC_NOSE_IN) / B747_MAC_IN * 100
+end
+
 function calc_CGMAC()
 
 	local inch_to_meters	= 39.3700787
@@ -581,16 +593,14 @@ function calc_CGMAC()
 								+ (wb.freight_zoneC_weight * wb.freight_zoneC_distance) + (wb.freight_zoneD_weight * wb.freight_zoneD_distance)
 								+ (wb.freight_zoneE_weight * wb.freight_zoneE_distance)
 	local CG				= total_moment / GW
-	local wing_root_chord	= 648.99996  --54.10 feet (from the aircraft .acf file)
-	local wing_tip_chord	= 159.99996  --13.40 feet (from the aircraft .acf file)
-	local wing_taper		= wing_tip_chord / wing_root_chord
-	local MAC				= (2/3) * wing_root_chord * ((1 + wing_taper + wing_taper^2) / (1 + wing_taper))
-	local LEMAC				= 1129.87932  --Approximately 94.18 feet as measured by where the default XP CG hits the 25% chord line at MAC and subtracting the 25% from the
-										  --default CG reference point of 1243.32 inches (103.61 feet)
 	local dist_default_CG	= 1243.32  --103.61 feet (from the aircraft .acf file)
-	local dist_aft_LEMAC	= CG - LEMAC
 	local CG_shift			= (dist_default_CG - CG) / inch_to_meters  --determine how far ahead or behind the OEW CG we are
-	local CG_MAC			= (dist_aft_LEMAC / MAC) * 100
+	-- (2026-11-20, GAP_ANALYSIS.md N19-WB-01) the airplane's % MAC
+	-- (B747_fms_mac_pct). Before, the acf's trapezoid MAC (453.8 in from its
+	-- root and tip chords) and a LEMAC of 1129.88 in (X-Plane's default CG
+	-- at 25 %): the airplane's % = 1.384 x that - 11.63 (the empty airplane
+	-- 25.0 for 23.0, 35 for 36.8, 15 for 9.1)
+	local CG_MAC			= B747_fms_mac_pct(CG)
 		
 	wb.cg_mac 				= CG_MAC
 	
