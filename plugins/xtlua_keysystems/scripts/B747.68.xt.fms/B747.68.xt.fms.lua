@@ -4443,6 +4443,10 @@ do
   local ul = {}
   local verify = {}
   local due = {}
+  -- (2026-11-20, N19-ATC-04) the responses sent and not yet acknowledged
+  -- (each {v = the VERIFY RESPONSE state, id = its CDU}): a CDU's next
+  -- response does not leave the one before SENDING
+  local sending = {}
   local wasComm, lastN = false, 0
   -- (step 12g1) the ATC LOG's order (each uplink when first seen, each
   -- downlink when sent) and the downlinks sent from here; (step 12g2a) the
@@ -4470,7 +4474,10 @@ do
     local s = ul[i]
     if not s then
       seq = seq + 1
-      s = {resp = U.response(field(m, "msg") or ""), sent = nil, acked = nil, aborted = false,
+      -- (2026-11-20, GAP N19-ATC-02) the ground's response attribute (the
+      -- provider's RR, kept as rr: acars/autoatcProvider.lua) before the
+      -- words' estimate
+      s = {resp = U.response(field(m, "msg") or "", field(m, "rr")), sent = nil, acked = nil, aborted = false,
         seq = seq, deleted = false}
       ul[i] = s
     end
@@ -4589,20 +4596,31 @@ do
     end
     return t
   end
-  -- RESPONSE SEND: nil, or the message (no ATC COMM, the datalink's)
+  -- RESPONSE SEND (or RESEND: the same response, its ATC LOG entry again
+  -- SENDING): nil, or the message (no ATC COMM, the datalink's)
   function B747_fms_atc_send_response(fmsO)
     local v = verify[fmsO.id]
-    if not v or v.state then return nil end
+    if not v or (v.state and v.state ~= "RESEND") then return nil end
     if not B747_fms_atc_ready() then return "NO COMM" end
     if not B747_fms_atc_logon().comm then return "NO ATC COMM" end
     local m = msg(v.i)
-    local reply = {type = "cpdlc", msg = B747_fms_atc_response_text(fmsO.id), RR = "N", status = "SENDING",
+    local text = v.state == "RESEND" and v.down and v.down.text or B747_fms_atc_response_text(fmsO.id)
+    local reply = {type = "cpdlc", msg = text, RR = "N", status = "SENDING",
       RT = field(m, "srcID")}
     fmsFunctions.acarsSystemSendATC(fmsO, json.encode(reply))
     local s = B747_fms_atc_uplink(v.i)
     s.sent = v.kind
-    v.state = "SENDING"
+    -- (2026-11-20, GAP N19-ATC-04) SENDING until the provider sends it (its
+    -- queue: one message each 15 s), the network's acknowledgement then
+    -- (estimate, as the requests'); none in the logon's ACK_S: RESEND
+    v.state, v.sent_t = "SENDING", simDRTime
+    v.queue = table.getn(acarsSystem.messageSendQueue.values)
+    sending[#sending + 1] = {v = v, id = fmsO.id}
     if v.kind ~= "STANDBY" then m["REPLIED"] = true end
+    if v.down then
+      v.down.status = "SENDING"
+      return nil
+    end
     -- (step 12g1) its ATC LOG entry (FCOM p.765)
     seq = seq + 1
     v.down = {seq = seq, time = string.format("%02d%02d", hh or 0, mm or 0), text = reply.msg, status = "SENDING",
@@ -4613,16 +4631,32 @@ do
   -- each frame: the acknowledgements, ATC COMM's end
   function B747_fms_atc_uplinks_update()
     local n = table.getn(acarsSystem.messages.values)
-    if n < lastN then ul, verify, due = {}, {}, {} end
+    if n < lastN then ul, verify, due, sending = {}, {}, {}, {} end
     lastN = n
-    local ready = B747_fms_atc_ready()
-    for _, v in pairs(verify) do
-      if v.state == "SENDING" and ready then
+    -- (2026-11-20, GAP N19-ATC-04) the network's acknowledgement once the
+    -- provider has sent the response (before: the next frame with the
+    -- datalink ready): SENT, the uplink ACCEPTED or REJECTED (FCOM p.765),
+    -- the CDU on its VERIFY RESPONSE back to the uplink (FMSPG p.297);
+    -- none in ACK_S (the logon's, 60 s: estimate): RESEND> (FCOM p.765),
+    -- NO ACK in the ATC LOG (p.753), ATC MSG NOT ACKNOWLEDGED (p.1431)
+    for k = #sending, 1, -1 do
+      local v, id = sending[k].v, sending[k].id
+      if v.state ~= "SENDING" then
+        table.remove(sending, k)
+      elseif acarsSystem.sentMessage >= (v.queue or 0) then
+        table.remove(sending, k)
         v.state = "SENT"
         local s = ul[v.i]
         if s and v.kind ~= "STANDBY" then s.acked = v.kind end
         -- a response needs none: SENT (FCOM p.754)
         if v.down then v.down.status = "SENT" end
+        local o = fmsModules[id]
+        if o and o.currentPage == "ATCVERIFYRESP" and verify[id] == v then fmsFunctions.setpage(o, "ATCUPLINK") end
+      elseif simDRTime - (v.sent_t or simDRTime) >= B747_atc_logon_model.ACK_S then
+        table.remove(sending, k)
+        v.state = "RESEND"
+        if v.down then v.down.status = "NO ACK" end
+        B747_cdu_fmc_event("ATC MSG NOT ACKNOWLEDGED", true)
       end
     end
     -- (step 12g2a) ATC's response to a request: STANDBY keeps it OPEN,
@@ -4656,7 +4690,7 @@ do
     wasComm = comm
   end
   -- the message list cleared (ACARS's clear)
-  function B747_fms_atc_uplinks_clear() ul, verify, due, down, scanned = {}, {}, {}, {}, 0 end
+  function B747_fms_atc_uplinks_clear() ul, verify, due, down, scanned, sending = {}, {}, {}, {}, 0, {} end
 end
 -- (6-1/6-2 step 12g2a; notes/ATA-34-61-FMC.md §116) the ATC requests
 -- (B747.68.atc_request_model.lua): the ATC REQUEST pages' request and ATC
@@ -4813,6 +4847,7 @@ do
           finish(kind, dr, d)
         elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then
           d.status = "NO ACK"
+          B747_cdu_fmc_event("ATC MSG NOT ACKNOWLEDGED", true)  -- (2026-11-20, N19-ATC-04: FCOM p.1431)
         end
       elseif d and d.status ~= "NO ACK" and d.status ~= "ABORTED" then
         finish(kind, dr, d)
@@ -4927,7 +4962,11 @@ do
           -- (step 12g3c) an ATC position report sent: the oldest REQUEST
           -- POSITION REPORT entry goes (FMSPG p.337)
           if which == "ATC" and B747_fms_report_posrep_sent then B747_fms_report_posrep_sent() end
-        elseif simDRTime - s.sent_t >= B747_atc_logon_model.ACK_S then s.status = "NO ACK" end
+        elseif simDRTime - s.sent_t >= B747_atc_logon_model.ACK_S then
+          s.status = "NO ACK"
+          -- (2026-11-20, N19-ATC-04) an ATC message: FCOM p.1431
+          if which == "ATC" then B747_cdu_fmc_event("ATC MSG NOT ACKNOWLEDGED", true) end
+        end
       end
     end
   end
@@ -5086,7 +5125,10 @@ do
           d.status = "SENT"
           drop(rep)
           break
-        elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then d.status = "NO ACK" end
+        elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then
+          d.status = "NO ACK"
+          B747_cdu_fmc_event("ATC MSG NOT ACKNOWLEDGED", true)  -- (2026-11-20, N19-ATC-04: FCOM p.1431)
+        end
       end
       if rep.armed then
         if not passed then
@@ -5170,6 +5212,7 @@ do
         E.erase(em)
       elseif simDRTime - d.sent_t >= B747_atc_logon_model.ACK_S then
         d.status = "NO ACK"
+        B747_cdu_fmc_event("ATC MSG NOT ACKNOWLEDGED", true)  -- (2026-11-20, N19-ATC-04: FCOM p.1431)
       end
     end
     local comm = B747_fms_atc_logon().comm
