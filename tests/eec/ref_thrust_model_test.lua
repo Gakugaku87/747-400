@@ -63,6 +63,20 @@ T.near(tr(clb20, R.reference(inp{mode = "CLB 2", alt = 20000, tat = -5, mach = 0
 T.near(R.reference(inp{mode = "CLB 1", alt = 30000, tat = -20, mach = 0.8}), clb30, 1e-9, "CLB 1 at 30,000 ft: CLB's")
 T.near(R.reference(inp{type = "GE", mode = "CLB 1", alt = 20000, tat = -5, mach = 0.7}), E.lookup(GE.clb, -5, 20000), 1e-9,
     "GE's CLB 1 at 20,000 ft: CLB's (washed out at 15,000 ft: the 570)")
+local geClb12 = R.reference(inp{type = "GE", mode = "CLB", alt = 12500, tat = 5, mach = 0.6})
+T.near((R.reference(inp{type = "GE", mode = "CLB 2", alt = 12500, tat = 5, mach = 0.6}) / geClb12) ^ 3, 0.90, 1e-6,
+    "GE's CLB 2 at 12,500 ft: 10 % less (halfway from 10,000 to 15,000 ft)")
+-- (2026-11-19) the 405 (a P&W freighter, laminar/B747/freighter) both at
+-- 15,000 ft as the 570 (FCOM p.1273; before, the 109's as any P&W)
+local clb12 = R.reference(inp{mode = "CLB", alt = 12500, tat = 5, mach = 0.6})
+T.near(tr(clb12, R.reference(inp{mode = "CLB 2", alt = 12500, tat = 5, mach = 0.6, freighter = true}), 0.6), 0.90, 1e-6,
+    "a P&W freighter's CLB 2 at 12,500 ft: 10 % less (halfway to 15,000 ft: the 405)")
+T.near(tr(clb12, R.reference(inp{mode = "CLB 2", alt = 12500, tat = 5, mach = 0.6}), 0.6), 1 - 0.20 * 22.5 / 25, 1e-6,
+    "a P&W passenger's CLB 2 at 12,500 ft: 18 % less (the 109's to 35,000 ft)")
+T.near(R.reference(inp{mode = "CLB 1", alt = 15000, tat = 0, mach = 0.65, freighter = true}),
+    R.reference(inp{mode = "CLB", alt = 15000, tat = 0, mach = 0.65}), 1e-9, "a P&W freighter's CLB 1 at 15,000 ft: CLB's")
+T.near(R.reference(inp{mode = "CLB 2", alt = 20000, tat = -5, mach = 0.7, freighter = true}), clb20, 1e-9,
+    "a P&W freighter's CLB 2 at 20,000 ft: CLB's (before, 12 % less)")
 -- GA the go-around table (held above 10,000 ft); CON (step 9h1) the
 -- maximum continuous table at the airspeed
 T.near(R.reference(inp{mode = "GA", alt = 2000, tat = 20}), E.lookup(PW.ga, 20, 2000), 1e-9, "GA: the go-around table")

@@ -181,8 +181,8 @@
 
 - TO 1 / TO 2: operator 指定の %（1% 刻み、最大 certified derate まで）。fixed derate は離陸の limitation（エンジン故障時も越えない）(FCOM p.1272 (11.32.2)、FCTM p.102 (3.14))。PERF FACTORS で 0–30% (ATA34_2 p.678)。
 - D-TO（assumed temperature）: 入力温度が実温度より高いと減少。最大減少 25%（derate との併用時は derated thrust から 25%）。limitation ではなく、必要なら手で full thrust (FCOM p.1273、FCTM p.101–102 (3.13–14))。選択温度は TAT より高いときだけ使う (ATA34_2 p.651)。limit が下がったときだけ D を付ける (ATA34_2 p.535)。TO/GA で離陸開始後は入力禁止 (FMSPG p.101 (3.2-41))。
-- climb derate の自動選択（109）: takeoff 減少 <5% → CLB、5% 以上 15% 未満 → CLB 1、15% 以上 → CLB 2。takeoff 選択後に地上で手動上書き可（takeoff derate は変わらない）(FCOM p.1273、FCTM p.123 (4.1)、FMSPG p.103)。405・570 は TO 1→CLB 1、TO 2→CLB 2 (FCOM p.1315)。
-- CLB 1 / CLB 2 の消去: 109 は 10,000 ft まで 10% / 20%、そこから CLB 1 は 30,000 ft、CLB 2 は 35,000 ft で線形に CLB へ。405・570 は両方 15,000 ft で CLB (FCOM p.1273)。FMSPG も 15,000 ft (FMSPG p.33 (2-21))。上昇率が約 500 fpm を下回ったら上の rating を選ぶ (FCTM p.123)。
+- climb derate の自動選択（109）: takeoff 減少 <5% → CLB、5% 以上 15% 未満 → CLB 1、15% 以上 → CLB 2。takeoff 選択後に地上で手動上書き可（takeoff derate は変わらない）(FCOM p.1273、FCTM p.123 (4.1)、FMSPG p.103)。405・570 は TO 1→CLB 1、TO 2→CLB 2 (FCOM p.1315)。2026-11-19 から、405・570 を「GE か貨物機（`laminar/B747/freighter` 1）」として作り分けた（notes/ATA-34-61-FMC.md §172。前は全型式が 109 の規則）。
+- CLB 1 / CLB 2 の消去: 109 は 10,000 ft まで 10% / 20%、そこから CLB 1 は 30,000 ft、CLB 2 は 35,000 ft で線形に CLB へ。405・570 は両方 15,000 ft で CLB (FCOM p.1273)。FMSPG も 15,000 ft (FMSPG p.33 (2-21))。上昇率が約 500 fpm を下回ったら上の rating を選ぶ (FCTM p.123)。2026-11-19 から P&W の貨物機も 405 の 15,000 ft（前はエンジン型式だけで分け、P&W は全部 109：notes/ATA-34-61-FMC.md §172）。EICAS の「CLB 1/2」は高度では変わらず、T/C か乗員の選択まで残る。
 - 離陸後の TO/GA で takeoff derate は外れる (§4.3)。
 
 ### 4.7 engine trim (ATA34_2 p.638・640・474)

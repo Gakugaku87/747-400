@@ -1,0 +1,39 @@
+{
+  "name": "s336_eicas_cmd_epr_idle",
+  "description": "EICAS の EPR の指令の線（2026-11-19、notes/ATA-70-80.md §22。利用者の写真「N1計に謎の横線が入ってる」）の X-Plane での確認、空中、P&W。FL340 の空中開始（270 t）で A/T を外し、スラスト・レバーをアイドルに。指令の EPR（laminar/B747/engines/TRA）が目盛の下の 0.85 を割ると、前はカスタム acf のパネルの key frame が 2 点だけで、白い指令の線が目盛の下へ延び、N1 の数字の真ん中を通った（0.62 なら y 841）。直した後は目盛の下の端（REF の印と同じく 0.85 で止まる）。FCOM p.833（図：指令の印はバーの端）、p.834（Command EPR Indicator）、p.873（安定すれば実際の EPR と同じ）。目盛の下での出方は FCOM に無い：端で止めるのは推定。EICAS を撮る（線が N1 の数字に重ならないことは写真で見る）",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 10363, "heading_true": 340, "speed_in_meters_per_second": 250 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMS の初期化" },
+    { "do": "wait", "note": "FMS の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30 },
+    { "do": "check", "note": "P&W（既定のリバリー）", "dref": "laminar/B747/engines/type", "op": "==", "value": 0, "stop": true },
+    { "do": "switch", "note": "A/T ARM OFF", "dref": "laminar/B747/toggle_switch/position[29]", "value": 0, "cmd": "laminar/B747/authrottle_arm", "cmd_down": "laminar/B747/authrottle_disarm" },
+    { "do": "set", "note": "スラスト・レバー 4 本をアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
+    { "do": "wait", "note": "指令の EPR が目盛の下の端 0.85 を割る（前は線が目盛の下へ延びた）", "dref": "laminar/B747/engines/TRA[0]", "op": "<", "value": 0.85, "timeout": 60, "stop": true },
+    { "do": "sleep", "seconds": 5, "note": "表示の EPR が下がりきる" },
+    { "do": "snapshot", "note": "アイドルの指令と表示", "drefs": [ "laminar/B747/engines/TRA[0]", "laminar/B747/engines/TRA[1]", "laminar/B747/engines/TRA[2]", "laminar/B747/engines/TRA[3]", "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_N1[0]", "laminar/B747/fms/thrlim/eicas", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
+    { "do": "check", "note": "4 発とも指令が目盛の下（写真の条件）", "dref": "laminar/B747/engines/TRA[3]", "op": "<", "value": 0.85 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_idle_pw" },
+    { "do": "view", "note": "上の EICAS に寄せる（eicas の視点の中心）", "the": -22, "psi": 29, "fov": 14 },
+    { "do": "shot", "name": "eicas_idle_pw_close" },
+    { "do": "view", "name": "forward" }
+  ]
+}

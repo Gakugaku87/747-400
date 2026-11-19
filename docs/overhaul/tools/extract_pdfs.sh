@@ -2,6 +2,8 @@
 # Dump every reference PDF in _ref/ to text, one file per page plus one
 # whole-document file with page markers, and a per-page stats table.
 #   usage: docs/overhaul/tools/extract_pdfs.sh "<aircraft dir>"   (Git Bash; uses Git for Windows' xpdf pdftotext)
+# The Word reference (CMCS: 12_Scribd_ATA45_NEW_CMCS.docx, 2026-11-19) goes
+# by docx_to_text.ps1 into the same form.
 set -u
 AC="$1"
 REF="$AC/_ref"
@@ -34,6 +36,32 @@ ATA70_80	678025050-ATA-70-80-03-00.pdf
 QRH_CA	953908883-AirChina-B747-400-QRH.pdf
 ACAP	D6-58326-1_747-400_Airport_Planning_Rev_F.pdf
 FPPM	1059530115-74F-FPPM.pdf
+TCDS_747	A20WE.pdf
+TCDS_747_R64	A20WE_Rev64.pdf
+TCDS_PW4000	03_FAA_TCDS_E24NE_Rev14_PW4000.pdf
+TCDS_CF6	04_FAA_TCDS_E13NE_Rev27_CF6-80.pdf
+TCDS_CF6_EASA	05_EASA_TCDS_IM.E.240_Issue02_CF6-80.pdf
+TCDS_RB211	06_EASA_TCDS_E.062_Issue03_RB211-524.pdf
+NASA_SIM	07_NASA_CR-114494_D6-30643_Vol2_Jumbo_Jet_Simulation_Modeling_Data.pdf
+NASA_HQ	08_NASA_CR-2144_Aircraft_Handling_Qualities_Data.pdf
+VT_SPECS	09_VirginiaTech_B747_Specs_Airfoil_Notes.pdf
+APU_MTM	10_Scribd_49-APU_Maintenance_Training_Manual.pdf
+AC_SPECS	11_AircraftCommerce_747-400_Series_Specifications.pdf
+LH_MAN	13_Scribd_Lufthansa_B747-400_Manuals.pdf
+OMS	14_Scribd_Overview_Onboard_Maintenance_Systems.pdf
+COMM	15_Scribd_747-400_Communications_System_Manual.pdf
+CPDLC	16_ROSAP_CPDLC_Procedures_Honeywell_2011.pdf
+PW_PPM	17_Scribd_B744_PW4000_Power_Plant_Manual.pdf
+MMEL	18_FAA_MMEL_B-747-400_Rev32.pdf
+EICAS_WS	19_Scribd_747-400_EICAS_Warning_Systems.pdf
+AOM_JP	20_747-400_航空機運用規程_Warnings_EICAS.pdf
+CB_BA	21_Scribd_BA_B747-400_Circuit_Breaker_Locations.pdf
+HYD_SCH	22_Scribd_B747_Hydraulic_System_Schematic.pdf
+ARINC424	23_ARINC_424-17_Navigation_System_Data_Base.pdf
+ICAO_NDB	24_ICAO_Navigation_Database_Coding.pdf
+NTSB_WBM	25_NTSB_DCA13MA081_Structures_Attachment1_WBM_Excerpt.pdf
+NTSB_STR	26_NTSB_DCA13MA081_Structures_Group_Factual_Report.pdf
+WBM_SUP	27_Scribd_B747_WBM_Supplements.pdf
 EOF
 
 tail -n +2 "$OUT/SOURCES.tsv" | while IFS=$'\t' read -r id file; do

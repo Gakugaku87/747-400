@@ -656,3 +656,9 @@ ND（2026-11-05：PLAN の絵を FCOM の 3 通りに。利用者の依頼「ND�
 - X-Plane の acf の重量の項目は、最大重量（Maximum gross mass）の 1 つだけ。FCOM の同じ表の最大地上走行重量（Taxi 395,986 kg）・最大着陸重量（285,763 kg）・最大零燃料重量（244,939 kg）を入れる所は無い。
 - 同じページの機番 570（GE）は MTOW 875,000 lb（396,893 kg）。acf は 1 つなので、機番 109（P&W：開発と試験の主なエンジン）の値にした。GE の機体では X-Plane の重量と燃料の画面の上限が 5,000 lb 低い（機体の FMC と重量の窓は `acf_m_max` で積む量を抑えない：表示だけ）。
 - 純正 acf は変えていない（850,000 lb のまま）。
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-19・EICAS（利用者の写真「N1計に謎の横線が入ってる」：notes/ATA-70-80.md §22） | Upper EICAS の `GROUP Thrust Command EPR and 1` の 2 組（`laminar/B747/engines/type` 0 の P&W と 2 の RR）の `gen_pointer Engine 1`〜`Engine 4`（画像 `N1_thrust`、`laminar/B747/engines/TRA[0]`〜`[3]`：EPR の白い指令の印。変更後の acf の 144482・144497・144512・144527 行（RR）と 144548・144563・144578・144593 行（P&W）から） | key frame 2 点：`0.850000 -67.000000 1.000000`、`1.750000 67.000000`（RR は `1.950000 67.000000`）。端に平らな点が無く、X-Plane は端の傾きのまま外へ延ばした（飛行中のアイドルの指令 0.62 で y 841：N1 の数字の真ん中） | 4 点：`0.850000 -67 1`、`0.850001 -67 1`、`1.750000 67 0`、`1.760000 67`（RR は `1.950000 67 0`、`1.950001 67`）。同じ目盛の REF の印（`display_EPR_ref`）と同じ形で、目盛の両端で止まる | FCOM p.833（図：指令の印はバーの端）、p.834（Command EPR Indicator）、p.873（安定すれば実際の EPR と同じ）。目盛の外での出方は FCOM に無く、端で止めるのは推定 |
+
+上の 1 行は Edit で 8 本の key frame を書き換えた（各 2 行を 4 行に）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261119_before_cmd_epr_clamp`。見た目の変わるのは、指令の EPR が目盛の外にあるときの EICAS の白い線だけ（X-Plane の写真：`s336_eicas_cmd_epr_idle`・`s337_eicas_cmd_epr_idle_rr`。外から見た写真：`gear_exterior_ground`）。GE の N1 の指令（`Thrust Command N1 G`）は前から両端が平ら。純正 acf（747-400.acf の同じ組）は変えていない。

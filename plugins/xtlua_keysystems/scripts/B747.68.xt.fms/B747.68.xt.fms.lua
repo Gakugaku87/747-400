@@ -2541,6 +2541,9 @@ B747DR_fms_thrlim_eicas = find_dataref("laminar/B747/fms/thrlim/eicas")
 -- not see this one's string writes: s152 and s141's references were TO's)
 B747DR_fms_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
 local THRLIM_CODE = {TO = 1, CLB = 2, CRZ = 3, CON = 4, GA = 5}
+-- (2026-11-19) a freighter (the simconfig's aircraft type): with GE the
+-- FCOM's 405 and 570, the climb armed by the takeoff's rating (FCOM p.1315)
+B747DR_fms_freighter = find_dataref("laminar/B747/freighter")
 -- (step 9h3) the engines inoperative (the engines' N2 under the ENG FAIL
 -- speed: B747.40.engine_start_model.lua), sensed in the air (on the
 -- ground before the start all four are)
@@ -2601,15 +2604,23 @@ local function update_thrlim()
   inp.eo_vnav = B747_fms_eo().active
   -- (step 12c1) PERF FACTORS' THR/CRZ: the cruise's limit CLB or CRZ
   inp.crz_clb = B747_fms_perf_factors().thr_crz == "CLB"
+  -- (2026-11-19) the 405 and 570 (a freighter or GE): the climb armed by
+  -- the takeoff's rating (FCOM p.1315); the 109 by its reduction (p.1273)
+  inp.by_rating = B747DR_fms_engine_type == 1 or B747DR_fms_freighter == 1
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
   local s = thrlimState
   local code = 10 * THRLIM_CODE[s.mode] + ((s.mode == "TO" and s.to) or (s.mode == "CLB" and s.clb) or 0)
     + ((s.mode == "TO" and s.d) and 100 or 0)
   if B747DR_fms_thrlim_code ~= code then B747DR_fms_thrlim_code = code end
-  -- (step 9g4) the EICAS's line: with D- the assumed temperature after
+  -- (step 9g4) the EICAS's line: with D- the assumed temperature after.
+  -- (2026-11-19, notes/ATA-34-61-FMC.md §170 3) with the takeoff's limit
+  -- only (FCOM p.831: the assumed temperature "for reduced thrust
+  -- takeoff"; the THRUST LIM page in the air has no SEL, p.1337-1339).
+  -- Before, with any mode while the SEL stayed above the OAT ("CRZ +47C"
+  -- in the user's cruise)
   local eicas = mode
-  if thrlimState.d and sel then eicas = string.format("%s %+dC", mode, math.floor(sel + 0.5)) end
+  if s.mode == "TO" and s.d and sel then eicas = string.format("%s %+dC", mode, math.floor(sel + 0.5)) end
   if B747DR_fms_thrlim_eicas ~= eicas then B747DR_fms_thrlim_eicas = eicas end
   local selOut = (sel and not thrlimState.no_sel) and sel or -99
   if B747DR_fms_thrlim_sel ~= selOut then B747DR_fms_thrlim_sel = selOut end

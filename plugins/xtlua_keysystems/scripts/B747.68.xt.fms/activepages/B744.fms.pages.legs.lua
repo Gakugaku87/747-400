@@ -187,11 +187,18 @@ end
 
 -- a waypoint's line: its name and constraint; PLAN's centre with <CTR> at
 -- the 9th place (FCOM p.1330's and FMSPG p.124's figures: "BANDR   <CTR>"),
--- after a longer name, none where the constraint leaves no room
+-- after a longer name, none where the constraint leaves no room. (2026-11-19,
+-- notes/ATA-34-61-FMC.md §170 2) A speed constraint alone ("210/") stands
+-- before the altitude's five places, where the predicted altitude goes in
+-- small font (pred_text; FCOM p.1332: constraints large, predictions small,
+-- each in its own place); the same place without a prediction (estimate).
+-- Before, it stood at the end, no prediction after it
+local PRED_ALT_W = 5
 local function leg_line(st, r, i, ctr)
   local l = r.legs[i]
   local name = R.leg_name(l)
   local cons = R.constraint_text(l, fl_above(st, r, i)) or ""
+  if l.spd and not (l.alt or l.step) then cons = cons .. string.rep(" ", PRED_ALT_W) end
   if ctr then
     local c = name .. string.rep(" ", math.max(1, 8 - #name)) .. "<CTR>"
     if #c + 1 + #cons <= 24 then name = c end
@@ -298,12 +305,17 @@ end
 -- altitude" without one (a Mach above the crossover, FL above the
 -- transition altitude); dashes in the descent's region (the arrival's
 -- legs) without a descent path (no E/D); the active route as it is (none
--- on a modification), from the trajectory predictions (step 8c)
+-- on a modification), from the trajectory predictions (step 8c). (2026-11-19,
+-- §170 2) The altitude after a speed constraint alone's slash (FCOM p.1332:
+-- "Waypoint speed and altitude predictions display in small font", the
+-- constraints large); none under a speed and altitude constraint. Before
+-- (§48, no source), none under any speed constraint
 local function pred_text(st, r, i)
   local pred = B747_fms_preds()
   if not (pred and st.active and r == st.rte) then return nil end
   local l, p = r.legs[i], pred.pts[i]
-  if not (l and p) or l.disc or l.pending or l.spd then return nil end
+  if not (l and p) or l.disc or l.pending then return nil end
+  if l.spd and (l.alt or l.step) then return nil end
   -- (none after the E/D: the missed approach's)
   if pred.ed_i and i > pred.ed_i then return nil end
   local dashes = not pred.ed and (l.proc == "STAR" or l.proc == "APPR")
@@ -311,6 +323,9 @@ local function pred_text(st, r, i)
   if not dashes then
     spd = p.machMode and string.format(".%03d", math.floor(p.mach * 1000 + 0.5)) or string.format("%3d", math.floor(p.cas + 0.5))
     alt = p.h > fl_above(st, r, i) and string.format("FL%03d", math.floor(p.h / 100 + 0.5)) or string.format("%5d", math.floor(p.h / 10 + 0.5) * 10)
+  end
+  if l.spd then
+    return string.rep(" ", 24 - #alt) .. alt
   end
   if l.alt or l.step then
     local cons = R.constraint_text(l, fl_above(st, r, i)) or ""

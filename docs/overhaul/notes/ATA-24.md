@@ -563,3 +563,10 @@
   - CDU の画面の明かりは、その CDU の電源（`display_has_power`：[8] 左、[7] 右）で決める。
 - 試験：`elec_module_test`（4 件）、`lighting_module_test`（FIELD OFF・SSB OPEN の 4 件、CDU の 3 件）。直す前のコードでは電気の 4 件が落ち、照明は新しい dataref が無くて止まる。
 - X-Plane（カスタム acf、2026-11-09）：`s275` の (2)(3)：GEN CONT 1 の OFF で `gen_field_open[0]` が 1、FIELD OFF 1（annunciator 88）が 0.8 で点き、ON で消える。SSB は閉で、SSB OPEN（94）は消灯。頭上の写真には整備パネルが写らなかった（灯の目視は利用者に）。CDU の画面の明かりは、X-Plane では電池だけの APU の始動の 65 秒を作りにくいので、試験の土台での確かめだけ。
+
+## 2026-11-19 の資料から（段取りの段 2。[SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 7・9・11）
+
+- CB_BA（BA の CB 位置表、RR 機）：母線名は無いが、P6-05・P6-06 の給電の並び（AC・DC・TRU・XFR）、電池母線・インバーターの給電、APU の CB の分担は FCOM p.799–804・p.820、LH24 p.150–155・p.182 と合う。
+- LH_MAN の GCU 2 の論理図（p.111）は LH24 p.72–73 と同じ値（IDG の cooler 弁 127/104 ℃、ELEC DRIVE 185 ℃・140 psi、DRIVE OIL TEMP、underspeed）。BCU 1 の CB を APU 停止の前に抜くと APU が cool-down なしで止まる（p.96）。
+- MMEL（p.83–86）：BTB 1〜3 か DC 絶縁リレー 1〜3 が閉のままだと LAND 3 不可（ELEC-18 と合う）。PW で IDG を切り離すと燃料タンクの温度の下限が変わる（FUEL-20 の手がかり）。
+

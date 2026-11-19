@@ -351,3 +351,8 @@ GAP ID 接頭辞：`COM`。2026-10-23 調査。コード・acf・obj は変更�
 - ACP の電源（FCOM p.819–820）：機長の ACP は main battery bus、副操縦士の ACP は APU battery bus。電源が無いと、その席の X-Plane の音声パネル（pilot・copilot）を聞こえなくする。
 - memo VHF DATA OFF（FCOM p.776、109）：VHF C が音声のとき。570 の「全部の VHF が音声」は、VHF L・R が音声だけなので VHF C で決まる。
 - 試験：`tests/com/acp_model_test.lua` と `acp_module_test.lua` に呼び出し（全部の ACP の CALL 灯、チャイム 1 秒、送信選択で消える・すでに選んでいれば消えない、R/T・INT で消える、FLT の 30 秒、離陸の滑走中は鳴らない）、ACP の電源、VHF DATA OFF。
+
+## 2026-11-19 の資料から（段取りの段 2。[SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 9、GAP は N19-COM-01）
+
+- COMM（IAI の改造貨物機の配線図）：地上員の呼出は呼出パネルの GND 灯 60 秒・MAWEA の LO CHIME・ACP の FLT CALL、ACP の FLT の MIC で CALL とパネルの灯が消える、パネルの GND で前脚室のホーン 3 秒（地上だけ：推定）（p.7・p.12）。上部デッキの呼出は入る呼出 60 秒・こちらから 15 秒（p.8）。PA と service interphone は APU battery bus（p.5–6）。AMU の SELCAL 5 チャンネル・CVR 3 チャンネル（p.10–12）は今のノートと矛盾しない。
+

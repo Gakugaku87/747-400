@@ -207,7 +207,7 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 | DES（VNAV 3/3） | VNAV p3 | 一部 | E/D がなくても題名 "DES" だけの空白ページにならない。題名にモード（XXXKT、END OF DES、MCP SPD など）が出ず、MOD もない。SPD TRANS が入力できる。AT 制限を削除できない。FORECAST>・<OFFPATH DES・DES DIR>/DES NOW> に割り当てがない。FPA・V/B・V/S の行は 570 仕様で、WPT/ALT の入力はない | FCOM p.1389-1394; FMSPG p.186-190 | vnav.lua:332-449; B744.fms.pages.lua:1046-1084 |
 | DESCENT FORECAST | なし | no | refonly の雛形だけ | FCOM p.1395-1397; FMSPG p.178-179 | refonly/B744.fms.pages.descentforecast.lua |
 | OFFPATH DES | なし | no | — | FCOM p.1398-1399; FMSPG p.191-193 | なし |
-| APPROACH REF | APPROACH | 一部 | 4R を空の scratchpad で押すと FLAP/SPEED が消える（CDU-28）。入力は "XX/YYY" だけ。GROSS WT は入力しても使われない。滑走路と長さの行は固定の伏せ字 | FCOM p.1409-1412; FMSPG p.203-205 | activepages/B744.fms.pages.approach.lua:6-56; B744.fms.pages.lua:1342-1366 |
+| APPROACH REF | APPROACH | 一部 | 4R を空の scratchpad で押すと FLAP/SPEED が消える（CDU-28）。入力は "XX/YYY" だけ。GROSS WT は入力しても使われない。滑走路と長さの行は固定の伏せ字（2026-11-19 に直した：ATA-34-61-FMC.md §170 の 1） | FCOM p.1409-1412; FMSPG p.203-205 | activepages/B744.fms.pages.approach.lua:6-56; B744.fms.pages.lua:1342-1366 |
 | EFIS CONTROL | EFISCTL152 | 一部 | BARO と RANGE が両席に効く。BARO・DH・MDA に範囲と単位の検査がない（I/H 指定、hPa 745-1084、inHg 22.00-32.00 など）。RANGE が 640↔10 で循環しない。いつでも開ける | FCOM p.1062-1064; FMSPG p.239-241 | activepages/B744.fms.pages.efisctl.lua:2-99; B744.fms.pages.lua:905-992 |
 | EFIS OPTIONS | EFISOPTIONS152 | 一部 | CDU-152 と -161 の項目が混在（TERR/TFC はあり、MTRS/FPV はない）。<POS と DATA> に割り当てがない | FCOM p.1065-1067; FMSPG p.242-243 | efisctl.lua:106-164 |
 | EICAS MODES / EICAS SYNOPTICS | EICASMODES / EICASSYN | yes | 2 ページ目の題名も "EICAS MODES"。LSK の配置は FCOM と一致（FMSPG は CANC/RCL を 3L/3R と書く） | FCOM p.1067-1068; FMSPG p.244-246 | activepages/B744.fms.pages.eicasctl.lua:11-67 |
@@ -461,7 +461,7 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 | CDU-25 | 挙動の誤り | 低 | S | EFIS CONTROL/OPTIONS：BARO（STD も）と RANGE が両席に効く。RANGE が循環しない。BARO・DH・MDA の範囲と単位の検査がない。-152 と -161 の項目が混在。<POS と DATA> が効かない。CDU で操作中の >EFIS CONTROL advisory（-161）がない | FCOM p.1060-1068, p.1198; FMSPG p.238-246 | B744.fms.pages.lua:905-992; efisctl.lua:43-164 |
 | CDU-26 | 挙動の誤り | 低 | S | IDENT：CO DATA が入力できる。NAV DATA の識別子、非アクティブ DB とその切替、OPC がない | FCOM p.1282-1284; FMSPG p.62-65 | identpage.lua:4-53 |
 | CDU-27 | 挙動の誤り | 低 | S | POS REF 2/3・3/3：RNP/ACTUAL が固定値で RNP を入力できない（VERIFY RNP ENTRY もない）、<PURGE・GPS NAV INHIBIT>・BRG/DIST> が効かない（IRS の中身は航法のノート） | FCOM p.1367-1370, p.1436; FMSPG p.74-76 | posinit.lua:43-104 |
-| CDU-28 | バグ | 中 | S | APPROACH REF：空の scratchpad で 4R を押すと、写すのではなく FLAP/SPEED と PFD の VREF を消す。入力は "XX/YYY" だけ（実機は /YYY と YYY も可）。25 以外のフラップは 30 扱い。GROSS WT の入力は無視される。滑走路と長さの行が固定の伏せ字 | FCOM p.1409-1412; FMSPG p.203-205 | B744.fms.pages.lua:1348-1366; approach.lua:6-56 |
+| CDU-28 | バグ | 中 | S | APPROACH REF：空の scratchpad で 4R を押すと、写すのではなく FLAP/SPEED と PFD の VREF を消す。入力は "XX/YYY" だけ（実機は /YYY と YYY も可）。25 以外のフラップは 30 扱い。GROSS WT の入力は無視される。滑走路と長さの行が固定の伏せ字（2026-11-19 に直した：ATA-34-61-FMC.md §170 の 1） | FCOM p.1409-1412; FMSPG p.203-205 | B744.fms.pages.lua:1348-1366; approach.lua:6-56 |
 | CDU-29 | 挙動の誤り | 低 | S | RTE の FLT NO は標準 FMS へ送るだけで、FMC の便名（ACARS・ATC のログオンが使う `fltno`）にならない。fltno は ACARS INITIALIZE と ATC LOGON/STATUS でしか入らない。PROGRESS の題名にも出ない | FCOM p.1289-1290, p.1371 | B744.fms.pages.lua:153-158, 226-240; acars/acars.pages.lua:159; activepages/atc/B744.fms.pages.atclogonstatus.lua:61 |
 | CDU-30 | 欠落 | 低 | S | 自動のページ変更がない（570 の TAKEOFF REF → CLB）。DSPY 灯の判定もない | FCOM p.1210, p.1325 | なし |
 | CDU-31 | 欠落 | 低 | M | 保守ページは固定文字。MAINTENANCE INDEX の <INDEX が ACMS を開く。PERF FACTORS（THR RED、ACCEL HT、derate %）が TAKEOFF REF・THRUST LIM の既定値と連動しない | FCOM p.1239; FMSPG p.263-269 | maint.lua:25; maintperffactor.lua |
@@ -525,3 +525,8 @@ FMC のメッセージは重要度の順に出す。CLR か条件の解消で、
 ## 10. 段取り（2026-10-26）
 
 - 6-2 は 6-1 と 1 本の段取りで進める（notes/ATA-34-61-FMC.md §10）。§8 の進め方の 1 は段 2、2 は段 3、3 は段 5〜7、4 は段 5・9、5 は段 8・11・12 に当たる。当面の小修正（CDU-09・10・28・33）は段 1。
+
+## 2026-11-19 の資料から（段取りの段 2。[SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 9、GAP は N19-CMC・N19-CDU）
+
+- CMC の CDU 画面（LH_MAN p.46–86、747-400 の実例）：CMC-L MENU 1/2 は今のコードと一致、2/2 は <EXISTING FAULTS・<FAULT HISTORY。PRESENT LEG FAULTS は FDE ごとに 2 行（「*STATUS: 22 10 82 00」と「<NO LAND 3」）、ラッチする STATUS に ERASE>、MSG の画面は「*RA-L FAIL (NO BUS OUTPUT)」「MSG:34077 ATA:34-33」と日時・フェーズ・HRD/INT。今の <PRESENT LEG FAULTS は開発用の表示のまま（N19-CMC-01）。故障の記録は無い（N19-CMC-02）。CMCS（787）と OMS（一般論）は使わない。
+

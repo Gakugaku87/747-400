@@ -849,3 +849,104 @@ Lua の値だけでは直せず、カスタム acf のパネル定義を変え�
 | DOOR-07 | 欠落 | 低 | M | DRS synoptic の箱が L1 と UD L の 2 つだけ（両 acf 同じ）。ほかのドアの箱、latched との区別にはカスタム acf のパネル計器の追加が要る（承認事項）。背景の名称は 109 の配置で揃っている | FCOM p.466 | ACF:137429-137497、ACFC:127140-127208 |
 | DOOR-08 | 挙動の誤り | 低 | S | FMC の DOORS ページや X-Plane のコマンドで、飛行中でも L1・UD L を開けられる（与圧中の plug door は開かず、UD door は flight lock で止まる）。開けても与圧に影響しない（ATA 21 と調整。X-Plane の与圧が反応するかは未確認） | FCOM p.529・534、ATA38_51_52_56 p.342 | FMSD:20-41 |
 
+
+## 7. 2026-11-19 の資料からの GAP（段取りの段 2。重要度の段ごとに承認なしで進める：CLAUDE.md の「進め方」の例外）
+
+27 点の資料（[REFERENCE_INDEX.md](REFERENCE_INDEX.md) の「2026-11-19 の資料」）を Opus のエージェント 13 体が読んだ報告（要約は [SOURCES_2026-11-19_reports.md](SOURCES_2026-11-19_reports.md)）から、親のセッションが採った GAP。重要度は担当の案を見て親が決め直した（高：乗員に見える挙動が違う・利用者の報告に結び付く・他系統の前提が崩れる）。「測る」は X-Plane で測ってから直すか決めるもの。資料の素性で使わないもの：APU_MTM（A320 の APS 3200）、CMCS（787）、OMS（一般論）、VT_SPECS（学生）。-100 の値（NASA_SIM・NASA_HQ）は 747-400 の推定の出発点にだけ使う。
+
+- 合計 76 件：高 7・中 18・低 51。
+
+### 7.1 高（段 3 の最初の段）
+
+| ID | 種別 | 規模 | 内容 | 根拠 | 該当コード |
+|---|---|---|---|---|---|
+| N19-ENG-01 | 挙動の誤り | S〜M | P&W の全開（TRA 約 82°）の定格：約 14,100 ft 未満は離陸、上は**最大連続**。今はどの高度でも GA の定格（10,000 ft より上は推定）。EICAS の最大 EPR の線と全開の推力 | PW_PPM p.196 | `B747.42.eec_model.lua:36-55, 941, 963-971` |
+| N19-ENG-02 | 挙動の誤り | M | P&W の N2 の赤線 105.5 %（10,450 rpm）、EEC の N2 の制限 104 %。今は両方 111.4 %。表示の N2(N1) の式は最大 EPR で約 107 % を出すので、式の当てはめ直しが前提 | PW_PPM p.7, p.204, p.472; TCDS_PW4000 p.3 | `B747.40.engine_display_model.lua:85`, `B747.42.eec_model.lua:150`, `B747.42.xt.EEC.PW.lua:365-384` |
+| N19-ENG-03 | 欠落・挙動の誤り | M | P&W の逆推力は EEC が N1 で制御（Tt2 補正、レバーに比例）、全開 87 % N1、スリーブが動く間（出るときも戻るときも）はアイドルの燃料、格納を確かめてから前進推力。今はレバー × X-Plane の上限 0.8、表示の N1・EPR は正味の推力から作り逆推力で上がらない（利用者の「リバースで EPR が赤」：ATA-70-80.md §23） | PW_PPM p.196-197, p.204, p.250, p.550-552 | `B747.42.xt.eec_thrust.lua:339-347`, `B747.42.xt.EEC.lua:803-811`, `B747.42.eec_model.lua:880-888` |
+| N19-WARN-01 | 挙動の誤り（見込み） | S | 離陸形態警報の「離陸推力」を、表示の N1 と全エンジン共通の `throttle_jet_rev_ratio_all` で判定。AOM は「エンジン 2・3 のスラストレバーが離陸範囲」。着陸の滑走で逆推力から戻すときに武装しうる（利用者の「謎の MASTER WARNING」：ATA-31-warning.md §11）。レバーで判定する（離陸範囲の値は推定）か、逆推力を扉で除く | AOM_JP p.10, FCOM p.1557, ATA27 p.730 | `B747.45.tocw_model.lua:56`, `B747.45.xt.fltCtrls.lua:845-846` |
+| N19-WB-01 | 挙動の誤り | S | `calc_CGMAC` の MAC 453.8 in（11.53 m）・LEMAC 1129.88 in を TCDS の MAC 327.8 in・LEMAC は datum（機首の 90 in 前）の 1258.0 in 後ろに。PAX/CARGO の CG と、TAKEOFF の CG・トリムに効く（実機の % ＝ 1.384 × 今の % − 11.63） | TCDS_747 p.14, p.22; NTSB_STR p.9 | `B747.68.xt.fms.lua:584-597` |
+| N19-WB-02 | 挙動の誤り | S | CDU の CG の自動入力と重量の窓が X-Plane の `cg_offset_z_mac`（X-Plane の MAC 10.49 m）を使う。実機の % MAC に換算する（acf の _cgZ 1243.3 in は実機の 23.0 % MAC） | TCDS_747 p.14 | `B744.fms.pages.perfinit.lua:61,76-79`, `B744.fms.pages.lua:1689`, `plugins/b747_fms_bridge/src/wb_window.c:59-61,107-110,250-254` |
+| N19-FCTL-01 | 挙動の誤り | M | 安定板が 1 unit 2°（0 units ＝ +15°）。747-100 でも 1 unit 1°（0 units ＝ 前縁上げ 3°、範囲 +3〜−12°）。SRM のトリムの速さも units/s を °/s として持つので 2 倍で動く。段 3 の離陸トリム（AERO.md §3.23）と一緒に、測ってから直す | NASA_SIM p.42, p.247, p.328, p.442; ATA22 p.132 | `B747.19.xt.hydraulicsmodel.lua:439`, `B747.45.srm_model.lua:44-56`, `B747.45.xt.srm.lua:169` |
+
+### 7.2 中
+
+| ID | 種別 | 規模 | 内容 | 根拠 | 該当コード |
+|---|---|---|---|---|---|
+| N19-ENG-04 | 挙動の誤り | S | P&W のレバーの線に最大上昇の折れ点（TRA 約 72°）が無い（アイドルから最大 EPR まで 1 本） | PW_PPM p.196-197 | `B747.42.eec_model.lua:56-66, 947, 1031` |
+| N19-ENG-05 | 挙動の誤り | M | P&W の ALTN：N1 の指令は TRA と Tt2 だけ、自動は lockup、手は 100 rpm/秒で移る。今は EPR で制御したまま | PW_PPM p.196-198, p.204-205 | `B747.42.eec_model.lua:123-135, 1009-1010` |
+| N19-ENG-06 | 挙動の誤り | S | P&W の fuel-on の N2 は 15 %（今は推定の 20 %、ENG AUTOSTART の閾値にも使う） | PW_PPM p.472, p.498 | `B747.40.engine_start_model.lua:30, 304-306` |
+| N19-WARN-02 | 挙動の誤り | S | レバーが原因（800 ft 未満でレバーが閉）の CONFIG GEAR の siren と灯は master リセットで止まる。今は全部リセット不可（推定） | AOM_JP p.10, p.23; FCOM p.1556; ATA31 p.209-214 | `B747.87.alert_model.lua:51-61`, `B747.45.xt.fltCtrls.lua:904-922` |
+| N19-WARN-03 | 欠落 | M | STATUS のラッチ（EIU の NVM：NVM・NVM-A・NVM-G）と CMC の ERASE。今は条件が消えると全部消える（DRIVE DISC も） | LH_MAN p.52, p.78, p.82; LH24 p.64; ATA29_32 p.100; FCOM p.152 | `B747.87.xt.warning.lua:586-744`, `B747.03.xt.elec_buses.lua:241-243` |
+| N19-HYD-01 | 挙動の誤り | S | demand pump 1・4 の AUTO のフラップの信号は、系統 1 が右の FCU、系統 4 が左の FCU から。今は区別のない 1 つ（FCU R・L の故障でも回る） | MMEL p.139; ATA29_32 p.61-62 | `B747.45.fcu_model.lua:246, 304-305, 328`, `B747.19.xt.hyd_power.lua:146-148`, `B747.19.hyd_model.lua:234-243` |
+| N19-NAV-01 | 挙動の誤り | S | Waypoint Description の 2 文字目「B」（fly-over で route type の終わり）を fly-by として飛ぶ（AIRAC 2611 で 1,746 脚） | ARINC424 p.79 | `B747.68.proc_model.lua:158` |
+| N19-ATC-01 | 挙動の誤り | S | ATC の応答の種類を本文の先頭の語だけで決める（「AT ... EXPECT」が WU、連結が R、REQUEST FORWARDED などが R）。要素ごとに最も高い属性 | CPDLC p.177-180, p.184-198; FCOM p.760 | `B747.68.atc_uplink_model.lua:31-50` |
+| N19-ATC-02 | 欠落 | S | 地上側の応答の属性（AutoATC の RR、Hoppie）を使わない | CPDLC p.177-178; FMSPG p.290-291 | `B747.68.xt.fms.lua:4420`, `acars/autoatcProvider.lua:193-198` |
+| N19-ATC-03 | 欠落 | L | ATC の LOAD（4R の LOAD>、UNABLE TO LOAD CLEARANCE、PARTIAL CLEARANCE LOADED）。747-400 の FMS の規則は CPDLC 付録 G、範囲は FMSPG p.293 を優先（CDU-35 の残り、12h4） | CPDLC p.202-203; FMSPG p.290, p.293; FCOM p.760-761 | `activepages/atc/B744.fms.pages.atcuplink.lua:10-11` |
+| N19-WB-03 | 挙動の誤り | S | GR WT か ZFW を入れると TAKEOFF の CG に calc_CGMAC の値が小さい字で入る。109 は初めダッシュ（WBS の CG は 405） | FCOM p.1320 | `B744.fms.pages.lua:1514`, `activepages/B744.fms.pages.takeoff.lua:169-174` |
+| N19-AERO-01 | 挙動の誤り（見込み・測る） | M | 推力線が CG のすぐ下（acf のエンジンの高さと _cgY から腕約 1.0・5.2 ft）。747-100 の実効の腕は地上 7.3・9.2 ft、推力線は 2.5° 上向き。推力による機首上げが弱く、離陸トリムの食い違いの一部（段 3 の離陸トリム） | NASA_SIM p.22, p.38 | `747-400_custom.acf:29296-29357, 71854` |
+| N19-AERO-02 | 挙動の誤り（見込み・測る） | M | 巡航の縦の効き：FL350 で 1 g あたりの昇降舵が 747-100 の約 3 倍、短周期の減衰が弱い（記録の当てはめ） | NASA_HQ p.236-239 | カスタム acf の水平尾翼、`B747.19.xt.afds_control.lua:566, 638` |
+| N19-AFDS-01 | 挙動の誤り（見込み） | S〜M | LNAV の旋回の先読みに機体のロールの遅れが無い（747-100 の素のロールの時定数は FL400 で 1.8〜2.2 s、低い所で 0.6〜1.1 s）。段 3 の LNAV の旋回（§171）で測ってから | NASA_HQ p.241, p.247; NASA_SIM p.416 | `B747.68.lnav_model.lua:68, 78`, `B747.70.afds_roll_model.lua:87`, `tests/lib/lnav_sim.lua` |
+| N19-AFDS-02 | 確かめていない | S | ヨーダンパーの高い所の効き（747-100 の素のダッチロールは FL400・M.8 で ζ 0.035）。FL350 で doublet | NASA_HQ p.241, p.243 | `B747.19.yd_model.lua:37-43, 91` |
+| N19-AFDS-03 | 欠落 | M | ヨーダンパーに旋回協調の項（フラップ下げでロールの角速度とバンク）が無い。150 kt・フラップ 30 のロールの入りで横滑り約 2° が残る。-400 の YDM もロールの角速度とバンクを入力に持つ（利得は無い：-100 の値は推定の出発点） | NASA_SIM p.279-280, p.592-598; ATA22 p.86-87 | `B747.19.yd_model.lua:42-43, 95-98` |
+| N19-AERO-03 | 確かめていない（測る） | M | 地面効果の量（自動着陸の浮き）。747-100 の 10・30・100 ft の釣り合い（安定板 +2.2 units、推力 −34 %）と ΔCL・ΔCm で比べる | NASA_SIM p.337, p.393, p.614-620 | `B747.70.afds_pitch_model.lua:340-348` |
+| N19-GEAR-01 | 確かめていない（測る） | S | 最大のブレーキ（747-100 のシミュレーターは乾いた路面 μ 0.4・主脚だけ）。全踏みの減速を FCOM・FPPM の着陸距離と比べる | NASA_SIM p.323, p.432 | `747-400_custom.acf:71801` |
+
+### 7.3 低
+
+| ID | 内容（根拠：該当コード） |
+|---|---|
+| N19-ENG-07 | P&W の地上アイドル：EGT 340 °C・推力 1,880 lb・N2 63〜64 %（今は推定の 390 °C・10.3 kN・約 70 %）（PW_PPM p.7, p.149：egt_model.lua:57, epr_model.lua:31, EEC.PW.lua:370-373） |
+| N19-ENG-08 | P&W の ALTN 灯の自動に N2 >50 % の条件（PW_PPM p.199：eec_model.lua:992） |
+| N19-ENG-09 | P&W のアイドルの選択：フラップ >20°（今は CF6 の 23°）、5 秒の遅れは接地側だけ（PW_PPM p.208-209：eec_model.lua:80-87, 896-918） |
+| N19-ENG-10 | EPR のトリム（0.03/0.05 EPR、65 kt で凍結、ATHR-18 に足す）（PW_PPM p.215-216） |
+| N19-ENG-11 | 離陸の EGT と N1 が高めの見込み（PW_PPM p.150：epr_model.lua:120-135, egt_model.lua:51-57） |
+| N19-ENG-12 | FMU のオーバースピードのソレノイド（N1 117 %・N2 110.4 %）（PW_PPM p.206-207：eec_model.lua:798-818） |
+| N19-ENG-13 | センサー故障ごとの ALTN と合成（故障の窓）（PW_PPM p.220-221） |
+| N19-ENG-14 | P&W の N1・N2 の赤線超過 5 秒で赤のまま（PW_PPM p.470, p.472：exceedance_model.lua:24, 49-59） |
+| N19-ENG-15 | P&W の油温の閾値（琥珀 163・赤 177、ENG OIL TEMP 163。今は CF6 の 160/175）（PW_PPM p.486, TCDS_PW4000 p.3：engine_display_model.lua:57、パネル） |
+| N19-ENG-16 | RR の油の限界（油圧 25/35 psi、油温 171 °C。今は P&W の値）（TCDS_RB211 p.17, p.20：engine_display_model.lua:58） |
+| N19-ENG-17 | ENG n OIL FILT が GE だけ（FCOM p.901 の 109 にもある）（PW_PPM p.382, p.482：engine_display_model.lua:214） |
+| N19-ENG-18 | P&W の STARTER CUTOUT（52 %・5 秒）、ENG START VLV（5 秒）、地上の 20 秒抑止（PW_PPM p.523：engine_start_model.lua:39-40） |
+| N19-ENG-19 | ENG n REVERSER：故障 15 秒、advisory は地上かつ 80 kt 未満、STATUS（PW_PPM p.614-615：reverser_model.lua:32, 70-74） |
+| N19-ENG-20 | 逆推力の展開条件に火災スイッチ（通常位置）（PW_PPM p.550, p.604, p.613：reverser_model.lua:58-69） |
+| N19-ENG-21 | P&W の EGT 赤線 654（TCDS の離陸）と PPM の 650 の食い違い：利用者の判断。コードの「no source」を TCDS_PW4000 p.3 に（engine_display_model.lua:30） |
+| N19-ENG-22 | 油量（L）：P&W は止まって 33〜37 L（タンク約 32.6 L）、RR の使用可能量約 22.5 L（FCOM p.848, PW_PPM p.374, TCDS_RB211 p.21：engine_display_model.lua:70-72） |
+| N19-ENG-23 | RR の赤線（LP 3,900 rpm ＝ 100 %、どの値が赤線かは資料に無い）と逆推力 91 % の 40 秒（TCDS_RB211 p.10, p.18-19：EEC.RR.lua:384, 458-461, 855-859） |
+| N19-ENG-24 | P&W の始動の推定値（アイドル N2、EGT の形、ホットスタート 520 °C）（PW_PPM p.500-502：egt_model.lua、engine_start_model.lua:44-46, alerts.lua:45） |
+| N19-ENG-25 | GE の逆推力が HPSOV・PRV の閉でも動く（MMEL p.229-232, p.180：reverser_model.lua:63-65） |
+| N19-ENG-26 | 超過の赤い枠を新しいフライトで消す（実機は NVM を消すまで：今の簡略化で足りる見込み）（LH_MAN p.53, ATA70_80 p.334） |
+| N19-WARN-04 | ALT ALERT SYS は STATUS（> なし）（LH_MAN p.49, p.75：warning.lua:207） |
+| N19-WARN-05 | STATUS の名前が足りない（ELEC GEN SYS 1〜4、ELEC IDG 1〜4 VALVE、NO LAND 3・NO AUTOLAND の STATUS 版ほか）（LH_MAN p.55-76：warning.lua:589-744） |
+| N19-WARN-06 | STATUS の BRAKE SOURCE（条件は資料に無い）（EICAS_WS p.7） |
+| N19-WARN-07 | GPWS Mode 1 の PULL UP の線（AOM の図。GPWC の型が違う見込み：利用者の判断）（AOM_JP p.13：gpws_model.lua:57） |
+| N19-CMC-01 | CMC の PRESENT LEG FAULTS が開発用の THROTTLE TESTS・STALL TESTS を出す（バグ）（LH_MAN p.49, p.55：B744.fms.pages.cmc.lua:7, 54-118） |
+| N19-CMC-02 | CMC の故障の記録（PRESENT LEG・EXISTING・FAULT HISTORY、相関、REPORT）（LH_MAN p.46-71：cmc.lua:27-51, 121-366） |
+| N19-COM-01 | 呼出パネルの灯（GND 60 秒、FLT CALL、LO CHIME、MIC で消える、ホーン 3 秒）と FLT の自動消灯の旅客機 30・貨物機 60 秒（COMM p.7, p.8, p.12, FCOM p.697-698：acp_model.lua:35, 70-71） |
+| N19-CDU-01 | ACMS INDEX の MAINT> が FMC の MAINTENANCE INDEX を開く（ATA31 p.338：acms.lua:25） |
+| N19-ATC-04 | 応答の受け取りがすぐ ACCEPTED、RESEND・ATC MSG NOT ACKNOWLEDGED が出ない（FCOM p.765, FMSPG p.297：xt.fms.lua:4566-4573） |
+| N19-ATC-05 | <PRINT LOG と PRINT の扱いの食い違い（FCOM p.726-727, p.760-761：atcindex.lua:17） |
+| N19-ATC-06 | 連結の要素を新しい行の「/」から（FCOM p.758, p.760：atc_uplink_model.lua:78-98） |
+| N19-NAV-02 | コースの「085T」（真方位）を読めない、滑走路 RWnnT の長さ（ARINC424 p.85, p.96：proc_model.lua:158-159, navdb.lua:521） |
+| N19-NAV-03 | 推奨航法施設の種類を区別しない（ARINC424 p.82：proc_model.lua:155, navdb.lua:347-372） |
+| N19-NAV-04 | TDV を読まない（ARINC424 p.198：proc_model.lua:157） |
+| N19-NAV-05 | 速さの制限の効く範囲（SID は前の制限から、STAR は次の制限まで）（ARINC424 p.100：pred_model.lua:96-104, 567-575） |
+| N19-NAV-06 | PI の outbound の長さ（ARINC424 p.200：path_model.lua:206-216, 547-568） |
+| N19-NAV-07 | 高度の記述の記号と滑走路の長さの「推定」を ARINC の出典に（ARINC424 p.86, p.95：proc_model.lua:165-168, navdb.lua:515-517） |
+| N19-NAV-08 | 進入の種類の文字 F・W・Y の名前（ARINC424 p.73：proc_model.lua:40-41） |
+| N19-WB-04 | 下部貨物室の arm（FWD 725.5、AFT 1702/1732、BULK 2014.6/2064.2）（NTSB_WBM p.32：xt.fms.lua:507-509） |
+| N19-WB-05 | 貨物機の主甲板のゾーン A・E の上限（BCF の値）（NTSB_WBM p.23：B744.fms.pages.lua:2010-2014） |
+| N19-DSP-01 | PFD の最大速度で脚下げの .82M（FCOM p.429, p.969：fltInst02.lua:2378-2381, 2430-2433） |
+| N19-ACF-01 | acf の _Vne_kts 399・_Vno_kts 347・_Vle_kts 270 が VMO 365・脚 270/320 と合わない（TCDS_747 p.12, FCOM p.429：747-400_custom.acf:70939-70942） |
+| N19-FCTL-02 | 舵面の blowdown（高速でスポイラー 45 → 28°、外側昇降舵が数度）（NASA_SIM p.385-387：hydraulics_override.lua:41-56） |
+| N19-FCTL-03 | 舵面の速さ（-100：昇降舵 37°/s、補助翼 40〜55、スポイラー 75、方向舵 50）（NASA_SIM p.42：hydraulics_override.lua:207-231） |
+| N19-FCTL-04 | ヨーダンパーの作動筒の速さ（-100 は 15°/s）（NASA_SIM p.279：yaw_damper.lua:81-82） |
+| N19-AERO-04 | 脚の抗力の補正をフラップ 25・30 で小さく（NASA_SIM p.101：aero_corr_model.lua:12-21） |
+| N19-AERO-05 | 素のダッチロールの減衰の速さによる向き、補助翼のヨーの向き（NASA_HQ p.222-223, p.240-241, p.247） |
+| N19-AERO-06 | 逆推力の噴流の空力への効き（100 kt 未満）（NASA_SIM p.317-318） |
+| N19-AFDS-04 | FLARE の則の形の別案（-100 の指数形）（NASA_SIM p.567, p.582-583：afds_pitch_model.lua:340-348） |
+| N19-GEAR-02 | 脚上げのときの車輪の制動（MMEL p.191, ATA29_32 p.400：brake_model.lua） |
+| N19-FAIL-01 | 故障の窓に足す候補（FCC L/C/R、FCC SERVO、TO/GA、BTB・DC 絶縁リレーの固着、APU 発電機、squib、FLT CONTROL VALVE、EDP 圧力スイッチ、FSMC、ENG FUEL VALVE の固着、SPEED CARD、AUTOSTART、REVERSE LEVER INTERLOCK、点火の自動選択、ISLN 弁、GEAR LEVER LOCK、ペダル操向、STICK SHAKER、CDU、RSVR PRESS）（MMEL：SOURCES_2026-11-19_reports.md の担当 11） |
+
+- 採らなかったもの：APU の保護停止の種類・ドアの閉じる回転数（APU_MTM は A320）、操向の電源（母線は資料に無い）、CMCS の 787 のメニュー、CPDLC の 777・787 だけの機能と「40 秒の時間切れ」、AOM の古い版の文言・抑止の食い違い（FCOM を優先）、MMEL の構成の違い（D-1〜D-4：今のままでよい）。
+- 段 3 の残りの項目との対応：N19-FCTL-01・N19-AERO-01 は離陸トリム（AERO.md §3.23）、N19-ENG-03 は逆推力の EPR の赤（ATA-70-80.md §23）、N19-WARN-01 は着陸の滑走の MASTER WARNING（ATA-31-warning.md §11）、N19-AFDS-01 は LNAV の旋回（ATA-34-61-FMC.md §171）と一緒に進める。
+- 段 1 の直しとの照らし合わせ：LEGS の速さだけの制限の表示（ARINC424 と FMSPG p.127：航法データから入った速さだけの制限を FMC がどう表示するかは資料に無い。FCOM p.1330・p.1332 の規則どおりのまま）、APPROACH REF の滑走路の長さ（ARINC の Runway Length の定義と今の計算が同じ：差 0.3 % 以内）。食い違いは無い。

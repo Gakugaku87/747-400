@@ -486,3 +486,10 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 - 作らないもの：CDU で入れた CG が範囲外（8.5〜33 % MAC）のときの >STAB GREENBAND と灯の消灯（ATA31 p.202）。
 - 試験：`greenband_model_test` 21、`fltctrls_module_test` 198。
 - X-Plane（カスタム acf、2026-11-04）：`s247_failures_more` 38/38（成田でエンジン運転中：カードの故障で >CONFIG WARN SY と STATUS がすぐ出る。FMC の離陸トリム 9（nose up 帯：指示器の帯が 0.93 に動く）でスイッチが AFT を読むと >STAB GREENBAND と STATUS、直すと消える）、回帰の `s224_config_gear` 11/11。Log.txt に Lua の誤りなし。
+
+## 21. 2026-11-19 の資料から（段取りの段 2。[SOURCES_2026-11-19_reports.md](../SOURCES_2026-11-19_reports.md) の担当 4・5・11、GAP は GAP_ANALYSIS.md §7 の N19-FCTL）
+
+- 安定板（NASA_SIM p.42・p.247）：747-100 のペデスタルのレバーの範囲は +3〜−12°（前縁上げ正、1 unit 1°）、速さは動圧で 0.5→0.2°/s。プラグインは X-Plane に 1 unit 2° で書き、SRM のトリムの速さも units/s を °/s として持つので、X-Plane の安定板は 2 倍の角度・速さで動く（N19-FCTL-01、高：離陸トリムと一緒に）。
+- 舵面の範囲と速さ（-100、p.42）：昇降舵 下げ 17・上げ 23°・37°/s、補助翼 内側 ±20°・外側 下げ 15・上げ 25°、スポイラー 45°（5・8 は 20°）・75°/s、方向舵 ±25°・50°/s。§16 の「資料に値が無い」に -100 の値（N19-FCTL-03）。高速の blowdown（p.385–387：スポイラーが 28° まで、N19-FCTL-02）。スピードブレーキの program（p.622）は §4.2 と同じ。
+- MMEL（p.137–141）：右の FCU が不作動なら No.1、左なら No.4 の demand pump を離着陸で ON（系統 1 は右、系統 4 は左の FCU のフラップの信号を使う：N19-HYD-01）。
+
