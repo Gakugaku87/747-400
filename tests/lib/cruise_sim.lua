@@ -104,8 +104,16 @@ function M.run(o)
             local f_eng = drag(mach_now) / eng / 1000
             epr = P.epr(f_eng, delta, mach_now)
             local idl = math.min(idle, out0.max[1])
-            local x = math.max(0, math.min(1, (epr - idl) / (out0.max[1] - idl)))
-            lever = (E.TLA_FLAT_IDLE + x * (out0.tla_full - E.TLA_FLAT_IDLE)) / E.TLA_STOP
+            -- (2026-11-20, N19-ENG-04) the P&W's line has its knee at the
+            -- maximum climb EPR (E.PW_TLA_CLB): the lever for the EPR on it
+            local clb = math.max(idl, math.min(E.rating(E.TABLE.PW.clb, inp, tat, alt, false), out0.max[1]))
+            local tla
+            if epr <= clb then
+                tla = E.TLA_FLAT_IDLE + math.max(0, (epr - idl) / math.max(1e-6, clb - idl)) * (E.PW_TLA_CLB - E.TLA_FLAT_IDLE)
+            else
+                tla = E.PW_TLA_CLB + math.min(1, (epr - clb) / math.max(1e-6, out0.max[1] - clb)) * (out0.tla_full - E.PW_TLA_CLB)
+            end
+            lever = tla / E.TLA_STOP
             if o.lever0 then lever = o.lever0 end
             th, x1, x2, buf = 0.6, 0, 0, {}
             for i = 1, math.max(1, math.floor(dead / dt + 0.5)) do buf[i] = th end

@@ -87,7 +87,7 @@ local out = E.update(s, inp, DT)
 for n = 1, 4 do T.near(out.max[n], 1.51, 1e-9, "PW max EPR at sea level, engine " .. n) end
 T.near(out.command[1], 1.51, 1e-9, "full forward commands the max EPR")
 T.near(out.command[2], 1.51, 1e-9, "48° TLA commands the max EPR")
-T.near(out.command[3], 1.0 + 0.51 * 22 / 46, 1e-9, "24° TLA commands 22/46 of the way from idle (the flat idle to 2°)")
+T.near(out.command[3], 1.0 + (E.lookup(PW.clb, 15, 0) - 1.0) * 22 / 36, 1e-9, "24° TLA commands 22/36 of the way from idle to the maximum climb EPR at 38° (N19-ENG-04, PW_PPM p.196: the 72° TRA knee; before 22/46 to the maximum)")
 T.near(out.command[4], 1.0, 1e-9, "idle lever commands idle")
 -- (2026-11-11) the flat idle: a forward TLA to 2° commands idle (ATA70_80
 -- p.151), the A/T's idle (the lever at 0.12°) too; over it the command
@@ -104,7 +104,7 @@ do
     T.equal(o2.command[1], 1.0, "the A/T's idle (0.12° TLA): idle")
     T.equal(o2.command[2], 1.0, "1° TLA: idle (the flat idle)")
     T.equal(o2.command[3], 1.0, "2° TLA: idle (its upper limit)")
-    T.near(o2.command[4], 1.0 + 0.51 / 46, 1e-9, "3° TLA: 1/46 of the way to the maximum")
+    T.near(o2.command[4], 1.0 + (E.lookup(PW.clb, 15, 0) - 1.0) / 36, 1e-9, "3° TLA: 1/36 of the way to the maximum climb EPR (N19-ENG-04)")
     local th = E.thrust_control(E.new(), "PW", 1, o2.target[1], 1.45, 0.89, 1.0, 0.016, 1.65, 0.37, false)
     T.equal(th, 0, "at the A/T's idle the thrust control gives idle at once (from 0.89)")
 end
@@ -123,21 +123,23 @@ out = E.update(s, inp, DT)
 -- continuous, not the climb's (before, 1.57: its EPR at CLB thrust was the
 -- maximum EPR and turned red, FCOM p.834). (2026-11-13, B2) The go-around's
 -- carried up: above its table the maximum continuous + PW_MAX_OVER_MCT
--- (estimate), the lever's one line to it at 48°
+-- (estimate), the lever's one line to it at 48°. (2026-11-20, N19-ENG-01)
+-- Above about 14,100 ft the maximum continuous itself (PW_PPM p.196), not
+-- under the climb's + PW_MCT_OVER_CLB
 local clb30 = E.lookup(PW.clb, -20, 30000)
 local mct30 = E.rating_mct(PW.mct, inp, -20, 30000, 280, false)
 T.near(clb30, 1.57, 1e-9, "PW max climb EPR at 30,000 ft, TAT -20")
 T.check(mct30 > clb30 + 0.01, "PW at 30,000 ft: the maximum continuous over the climb's (PI.13.1, PI.10.36): " .. mct30)
-T.near(out.max[2], mct30 + E.PW_MAX_OVER_MCT, 1e-9, "PW max EPR at 30,000 ft: the maximum continuous + 0.16 (B2; before, the maximum continuous)")
-T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true), E.rating_mct(PW.mct, inp, -20, 30000, 280, true)) + E.PW_MAX_OVER_MCT, 1e-9,
+T.near(out.max[2], mct30, 1e-9, "PW max EPR at 30,000 ft: the maximum continuous (PW_PPM p.196; B2 + 0.16 before)")
+T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true) + E.PW_MCT_OVER_CLB, E.rating_mct(PW.mct, inp, -20, 30000, 280, true)), 1e-9,
     "engine anti-ice on engine 1: the maximum continuous's own adjustment")
-local max30 = mct30 + E.PW_MAX_OVER_MCT
-T.near(out.command[2], 1.0 + (max30 - 1.0) * 33 / 46, 1e-9, "35° TLA: 33/46 of the way to the maximum EPR (B2: one line to 48°; before, the maximum at 35° above 25,000 ft)")
+local max30 = mct30
+T.near(out.command[2], 1.0 + (clb30 - 1.0) * 33 / 36, 1e-9, "35° TLA: 33/36 of the way to the maximum climb EPR at 38° (N19-ENG-04; B2: 33/46 to the maximum)")
 T.near(out.command[4], max30, 1e-9, "full forward gives the maximum EPR")
-T.near(out.command[3], 1.0 + (max30 - 1.0) * 15.5 / 46, 1e-9, "17.5° TLA commands 15.5/46 of the way from idle (the flat idle to 2°)")
+T.near(out.command[3], 1.0 + (clb30 - 1.0) * 15.5 / 36, 1e-9, "17.5° TLA commands 15.5/36 of the way from idle to the maximum climb EPR (N19-ENG-04)")
 inp.wai = true
 out = E.update(s, inp, DT)
-T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true), E.rating_mct(PW.mct, inp, -20, 30000, 280, true)) + E.PW_MAX_OVER_MCT, 1e-9,
+T.near(out.max[1], math.max(E.rating(PW.clb, inp, -20, 30000, true) + E.PW_MCT_OVER_CLB, E.rating_mct(PW.mct, inp, -20, 30000, 280, true)), 1e-9,
     "engine and wing anti-ice: their adjustments at 30,000 ft")
 T.near(out.max[2], max30, 1e-9, "wing anti-ice alone does not change an engine without engine anti-ice")
 inp.wai, inp.nai = false, {false, false, false, false}
@@ -175,10 +177,27 @@ T.near(out.max[1], E.lookup(GE.clb, -5, 26000), 1e-9, "GE climb rating at 26,000
 inp.type, inp.alt, inp.tat, inp.kias = "PW", 20000, -14, 280
 inp.idle = {1.0, 1.0, 1.0, 1.0}
 out = E.update(s, inp, DT)
-T.near(out.max[1], 1.512 + E.PW_MAX_OVER_MCT, 1e-9, "PW max EPR at 20,000 ft, 280 KIAS: the maximum continuous table's (step 9h1) + 0.16 (B2)")
+T.near(out.max[1], 1.512, 1e-9, "PW max EPR at 20,000 ft, 280 KIAS: the maximum continuous table's (step 9h1; N19-ENG-01, PW_PPM p.196: before + 0.16)")
 inp.kias = 360
 out = E.update(s, inp, DT)
-T.near(out.max[1], E.lookup(PW.ga, -14, 10000), 1e-9, "PW at 360 KIAS: the go-around table's 10,000 ft held where the climb rating + 0.16 is under it (B2)")
+T.near(out.max[1], math.max(E.lookup_mct(PW.mct, -14, 20000, 360), E.lookup(PW.clb, -14, 20000) + E.PW_MCT_OVER_CLB), 1e-9,
+    "PW at 360 KIAS: the maximum continuous, not under the climb rating + 0.01 (before, the go-around's 10,000 ft held)")
+-- (N19-ENG-01) below about 14,100 ft the takeoff rating as before: at
+-- 12,000 ft the go-around table's 10,000 ft held (or the climb's or the
+-- maximum continuous + 0.16 where higher)
+inp.alt, inp.kias = 12000, 280
+out = E.update(s, inp, DT)
+local mct12 = E.lookup_mct(PW.mct, -14, 12000, 280)
+T.near(out.max[1], math.max(E.lookup(PW.ga, -14, 10000), math.max(E.lookup(PW.clb, -14, 12000), mct12) + E.PW_MAX_OVER_MCT), 1e-9,
+    "PW at 12,000 ft (under 14,100): the takeoff rating as before")
+inp.alt = 14500
+out = E.update(s, inp, DT)
+T.near(out.max[1], math.max(E.lookup_mct(PW.mct, -14, 14500, 280), E.lookup(PW.clb, -14, 14500) + E.PW_MCT_OVER_CLB), 1e-9,
+    "PW at 14,500 ft (over 14,100): the maximum continuous")
+inp.type, inp.alt = "RR", 20000
+out = E.update(s, inp, DT)
+T.near(out.max[1], 1.512, 1e-9, "RR at 20,000 ft: as the P&W (no source: estimate)")
+inp.type = "PW"
 inp.type, inp.alt, inp.tat, inp.kias = "GE", 26000, -5, 290
 inp.idle = {25, 25, 25, 25}
 inp.lever = {0, 0, 0, 0}
@@ -193,7 +212,11 @@ do
     i3.idle = {1.0, 1.0, 1.0, 1.0}
     -- the P&W at a fixed lever (the climb's 34°) through 290 to 305 KIAS at
     -- 10,000 and 15,000 ft: the command no more than 0.005 apart (before,
-    -- the rating's step to the maximum continuous: -0.04)
+    -- the rating's step to the maximum continuous: -0.04). (2026-11-20) Over
+    -- about 14,100 ft the full-forward rating is the maximum continuous,
+    -- whose table falls with the speed (N19-ENG-01), but under the knee at
+    -- 38° the line runs to the maximum climb rating (N19-ENG-04, PW_PPM
+    -- p.196), which the speed does not move
     i3.type = "PW"
     for _, alt in ipairs({10000, 15000}) do
         i3.alt, i3.tat = alt, 0

@@ -27,7 +27,7 @@ M.ABORTED = "aborted"       -- autostart gave up on the ground; held until CUTOF
 
 -- values from the sources
 M.CUTOUT_N2 = 50                    -- START switch released, start valve closes (FCOM p.862, p.879)
-M.FUEL_ON_N2 = {GE = 15, PW = 20}   -- autostart fuel on (CF6: ATA70_80 p.564-565; PW: estimate)
+M.FUEL_ON_N2 = {GE = 15, PW = 15}   -- autostart fuel on (CF6: ATA70_80 p.564-565; PW: PW_PPM p.472, p.498, 2026-11-20 N19-ENG-06: before the estimate 20)
 M.LIGHT_OFF_S = {GE = {20, 15, 15}, PW = {20, 20}}   -- light-off window per attempt (ATA70_80 p.564; FCOM p.185)
 M.ATTEMPTS = {GE = 3, PW = 2}       -- ground attempts before the abort (FCOM p.880-881)
 M.DRY_MOTOR_S = 30                  -- motoring after a failed light-off or an abort (FCOM p.880-881)

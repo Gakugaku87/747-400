@@ -1,6 +1,6 @@
 {
   "name": "s10_overspeed",
-  "description": "EEC のオーバースピード保護と >ENG RPM LIM（2-3 段 2）の X-Plane での確認。10,000 ft・250 kt で空中から始め、海面 50 ℃ の高温にして A/P の FLCH で 250 kt を保ちながら全推力にする。通常モードでは最大 EPR で止まり RPM LIM は出ない。EEC MODE を 4 発とも ALTN にすると角点の EPR まで上がり（オーバーブースト、FCOM p.877）、N1・N2 が赤線に近づけば EEC が抑える（FCOM p.878、p.901）。N1・N2 の表示が赤（P&W は 111.4 % 超え）にならないことを見る。機体を読み直す。",
+  "description": "EEC のオーバースピード保護と >ENG RPM LIM（2-3 段 2）の X-Plane での確認。10,000 ft・250 kt で空中から始め、海面 50 ℃ の高温にして A/P の FLCH で 250 kt を保ちながら全推力にする。通常モードでは最大 EPR で止まり RPM LIM は出ない。EEC MODE を 4 発とも ALTN にすると角点の EPR まで上がり（オーバーブースト、FCOM p.877）、N1・N2 が赤線に近づけば EEC が抑える（FCOM p.878、p.901）。N1・N2 の表示が赤（P&W は N1 111.4 %、N2 105.5 % 超え：2026-11-20 から N2 は PW_PPM p.7 の 105.5、EEC の N2 の制限は p.204 の 104 %）にならないことを見る。機体を読み直す。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 3048, "heading_true": 340, "speed_in_meters_per_second": 128 },
@@ -51,7 +51,7 @@
     { "do": "check", "note": "最大 EPR の近くで止まる（FCOM p.876）", "dref": "laminar/B747/engines/display_EPR[0]", "op": "between", "value": [1.4, 1.6] },
     { "do": "check", "note": "ENG 1 RPM LIM は出ない", "dref": "laminar/B747/CAS/advisory_status[134]", "op": "==", "value": 0 },
     { "do": "check", "note": "ENG 4 RPM LIM は出ない", "dref": "laminar/B747/CAS/advisory_status[137]", "op": "==", "value": 0 },
-    { "do": "check", "note": "N2 は赤線（111.4 %）の下", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 111.4 },
+    { "do": "check", "note": "N2 は赤線（105.5 %）の下", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 105.5 },
 
     { "do": "mark", "note": "EEC MODE 4 発 ALTN（オーバーブースト）" },
     { "do": "switch", "note": "EEC MODE 1 を ALTN", "dref": "laminar/B747/button_switch/position[7]", "value": 0, "cmd": "laminar/B747/button_switch/elec_eng_ctrl_1" },
@@ -80,8 +80,8 @@
       "laminar/B747/engines/display_N1[3]", "laminar/B747/engines/display_N2[3]",
       "laminar/B747/CAS/advisory_status[134]", "laminar/B747/CAS/advisory_status[137]" ] },
     { "do": "check", "note": "N1 は赤線（111.4 %）の下", "dref": "laminar/B747/engines/display_N1[0]", "op": "<", "value": 111.4 },
-    { "do": "check", "note": "N2 は赤線の下（表示は整数、112 で赤）", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 111.4 },
-    { "do": "check", "note": "ENG 4 も N2 は赤線の下", "dref": "laminar/B747/engines/display_N2[3]", "op": "<", "value": 111.4 },
+    { "do": "check", "note": "N2 は赤線の下（105.5 %。EEC は 104 % で抑える）", "dref": "laminar/B747/engines/display_N2[0]", "op": "<", "value": 105.5 },
+    { "do": "check", "note": "ENG 4 も N2 は赤線の下", "dref": "laminar/B747/engines/display_N2[3]", "op": "<", "value": 105.5 },
     { "do": "cas", "note": "ALTN・全推力" },
 
     { "do": "mark", "note": "戻す" },

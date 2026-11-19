@@ -362,9 +362,18 @@ function engine_idle_control_PW(altitude_ft_in)
     return N1_actual
   end
   local last_N2 = {0.0, 0.0, 0.0, 0.0}
+  --(2026-11-20, GAP_ANALYSIS.md N19-ENG-02) N2 from the N1 shown: through
+  --the PW4056's IDLE N2 63.0 % at the shown N1 of a ground idle (27.2 %:
+  --PW_PPM p.7), 100 % at a sea level takeoff's 101.6 % N1 (X-Plane's own N2
+  --there, s109: estimate) and its N2 red line 105.5 % at the N1 red line
+  --111.4 % (PW_PPM p.7, TCDS E24NE p.3: estimate that the two meet there).
+  --Before, the cubic (0.000798 N1^2 - 0.154 N1 + 10.2) x N1 x 3600 / 9900:
+  --103.1 % at the takeoff, 119 % at the N1 red line, over the N2 red line
+  --(red N2 and the EEC's 104 % limit on a cold day's takeoff)
+  local N2_A, N2_B, N2_C = 51.57, 0.3996, 0.000759
   function N2_display_PW(engine_N1_in, engine_in)
     local N2_display = 0.0
-    N2_display = (0.000798 * engine_N1_in^2 - 0.154 * engine_N1_in + 10.2) * engine_N1_in * (3600/9900)  --have to multiply by the 100% rotation speed of N1 / 100% rotation speed of N2
+    N2_display = N2_A + N2_B * engine_N1_in + N2_C * engine_N1_in^2
   
     if last_N2[engine_in] == nil then last_N2[engine_in] = 0.0 end
     if (simDR_engine_running[engine_in] == 0 or simDR_N2[engine_in]<35) then

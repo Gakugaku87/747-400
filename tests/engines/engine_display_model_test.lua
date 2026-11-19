@@ -266,10 +266,10 @@ do
     T.check(not o.n3_red[1], "CF6: no N3")
     inp.type = "PW"
     inp.n1 = {111.4, 111.3, 100, 100}
-    inp.n2 = {100, 100, 111.4, 111.3}
+    inp.n2 = {100, 100, 105.5, 105.4}
     o = D.update(s, inp, DT)
     T.check(o.n1_red[1] and not o.n1_red[2], "P&W: N1 red from 111.4 % (the panel's previous value)")
-    T.check(o.n2_red[3] and not o.n2_red[4], "P&W: N2 red from 111.4 %")
+    T.check(o.n2_red[3] and not o.n2_red[4], "P&W: N2 red from 105.5 % (PW_PPM p.7, TCDS E24NE p.3: 10,450 rpm; before 111.4)")
     inp.type = "RR"
     inp.n2 = {109.5, 100, 100, 100}
     inp.n3 = {100, 101.5, 101.4, 100}

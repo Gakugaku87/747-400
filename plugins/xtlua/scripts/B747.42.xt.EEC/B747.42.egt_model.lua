@@ -104,7 +104,7 @@ end
 -- start, its START_LIMIT less HOT_MARGIN, P&W 510 and GE 725 °C, at 15 and
 -- 40 °C; B747.40.engine_start_model.lua)
 M.IDLE_N2 = 55                      -- X-Plane's N2, %: the start model's IDLE_MIN_N2 (estimate there)
-M.LIGHT_N2 = {PW = 20, GE = 15}     -- X-Plane's N2, %
+M.LIGHT_N2 = {PW = 15, GE = 15}     -- X-Plane's N2, % (2026-11-20, N19-ENG-06: the P&W's fuel-on 15 %, PW_PPM p.472, p.498; before 20)
 M.START_PEAK = {PW = 20, GE = 60}   -- K, corrected, over the idle's
 M.PEAK_AT = 0.4
 
