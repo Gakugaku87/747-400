@@ -16,12 +16,19 @@
 -- at (estimate: the climb at 290 KIAS takes the same EPR). It does nothing
 -- until started, so it does not touch other flights.
 --
+-- v4 (2026-11-20): the error is the EEC's command of the levers (the
+-- four's mean of laminar/B747/engines/TRA: the EPR the lever line gives,
+-- without the engines' lag), as the A/T's THR REF takes it. On the shown
+-- EPR (v3) the integral wound on with the engines' spool-down: at s109's
+-- thrust reduction the levers went 0.98 -> 0.23 and back to 0.75 (N1
+-- 100 -> 63 %, the speed 184 -> 164 kt; 11-13 the same, to 0.17)
+--
 -- Commands (also reachable through the X-Plane Web API):
 --   FlyWithLua/B747_epr_hold/max_climb   hold the Max Climb EPR (A/T off first)
 --   FlyWithLua/B747_epr_hold/stop        stop moving the levers
 -- B747/test/epr_hold_target (float): the EPR held, 0 when stopped.
 
-local VERSION = "3"
+local VERSION = "4"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true) then
     logMsg("B747 EPR hold: not the 747-400, inactive")
@@ -50,10 +57,10 @@ local GAIN = 1.0
 dataref("B747EH_palt", "sim/flightmodel2/position/pressure_altitude", "readonly")
 dataref("B747EH_tat", "sim/weather/aircraft/temperature_leadingedge_deg_c", "readonly")
 dataref("B747EH_time", "sim/time/total_running_time_sec", "readonly")
-dataref("B747EH_epr0", "laminar/B747/engines/display_EPR", "readonly", 0)
-dataref("B747EH_epr1", "laminar/B747/engines/display_EPR", "readonly", 1)
-dataref("B747EH_epr2", "laminar/B747/engines/display_EPR", "readonly", 2)
-dataref("B747EH_epr3", "laminar/B747/engines/display_EPR", "readonly", 3)
+dataref("B747EH_epr0", "laminar/B747/engines/TRA", "readonly", 0)
+dataref("B747EH_epr1", "laminar/B747/engines/TRA", "readonly", 1)
+dataref("B747EH_epr2", "laminar/B747/engines/TRA", "readonly", 2)
+dataref("B747EH_epr3", "laminar/B747/engines/TRA", "readonly", 3)
 -- the levers read and written with get() and set() while holding: a
 -- "writable" dataref variable would be written back every frame, fighting
 -- the A/T while stopped (docs/overhaul/TESTING.md)
