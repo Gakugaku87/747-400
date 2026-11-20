@@ -103,6 +103,47 @@ T.equal(get(STAB_CORR), 0, "aero_corr_off 1: no stabilizer correction")
 rt:set("laminar/B747/debug/aero_corr_off", 0)
 frames(0.1)
 T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "aero_corr_off 0: back")
+-- (2026-11-20, N19-AERO-02) the downwash's part by X-Plane's alpha and
+-- indicated airspeed, on top of the flaps'; aero_corr_off leaves it out
+rt:set("sim/flightmodel/position/indicated_airspeed", 250)
+rt:set("sim/flightmodel/position/alpha", 6)
+frames(0.1)
+T.near(get(STAB_CORR), ACM.stab_flap(10) + ACM.stab_downwash(6, 250), 1e-6,
+    "alpha 6 at 250 kt: the flaps' and the downwash's (" .. ACM.stab_downwash(6, 250) .. " degrees)")
+rt:set("laminar/B747/debug/aero_corr_off", 1)
+frames(0.1)
+T.equal(get(STAB_CORR), 0, "aero_corr_off 1: neither")
+rt:set("laminar/B747/debug/aero_corr_off", 0)
+-- (N19-AERO-03) none of the ground's own: the same 19 ft over the ground
+-- (y_agl 0.26 m on the gear) as out of its effect
+rt:set("sim/flightmodel/position/y_agl", 0.26 + 19 * 0.3048)
+frames(0.1)
+T.near(get(STAB_CORR), ACM.stab_flap(10) + ACM.stab_downwash(6, 250), 1e-6, "19 ft: the downwash's as up high")
+rt:set("sim/flightmodel/position/alpha", 0)
+rt:set("sim/flightmodel/position/indicated_airspeed", 0)
+frames(0.1)
+T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "at rest again: the flaps' alone")
+-- (2026-11-20, N19-AERO-01) the thrust's part: 150 kN each at 200 kt in the
+-- air (alpha at the downwash's zero), the arms blending from the ground's
+-- to the air's over 2 s after onground_any goes 0
+rt:set("sim/flightmodel/position/indicated_airspeed", 200)
+rt:set("sim/flightmodel/position/alpha", ACM.DW_ALPHA0)
+rt:set("sim/weather/rho", 1.225)
+rt:set("sim/flightmodel/position/true_airspeed", 200 * 0.51444)
+for i = 0, 3 do rt:set("sim/flightmodel/engine/POINT_thrust", i, 150e3) end
+rt:set("sim/flightmodel/failures/onground_any", 0)
+frames(3)
+local q200 = 0.5 * 1.225 * (200 * 0.51444) ^ 2
+local tm = ACM.stab_thrust(ACM.thrust_moment({150e3, 150e3, 150e3, 150e3}, 0), q200, 200)
+T.near(get(STAB_CORR), ACM.stab_flap(10) + tm, 0.02,
+    string.format("150 kN each at 200 kt in the air: the thrust's %.2f degrees", tm))
+for i = 0, 3 do rt:set("sim/flightmodel/engine/POINT_thrust", i, 0) end
+rt:set("sim/flightmodel/position/indicated_airspeed", 0)
+rt:set("sim/flightmodel/position/true_airspeed", 0)
+rt:set("sim/flightmodel/position/alpha", 0)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+frames(3)
+T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "no thrust, at rest: the flaps' alone")
 
 -- load relief (FCOM p.954; ATA27 p.288-289): lever 30, 30->25 at 178 kt,
 -- 25->20 at 203 kt; back 20->25 at 195 kt, 25->30 at 170 kt; >FLAP RELIEF

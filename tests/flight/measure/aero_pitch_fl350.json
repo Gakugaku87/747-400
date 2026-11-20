@@ -49,7 +49,7 @@
     { "do": "cmd", "note": "HDG HOLD", "name": "sim/autopilot/heading_hold" },
     { "do": "snapshot", "note": "doublet の前", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/misc/machno", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/weight/m_total", "laminar/B747/flt_ctrls/yaw_damper_mode" ] },
 
-    { "do": "snapshot", "note": "A/P を外す前", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/misc/machno", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/weight/m_total", "sim/flightmodel2/controls/elevator_trim", "laminar/B747/flt_ctrls/l_elev_inner", "sim/cockpit2/controls/yoke_pitch_ratio", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta" ] },
+    { "do": "snapshot", "note": "A/P を外す前", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/misc/machno", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/weight/m_total", "sim/flightmodel2/controls/elevator_trim", "laminar/B747/flt_ctrls/l_elev_inner", "sim/cockpit2/controls/yoke_pitch_ratio", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "sim/aircraft/weight/acf_Jyy_unitmass", "sim/flightmodel2/misc/cg_offset_z_mac", "sim/flightmodel2/misc/cg_offset_z" ] },
     { "do": "mark", "note": "A/P を外す" },
     { "do": "cmd", "note": "操縦輪の A/P 解除スイッチ（1 回目）", "name": "laminar/B747/autopilot/button_switch/yoke_disengage_capt", "duration": 0.2 },
     { "do": "sleep", "seconds": 1 },
