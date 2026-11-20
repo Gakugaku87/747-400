@@ -859,15 +859,17 @@ do
     frames(20)                     -- the cruise's N1 and EGT settled again
 end
 -- (2026-11-11 review) an engine short of its target at full throttle raises
--- X-Plane's maximum thrust by 200 N a frame up to 1.1 times the rated
--- (258,000 N); a shut down one not at all. Before, without a top, and a shut
--- down engine at full throttle raised it for good
+-- X-Plane's maximum thrust by 200 N a frame up to 1.3 times the rated
+-- (258,000 N; 1.1 before 2026-11-20: short for the P&W hot and high,
+-- notes/ATA-70-80.md §26); a shut down one not at all. Before, without a
+-- top, and a shut down engine at full throttle raised it for good
 do
     local TMAX = "sim/aircraft/engine/acf_tmax"
     T.near(ns.B747_eec_boosted_max(258000, 258000), 258200, 1e-6, "the raise: 200 N a frame")
-    T.near(ns.B747_eec_boosted_max(283700, 258000), 283800, 1e-6, "up to 1.1 times the rated (283,800 N)")
-    T.near(ns.B747_eec_boosted_max(283800, 258000), 283800, 1e-6, "not past it")
-    T.near(ns.B747_eec_boosted_max(300000, 258000), 300000, 1e-6, "one already above: not lowered here")
+    T.near(ns.B747_eec_boosted_max(283800, 258000), 284000, 1e-6, "past 1.1 times the rated (283,800 N): FAOR's P&W needed more (2026-11-20)")
+    T.near(ns.B747_eec_boosted_max(335300, 258000), 335400, 1e-6, "up to 1.3 times the rated (335,400 N)")
+    T.near(ns.B747_eec_boosted_max(335400, 258000), 335400, 1e-6, "not past it")
+    T.near(ns.B747_eec_boosted_max(350000, 258000), 350000, 1e-6, "one already above: not lowered here")
     rt:set("sim/flightmodel/engine/ENGN_running", 3, 0)
     rt:set("sim/flightmodel/engine/ENGN_thro_use", 3, 1)
     rt:set(ENG .. "display_N1", 3, 20)

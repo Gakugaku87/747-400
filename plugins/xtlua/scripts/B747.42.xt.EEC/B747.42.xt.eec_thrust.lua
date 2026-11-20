@@ -435,10 +435,20 @@ function B747_eec_thrust_short()
     return false
 end
 -- (2026-11-11 review) the maximum thrust raised for a short engine (by
--- BOOST_N a frame), at most BOOST_MAX times the rated (estimate: the
--- remedy is for small differences of X-Plane's engine). Before, without a
--- top: 6 kN a second for as long as one stayed short
-local BOOST_N, BOOST_MAX = 200, 1.10
+-- BOOST_N a frame), at most BOOST_MAX times the rated (estimate). Before,
+-- without a top: 6 kN a second for as long as one stayed short.
+-- (2026-11-20) BOOST_MAX 1.10 -> 1.30: X-Plane's engine is not flat rated -
+-- at full throttle its thrust falls with the air's density, the real
+-- engine's EEC holds the rating (EPR or N1) to the flat-rate corner and
+-- beyond. 1.10 was short for the P&W: at FAOR (5,214 ft, 24 deg C) the
+-- takeoff EPR at rest took 1.098 times the rated and at 100 kt the throttle
+-- was at full with the EPR 0.031 under the maximum (1.553 against 1.584);
+-- at 10,000 ft and ISA+23 (s10's 50 deg C at sea level) the full forward EPR
+-- stayed at 1.45 against the maximum 1.57, in ALTN too (no overboost, no
+-- >ENG LIM PROT). The GE took 1.024 times at FAOR. 1.30 covers those (the
+-- 10,000 ft case's estimate about 1.27); still a top for a failure that
+-- leaves a target out of reach (notes/ATA-70-80.md §26)
+local BOOST_N, BOOST_MAX = 200, 1.30
 function B747_eec_boosted_max(current, rated)
     return math.max(current, math.min(current + BOOST_N, rated * BOOST_MAX))
 end
