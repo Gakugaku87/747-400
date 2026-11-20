@@ -41,11 +41,14 @@ T.check(path[2].kind == "line" and path[2].a == B and path[2].b == C, "TF C: the
 T.near(path[2].crs, 89.83, 0.01, "east along 35.5 N: the great circle's course at B")
 T.near(M.end_course(path[2]), 90.17, 0.01, "and at C")
 
--- the fly-by turn at B: 250 kt, 25 degrees of bank
+-- the fly-by turn at B: 250 kt, 23 degrees of bank (TURN_BANK since
+-- 2026-11-20: 2 under LNAV's 25, for its steering back onto the arc;
+-- notes/ATA-34-61-FMC.md §171. Before 25: 1.95 nm)
 local tr = M.turn(path[1], path[2], 250)
-local r = (250 * 1852 / 3600) ^ 2 / (9.80665 * math.tan(25 * rad)) / 1852
-T.near(tr.r, r, 1e-6, "the radius at 250 kt and 25 degrees: about 1.95 nm")
-T.near(tr.r, 1.953, 0.001, "1.95 nm")
+local r = (250 * 1852 / 3600) ^ 2 / (9.80665 * math.tan(23 * rad)) / 1852
+T.equal(M.TURN_BANK, 23, "fly-by turns at 23 degrees of bank")
+T.near(tr.r, r, 1e-6, "the radius at 250 kt and 23 degrees: about 2.15 nm")
+T.near(tr.r, 2.146, 0.001, "2.15 nm")
 T.equal(tr.dir, "R", "a right turn")
 T.near(tr.delta, 89.83, 0.01, "89.8 degrees")
 T.near(tr.d, tr.r * math.tan(tr.delta / 2 * rad), 1e-6, "it starts r tan(delta / 2) before B")

@@ -79,6 +79,49 @@ for _, c in ipairs({{17, 490}, {60, 300}}) do
     T.check(inside > -0.05, string.format("and within 0.05 nm inside the leg out: %.3f", inside))
 end
 
+-- (2026-11-20, notes/ATA-34-61-FMC.md §171) fly-by turns with the airplane's
+-- bank 0.9 s behind the 3 degree a second command (X-Plane's, s271): the
+-- roll in started half the arc's bank at ROLL_RATE and ROLL_LAG before the
+-- arc, the roll out once the heading still to turn is what the bank's
+-- coming off turns, the arc at 23 degrees: the course out met within 1
+-- degree, no more than 0.02 nm outside the leg out after the turn (the
+-- user's aim, 2026-11-20), at most 2 degrees of bank back the other way.
+-- Before (the roll out's lead by the distance, the leg's steering from
+-- there): X-Plane's 17 degree turn at FL370 came out 0.084 nm outside and
+-- about 1 degree past, the model here 0.05 nm
+local function lagged(turn, tas, wind, from)
+    local Bf = {ident = "BG", lat = 35.5, lon = 140.0}
+    local cin = 157
+    local cout = cin - turn
+    local Cf = P.point(Bf, cout, 40)
+    local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, cin + 180, 30))
+    local sf = L.new(P)
+    local p0 = P.point(Bf, cin + 180, 20)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = cin, tas = tas, wind = wind, wind_from = from, alt = 37000})
+    local onC, out, past, back = false, 0, 0, 0
+    local sign = turn > 0 and 1 or -1
+    fly(stf, sf, af, 300, {lag = 0.9, each = function(t, s, air)
+        if stf.rte.legs[1].fix == Cf then onC = true end
+        if onC then
+            -- a left turn's outside is right of the leg out
+            out = math.max(out, sign * s.xtk)
+            back = math.max(back, sign * af.bank)
+            local d = ((air.trk - cout + 180) % 360) - 180
+            past = math.max(past, -sign * d)
+        end
+    end})
+    return onC, out, past, back
+end
+for _, c in ipairs({{3, 497}, {6, 497}, {10, 497}, {17, 497}, {30, 497}, {-17, 497}, {60, 300}, {90, 250},
+                    {17, 497, 60, 200}, {60, 300, 40, 270}}) do
+    local onC, out, past, back = lagged(c[1], c[2], c[3] or 0, c[4] or 0)
+    local what = string.format("a %d degree turn at %d kt%s", c[1], c[2], c[3] and string.format(", %d kt from %03d", c[3], c[4]) or "")
+    T.check(onC, what .. ": the leg out active")
+    T.check(past < 1, string.format("%s: the course out met within 1 degree: %.2f", what, past))
+    T.check(out < 0.02, string.format("%s: within 0.02 nm outside the leg out: %.4f", what, out))
+    T.check(back < 2, string.format("%s: at most 2 degrees of bank back: %.2f", what, back))
+end
+
 -- a fly-over fix: over it, then back onto the leg
 st = route({{via = "DIRECT", fix = B, flyover = true}, {via = "DIRECT", fix = C}}, A)
 s = L.new(P)

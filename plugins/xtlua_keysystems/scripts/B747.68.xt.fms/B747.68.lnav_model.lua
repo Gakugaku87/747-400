@@ -64,8 +64,15 @@ M.LOOKAHEAD = 25
 M.K_TRK = 2.5
 M.K_HDG = 2.5
 -- the turns started this many seconds early for the roll into them
--- (estimate: about 3 degrees a second to 25 degrees)
+-- (estimate: about 3 degrees a second to 25 degrees). (2026-11-20, §171)
+-- A fly-by turn's own: half its arc's bank at ROLL_RATE and the airplane's
+-- lag behind the command, ROLL_LAG (the turn's middle on the arc's start);
+-- ROLL_LEAD stays for the turns onto a leg (turn_in)
 M.ROLL_LEAD = 4
+-- (2026-11-20, §171) the airplane's bank behind the AFDS's command, s: X-Plane
+-- 0.9 s at FL370 (s271 2026-11-11: 2.7 degrees behind a 3 degree a second
+-- command, the roll in and out alike; estimate)
+M.ROLL_LAG = 0.9
 -- (2026-11-09) a fly-by turn's arc left before its end by the time the
 -- roll out of its bank takes at ROLL_RATE degrees a second, halved (the
 -- AFDS's command rate: B747.70.afds_roll_model.lua's ROLL_RATE, an
@@ -76,6 +83,9 @@ M.ROLL_LEAD = 4
 -- of heading past). Estimate: the sources give the turn's path (ATA34_2
 -- p.615, p.626), not the guidance's lead
 M.ROLL_RATE = 3
+-- (2026-11-20, §171) a fly-by turn's roll out over with this bank (degrees)
+-- left: the leg out's steering from there (estimate)
+M.ROLLOUT_END = 2
 
 local function clamp(v, lo, hi) return v < lo and lo or (v > hi and hi or v) end
 local function wrap180(a) return (a + 180) % 360 - 180 end
@@ -553,7 +563,10 @@ function M.update(s, path, air, armed, engaged)
             if s.turn and not s.turn.past and dtg and dtg > s.turn.d + 1 then s.turn = nil end
             if not s.turn then
                 local tr = P.turn(e, nxt, vt)
-                if tr and dtg and dtg <= tr.d + air.gs * KT * M.ROLL_LEAD / 1852 then s.turn = tr end
+                if tr and dtg then
+                    local lead = math.abs(arc_bank(vt, tr.r, tr.dir)) / (2 * M.ROLL_RATE) + M.ROLL_LAG
+                    if dtg <= tr.d + air.gs * KT * lead / 1852 then s.turn = tr end
+                end
             end
             if s.turn and not s.turn.past then
                 -- past the bisector of the turn
@@ -570,15 +583,37 @@ function M.update(s, path, air, armed, engaged)
             end
         end
     end
-    -- the fly-by turn flown to its end (past the bisector it belongs to
-    -- the leg out), left the roll out's lead before it (ROLL_RATE); not
-    -- without LNAV, nor 2 nm off it
+    -- (2026-11-20, §171) the roll out of a fly-by turn: once the heading
+    -- still to turn is what the airplane turns while its bank comes off at
+    -- ROLL_RATE and ROLL_LAG behind (its bank `air.bank`, the IRS's; the
+    -- turn rate g tan(bank) / TAS), wings level is asked for, before or
+    -- after the bisector (a small turn's bank never reaches the arc's);
+    -- the turn ends, the leg out's steering on, past the bisector with the
+    -- bank under ROLLOUT_END. Without the bank, as before: the roll out's
+    -- lead before the arc's end (half its bank at ROLL_RATE). Before, that
+    -- lead alone, with the leg out's steering on from there: its K_TRK
+    -- asked for 15 degrees still at the switch and the airplane came out
+    -- 1 degree past the leg's course, 0.08 nm outside (X-Plane s271, FL370)
     local u = s.turn
+    if u and engaged and air.bank and not u.rollout then
+        local v = math.max(air.tas or air.gs, 60) * KT
+        local phi = math.min(math.abs(air.bank), 60) * RAD
+        local out = G / (v * M.ROLL_RATE * RAD) * -math.log(math.cos(phi)) + G / v * math.tan(phi) * M.ROLL_LAG
+        local sign = u.dir == "R" and 1 or -1
+        if air.bank * sign > 0 and wrap180(u.c2 - air.trk) * sign * RAD <= out then u.rollout = true end
+    end
+    -- the fly-by turn flown to its end (past the bisector it belongs to
+    -- the leg out); not without LNAV, nor 2 nm off it
     if u and u.past and s.seq == 0 then
         local _, at = P.track(u.t2, u.c2, p)
         local cx = circle(P, u.center, u.r, u.dir, p)
-        local lead = air.gs * KT * math.abs(arc_bank(air.gs, u.r, u.dir)) / (2 * M.ROLL_RATE) / 1852
-        if at >= -lead or not engaged or math.abs(cx) > 2 then s.turn, u = nil, nil end
+        local over
+        if air.bank then
+            over = u.rollout and math.abs(air.bank) <= M.ROLLOUT_END
+        else
+            over = at >= -air.gs * KT * math.abs(arc_bank(air.gs, u.r, u.dir)) / (2 * M.ROLL_RATE) / 1852
+        end
+        if over or not engaged or math.abs(cx) > 2 then s.turn, u = nil, nil end
     end
     -- the guidance
     local ref_xt, ref_dtk, ff = xt, dtk, hff
@@ -602,6 +637,8 @@ function M.update(s, path, air, armed, engaged)
         s.valid = true
         if mode == "path" and ref_dtk then
             s.roll = steer(ref_xt, ref_dtk, ff, air, hdir or turn_dir(s, e, wrap180(ref_dtk - air.trk)), bank)
+            -- (§171) a fly-by turn's roll out: wings level
+            if u and u.rollout then s.roll = 0 end
         elseif mode == "heading" then
             -- (2026-11-20, GAP N19-NAV-02) a heading charted in degrees
             -- true (ARINC 424 p.85: "085T") as it is

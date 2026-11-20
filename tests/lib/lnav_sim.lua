@@ -1,6 +1,8 @@
 -- A simple airplane for the LNAV tests (tests/fms/lnav_*_test.lua): its bank
 -- after LNAV's command at 3 degrees a second at most, its turn from its
--- bank, the wind; the route sequenced as LNAV says.
+-- bank, the wind; the route sequenced as LNAV says. (2026-11-20) Its bank in
+-- the state LNAV gets (the IRS's); opts.lag s: the bank behind the 3 degree
+-- a second command (X-Plane's about 0.9 s: notes/ATA-34-61-FMC.md §171).
 --   local SIM = dofile("tests/lib/lnav_sim.lua")(N, R, P, L, VAR)
 -- N, R, P, L the nav DB, route, path and LNAV models, VAR the magnetic
 -- variation (degrees east).
@@ -26,7 +28,8 @@ return function(N, R, P, L, VAR)
         local vn = a.tas * math.cos(a.hdg * RAD) - a.wind * math.cos(a.wind_from * RAD)
         local ve = a.tas * math.sin(a.hdg * RAD) - a.wind * math.sin(a.wind_from * RAD)
         return {lat = a.lat, lon = a.lon, hdg = a.hdg, trk = (math.atan2(ve, vn) / RAD + 360) % 360,
-            gs = math.sqrt(vn * vn + ve * ve), tas = a.tas, wind = a.wind, alt = a.alt, var = VAR, ground = a.ground or false}
+            gs = math.sqrt(vn * vn + ve * ve), tas = a.tas, wind = a.wind, alt = a.alt, var = VAR, ground = a.ground or false,
+            bank = a.bank}
     end
     -- fly `seconds` (steps of 0.1 s): the route sequenced as LNAV says;
     -- opts.engaged (default true), opts.armed, opts.engage_when_valid,
@@ -54,7 +57,13 @@ return function(N, R, P, L, VAR)
                 end
             end
             local cmd = engaged and s.roll or 0
-            a.bank = a.bank + clamp(cmd - a.bank, -3 * dt, 3 * dt)
+            a.cmd = a.cmd or a.bank
+            a.cmd = a.cmd + clamp(cmd - a.cmd, -3 * dt, 3 * dt)
+            if opts.lag and opts.lag > 0 then
+                a.bank = a.bank + (a.cmd - a.bank) * math.min(1, dt / opts.lag)
+            else
+                a.bank = a.cmd
+            end
             a.hdg = (a.hdg + 9.80665 * math.tan(a.bank * RAD) / (a.tas * 1852 / 3600) / RAD * dt) % 360
             local sa = M.state(a)
             local q = P.point(a, sa.trk, sa.gs * dt / 3600)
