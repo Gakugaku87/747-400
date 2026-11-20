@@ -1,0 +1,93 @@
+{
+  "name": "aero_yd_fl350",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：高い所のヨーダンパーの効き（GAP_ANALYSIS.md N19-AFDS-02、2026-11-20）。747-100 の素のダッチロールは FL400・M.8 で減衰比 0.035（NASA_HQ p.241, p.243：-100 の値）。s126（10,000 ft）と同じ doublet を FL350・M.84・238 t（s263 と同じ積み方、燃料 15 t、ISA、無風）で：A/P 1 台（空中の初期化の CMD L）の ALT HOLD と HDG HOLD、ヨーダンパーを両方 OFF にして方向舵のトリムで doublet（+0.3 を 2 秒、−0.3 を 2 秒、0。その後 30 秒）を左右 1 回ずつ、ヨーダンパーを ON（flight mode）にして同じ。記録（session.csv の yaw rate・横滑り角・バンク）から周期と減衰比を出す",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 10668, "heading_true": 90, "speed_in_meters_per_second": 249.1 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 3750, 3750, 3750, 3750, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "record_start" },
+    { "do": "wait", "note": "空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "set", "note": "MCP 高度 FL350", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 35000 },
+    { "do": "set", "note": "MCP を Mach に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 1 },
+    { "do": "set", "note": "窓 M.84", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 84 },
+    { "do": "set", "note": "MCP 方位 098（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 98 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（空中の初期化の ALT HOLD。違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "sleep", "seconds": 90, "note": "落ち着かせる（空中開始の上昇と ALT HOLD：air-start settle）" },
+    { "do": "cmd", "note": "HDG HOLD", "name": "sim/autopilot/heading_hold" },
+    { "do": "snapshot", "note": "doublet の前", "drefs": [ "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/misc/machno", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/weight/m_total", "laminar/B747/flt_ctrls/yaw_damper_mode" ] },
+
+    { "do": "mark", "note": "ヨーダンパー OFF" },
+    { "do": "switch", "note": "YAW DAMPER UPPER OFF", "dref": "laminar/B747/button_switch/position[82]", "value": 0, "cmd": "laminar/B747/button_switch/yaw_damper_upr" },
+    { "do": "switch", "note": "YAW DAMPER LOWER OFF", "dref": "laminar/B747/button_switch/position[83]", "value": 0, "cmd": "laminar/B747/button_switch/yaw_damper_lwr" },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "mark", "note": "doublet 右から（YD OFF）" },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": -0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0 },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "mark", "note": "doublet 左から（YD OFF）" },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": -0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0 },
+    { "do": "sleep", "seconds": 30 },
+
+    { "do": "mark", "note": "ヨーダンパー ON" },
+    { "do": "switch", "note": "YAW DAMPER UPPER ON", "dref": "laminar/B747/button_switch/position[82]", "value": 1, "cmd": "laminar/B747/button_switch/yaw_damper_upr" },
+    { "do": "switch", "note": "YAW DAMPER LOWER ON", "dref": "laminar/B747/button_switch/position[83]", "value": 1, "cmd": "laminar/B747/button_switch/yaw_damper_lwr" },
+    { "do": "wait", "note": "flight mode（fade-in 5 秒）", "dref": "laminar/B747/flt_ctrls/yaw_damper_mode[1]", "op": "==", "value": 4, "timeout": 15 },
+    { "do": "sleep", "seconds": 10 },
+    { "do": "mark", "note": "doublet 右から（YD ON）" },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": -0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0 },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "mark", "note": "doublet 左から（YD ON）" },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": -0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0.3 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "set", "dref": "sim/cockpit2/controls/rudder_trim", "value": 0 },
+    { "do": "sleep", "seconds": 30 },
+    { "do": "check", "note": "A/P のまま", "dref": "laminar/B747/autopilot/cmd_L_mode/status", "op": "==", "value": 1 },
+    { "do": "record_stop" }
+  ]
+}
