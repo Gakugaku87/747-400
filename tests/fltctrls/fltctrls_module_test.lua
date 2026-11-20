@@ -414,9 +414,10 @@ rt:set("sim/operation/failures/rel_elv_trim_run", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 fly(0, 0, 1)
 -- the flight's start: X-Plane's trim followed on the ground; an air start
--- with no airspeed yet keeps 7.7 units (X-Plane trims for its own trim
--- there: 0.5 at FL350). 7.7: the stabilizer angle of the 7.5 units before
--- 2026-11-20 (1 degree a unit since, the acf's incidence +4.7)
+-- with no dynamic pressure yet keeps 7.7 units (X-Plane trims for its own
+-- trim there: 0.5 at FL350). 7.7: the stabilizer angle of the 7.5 units
+-- before 2026-11-20 (1 degree a unit since, the acf's incidence +4.7)
+rt:set("sim/flightmodel/misc/Qstatic", 0)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:callout("flight_start")
@@ -773,23 +774,31 @@ frames(0.2)
 -- 0.26 + 308,800 / IAS^2 units, 1.7 to 7.7, since 2026-11-20 at 1 degree
 -- a unit; before 3.78 + 154,400 / IAS^2, 4.5 to 7.5, the same angles),
 -- not a fixed 7.5 units (a 334 kt start pitched up to 13 degrees before
--- the A/P came on)
+-- the A/P came on). The speed from X-Plane's dynamic pressure (the
+-- equivalent airspeed), right from the start: X-Plane's indicated airspeed
+-- comes up from 0 over about 3 s there (2026-11-20: up to 204 kt the
+-- fit's 7.7 cap held for the first second, a 322 kt start up to 12.7
+-- degrees pitch)
+local function q_of(kt) return 0.5 * 1.225 * (kt * 0.514444) ^ 2 end
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("sim/flightmodel/position/indicated_airspeed", 0)
 for _, c in ipairs({{334, 0.26 + 308800 / 334 ^ 2}, {231, 0.26 + 308800 / 231 ^ 2}, {150, 7.7}}) do
-    rt:set("sim/flightmodel/position/indicated_airspeed", c[1])
+    rt:set("sim/flightmodel/misc/Qstatic", q_of(c[1]))
     rt:callout("flight_start")
     frames(1)
-    T.near(units(), c[2], 0.01, "air start at " .. c[1] .. " kt: " .. string.format("%.2f", c[2]) .. " units")
+    T.near(units(), c[2], 0.01, "air start at " .. c[1] .. " kt (indicated 0): " .. string.format("%.2f", c[2]) .. " units")
     T.near(get(TRIM), units() / 7.5 - 1, 1e-6, "X-Plane's trim written (" .. c[1] .. " kt)")
 end
-rt:set("sim/flightmodel/position/indicated_airspeed", 334)
+rt:set("sim/flightmodel/misc/Qstatic", q_of(334))
 rt:callout("flight_start")
 frames(4)
 local u = units()
-rt:set("sim/flightmodel/position/indicated_airspeed", 250)
+rt:set("sim/flightmodel/misc/Qstatic", q_of(250))
 frames(1)
 T.near(units(), u, 1e-6, "after the start's 3 s the speed no longer sets it")
+rt:set("sim/flightmodel/misc/Qstatic", 0)
+rt:set("sim/flightmodel/position/indicated_airspeed", 250)
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 

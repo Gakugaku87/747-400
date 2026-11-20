@@ -1,6 +1,6 @@
 {
   "name": "s217_air_start",
-  "description": "空中開始（シムの開始の扱い、2026-11-02：notes/ATA-22.md §45、ATA-27.md §18）の X-Plane での確認、空中。伊豆諸島の南の海上 FL250・指示約 334 kt（真 245 m/s）・西向きで開始（機体を読み直す、カスタム acf）、何も押さない。FMS の初期化（F/D・A/T・ALT HOLD・CMD L）の後、MCP の速さが今の速さ、安定板が速さからの値（約 5.2 units）で、機首が上がって高く上がらないこと。前は安定板 7.5 units と MCP 214 kt で、8 秒で +9,800 fpm、29,600 ft まで上がり 229 kt まで落ちた。記録を取る。Lua の誤りも確かめる",
+  "description": "空中開始（シムの開始の扱い、2026-11-02：notes/ATA-22.md §45、ATA-27.md §18）の X-Plane での確認、空中。伊豆諸島の南の海上 FL250・指示約 334 kt（真 245 m/s）・西向きで開始（機体を読み直す、カスタム acf）、何も押さない。FMS の初期化（F/D・A/T・ALT HOLD・CMD L）の後、MCP の速さが今の速さ、安定板が速さからの値（約 3.3 units。2026-11-20 から速さは動圧から：X-Plane の指示対気速度は空中開始で 0 から約 3 秒かけて上がる、ATA-27.md §22）で、機首が上がって高く上がらないこと。前は安定板 7.5 units と MCP 214 kt で、8 秒で +9,800 fpm、29,600 ft まで上がり 229 kt まで落ちた。記録を取る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 32.80, "longitude": 139.20, "elevation_in_meters": 7620.0, "heading_true": 270, "speed_in_meters_per_second": 245.0 },
@@ -24,7 +24,7 @@
     { "do": "check", "note": "MCP の速さは今の速さ（前は min（今の速さ、Vmc + 10）で約 214 kt に下がった：notes/ATA-22.md §45）", "dref": "laminar/B747/autopilot/ias_dial_value", "op": "between", "value": [295, 345] },
     { "do": "check", "note": "安定板は速さから（334 kt で約 3.0 units：2026-11-20 から 1 unit 1° で 0.26 + 308,800 ÷ IAS²、notes/AERO.md §3.23。1 unit 2° のときは約 5.2 units、その前は 7.5 units：notes/ATA-27.md §18）", "dref": "laminar/B747/flt_ctrls/stab_trim/units", "op": "between", "value": [2.0, 4.0] },
     { "do": "check", "note": "A/P の ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9 },
-    { "do": "watch", "note": "60 秒：高度は 26,500 ft まで（前は 8 秒で 26,300 ft・+9,800 fpm、29,600 ft まで上がった）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 26500, "timeout": 60 },
+    { "do": "watch", "note": "60 秒：高度は 25,500 ft まで（2026-11-20 の動圧の速さで 24,964〜25,005 ft。指示対気速度の時は 25,700〜26,634 ft、2026-11-02 の前は 8 秒で 26,300 ft・+9,800 fpm、29,600 ft まで上がった）", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "max": 25500, "timeout": 60 },
     { "do": "watch", "note": "続く 30 秒：速さは 290 kt より上（前は 229 kt まで落ちた）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "min": 290, "timeout": 30 },
     { "do": "record_stop" }
   ]

@@ -43,8 +43,10 @@ simDR_srm_trim_fail             = find_dataref("sim/operation/failures/rel_trim_
 -- X-Plane's flight start on the ground or in the air (its flight load, not
 -- the airplane's air/ground logic: the PSEU can still say ground then)
 simDR_srm_xp_on_ground          = find_dataref("sim/flightmodel/failures/onground_any")
--- and its airspeed then (the air data's comes a little later)
-simDR_srm_xp_ias                = find_dataref("sim/flightmodel/position/indicated_airspeed")
+-- and its dynamic pressure then (Pa), right from an air start's first
+-- frame: X-Plane's indicated airspeed comes up from 0 over about 3 s there
+-- (2026-11-20, s217's start: 0 to 322 kt; the air data's later still)
+simDR_srm_xp_q                  = find_dataref("sim/flightmodel/misc/Qstatic")
 B747DR_srm_hyd_2                = find_dataref("laminar/B747/hydraulics/pressure_2")
 B747DR_srm_hyd_3                = find_dataref("laminar/B747/hydraulics/pressure_3")
 B747DR_srm_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
@@ -177,11 +179,19 @@ local function trim_of(u) return u / 7.5 - 1 end
 -- stabilizer angles with the stabilizer at 1 degree a unit and the acf's
 -- incidence +4.7 degrees (notes/AERO.md §3.23): 0.26 + 308,800 / IAS^2,
 -- from 1.7 to 7.7 units (before 2 degrees a unit: 3.78 + 154,400 / IAS^2,
--- 4.5 to 7.5)
-local function air_start_units(ias)
-    if ias < 100 then return 7.7 end
-    return math.max(1.7, math.min(7.7, 0.26 + 308800 / (ias * ias)))
+-- 4.5 to 7.5). 2026-11-20: the speed from X-Plane's dynamic pressure (the
+-- equivalent airspeed), not its indicated airspeed, which comes up from 0
+-- over about 3 s after an air start: up to 204 kt the fit's 7.7 cap held
+-- for the first second, and a 322 kt start pitched up to 12.7 degrees at
+-- 8.9 degrees alpha (s217: 4,900 fpm as the A/P came on; with the
+-- downwash's correction, notes/AERO.md §3.24, 26,600 ft from FL250;
+-- notes/ATA-27.md §22). X-Plane's indicated airspeed is about the
+-- equivalent one (322 kt to 319 there), so the fit stands
+local function air_start_units(kt)
+    if kt < 100 then return 7.7 end
+    return math.max(1.7, math.min(7.7, 0.26 + 308800 / (kt * kt)))
 end
+local function eas_kt(q) return math.sqrt(math.max(0, 2 * q / 1.225)) / 0.514444 end
 -- one switch pair from two sources: either, or both the same way
 local function either(a, b)
     if a == 0 then return b end
@@ -268,7 +278,7 @@ function B747_srm()
         and not hist_has(trim_hist, xp, TRIM_SAME) and not xp_runaway) then
         S.stab_set(srm_state, units(xp))
     elseif starting then
-        S.stab_set(srm_state, air_start_units(simDR_srm_xp_ias))
+        S.stab_set(srm_state, air_start_units(eas_kt(simDR_srm_xp_q)))
     end
 
     local out = S.update(srm_state, inp, math.min(SIM_PERIOD, SRM_DT_MAX))
