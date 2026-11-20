@@ -265,6 +265,50 @@ run(125, function()
 end)
 T.equal(table.concat(heard, ","), "1000,500,1,2,100,50,40,30,20,10", "... 500, APPROACHING MINIMUMS, MINIMUMS, 100 ...")
 T.equal(out.callout, 0, "the callout code falls back to 0")
+-- (2026-11-20) the reset (ATA34_2 p.180, p.183): the sequence again only after
+-- climbing above 1,000 ft; the 1,000 ft one above 1,100 ft (estimate)
+local function fly(to_ft, fpm)
+    local up = to_ft > inp.ra
+    while (up and inp.ra < to_ft) or (not up and inp.ra > to_ft) do
+        inp.vs = up and fpm or -fpm
+        inp.ra = up and math.min(to_ft, inp.ra + fpm / 60 * DT) or math.max(to_ft, inp.ra - fpm / 60 * DT)
+        inp.alt, inp.mins_ref = inp.ra, inp.ra
+        out = G.update(s, inp, DT)
+        if out.callout ~= 0 and out.callout ~= last then heard[#heard + 1] = out.callout end
+        last = out.callout
+    end
+    inp.vs = 0
+    run(2)
+    last = out.callout
+end
+local function approach(ft)
+    heard, last = {}, 0
+    fly(ft, 1500)
+    fly(60, 900)
+    return table.concat(heard, ",")
+end
+fresh(1200)
+inp.gear_down, inp.flaps_landing = true, true
+T.equal(approach(1200), "1000,500,100", "an approach to 60 ft")
+T.equal(approach(900), "", "a go-around to 900 ft: none again")
+T.equal(approach(1050), "500,100", "to 1,050 ft: 500 and below again (before 2026-11-20: none)")
+T.equal(approach(1150), "1000,500,100", "to 1,150 ft: 1,000 too")
+-- the minimums ones (p.180 lists MINIMUMS): reset above 1,000 ft too
+fresh(1200)
+inp.gear_down, inp.flaps_landing = true, true
+inp.mins = 200
+T.equal(approach(1200), "1000,500,1,2,100", "DH 200: an approach to 60 ft")
+T.equal(approach(900), "", "a go-around to 900 ft: the minimums neither (before 2026-11-20: they re-armed at 380 ft)")
+T.equal(approach(1050), "500,1,2,100", "to 1,050 ft: the minimums again")
+-- armed above 1,000 ft without minimums set: set at 330 ft, they sound
+fresh(1200)
+inp.gear_down, inp.flaps_landing = true, true
+heard, last = {}, 0
+fly(330, 900)
+inp.mins = 200
+fly(60, 900)
+T.equal(table.concat(heard, ","), "1000,500,1,2,100", "DH 200 set at 330 ft: armed since above 1,000 ft (before 2026-11-20: not below 380 ft)")
+inp.mins = 0
 
 -- bank angle (FCOM p.1577: 35, 40, 45 deg; low altitude from 10 deg)
 fresh(2000)
