@@ -137,7 +137,7 @@
 | 離陸後 TO/GA | takeoff limit 表示中なら derate（assumed temp を含む）を外し THR REF で最大推力 | FCOM p.656・667、FCTM p.94・119 (3.31)、ATA34_2 p.661 図 |
 | 400 ft VNAV | THR REF（armed climb limit）。thrust reduction 点で limit が CLB 系に変わりマゼンタ target | FCOM p.667、p.1255 (11.31.21)、ATA34_2 p.662–663 |
 | FLCH 上昇・降下 | THR。降下で idle が要れば IDLE → HOLD。lever が後方 stop に達するか 8° override で HOLD | ATA34_2 p.670、FCOM p.173 (SP.4.3)、ATA22 p.284 |
-| ALT/V/S/G/S 捕捉 | VNAV・FLCH からの移行は自動で SPD。TO/GA pitch のまま高度捕捉した場合は自動ではない（SPD を選ぶ）。GA の level-off も SPD を選ぶまで THR/THR REF | ATA34_2 p.654、FCTM p.124 (4.2)、FCOM p.673 (4.20.15) |
+| ALT/V/S/G/S 捕捉 | VNAV・FLCH からの移行は自動で SPD。TO/GA pitch のまま高度捕捉した場合は自動ではない（FCTM は SPD を選ぶと書くが、推力制限が TO の間は SPD は入らない：§4.5 の 2026-11-20 の決定）。GA の level-off も SPD を選ぶまで THR/THR REF | ATA34_2 p.654、p.668、FCTM p.124 (4.2)、FCOM p.673 (4.20.15) |
 | VNAV 巡航・VNAV ALT | SPD（limit は CRZ か CLB、§4.5） | ATA34_2 p.664–665、FCOM p.1256 (11.31.22) |
 | VNAV PTH 降下 | IDLE → lever が stop に着くか override で HOLD。浅い path は SPD。目標より 15 kt（最初の速度制限より下では 10 kt）以上遅いと IDLE/HOLD → SPD | ATA34_2 p.666–667、FCOM p.1258–1259 (11.31.24–25)、ATA22 p.280 |
 | early descent | THR → HOLD（pitch VNAV SPD） | FCOM p.1260 (11.31.26) |
@@ -167,7 +167,7 @@
 |---|---|---|
 | 地上（既定） | TO（THRUST LIM の選択） | ATA34_2 p.535 |
 | thrust reduction 点（フラップ 5 か入力高度）で VNAV 作動中 | armed climb（CLB/CLB 1/CLB 2） | FCOM p.667、p.1272、FMSPG p.105 (3.2-45)・p.111 (3.3-2) |
-| VNAV なしで 400 ft 以上、THR スイッチ | armed climb（E/O なら CON） | FCOM p.642、ATA34_2 p.536、FMSPG p.111 |
+| 400 ft 以上で VNAV か FLCH のとき、THR スイッチ | armed climb（E/O なら CON） | FCOM p.642 (4.10.4)、FCTM p.113 (3.25)。ATA34_2 p.536・FMSPG p.111 はモードの条件を書いていない |
 | T/C（VNAV 巡航移行） | CRZ（PERF FACTORS で CRZ 指定時）。既定は CLB のまま。E&M の例は CRZ (ATA34_2 p.664) | FCOM p.1273 (11.32.3)、ATA34_2 p.536、FMSPG p.267 (7-7) |
 | 空中でフラップ UP 以外、着陸位置、または G/S 捕捉 | GA。フラップ着陸位置か G/S 中は GA に固定 | FCOM p.672 (4.20.14) |
 | GA 後の THR スイッチ / VNAV | CLB（E/O か CON 選択時は CON） | FCOM p.642、p.674 図 |
@@ -176,6 +176,11 @@
 | CDU の手動選択 | 押したもの（自動選択を上書き） | FCOM p.1316、p.1339 |
 
 - 地上の takeoff 選択中は CLB 系を <ARM> 表示。ARM の CLB は thrust reduction で <SEL> (ATA34_2 p.535–536)。
+- VNAV の無い離陸（2026-11-20、利用者が決めた：今のまま。s109 で気づいた）：推力制限は thrust reduction 点でも TO のまま。上昇の制限にするのは、FLCH（か VNAV）での THR スイッチ。根拠：
+  - FCTM p.113 (3.25)：VNAV を使わないときは、加速の高さで FLCH を入れ、フラップ 5 で THR スイッチを押し、EICAS の TO→CLB を確かめる。FCTM の改訂の記録（p.18）にも、この説明を足したとある。
+  - FCOM p.1272 (11.32.2)：推力制限が飛行の段階で変わるのは VNAV のとき。FCOM p.642 (4.10.4)、FMSPG p.105 (3.2-45) も同じ向き。
+  - 条件の無い書き方の FCOM p.667 (4.20.9)・p.1255 (11.31.21)・ATA34_2 p.662 は、VNAV の離陸の説明の中の文と読んだ。ATA34_2 p.536・p.679 と FMSPG p.111 は、モードの条件を書いていないだけと読んだ。
+  - 推力制限が TO の間は A/T の SPD が入らない（ATA34_2 p.668）。なので FCTM p.124 (4.2) の「TO/GA の pitch のまま捕捉したら SPD を選ぶ」は、そのままでは通らない（FCTM は FCOM より一般的に書かれている：FCTM p.8 (0.2.2)）。早い捕捉は手の推力で抑える（s109：f5bcbf0a）。
 
 ### 4.6 derate と assumed temperature
 

@@ -165,7 +165,7 @@
   - 減推力上昇：THRUST LIM で CLB 1（10 %）、CLB 2（20 %）。離陸の減推力に応じて FMC が自動で選ぶ。上昇率が約 500 fpm を下回ったら一段上を選ぶ（FCTM p.123 (4.1)）。FCOM の詳しい規則は §1.11。
   - 上昇制限：方式を選べば自動で入り、手でも入れられる。MCP 高度で水平になると FMC はそれを上昇制限として扱う。「at or below」を含む硬い高度制限はすべて MCP に入れ、制限を満たすか新しい許可が出てから次を入れる（FCTM p.123 (4.1)）。
   - 制限が外れたら、混んだ空域・高負荷時は FLCH か VNAV＋altitude intervention。altitude intervention＝次の高度を MCP に入れて altitude selector を押す。高度制限が消えて MCP 高度まで上昇する（FCTM p.124 (4.2); FCOM p.1256 (11.31.22)）。
-  - 低高度での水平：近づくと ALT か VNAV ALT になり、A/T が SPD で目標速度を保つ。TO/GA の pitch のまま捕捉したら SPD を選び速度を入れる。軽量・大推力では浮揚直後に捕捉が始まり行き過ぎることがある：減推力離陸、早めに climb thrust、手で止める、手動推力（FCTM p.124 (4.2)）。
+  - 低高度での水平：近づくと ALT か VNAV ALT になり、A/T が SPD で目標速度を保つ。TO/GA の pitch のまま捕捉したら SPD を選び速度を入れる（747-400 では、推力制限が TO の間は SPD が入らない：ATA34_2 p.668。2026-11-20 の利用者の決定で今のまま：notes/ATA-22-AT.md §4.5）。軽量・大推力では浮揚直後に捕捉が始まり行き過ぎることがある：減推力離陸、早めに climb thrust、手で止める、手動推力（FCTM p.124 (4.2)）。
   - 障害物を越えるまで flaps up 機動速度+20、その後すみやかに上昇速度へ（FCTM p.124）。
   - 上昇速度：VNAV の command speed。speed transition altitude より下は、出発空港の transition speed（FAA 空域は 10,000 ft MSL 未満 250 kt）か flaps up 機動速度+20 の大きい方。waypoint の速度制限と CLB ページの高度別速度制限を守る（FCTM p.125 (4.3)）。FCOM は「transition speed か VREF+100 の大きい方」（FCOM p.667 (4.20.9), p.1328 (11.41.4)）→ 重量大では差がある（§1.11）。
   - ECON 上昇：一定 CAS / 一定 Mach（Mach は CRZ ALT の ECON 巡航 Mach）。TOC 重量・風・ISA 偏差・cost index で決まる。通常 250 kt 超（FCTM p.125 (4.3)）。FMC が使えなければ 10,000 ft 未満 250 kt か VREF30+100 の大きい方、以上は 340 kt/0.84M（FCTM p.126 (4.4)）。
