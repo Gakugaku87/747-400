@@ -19,16 +19,40 @@ simDR_ac_mach                   = find_dataref("sim/flightmodel/misc/machno")
 simDR_ac_weight                 = find_dataref("sim/flightmodel/weight/m_total")
 simDR_ac_q                      = find_dataref("sim/flightmodel/misc/Qstatic")
 B747DR_ac_stab_corr             = find_dataref("laminar/B747/flt_ctrls/stab_corr_deg")
-
-local fuse_cd_acf = nil         -- the acf's fuselage drag coefficient
+-- (2026-11-20, N19-AERO-02) the downwash at the tail by the body's alpha
+simDR_ac_alpha                  = find_dataref("sim/flightmodel/position/alpha")
+simDR_ac_ias                    = find_dataref("sim/flightmodel/position/indicated_airspeed")
+-- (2026-11-20, N19-AERO-01) the thrust's pitching moment: each engine's
+-- thrust, the dynamic pressure from the air's density and the true
+-- airspeed, the ground (X-Plane's onground_any, bound in
+-- B747.45.xt.fltCtrls.lua) blended over about 2 s on X-Plane's clock
+simDR_ac_thrust                 = find_dataref("sim/flightmodel/engine/POINT_thrust")
+simDR_ac_rho                    = find_dataref("sim/weather/rho")
+simDR_ac_tas                    = find_dataref("sim/flightmodel/position/true_airspeed")
+simDR_ac_time                   = find_dataref("sim/time/total_running_time_sec")
+local AC_ETA_RATE = 0.5         -- of the air-ground blend a second
+local ac_eta, ac_last = nil, nil
+local ac_thrust = {0, 0, 0, 0}
 
 function B747_aero_corr()
     local te = 0
+    local dw, tm = 0, 0
+    -- the air-ground blend for the thrust's arms
+    local now = simDR_ac_time
+    local dt = ac_last and math.max(0, math.min(0.2, now - ac_last)) or 0
+    ac_last = now
+    local gnd = simDR_all_wheels_on_ground == 1 and 1 or 0
+    if ac_eta == nil then ac_eta = gnd end
+    ac_eta = ac_eta + math.max(-AC_ETA_RATE * dt, math.min(AC_ETA_RATE * dt, gnd - ac_eta))
     if B747DR_ac_off == 0 then
         for i = 0, 3 do te = te + B747DR_fcu_te_deg[i] end
         te = te / 4
+        dw = A.stab_downwash(simDR_ac_alpha, simDR_ac_ias)
+        for i = 1, 4 do ac_thrust[i] = simDR_ac_thrust[i - 1] end
+        local q = 0.5 * simDR_ac_rho * simDR_ac_tas * simDR_ac_tas
+        tm = A.stab_thrust(A.thrust_moment(ac_thrust, ac_eta), q, simDR_ac_ias)
     end
-    local stab = A.stab_flap(te)
+    local stab = A.stab_flap(te) + dw + tm
     if math.abs(B747DR_ac_stab_corr - stab) > 1e-6 then B747DR_ac_stab_corr = stab end
     if fuse_cd_acf == nil then
         if simDR_ac_fuse_cd <= 0 then return end    -- not read yet (or none)

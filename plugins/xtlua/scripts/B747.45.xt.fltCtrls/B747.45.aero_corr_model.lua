@@ -298,12 +298,15 @@ end
 --     degrees, the 747-100's 7.3 (256 t, 150 kt, 21 %: NASA_SIM p.342; the
 --     -100's: a starting point);
 --   * 5: straight from none to flaps 10's (estimate).
--- The takeoff's part may hold X-Plane's thrust line too close under the
--- centre of gravity (N19-AERO-01: about 1 unit at takeoff thrust; to measure
--- again once that is fixed). The stabilizer's units (the SRM, its
--- indicator, the EICAS, the greenband) and the 3D keep the trim's own
--- values
-M.STAB_FLAP = {{0, 0}, {10, 1.0}, {20, 3.2}, {30, 4.0}}
+-- (2026-11-20 afternoon) Fitted again with the downwash's (stab_downwash)
+-- and the thrust's (stab_thrust) corrections below, which move the
+-- balance nose up where the alpha is over 2 degrees and the thrust high:
+-- flaps 10 1.0 -> 5.2, 20 3.2 -> 6.2 (280 t: the two centres of gravity's
+-- mean +0.1 units; 220 t +0.8 to +1.2, 340 t -1.7 to +0.4: notes/AERO.md
+-- §3.24), 30 4.0 -> 6.05 (7.13 units on the approach; the cruise's 4.36 ->
+-- 4.00 units). The stabilizer's units (the SRM, its indicator, the EICAS,
+-- the greenband) and the 3D keep the trim's own values
+M.STAB_FLAP = {{0, 0}, {10, 5.2}, {20, 6.2}, {30, 6.05}}
 
 -- the degrees (leading edge up) at a trailing edge flap angle
 function M.stab_flap(te)
@@ -315,6 +318,94 @@ function M.stab_flap(te)
         end
     end
     return t[#t][2]
+end
+
+-- (2026-11-20, GAP N19-AERO-02; notes/AERO.md §3.24, 補正) The wing's
+-- downwash at the horizontal tail, which X-Plane's tail hardly sees: fitted
+-- from A/P-off column steps and doublets (tests/flight/measure/
+-- aero_pitch_fl350 and _20k, tests/flight/tools/pitch_fit.lua), X-Plane's
+-- static stability came 1.8 to 2.4 times the 747-100's at the same centre
+-- of gravity (Cm_alpha -2.46 /rad at FL350 M.84 against about -1.35;
+-- -2.32 at 20,000 ft M.63 against -1.04: NASA_HQ p.218 (c.g. 0.25 MAC,
+-- Iy 33.1e6 slug ft2), p.236 table IX-4; -100 values), with the lift slope
+-- (5.0 /rad), the pitch inertia (46.4e6 kg m2 against 44.9e6) and the
+-- elevator about right: the elevator per g came about twice the -100's and
+-- the short period about 1.4 times as fast. Lowering the acf's tail 10 ft
+-- toward the wing's plane changed neither (2026-11-20). As the downwash
+-- does, the tail's incidence goes down as the wing's angle of attack rises:
+-- DW_K degrees of stabilizer (leading edge down) a degree of the body's
+-- alpha over DW_ALPHA0 (the cruise's, so the cruise's trim stays), DW_K the
+-- missing stability over the stabilizer's moment per degree (Cm_delta_s
+-- about 2.6 /rad: 2.5 degrees of elevator a unit, §3.23). Under DW_V0 kt
+-- none (alpha means nothing at rest), full from DW_V1; within DW_MAX
+M.DW_K = 0.50
+M.DW_ALPHA0 = 2.0
+M.DW_V0, M.DW_V1 = 40, 60
+M.DW_MAX = 5
+-- (2026-11-20, GAP N19-AERO-03; notes/AERO.md §3.26) Near the ground none
+-- of its own: measured level with the A/P at 142 kt, flaps 30, gear down,
+-- 256 t, 112 to 19 ft of gear height, X-Plane's own ground effect moved the
+-- balance +1.54 units (the stabilizer +1.05 and the elevator), about the
+-- 747-100's revised chart's +1.4 (NASA_SIM p.620 (19.0-9) with p.614's
+-- K_GE^B, September 1970; p.337's +1.97 is from the chart before). The
+-- downwash's correction taken away by (1 - K_GE^B) for a few hours that
+-- day took it to +2.30 and grew with the alpha far faster than the revised
+-- chart: the rotation's column 0.69 -> 0.96 at liftoff
+
+-- the degrees (leading edge up, as stab_flap) for the body's alpha
+-- (degrees) at an indicated airspeed (kt)
+function M.stab_downwash(alpha, kt)
+    if not alpha or not kt or kt <= M.DW_V0 then return 0 end
+    local fade = math.min(1, (kt - M.DW_V0) / (M.DW_V1 - M.DW_V0))
+    local d = -M.DW_K * (alpha - M.DW_ALPHA0)
+    return math.max(-M.DW_MAX, math.min(M.DW_MAX, d)) * fade
+end
+
+-- (2026-11-20, GAP N19-AERO-01; notes/AERO.md §3.25, 補正) The thrust's
+-- pitching moment X-Plane leaves out. The 747-100's effective engine moment
+-- arms (NASA_SIM p.22 (1.1-3), p.38 (1.3-3): M_T = (T1 + T4) Z_EO + (T2 +
+-- T3) Z_EI, nose up; the thrust line 2.5 degrees up; -100 values) are, in
+-- the air, 14.6 ft inboard and 5.4 ft outboard, on the ground 9.2 and 7.3
+-- ft; the custom acf's engines sit 5.2 and 1.0 ft under its centre of
+-- gravity (_engn/n/_part_y -11.2 and -7.0 ft, acf/_cgY -6.0). The rest of
+-- each arm (metres, engines 1 to 4) times each engine's forward thrust is
+-- a nose-up moment, made through X-Plane's stabilizer as the flaps' and
+-- the downwash's: degrees of stabilizer (leading edge down) = the moment
+-- over the stabilizer's moment a degree, TM_CMDS / 57.3 per degree times
+-- the dynamic pressure, TM_S and TM_C (Cm_delta_s about 2.6 /rad on the
+-- -100's 511 m2 and 8.32 m: 2.5 degrees of elevator a unit, §3.23, and the
+-- elevator's Cm from the fits of §3.24). The acf cannot carry it: the
+-- inboard engines lowered 9.4 ft sit at the ground. Between the air's and
+-- the ground's arms by eta (0 in the air, 1 on the ground; the -100 goes by
+-- the main gear's compression); faded in from TM_V0 to TM_V1 kt (the
+-- stabilizer cannot make a moment at rest), within TM_MAX
+M.TM_ARM_AIR = {(5.4 - 1.0) * 0.3048, (14.6 - 5.2) * 0.3048, (14.6 - 5.2) * 0.3048, (5.4 - 1.0) * 0.3048}
+M.TM_ARM_GND = {(7.3 - 1.0) * 0.3048, (9.2 - 5.2) * 0.3048, (9.2 - 5.2) * 0.3048, (7.3 - 1.0) * 0.3048}
+M.TM_CMDS = 2.6
+M.TM_S, M.TM_C = 511, 8.32
+M.TM_V0, M.TM_V1 = 40, 60
+M.TM_MAX = 5
+
+-- the missing nose-up moment (N m) for the four engines' thrust (N, X-Plane's
+-- POINT_thrust: forward plus; reverse counts none) at eta (0 air .. 1 ground)
+function M.thrust_moment(thrust, eta)
+    if not thrust then return 0 end
+    eta = math.max(0, math.min(1, eta or 0))
+    local m = 0
+    for i = 1, 4 do
+        local t = thrust[i] or 0
+        if t > 0 then m = m + t * (M.TM_ARM_AIR[i] * (1 - eta) + M.TM_ARM_GND[i] * eta) end
+    end
+    return m
+end
+
+-- the degrees (leading edge up, as stab_flap) giving a nose-up moment (N m)
+-- at a dynamic pressure (Pa) and an indicated airspeed (kt)
+function M.stab_thrust(moment, q, kt)
+    if not moment or not q or not kt or kt <= M.TM_V0 or q <= 100 then return 0 end
+    local fade = math.min(1, (kt - M.TM_V0) / (M.TM_V1 - M.TM_V0))
+    local d = moment / (M.TM_CMDS / 57.2958 * q * M.TM_S * M.TM_C)
+    return -math.max(-M.TM_MAX, math.min(M.TM_MAX, d)) * fade
 end
 
 return M

@@ -416,6 +416,7 @@ sim/flightmodel/engine/ENGN_N2_	array[16]
 sim/flightmodel/engine/ENGN_running	int array[16]
 sim/flightmodel/engine/ENGN_thro	array[16]
 sim/flightmodel/engine/ENGN_thro_use	array[16]
+sim/flightmodel/engine/POINT_thrust	array[16]
 sim/flightmodel/failures/onground_all	int number
 sim/flightmodel/failures/onground_any	int number
 sim/flightmodel/failures/stallwarning	int number
@@ -614,4 +615,5 @@ sim/weather/aircraft/temperature_leadingedge_deg_c	number
 sim/weather/aircraft/wind_now_x_msc	number
 sim/weather/aircraft/wind_now_y_msc	number
 sim/weather/aircraft/wind_now_z_msc	number
+sim/weather/rho	number
 sim/weather/temperature_ambient_c	number

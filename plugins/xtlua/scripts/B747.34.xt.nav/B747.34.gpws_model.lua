@@ -36,11 +36,18 @@ M.CALLOUTS = {2500, 1000, 500, 100, 50, 40, 30, 20, 10}
 M.C_APPROACHING_MINIMUMS, M.C_MINIMUMS = 1, 2
 M.CALLOUT_HOLD_S = 0.3
 M.APPROACHING_MINIMUMS_FT = 80
--- each callout once; again after climbing above 1,000 ft (p.180, p.183).
--- estimates: 100 ft above max(1,000 ft, the callout) so that flying level
--- near 1,000 or 2,500 ft does not repeat it; the minimums ones 100 ft above
--- the minimums (the source only says "above 1,000 ft")
+-- each callout once; the sequence again after climbing above 1,000 ft of
+-- radio altitude (ATA34_2 p.180 "Mode 6 Reset", p.183; p.180 lists MINIMUMS
+-- among the callouts, so the minimums ones too). Estimates: the 1,000 and
+-- 2,500 ft ones CALLOUT_REARM_FT above their own altitude, and the minimums
+-- ones only CALLOUT_REARM_FT above the APPROACHING MINIMUMS mark as well, so
+-- that flying level there (or a high MDA) does not repeat them. Before
+-- 2026-11-20 every callout waited for 1,100 ft (max(1,000 ft, the callout)
+-- + 100 ft: a go-around or a circuit that stayed between 1,000 and 1,100 ft
+-- did not call 500 to 10 again), and the minimums ones re-armed at the
+-- minimums + 180 ft (below 1,000 ft too) and only with minimums set
 M.CALLOUT_REARM_FT = 100
+M.CALLOUT_RESET_FT = 1000
 
 -- the air/ground logic (p.127, p.205-206): to the air with the air/ground
 -- relay in air (or CAS 90 kt and up) and RA 5 ft and up; to the ground with
@@ -385,19 +392,20 @@ function M.update(s, inp, dt)
     local m6 = inp.power and inp.ra_valid
     if m6 then
         for _, v in ipairs(M.CALLOUTS) do
-            if ra > math.max(1000, v) + M.CALLOUT_REARM_FT then s.armed[v] = true end
+            if ra > math.max(M.CALLOUT_RESET_FT, v + M.CALLOUT_REARM_FT) then s.armed[v] = true end
             if s.armed[v] and prev_ra and prev_ra > v and ra <= v then
                 s.armed[v] = false
                 if s.in_air and not inp.callout_off[v] then new_callout = v end
             end
         end
+        if ra > M.CALLOUT_RESET_FT and (inp.mins <= 0
+                or inp.mins_ref > inp.mins + M.APPROACHING_MINIMUMS_FT + M.CALLOUT_REARM_FT) then
+            s.mins_armed[1], s.mins_armed[2] = true, true
+        end
         if inp.mins > 0 then
             local marks = {inp.mins + M.APPROACHING_MINIMUMS_FT, inp.mins}
             local codes = {M.C_APPROACHING_MINIMUMS, M.C_MINIMUMS}
             for k = 1, 2 do
-                if inp.mins_ref > inp.mins + M.APPROACHING_MINIMUMS_FT + M.CALLOUT_REARM_FT then
-                    s.mins_armed[k] = true
-                end
                 if s.mins_armed[k] and inp.mins_ref <= marks[k] then
                     s.mins_armed[k] = false
                     if s.in_air and not inp.callout_off[codes[k]] then new_callout = codes[k] end
