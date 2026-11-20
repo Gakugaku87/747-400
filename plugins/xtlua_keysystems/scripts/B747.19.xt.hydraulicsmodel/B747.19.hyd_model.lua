@@ -104,6 +104,10 @@ function M.inputs()
         on_ground = true,                         -- air/ground relay
         flaps_moving = false,                     -- trailing edge flaps in transit (FCU)
         flaps_down = false,                       -- trailing edge flaps not up (FCU)
+        -- (2026-11-20, N19-HYD-01) the FCU that gives demand pump 1 and 4
+        -- their flap signal working: system 1's the right FCU, system 4's
+        -- the left; no other FCU takes it over (ATA29_32 p.59-60; MMEL p.139)
+        flaps_fcu = {[1] = true, [4] = true},
         demand_gpm = {0, 0, 0, 0},                -- what the loads draw from each system
         -- (2026-11-13; the 2026-11-12 review HA-1, 案 26) what the gear's
         -- actuators take from each system (B747.10.gear_model.lua: no more
@@ -232,12 +236,15 @@ function M.update(s, inp, dt)
         local supply = ss.qty > 0 or ss.reserve > 0
         local dem_gpm, commanded = 0, false
         if n == 1 or n == 4 then
+            -- the flaps' signal from the right FCU (system 1) or the left
+            -- (system 4) only (N19-HYD-01: before, from any)
+            local fcu = inp.flaps_fcu == nil or inp.flaps_fcu[n] ~= false
             local flaps
             if inp.on_ground then
                 ss.flaps_t = M.ADP_FLAPS_HOLD_S
-                flaps = inp.flaps_moving
+                flaps = fcu and inp.flaps_moving
             else
-                if inp.flaps_down then ss.flaps_t = 0 else ss.flaps_t = ss.flaps_t + dt end
+                if fcu and inp.flaps_down then ss.flaps_t = 0 else ss.flaps_t = ss.flaps_t + dt end
                 flaps = ss.flaps_t < M.ADP_FLAPS_HOLD_S
             end
             local demand = run_on_demand(ss, auto and ss.edp_low, dt)

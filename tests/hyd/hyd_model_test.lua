@@ -192,6 +192,36 @@ do
     T.check(not out.sys[4].dem_running, "on the ground, flaps stopped: ADP 4 stops")
 end
 
+-- (2026-11-20, N19-HYD-01) the flap signal of ADP 1 from the right FCU, of
+-- ADP 4 from the left; with that FCU failed no other gives it (ATA29_32
+-- p.59-60: "does not transfer from FCU to FCU"; MMEL p.139: both L and R
+-- FCUs out, the demand pumps ON for takeoff and landing)
+do
+    local s, inp = parked()
+    engines_running(inp)
+    inp.on_ground, inp.flaps_down = false, true
+    inp.flaps_fcu[1] = false                              -- the right FCU failed
+    local out = run(s, inp, 20)
+    T.check(not out.sys[1].dem_running, "FCU R failed, flaps out in the air: ADP 1 does not run on the flaps")
+    T.check(out.sys[4].dem_running, "FCU R failed: ADP 4 runs (the left FCU's signal)")
+    inp.flaps_fcu[1], inp.flaps_fcu[4] = true, false       -- the left FCU failed instead
+    out = run(s, inp, 20)
+    T.check(out.sys[1].dem_running, "FCU L failed: ADP 1 runs (the right FCU's)")
+    T.check(not out.sys[4].dem_running, "FCU L failed: ADP 4 stops 10 s after (no signal)")
+    inp.flaps_fcu[1] = false                              -- both
+    out = run(s, inp, 20)
+    T.check(not out.sys[1].dem_running and not out.sys[4].dem_running, "FCU L and R failed: neither runs on the flaps")
+    inp.demand_sel[1], inp.demand_sel[4] = 2, 2
+    out = run(s, inp, 2)
+    T.check(out.sys[1].dem_running and out.sys[4].dem_running, "the switches ON: both run (MMEL p.139)")
+    inp.demand_sel[1], inp.demand_sel[4] = 1, 1
+    inp.flaps_fcu[1], inp.flaps_fcu[4] = true, true
+    inp.on_ground, inp.flaps_down, inp.flaps_moving = true, true, true
+    inp.flaps_fcu[4] = false
+    out = run(s, inp, 1)
+    T.check(out.sys[1].dem_running and not out.sys[4].dem_running, "on the ground, flaps moving, FCU L failed: ADP 1 runs, ADP 4 does not")
+end
+
 -- brake source: 4, then 1 below 1200 psi on 4, then 2 below 1500 on 1, then
 -- the accumulator, charged by system 4 (ATA29_32 p.388-392, p.408)
 do
