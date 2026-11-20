@@ -810,6 +810,7 @@ local TOCW_DETENT_POS = {[0] = 0, 1, 5, 10, 20, 25, 30}     -- the flap lever's 
 -- >CONFIG GEAR's two latches, and the time since the liftoff while its
 -- takeoff inhibit lasts (nil: none) (below)
 local config_gear_thrust, config_gear_flaps = false, false
+B747DR_cfg_gear_lever           = find_dataref("laminar/B747/flt_ctrls/config_gear_lever")
 local config_gear_after_lo = nil
 function B747_fltCtrols_EICAS_msg()
     
@@ -927,6 +928,10 @@ function B747_fltCtrols_EICAS_msg()
     else
         B747DR_CAS_warning_status[3] = 0
     end
+    -- (2026-11-20, N19-WARN-02) caused by the thrust lever alone: resettable
+    -- (FCOM p.1556)
+    local lever_only = (config_gear_thrust and not config_gear_flaps) and 1 or 0
+    if B747DR_cfg_gear_lever ~= lever_only then B747DR_cfg_gear_lever = lever_only end
 
 
     -- >CONFIG SPOILERS: the takeoff configuration warning (the model,

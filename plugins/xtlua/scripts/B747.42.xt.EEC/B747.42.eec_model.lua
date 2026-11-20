@@ -154,11 +154,45 @@ M.IDLE = {
 -- (ATA70_80 p.205, p.207): the rating at the TAT that gives the most thrust
 -- at that altitude, without the bleed adjustments. The same lever then
 -- gives at least normal-mode thrust, the maximum comes before full forward
--- and full forward can overboost (FCOM p.877). P&W: no source, as the CF6;
--- it keeps controlling EPR (the real one changes to N1; estimate).
+-- and full forward can overboost (FCOM p.877). P&W: below (PW_ALTN); the RR
+-- (no sources) as the CF6, controlling EPR (estimate).
 -- >ENG n LIM PROT (FCOM p.900): GE when the command passes the maximum
--- rating, P&W when it comes near it (within LIM_PROT_EPR, estimate).
+-- rating, P&W when the thrust comes near it (within LIM_PROT_EPR,
+-- estimate; since N19-ENG-05 the EPR measured, the command being N1).
 M.LIM_PROT_EPR = 0.01
+-- (2026-11-20, GAP_ANALYSIS.md N19-ENG-05; notes/ATA-70-80.md §25) The
+-- PW4000's alternate mode is its N1 mode (PW_PPM p.196, p.204): the EEC
+-- schedules N1 from the thrust lever angle alone, biased by Tt2 (a
+-- corrected N1, n1c, times the square root of Tt2 / 288.15 K; Tt2 the TAT),
+-- not limited at the maximum EPR: the redline's (N1, N2 or Pb) at the
+-- forward stop (p.197), the overspeed protection holding it (p.204). The
+-- schedule (estimates): from the flat idle's idle end rising steeply, then
+-- flatter (the shape of the N1 line, p.197, p.205), at least the normal
+-- mode's corrected N1 at the same lever (FCOM p.877; by 0.45 or more at
+-- every lever from 12 degrees, where the normal mode's is 70 % or more,
+-- over 0-43,000 ft, ISA-25 to +35, the speeds flown, packs and anti-ice:
+-- tests/eec/eec_altn_test.lua), the highest full-forward rating's (105.05:
+-- FL370, ISA-25, packs off) by 44 degrees (TRA about 78, p.197: the
+-- maximum power available before the forward stop; FCOM p.877, PI.18.11),
+-- 118 at 49 (TRA about 83, the redline's flat: 1.15 of the idle-to-maximum
+-- span, as p.197). The lever's TRA as N19-ENG-04's (TLA = TRA - 34). At a
+-- sea level takeoff the rating (n1c 100.7) comes at about 32 degrees.
+-- The automatic reversion's lockup keeps the thrust (p.198): the N1 the
+-- schedule gives less the difference (delta) between it and the N1 at the
+-- reversion, held, so the thrust follows the lever from there (p.197:
+-- "delta N1 maintained"); manual selection removes the lockup, delta ramped
+-- out at about 100 rpm a second (p.198: 100 % N1 is 3,600 rpm, p.204), also
+-- from the EPR mode (FCOM p.877: the thrust increases). Back to the EPR mode
+-- with the switch at NORM once the fault is gone (p.198): an automatic
+-- reversion stays (latched) until the switch is used. Estimates: delta in
+-- % N1, none below 0 (the schedule is over the EPR mode's, p.197) and none
+-- taken under run_n2 % N2 (an engine not running); the idle end n1c.
+M.PW_ALTN = {
+    tla = {2, 6, 10, 12, 15, 20, 25, 30, 38, 44, 49},
+    n1c = {20, 52, 66, 72, 81.5, 90.8, 95, 99, 104.5, 105.6, 118},
+    ramp = 100 / 36,        -- % N1 a second (100 rpm/s)
+    run_n2 = 50,            -- % N2
+}
 
 -- overspeed protection (FCOM p.878; ATA70_80 p.205): above idle the EEC
 -- keeps N1 and N2 from passing their operating limits (the red lines)
@@ -179,8 +213,10 @@ M.LIM_PROT_EPR = 0.01
 M.REDLINE = {GE = {n1 = 117.5, n2 = 112.5}, PW = {n1 = 111.4, n2 = 104}}
 M.RPM_MARGIN = 0.5                          -- %
 M.RPM_BAND = 2                              -- %
-M.RPM_GAIN = {GE = 0.6, PW = 0.01}          -- N1 % or EPR for each % of the rotor
-M.RPM_LIM_SHOW = {GE = 0.2, PW = 0.005}     -- N1 % or EPR
+-- (N19-ENG-05) PWN1: the P&W in its N1 mode, controlling N1 as the GE (its
+-- N1 limit caps the target, shown as RPM LIM; the GE's gains: estimates)
+M.RPM_GAIN = {GE = 0.6, PW = 0.01, PWN1 = 0.6}          -- N1 % or EPR for each % of the rotor
+M.RPM_LIM_SHOW = {GE = 0.2, PW = 0.005, PWN1 = 0.2}     -- N1 % or EPR
 
 -- the thrust control (FCOM p.875-876): the EEC adjusts fuel flow until the
 -- controlled value (N1 for GE, EPR for P&W) equals the target. In the sim
@@ -207,6 +243,12 @@ M.THRUST = {
     GE = {lag = 1.5, up = 15, down = 5,                                 -- N1 % each second
         at = {35, 45, 60, 75, 90, 100},
         slope = {20, 100, 112, 100, 80, 77}},                          -- N1 % for each unit of throttle
+    -- (N19-ENG-05) the P&W in its N1 mode (PW_ALTN), on the shown N1: the
+    -- GE's rates and slopes (estimate: no P&W figures; the glue gives the
+    -- slope from the EPR model's N1)
+    PWN1 = {lag = 1.5, up = 15, down = 5,
+        at = {35, 45, 60, 75, 90, 100},
+        slope = {20, 100, 112, 100, 80, 77}},
 }
 -- (2026-11-10) the loop for the plant measured in X-Plane (PROGRESS.md
 -- "next" 20; the open-loop test: tests/flight/measure/eec_steps_*.json,
@@ -255,8 +297,8 @@ M.KI_POWER = {0.5, 1.8}             -- below KI_DELTA_REF (higher up), above it 
 -- 215 t roll (s281 2026-11-10: it learns from about 9 s after TO/GA, the
 -- spool's tail first). Estimates: the gate, the gain, the bands
 M.RAMP_W = 0.08
-M.RAMP_SETTLED = {PW = 0.002, GE = 0.2}     -- |target - reference| (EPR, N1 %) to learn
-M.RAMP_BAND = {PW = 0.02, GE = 2}           -- |error| (EPR, N1 %) to learn
+M.RAMP_SETTLED = {PW = 0.002, GE = 0.2, PWN1 = 0.2}    -- |target - reference| (EPR, N1 %) to learn
+M.RAMP_BAND = {PW = 0.02, GE = 2, PWN1 = 2}             -- |error| (EPR, N1 %) to learn
 M.RAMP_MAX = 0.01                           -- throttle a second
 M.RAMP_FADE = 5                             -- s
 
@@ -820,29 +862,78 @@ function M.inputs()
         n1 = {0, 0, 0, 0},                   -- the engines' N1 and N2, %
         n2 = {0, 0, 0, 0},
         actual = {0, 0, 0, 0},               -- the controlled value now: N1 (GE) or EPR (P&W)
+        -- (N19-ENG-05) the RR (type "PW" for the tables): its alternate mode
+        -- as before, on EPR (no sources); the P&W's is the N1 mode (PW_ALTN)
+        rr = false,
     }
+end
+
+-- (N19-ENG-05) the P&W N1 mode's schedule: the N1 (%) for a lever angle
+-- (degrees, M.TLA_STOP forward) and the TAT (°C, as Tt2)
+function M.pw_altn_n1(tla, tat_c)
+    local A = M.PW_ALTN
+    return interp(A.tla, A.n1c, tla) * math.sqrt(math.max((tat_c or 15) + 273.15, 200) / 288.15)
+end
+
+-- (N19-ENG-05) the P&W's N1 mode of engine n (PW_ALTN): nil (the EPR
+-- mode), "lock" (reverted by itself: the lockup holds delta) or "hard" (the
+-- EEC MODE switch at ALTN: delta ramped out). Delta is taken as the mode is
+-- entered from the EPR mode or as the lockup starts again (the switch back
+-- at NORM with the fault still there)
+local function pw_n1_mode(s, inp, n, tla, dt)
+    local mode = s.n1_mode[n]
+    local function lockup()
+        local d = 0
+        if inp.n2[n] > M.PW_ALTN.run_n2 then d = math.max(0, M.pw_altn_n1(tla, inp.tat) - inp.n1[n]) end
+        s.n1_delta[n] = d
+    end
+    if inp.altn[n] then
+        if mode == nil then lockup() end
+        mode = "hard"
+    elseif inp.fail_altn[n] then
+        if mode ~= "lock" then lockup() end
+        mode = "lock"
+    elseif mode == "hard" then
+        mode = nil              -- NORM and no fault: the EPR mode (p.198)
+    end                         -- "lock" and no fault: kept until the switch is used
+    if mode == "hard" then
+        s.n1_delta[n] = math.max(0, (s.n1_delta[n] or 0) - M.PW_ALTN.ramp * dt)
+    elseif mode == nil then
+        s.n1_delta[n] = nil
+    end
+    s.n1_mode[n] = mode
+    return mode
 end
 
 -- the overspeed protection: the target of each engine's thrust control and
 -- whether a rotor limit holds it back (>ENG n RPM LIM)
 local function overspeed(inp, out)
     local key = inp.type == "GE" and "GE" or "PW"
-    local red, gain, show = M.REDLINE[key], M.RPM_GAIN[key], M.RPM_LIM_SHOW[key]
+    local red = M.REDLINE[key]
     -- a rotor's limit loop: the controlled value it allows (nil while the
     -- rotor is short of its band)
-    local function limit(rpm, redline, actual)
+    local function limit(rpm, redline, actual, gain)
         local short = redline - M.RPM_MARGIN - rpm
         if short > M.RPM_BAND then return nil end
         return actual + gain * short
     end
     out.target, out.rpm_lim = {}, {}
     for n = 1, 4 do
+        -- (N19-ENG-05) the P&W in its N1 mode: on N1, as the GE
+        local n1m = out.n1_mode[n]
+        local k = n1m and "PWN1" or key
+        local gain, show = M.RPM_GAIN[k], M.RPM_LIM_SHOW[k]
         local actual, command = inp.actual[n], out.command[n]
-        local lim = limit(inp.n2[n], red.n2, actual)
+        if n1m then actual = inp.n1[n] end
+        local lim = limit(inp.n2[n], red.n2, actual, gain)
         if key == "GE" then
             command = math.min(command, red.n1 - M.RPM_MARGIN)
+        elseif n1m then
+            -- its N1 limit caps the target; RPM LIM on N1 or N2 (FCOM p.901)
+            local cap = red.n1 - M.RPM_MARGIN
+            if lim == nil or cap < lim then lim = cap end
         else
-            local lim1 = limit(inp.n1[n], red.n1, actual)
+            local lim1 = limit(inp.n1[n], red.n1, actual, gain)
             if lim1 and (lim == nil or lim1 < lim) then lim = lim1 end
         end
         local target = command
@@ -857,7 +948,9 @@ function M.new()
         altn = {false, false, false, false}, throttle = {}, err = {}, ref = {},
         rate = {},          -- (2026-11-10) the roll's learned throttle rate (RAMP_W)
         soft_top = {},      -- (2026-11-04) the schedule an automatic reversion keeps
-        soft_clb = {}}      -- (2026-11-13, B2) and the CF6's line's CLIMB point
+        soft_clb = {},      -- (2026-11-13, B2) and the CF6's line's CLIMB point
+        n1_mode = {},       -- (N19-ENG-05) the P&W's N1 mode: nil, "lock" or "hard"
+        n1_delta = {}}      -- and its delta N1 (%)
 end
 
 -- the gains for the pressure ratio delta (nil: KI_DELTA_REF's)
@@ -1003,7 +1096,11 @@ function M.update(s, inp, dt)
     local out = {max = {}, command = {}, altn = {}, lim_prot = {}, to_share = to_share, tla_full = tla_full,
         at_disconnect = false,
         -- (2026-11-04) the ALTN light, >ENG n CONTROL, >ENG CONTROLS
-        altn_light = {}, control_alert = {}, controls_alert = false}
+        altn_light = {}, control_alert = {}, controls_alert = false,
+        -- (N19-ENG-05) the P&W's N1 mode: command and target in N1 (%)
+        n1_mode = {}}
+    -- (N19-ENG-05) the PW4000's alternate mode is its N1 mode (PW_ALTN)
+    local pw_n1 = inp.type ~= "GE" and not inp.rr
     local altn_count, manual_count, degraded = 0, 0, 0
     for n = 1, 4 do
         local nai = inp.nai[n]
@@ -1033,9 +1130,22 @@ function M.update(s, inp, dt)
         local tla = clamp(inp.lever[n], 0, 1) * M.TLA_STOP
         local manual = inp.altn[n]
         local auto = inp.fail_altn[n] and not manual
+        -- (N19-ENG-05) the P&W's N1 mode (PW_ALTN): an automatic reversion
+        -- latched until the switch is used (PW_PPM p.198); the control
+        -- starts again from X-Plane's throttle as the controlled value
+        -- changes (EPR, N1)
+        local n1m = nil
+        if pw_n1 then
+            local was = s.n1_mode[n]
+            n1m = pw_n1_mode(s, inp, n, tla, dt)
+            auto = n1m == "lock"
+            if (was == nil) ~= (n1m == nil) then M.reset_thrust_control(s, n) end
+        end
         local altn = manual or auto
         local top = max
-        if manual then top = math.max(altn_max, max)
+        if n1m then
+            -- (its N1 schedule: below)
+        elseif manual then top = math.max(altn_max, max)
         elseif auto then
             -- (2026-11-04) the automatic (soft) reversion keeps the last
             -- valid schedule: the thrust does not change then, and the
@@ -1048,8 +1158,10 @@ function M.update(s, inp, dt)
         if manual then manual_count = manual_count + 1 end
         -- the ALTN light: the alternate mode, for the GE's automatic one by
         -- the ECU's reversionary mode contact above 50 % N2 (ATA70_80
-        -- p.202-203, p.245; the P&W's: estimate)
-        out.altn_light[n] = manual or (auto and (inp.type ~= "GE" or inp.n2[n] > 50))
+        -- p.202-203, p.245); (N19-ENG-05) the P&W's the same, its EEC's EPR
+        -- MODE FAIL through the N2 > 50 % contact (PW_PPM p.199; before, at
+        -- any N2: estimate); the RR's at any N2 (estimate)
+        out.altn_light[n] = manual or (auto and ((inp.type ~= "GE" and not pw_n1) or inp.n2[n] > 50))
         -- >ENG n CONTROL: an EEC system fault, also the one that reverted it;
         -- inhibited in flight (FCOM p.899)
         local faulty = inp.fault[n] or inp.fail_altn[n]
@@ -1065,8 +1177,12 @@ function M.update(s, inp, dt)
         -- CLIMB point raised by the corner point's excess over the rating
         -- (estimate: so ALTN never gives less than the normal mode at a
         -- lever, FCOM p.877); the automatic reversion keeps the CLIMB point
-        -- with the rest of the last valid schedule
-        if manual and inp.type ~= "GE" then
+        -- with the rest of the last valid schedule. (N19-ENG-05) The P&W in
+        -- its N1 mode: the N1 schedule less delta, not under its idle end
+        -- (the RR's ALTN the single EPR line as before)
+        if n1m then
+            out.command[n] = math.max(M.pw_altn_n1(tla, inp.tat) - (s.n1_delta[n] or 0), M.pw_altn_n1(0, inp.tat))
+        elseif manual and inp.type ~= "GE" then
             out.command[n] = idle + (top - idle) * clamp((tla - M.TLA_FLAT_IDLE) / (tla_mix - M.TLA_FLAT_IDLE), 0, 1)
         elseif manual then
             local c = math.max(math.min(clb_n + math.max(0, top - max), top), idle)
@@ -1103,8 +1219,13 @@ function M.update(s, inp, dt)
             end
         end
         out.altn[n] = altn
+        out.n1_mode[n] = n1m ~= nil
         if inp.type == "GE" then
             out.lim_prot[n] = altn and out.command[n] > max
+        elseif n1m then
+            -- (N19-ENG-05) the thrust approaching the maximum rating (FCOM
+            -- p.900): the EPR measured, the command being N1
+            out.lim_prot[n] = inp.actual[n] > max - M.LIM_PROT_EPR
         else
             out.lim_prot[n] = altn and out.command[n] > max - M.LIM_PROT_EPR
         end

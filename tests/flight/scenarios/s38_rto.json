@@ -45,9 +45,10 @@
     { "do": "set", "note": "推力レバーをアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
     { "do": "sleep", "seconds": 2 },
     { "do": "check", "note": "85 kt 未満：RTO は働かない（p.527、FCOM p.1515）", "dref": "sim/cockpit2/controls/left_brake_ratio", "op": "==", "value": 0 },
-    { "do": "cmd", "note": "手でブレーキ max（10 秒、押している間に次へ）", "name": "sim/flight_controls/brakes_max", "duration": 10, "async": true },
+    { "do": "cmd", "note": "手でブレーキ max（brakes_toggle_max で踏み続ける：止まるのに 10 秒より長くかかる（2026-11-20 から acf のブレーキの摩擦 0.65、FCOM PI.12 に合わせた）ので、Web API の 10 秒までの brakes_max では途中で離れる）", "name": "sim/flight_controls/brakes_toggle_max", "duration": 0.2 },
     { "do": "wait", "note": "止まる", "dref": "sim/flightmodel/position/groundspeed", "op": "<", "value": 1, "timeout": 30 },
     { "do": "set", "note": "パーキングブレーキのレバー", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
+    { "do": "cmd", "note": "手のブレーキを離す（brakes_toggle_max をもう一度）", "name": "sim/flight_controls/brakes_toggle_max", "duration": 0.2 },
     { "do": "cmd", "note": "オートブレーキ OFF", "name": "sim/flight_controls/brakes_off_auto" },
     { "do": "cas", "note": "終わり" }
   ]

@@ -127,7 +127,10 @@ function M.route(path, o, out)
     local function turn(e1, e2, vt)
         -- the path model's turn into e2 (drawn with e2)
         if e2.turn_in then add(e1.b) return nil end
-        local tr = P.turn(e1.term == "intc" and intc_fix(e1) or e1, e2, vt)
+        -- (2026-11-20) an intercept's arc at BANK (25), where LNAV begins
+        -- it (its turn_in); a fly-by turn's at the path's TURN_BANK (23)
+        local intc = e1.term == "intc"
+        local tr = P.turn(intc and intc_fix(e1) or e1, e2, vt, intc and P.BANK or nil)
         if tr then
             add(tr.t1)
             local sgn = tr.delta > 0 and 1 or -1

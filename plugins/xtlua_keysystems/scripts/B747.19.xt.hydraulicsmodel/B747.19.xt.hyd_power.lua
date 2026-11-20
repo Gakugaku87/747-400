@@ -24,6 +24,8 @@ B747DR_hyd_elec_dc              = find_dataref("laminar/B747/electrical/bus/dc")
 B747DR_hyd_elec_gnd_hdlg        = find_dataref("laminar/B747/electrical/bus/gnd_hdlg")
 B747DR_hyd_elec_gnd_hdlg_dc     = find_dataref("laminar/B747/electrical/bus/gnd_hdlg_dc")
 B747DR_hyd_pseu_alt_air         = find_dataref("laminar/B747/gear/air_ground/alt_air")
+-- (2026-11-20, N19-HYD-01) the FCUs' failures (the failure window: L, C, R)
+B747DR_hyd_fcu_fail             = find_dataref("laminar/B747/flt_ctrls/fail/fcu")
 B747DR_hyd_light_eng_press      = find_dataref("laminar/B747/hydraulics/light/eng_press")
 B747DR_hyd_light_dem_press      = find_dataref("laminar/B747/hydraulics/light/dem_press")
 B747DR_hyd_light_sys_fault      = find_dataref("laminar/B747/hydraulics/light/sys_fault")
@@ -146,6 +148,10 @@ local function read_inputs(inp, dt)
     -- the trailing edge flaps moving and out: the FCU signals (B747.45.xt.fcu.lua)
     inp.flaps_moving = B747DR_fcu_te_moving > 0.5
     inp.flaps_down = B747DR_fcu_te_down > 0.5
+    -- demand pump 1's flap signal from the right FCU, 4's from the left
+    -- (N19-HYD-01: ATA29_32 p.59-60)
+    inp.flaps_fcu[1] = B747DR_hyd_fcu_fail[2] < 0.5
+    inp.flaps_fcu[4] = B747DR_hyd_fcu_fail[0] < 0.5
     inp.oat = B747DR_hyd_temp
     -- fluid the brakes take as they are applied: the parking brake as it is
     -- set and the pedals (the gear module's brakes write X-Plane's ratios);

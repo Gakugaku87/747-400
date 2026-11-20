@@ -222,6 +222,10 @@ B747DR_srm_fail_stab_runaway    = deferred_dataref("laminar/B747/flt_ctrls/fail/
 -- hydraulics' control mapping adds it to X-Plane's stabilizer; notes/AERO.md
 -- §3.23)
 B747DR_ac_stab_corr             = deferred_dataref("laminar/B747/flt_ctrls/stab_corr_deg", "number")
+-- (2026-11-20, N19-WARN-02) CONFIG GEAR's cause a closed thrust lever only
+-- (1): its siren and master WARNING lights stop on a master reset (FCOM
+-- p.1556); with the flaps a cause it is not resettable
+B747DR_cfg_gear_lever           = deferred_dataref("laminar/B747/flt_ctrls/config_gear_lever", "number")
 -- the speedbrakes (B747.45.xt.speedbrake.lua; step 3): the auto speedbrake
 -- actuator does not move (1)
 B747DR_sb_fail                  = deferred_dataref("laminar/B747/flt_ctrls/fail/auto_speedbrake", "number")

@@ -34,7 +34,8 @@
 --    GRAD ft/nm from the altitude before reaches it; a CF starts abeam the
 --    point before it on its course; a procedure turn's shape (step 7f:
 --    M.pturn). A fly-by turn's radius from
---    the ground speed and BANK degrees of bank, its start r tan(delta / 2)
+--    the ground speed and TURN_BANK degrees of bank (2026-11-20; before
+--    BANK's 25), its start r tan(delta / 2)
 --    before the fix, at most half of either leg; turns of more than
 --    MAX_FLYBY degrees, against the procedure's turn direction, onto a
 --    heading or onto a leg not starting at the fix flown over the fix.
@@ -61,6 +62,12 @@ local RAD = math.pi / 180
 local G = 9.80665
 local KT = 1852 / 3600        -- m/s in a knot
 M.BANK = 25
+-- (2026-11-20, notes/ATA-34-61-FMC.md §171) a fly-by turn's arc at 23
+-- degrees of bank, 2 under LNAV's most (ATA34_2 p.618: 25), the rest for
+-- LNAV to steer back onto the arc with (estimate: at 25 the airplane drifted
+-- off the arc's outside with LNAV at its limit, 0.04 nm in s271's 17 degree
+-- turn at FL370)
+M.TURN_BANK = 23
 M.MAX_FLYBY = 135
 M.GRAD = 500
 -- an FM or VM leg's line on the ND (no end: FCOM p.1237), nm (estimate)
@@ -708,7 +715,8 @@ end
 -- {r (nm), d (nm before the fix), delta (degrees, right positive), dir,
 -- center, t1 (where it starts), t2 (where it ends), c1, c2 (the courses
 -- in and out)}; nil when flown over the fix or straight on
-function M.turn(e1, e2, gs)
+-- (2026-11-20) `bank` the turn's degrees of bank, TURN_BANK unless given
+function M.turn(e1, e2, gs, bank)
     if not (e1 and e2 and e1.b and e2.a) or e1.term ~= "fix" or e1.flyover then return nil end
     if e1.kind ~= "line" and e1.kind ~= "arc" then return nil end
     if e2.kind ~= "line" and e2.kind ~= "course" and e2.kind ~= "arc" then return nil end
@@ -720,7 +728,7 @@ function M.turn(e1, e2, gs)
     if math.abs(delta) < 1 or math.abs(delta) > M.MAX_FLYBY then return nil end
     if e2.turn and (e2.turn == "R") ~= (delta > 0) then return nil end
     local half = math.tan(math.abs(delta) / 2 * RAD)
-    local r = (gs * KT) ^ 2 / (G * math.tan(M.BANK * RAD)) / 1852
+    local r = (gs * KT) ^ 2 / (G * math.tan((bank or M.TURN_BANK) * RAD)) / 1852
     local d = r * half
     local lim = math.min(e1.len or d, e2.len or d) / 2
     if d > lim then d, r = lim, lim / half end

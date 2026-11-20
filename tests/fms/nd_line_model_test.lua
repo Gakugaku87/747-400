@@ -128,7 +128,8 @@ local vi = {kind = "heading", a = X, b = INTC, hdg = 160, len = lo, term = "intc
 local cf = line(INTC, NRE)
 pts = D.route({vi, cf}, {P = P, L = L, kt = 250})
 local fix = {kind = "line", a = X, b = INTC, crs = 160, len = lo, term = "fix"}
-tr = P.turn(fix, cf, 250)
+-- (2026-11-20) the intercept at LNAV's 25 degrees (P.BANK; fly-by turns at TURN_BANK 23)
+tr = P.turn(fix, cf, 250, P.BANK)
 T.check(tr ~= nil and tr.dir == "R", "the intercept: a right turn")
 T.check(same(pts[1], X) and same(pts[2], tr.t1), "on the heading to the turn's start")
 local r = (250 * 1852 / 3600) ^ 2 / (9.80665 * math.tan(25 * math.pi / 180)) / 1852

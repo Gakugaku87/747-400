@@ -145,6 +145,12 @@ end
 -- the alert glue writes the STATUS page lines (page p, line n in
 -- gen_status_msg_NNN with NNN = 11 (p - 1) + n - 1) and the STATUS cue
 B747DR_CAS_status_status        = deferred_dataref("laminar/B747/CAS/status_status", "array[256]")  -- 256 since 2026-11-04 (the failures' STATUS messages)
+-- (N19-WARN-03) the EIUs' latched STATUS messages, per status_status slot of
+-- a latchable message (0 not shown, 1 shown and not latched, 2 latched),
+-- written by the alert glue; and the CMC's ERASE> pushes per slot, counted
+-- by the CMC's PRESENT LEG FAULTS page (B744.fms.pages.cmc.lua)
+B747DR_CAS_status_nvm           = deferred_dataref("laminar/B747/CAS/status_nvm", "array[256]")
+B747DR_CAS_status_erase_count   = deferred_dataref("laminar/B747/CAS/status_erase_count", "array[256]")
 B747DR_CAS_gen_status_msg = {}
 for i = 0, NUM_ALERT_MESSAGES do
     B747DR_CAS_gen_status_msg[i] = deferred_dataref(string.format("laminar/B747/CAS/gen_status_msg_%03d", i), "string")

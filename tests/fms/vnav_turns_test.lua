@@ -22,14 +22,15 @@ local function line(a, b)
     local c, d = P.course(a, b)
     return {kind = "line", a = a, b = b, crs = c, len = d, term = "fix"}
 end
--- a fly-by turn of 90 degrees at 300 kt: r (25 degrees of bank) 2.81 NM,
--- the arc's 4.42 NM against the tangents' 5.66 NM
+-- a fly-by turn of 90 degrees at 300 kt: r (23 degrees of bank, the path
+-- model's TURN_BANK since 2026-11-20; before 25: 2.81 NM, 1.22 NM shorter)
+-- 3.09 NM, the arc's 4.85 NM against the tangents' 6.18 NM
 local A = {lat = 35, lon = 135}
 local B = P.point(A, 90, 30)
 local C = P.point(B, 0, 30)
 local tr = P.turn(line(A, B), line(B, C), 300)
 T.near(L.transition(P, line(A, B), line(B, C), 300), tr.r * math.abs(tr.delta) * math.pi / 180 - 2 * tr.d, 1e-9, "a fly-by turn: its arc less the tangents")
-T.near(L.transition(P, line(A, B), line(B, C), 300), -1.22, 0.02, "90 degrees at 300 kt: 1.22 NM shorter")
+T.near(L.transition(P, line(A, B), line(B, C), 300), -1.345, 0.02, "90 degrees at 300 kt: 1.34 NM shorter")
 T.equal(L.transition(P, line(A, B), line(B, P.point(B, 90, 30)), 300), 0, "straight on: none")
 -- s198's ATMUG: from XAC (268 degrees) onto ATMUG-SAKVA (111 degrees), a
 -- left turn of 157 degrees flown over the fix

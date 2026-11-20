@@ -2767,6 +2767,9 @@ B747DR_fms_lnav_route=find_dataref("laminar/B747/fms/lnav/route")
 B747DR_fms_ap_lnav_state=find_dataref("laminar/B747/autopilot/lnav_state")
 simDR_lnav_trk=find_dataref("sim/flightmodel/position/hpath")
 simDR_lnav_tas=find_dataref("sim/flightmodel/position/true_airspeed")
+-- (2026-11-20, notes/ATA-34-61-FMC.md §171) the bank, for a fly-by turn's
+-- roll out (the IRS's roll: X-Plane's, right wing down positive)
+simDR_lnav_bank=find_dataref("sim/flightmodel/position/phi")
 local function lnav_var(lat,lon) return B747_navdb.variation(B747_fmc_navdb,lat,lon) end
 -- a leg as LNAV flies it: its fix or name, a direct-to's or LNAV's start,
 -- a hold at its fix
@@ -3269,7 +3272,7 @@ function B747_fmc_lnav_update()
   -- X-Plane's variation: west positive (magnetic = true + it)
   local air={lat=simDR_latitude,lon=simDR_longitude,trk=simDR_lnav_trk,hdg=simDR_fms_true_psi,
     gs=simDR_groundspeed*1.94384,tas=simDR_lnav_tas*1.94384,wind=simDR_wind_speed,
-    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1}
+    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1,bank=simDR_lnav_bank}
   lnavAir=air
   local n=B747_lnav_model.update(s,st.active and lnavPath or nil,air,armed,engaged)
   if n>0 then
