@@ -71798,7 +71798,7 @@ P acf/_bouncer_spring_k/9,1 0.000000000
 P acf/_bouncer_spring_k/9,2 0.000000000
 P acf/_bouncer_spring_k/i_count 14
 P acf/_bouncer_spring_k/j_count 3
-P acf/_brake_co 1.000000000
+P acf/_brake_co 0.650000000
 P acf/_brake_max_stopping_KTGS 150.000000000
 P acf/_brake_to_steer_power 0.000000000
 P acf/_burner_delay_sec 0.000000000
