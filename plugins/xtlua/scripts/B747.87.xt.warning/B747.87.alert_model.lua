@@ -51,8 +51,10 @@ M.LANDING_SHOWN = {["AUTOPILOT"] = true, ["AUTOTHROT DISC"] = true, ["NO AUTOLAN
 -- The aural of each warning (FCOM p.1550-1552, airplane 109 before the SB;
 -- notes/ATA-31-warning.md §3.4). The bell and the resettable siren stop on
 -- a master reset, the other siren only when the condition goes. CONFIG GEAR
--- caused by a closed thrust lever is resettable, by the flaps it is not: the
--- message does not say which, so it is taken as not resettable (estimate).
+-- caused by a closed thrust lever is resettable, by the flaps it is not
+-- (FCOM p.1556): since 2026-11-20 (N19-WARN-02) the flight controls say
+-- which (`inp.config_gear_lever`); before, never resettable (estimate). The
+-- siren comes back when the flaps become a cause after the reset.
 M.BELL = {["FIRE APU"] = true, ["FIRE CARGO AFT"] = true, ["FIRE CARGO FWD"] = true,
     ["FIRE ENG"] = true, ["FIRE WHEEL WELL"] = true}
 M.SIREN_RESETTABLE = {["CABIN ALTITUDE"] = true}
@@ -100,6 +102,7 @@ function M.inputs()
         status_page_shown = false,               -- the STATUS page on the secondary EICAS
         gpws_warning = false,                    -- PULL UP or WINDSHEAR on the PFDs (the GPWS)
         ap_siren = false,                        -- the 570 (GE): >AUTOPILOT DISC sounds the siren
+        config_gear_lever = false,               -- CONFIG GEAR caused by a closed thrust lever only
     }
 end
 
@@ -382,7 +385,12 @@ function M.update(s, inp, dt)
         if rec.announced and not rec.hidden and rec.level == "warning" then
             local class = M.classify(name)
             if M.BELL[class] and not rec.silenced then bell = true end
-            if M.SIREN[class] or (M.SIREN_RESETTABLE[class] and not rec.silenced) then siren = true end
+            local resettable = M.SIREN_RESETTABLE[class] or (class == "CONFIG GEAR" and inp.config_gear_lever)
+            if resettable then
+                if not rec.silenced then siren = true end
+            elseif M.SIREN[class] then
+                siren = true
+            end
             if M.WAILER[class] then
                 if inp.ap_siren then siren = true else wailer = true end
             end

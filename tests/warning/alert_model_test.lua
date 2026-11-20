@@ -456,6 +456,31 @@ do
     alerts(inp, {})
     out = run(s, inp, 0.2)
     T.check(not out.aural.siren, "CONFIG FLAPS: the siren stops with the condition")
+
+    -- (2026-11-20, N19-WARN-02) CONFIG GEAR by a closed thrust lever only:
+    -- the master reset silences the siren and puts out the lights (FCOM
+    -- p.1556); the flaps a cause again: the siren back
+    s, inp = flying()
+    inp.config_gear_lever = true
+    alerts(inp, {{">CONFIG GEAR", "warning"}})
+    out = run(s, inp, 0.5)
+    T.check(out.aural.siren and out.master_warning, "CONFIG GEAR by the thrust lever: siren and master WARNING")
+    out = push(s, inp, "master_reset")
+    T.check(not out.aural.siren and not out.master_warning, "CONFIG GEAR by the thrust lever: master reset silences the siren, the light out")
+    out = run(s, inp, 1)
+    T.check(not out.aural.siren, "CONFIG GEAR by the thrust lever: stays silent")
+    inp.config_gear_lever = false
+    out = run(s, inp, 0.2)
+    T.check(out.aural.siren, "CONFIG GEAR: the flaps a cause too: the siren again")
+    out = push(s, inp, "master_reset")
+    T.check(out.aural.siren, "CONFIG GEAR by the flaps: the master reset does not stop the siren")
+    alerts(inp, {})
+    out = run(s, inp, 0.2)
+    T.check(not out.aural.siren, "CONFIG GEAR: gone, the siren stops")
+    inp.config_gear_lever = true
+    alerts(inp, {{">CONFIG GEAR", "warning"}})
+    out = run(s, inp, 0.5)
+    T.check(out.aural.siren, "CONFIG GEAR by the thrust lever again later: sounds again (a new one)")
 end
 
 -- the wailer: while >AUTOPILOT DISC is shown, at least 1 s (FCOM p.1550)

@@ -493,3 +493,9 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - EIU の電源を全部落として戻す（エンジンを止め、外部電源・APU・BATTERY を切って入れ直す）：ラッチしたものが STATUS ページに戻る。
 - 新しいシナリオ s343_status_latch（取り込みで s342 から振り直した：番号が n19-afds03・n19-eng05 の新しいシナリオと重なったため）（地上）：上の流れをまとめた。
 
+## 14. レバーが原因の CONFIG GEAR は master リセットで止まる（2026-11-20、PC のセッション「段1-3実装」。N19-WARN-02）
+
+- 資料：FCOM p.1556：CONFIG GEAR の siren と master WARNING 灯は、推力レバーのアイドルが原因なら master WARNING/CAUTION スイッチで止まる・消える。§3.4 の表（FCOM p.1551–1552）でもリセット可。フラップが原因の CONFIG GEAR はリセットできない（条件が消えるまで鳴る）。AOM_JP p.23（リセットスイッチ：「一部の条件の形態の siren」を止める）も同じ。
+- 前：メッセージからは原因が分からないので、どちらもリセットできない扱いだった（推定）。
+- 直したこと：飛行制御（`B747.45.xt.fltCtrls.lua`）が原因を新しい dataref `laminar/B747/flt_ctrls/config_gear_lever`（1：レバーだけが原因）に書き、警報（`B747.87.xt.alerts.lua` → `B747.87.alert_model.lua` の `inp.config_gear_lever`）が、レバーだけが原因の間は CONFIG GEAR の siren をリセットで止める。リセットの後にフラップが原因に加わると siren は戻る（リセットできない原因）。メッセージが消えて新しく出れば、また鳴る。master WARNING 灯は前どおりリセットで消える（§3.4：リセットできない siren でも灯は消える）。
+- 試験：`tests/warning/alert_model_test.lua` に 6 件、`tests/fltctrls/fltctrls_module_test.lua` に 2 件（レバーで 1、フラップで 0）。直す前は落ちる。
