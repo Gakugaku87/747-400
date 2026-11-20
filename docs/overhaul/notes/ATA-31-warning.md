@@ -492,6 +492,7 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - CMC（機長の CDU、MENU → <CMC → <PRESENT LEG FAULTS）：「*STATUS:」と「DRIVE DISC 4　ERASE>」、その右の LSK（1 つだけなら 1R）で STATUS ページから消える。
 - EIU の電源を全部落として戻す（エンジンを止め、外部電源・APU・BATTERY を切って入れ直す）：ラッチしたものが STATUS ページに戻る。
 - 新しいシナリオ s343_status_latch（取り込みで s342 から振り直した：番号が n19-afds03・n19-eng05 の新しいシナリオと重なったため）（地上）：上の流れをまとめた。
+- X-Plane（カスタム acf、2026-11-20 10:24–10:33 の回）：`s343_status_latch` 15/0、`s02_elec_panel` 63/0、`s39_steering` 23/0、`s28_stab_trim` 25/0。`s27_srm` は 3 件落ちたが、ここではなく 11-13 の bbf3bdcc（SRM が ADC を片方ずつ使う）の後にシナリオが X-Plane の ADC 1 だけを落としていたため（シナリオを直した）。
 
 ## 14. レバーが原因の CONFIG GEAR は master リセットで止まる（2026-11-20、PC のセッション「段1-3実装」。N19-WARN-02）
 
