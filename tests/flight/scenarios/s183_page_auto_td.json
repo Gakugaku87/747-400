@@ -1,9 +1,9 @@
 {
   "name": "s183_page_auto_td",
-  "description": "6-1・6-2 段 12b（自動のページ変更）の X-Plane での確認、巡航から降下。s140 と同じ FL300・約 290 kt で、ATMUG の約 30 NM 西（T/D の手前）から東へ空中開始（機体を読み直す）。s140 と同じ経路と PERF INIT、MCP 10,000 ft で VNAV。CDU を VNAV の CRZ のページ（有効なページ）にしておくと、T/D で FMC の段階が降下（3）になったとき DES のページに変わる（FCOM p.1345）。右の CDU は CLB のページ（有効でない）のまま。CDU を撮る。Lua の誤りも確かめる",
+  "description": "6-1・6-2 段 12b（自動のページ変更）の X-Plane での確認、巡航から降下。s140 と同じ FL300・約 290 kt で、ATMUG の約 40 NM 西（T/D の手前。2026-11-22 に 10 NM 戻した：11-10 から降下の段階が T/D の角の約 3 NM 手前から始まり、30 NM 西の開始では 42 秒の検査の時点で降下（3）だった）から東へ空中開始（機体を読み直す）。s140 と同じ経路と PERF INIT、MCP 10,000 ft で VNAV。CDU を VNAV の CRZ のページ（有効なページ）にしておくと、T/D で FMC の段階が降下（3）になったとき DES のページに変わる（FCOM p.1345）。右の CDU は CLB のページ（有効でない）のまま。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 34.62, "longitude": 133.52, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
+    "lle_air_start": { "latitude": 34.64, "longitude": 133.32, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
     "weather": {

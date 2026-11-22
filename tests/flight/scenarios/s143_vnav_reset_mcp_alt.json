@@ -1,9 +1,9 @@
 {
   "name": "s143_vnav_reset_mcp_alt",
-  "description": "6-1/6-2 段 9d1（MCP の操作：RESET MCP ALT を FMC で）の X-Plane での確認。s140 と同じ FL300 の T/D の手前（ATMUG の約 30 NM 西）から東へ空中開始（機体を読み直す）、同じ経路と LNAV、ZFW 200・CI 100・FL300。MCP 高度は FL300（巡航高度）のまま VNAV：T/D の 2 分の内（と過ぎても）巡航のまま RESET MCP ALT（FCOM p.665、p.1433：FMC のメッセージの旗 33）。MCP を 10,000 ft に下げるとメッセージが消え、FMC は降下（3）に。Lua の誤りも確かめる。",
+  "description": "6-1/6-2 段 9d1（MCP の操作：RESET MCP ALT を FMC で）の X-Plane での確認。s140 と同じ FL300 の T/D の手前（ATMUG の約 40 NM 西：2026-11-22 に s140 の開始から 10 NM 戻した。11-10 から降下の段階が T/D の角の約 3 NM 手前から始まり、30 NM 西の開始では VNAV を入れる 42 秒の時点で T/D を過ぎていた）から東へ空中開始（機体を読み直す）、同じ経路と LNAV、ZFW 200・CI 100・FL300。MCP 高度は FL300（巡航高度）のまま VNAV：T/D の 2 分の内（と過ぎても）巡航のまま RESET MCP ALT（FCOM p.665、p.1433：FMC のメッセージの旗 33）、T/D を過ぎると VNAV ALT（FCOM p.665）。MCP を 10,000 ft に下げるとメッセージが消え、FMC は降下（3）に。Lua の誤りも確かめる。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 34.62, "longitude": 133.52, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
+    "lle_air_start": { "latitude": 34.64, "longitude": 133.32, "elevation_in_meters": 9144, "heading_true": 97, "speed_in_meters_per_second": 225 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
     "weather": {
@@ -46,8 +46,9 @@
     { "do": "wait", "note": "RESET MCP ALT（T/D の 2 分の内、MCP が巡航高度）", "dref": "laminar/B747/fms/notification[33]", "op": "==", "value": 1, "timeout": 120 },
     { "do": "check", "note": "FMC は巡航（2）のまま", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2 },
     { "do": "snapshot", "note": "RESET MCP ALT の時", "drefs": [ "laminar/B747/fms3/Line14_L", "laminar/B747/fms/vnav/dist", "laminar/B747/fms/vnav/path_dev", "sim/cockpit2/gauges/indicators/altitude_ft_pilot" ] },
-    { "do": "sleep", "seconds": 30, "note": "30 秒（T/D を過ぎても）" },
+    { "do": "wait", "note": "T/D を過ぎる：MCP が巡航高度のままなので FMC は巡航高度を保つ（2026-11-22 から待つ。前は 30 秒寝て、空中開始の上昇の後の MCP より上の高さで PTH のままだった）", "dref": "laminar/B747/fms/vnav/td_hold", "op": "==", "value": 1, "timeout": 150 },
     { "do": "check", "note": "まだ RESET MCP ALT", "dref": "laminar/B747/fms/notification[33]", "op": "==", "value": 1 },
+    { "do": "wait", "note": "VNAV ALT（FCOM p.665：VNAV の経路と MCP 高度が食い違うと水平にして VNAV ALT）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 5, "timeout": 10 },
     { "do": "set", "note": "MCP 高度 10,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
     { "do": "wait", "note": "メッセージが消える", "dref": "laminar/B747/fms/notification[33]", "op": "==", "value": 0, "timeout": 5 },
     { "do": "wait", "note": "FMC は降下（3）", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 3, "timeout": 10 },

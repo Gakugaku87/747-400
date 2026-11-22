@@ -1,6 +1,6 @@
 {
   "name": "s85_navdb",
-  "description": "FMC の航法データベース（6-1・6-2 段 4）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に開始（機体を読み直す）。航法データ（Custom Data、AIRAC 2610）を読み終えると IDENT に NAV DATA AIRAC 2610 と ACTIVE OCT01OCT29/26（FCOM p.1283）。日付を周期の後（11 月）にすると NAV DATA OUT OF DATE と >FMC MESSAGE（FCOM p.1433）、CLR で消え、日付を戻すと条件が消える。RTE の ORIGIN RJAA で TRANS ALT が RJAA の 14000（前は 18000 固定：FCOM p.1329）。IRS を入れ直してアライン中に POS INIT の REF AIRPORT RJAA で位置が出て、ZZZZ は NOT IN DATA BASE（FCOM p.1285）。CDU を撮る。",
+  "description": "FMC の航法データベース（6-1・6-2 段 4）の X-Plane での確認、地上。RJAA 34L でエンジン運転中に開始（機体を読み直す）。航法データ（Custom Data。2026-11-11 から AIRAC 2611）を読み終えると IDENT に NAV DATA の周期と ACTIVE（周期の初日と次の周期の初日、2611 なら AIRAC 2611 OCT29NOV26/26：FCOM p.1283。2026-11-22 から周期を決め打ちしない：前は 2610 で、2611 に替わって落ちた）。日付を周期の後（12 月 31 日：2612 の終わりの 12 月 23 日より後。2613 を入れたら日付を見直す。年は越えさせない：時計の年は戻らない）にすると NAV DATA OUT OF DATE と >FMC MESSAGE（FCOM p.1433）、CLR で消え、日付を戻すと条件が消える。RTE の ORIGIN RJAA で TRANS ALT が RJAA の 14000（前は 18000 固定：FCOM p.1329）。IRS を入れ直してアライン中に POS INIT の REF AIRPORT RJAA で位置が出て、ZZZZ は NOT IN DATA BASE（FCOM p.1285）。CDU を撮る。",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -23,16 +23,16 @@
     { "do": "sleep", "seconds": 0.5 },
     { "do": "cmd", "note": "<FMC（最初は IDENT）", "name": "laminar/B747/fms1/ls_key/L1" },
     { "do": "wait", "note": "航法データを読み終える（1 フレームに 32 KB）", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
-    { "do": "check", "note": "NAV DATA と ACTIVE（FCOM p.1283：周期の初日と次の周期の初日）", "dref": "laminar/B747/fms3/Line05_L", "op": "==", "value": "AIRAC 2610 OCT01OCT29/26" },
-    { "do": "check", "note": "10 月 26 日：期限内でメッセージなし", "dref": "laminar/B747/fms/notification[55]", "op": "==", "value": 0 },
+    { "do": "check", "note": "NAV DATA と ACTIVE（FCOM p.1283：周期の初日と次の周期の初日。周期は Custom Data しだい：2611 なら AIRAC 2611 OCT29NOV26/26）", "dref": "laminar/B747/fms3/Line05_L", "op": "matches", "value": "^AIRAC [0-9]{4} [A-Z]{3}[0-9]{2}[A-Z]{3}[0-9]{2}/[0-9]{2}$" },
+    { "do": "check", "note": "10 月下旬：期限内でメッセージなし", "dref": "laminar/B747/fms/notification[55]", "op": "==", "value": 0 },
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "view", "note": "左の CDU", "the": -34, "psi": 22, "fov": 16 },
     { "do": "shot", "name": "cdu_ident" },
 
     { "do": "mark", "note": "NAV DATA OUT OF DATE" },
     { "do": "snapshot", "note": "日付", "drefs": ["sim/time/local_date_days", "laminar/B747/fltInst/capt/clock_day", "laminar/B747/fltInst/capt/clock_month", "laminar/B747/fltInst/capt/clock_year"] },
-    { "do": "set", "note": "日付を 11 月 7 日ごろに（周期 2610 は 10 月 28 日まで）", "dref": "sim/time/local_date_days", "value": 310 },
-    { "do": "wait", "note": "時計の日付が 11 月に", "dref": "laminar/B747/fltInst/capt/clock_month", "op": "==", "value": 11, "timeout": 10 },
+    { "do": "set", "note": "日付を 12 月 31 日に（周期の後：2611 は 11 月 25 日、2612 は 12 月 23 日まで。前は 11 月 7 日で、2611 の内になって落ちた）", "dref": "sim/time/local_date_days", "value": 364 },
+    { "do": "wait", "note": "時計の日付が 12 月に", "dref": "laminar/B747/fltInst/capt/clock_month", "op": "==", "value": 12, "timeout": 10 },
     { "do": "wait", "note": "NAV DATA OUT OF DATE（FCOM p.1433）", "dref": "laminar/B747/fms3/Line14_L", "op": "contains", "value": "NAV DATA OUT OF DATE", "timeout": 10 },
     { "do": "check", "note": "FMC の alert：>FMC MESSAGE（FCOM p.1429）", "dref": "laminar/B747/CAS/advisory_status[145]", "op": "==", "value": 1 },
     { "do": "check", "note": "右の CDU にも", "dref": "laminar/B747/fms2/Line14_L", "op": "contains", "value": "NAV DATA OUT OF DATE" },
