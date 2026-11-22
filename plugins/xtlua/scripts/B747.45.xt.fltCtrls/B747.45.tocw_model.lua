@@ -21,7 +21,14 @@
 -- master WARNING (s341, notes/ATA-31-warning.md §11). Without
 -- a V1 the takeoff inhibit starts at 5 degrees of pitch instead (ATA31
 -- p.180, p.188). A message goes at once when the configuration is put
--- right, and 10 s after the takeoff thrust goes (ATA27 p.730).
+-- right, and 10 s after the takeoff thrust goes (ATA27 p.730: "after
+-- removal of takeoff thrust", the takeoff thrust the inboard N1 indication
+-- above the value): the 10 s from the N1 of engines 2 and 3 below it
+-- (their reversers stowed), the thrust levers only for the arming.
+-- (2026-11-22) Before, from 11-20's N19-WARN-01, a lever closed ended the
+-- takeoff thrust at once, and the 10 s ran from the levers' closing while
+-- the N1 still came down: s225's CONFIG PARK BRK went 12 s after the levers
+-- closed, about 6 s after the N1 passed 66.5.
 
 local M = setmetatable({}, {})
 B747_tocw_model = M
@@ -66,6 +73,10 @@ function M.update(s, inp, dt)
         return inp.n1[e] > thr and inp.lever[e] >= M.LEVER_CLOSED and not inp.reverser[e]
     end
     local takeoff_thrust = at_takeoff(2) or at_takeoff(3)
+    -- the takeoff thrust not yet removed for a message shown (ATA27 p.730):
+    -- the N1 of engine 2 or 3 still above the value, its reverser stowed
+    local function n1_high(e) return inp.n1[e] > thr and not inp.reverser[e] end
+    local thrust_on = n1_high(2) or n1_high(3)
     -- below V1; without a V1 until the rotation (5 degrees of pitch)
     local before_v1
     if inp.v1_kt > 0 and inp.v1_kt < M.V1_NONE then before_v1 = inp.ias_kt < inp.v1_kt
@@ -82,7 +93,7 @@ function M.update(s, inp, dt)
     for _, k in ipairs(M.MESSAGES) do
         if not wrong[k] or not can_arm then
             s.hold[k] = nil                      -- put right, airborne, at V1 or the switches
-        elseif armed then
+        elseif armed or (s.hold[k] ~= nil and thrust_on) then
             s.hold[k] = 0
         elseif s.hold[k] ~= nil then
             s.hold[k] = s.hold[k] + dt           -- the takeoff thrust gone: 10 s more
