@@ -303,21 +303,34 @@ for _ = 1, 150 do
     prev = get(ELEV)
 end
 T.check(on_at ~= nil and on_at > 0.6, "G/S: the nose up autotrim from 0.6 degrees (" .. tostring(on_at) .. ")")
--- steady, the stabilizer trimmed 0.05 nose up: the elevator command 1.9
--- times that less
+-- steady, the stabilizer trimmed 0.05 nose up: the elevator command 0.95
+-- times that less (since 2026-11-22: the stabilizer at 1 degree a unit
+-- halved the trim ratio's degrees; before 1.9)
 rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 9)
 rt:set("laminar/B747/autopilot/pitch_cmd", 2)
 step(6)
 local before = get(ELEV)
 rt:set("sim/flightmodel2/controls/elevator_trim", 0.05)
 frames(1)
-T.near(before - get(ELEV), 1.9 * 0.05, 0.01, "the stabilizer 0.05 nose up: the elevator 0.095 less (" .. before .. " to " .. get(ELEV) .. ")")
+T.near(before - get(ELEV), 0.95 * 0.05, 0.005, "the stabilizer 0.05 nose up: the elevator 0.0475 less (" .. before .. " to " .. get(ELEV) .. ")")
 -- the attitude rate (ATA22 p.330): 1 degree a second nose up, the
--- elevator command 0.03 less
+-- elevator command 0.06 less at 288 kt (since 2026-11-22 at least 0.06
+-- from about 200 kt up: the cruise's 3.4 s swing with the downwash's
+-- correction; before 0.03)
 local e0 = get(ELEV)
 rt:set("sim/flightmodel/position/Q", 1)
 frames(1)
-T.near(e0 - get(ELEV), 0.03, 0.005, "pitching up 1 degree a second: the elevator 0.03 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+T.near(e0 - get(ELEV), 0.06, 0.005, "pitching up 1 degree a second: the elevator 0.06 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+-- at 210 kt still 0.06 (the speed's schedule 0.03 x 1.42 ^ 1.5 = 0.051 is
+-- under it)
+rt:set("sim/flightmodel/position/Q", 0)
+frames(2)
+rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 210)
+frames(1)
+e0 = get(ELEV)
+rt:set("sim/flightmodel/position/Q", 1)
+frames(1)
+T.near(e0 - get(ELEV), 0.06, 0.005, "at 210 kt the pitch rate's floor: the elevator 0.06 less (" .. e0 .. " to " .. get(ELEV) .. ")")
 -- the gains by airspeed: at 150 kt the attitude error's (250 / 150) squared,
 -- 2.78 times (under 145 kt 3 times), the attitude rate's that to the 1.5,
 -- 4.6 times

@@ -20,6 +20,9 @@ simDR_ap_elev_up = find_dataref("sim/aircraft/controls/acf_elev_up")
 simDR_ap_elev_dn = find_dataref("sim/aircraft/controls/acf_elev_dn")
 -- the pitch rate (the IRUs': X-Plane's body rate, degrees a second)
 simDR_ap_pitch_rate = find_dataref("sim/flightmodel/position/Q")
+-- (2026-11-22) the attitude rate gain in percent of its own (0: its own), for
+-- finding the cruise's pitch swing in X-Plane
+B747DR_ap_dbg_rate_pct = find_dataref("laminar/B747/debug/ap_pitch_rate_pct")
 -- the roll and yaw rates (the same: the inner roll loop, 6-3 step 4d)
 simDR_ap_roll_rate = find_dataref("sim/flightmodel/position/P")
 simDR_ap_yaw_rate = find_dataref("sim/flightmodel/position/R")
@@ -550,8 +553,12 @@ pitchPid:compute()
 -- s109's recordings (estimate). Without it the autotrim and the integrator
 -- took turns: at FL350 in ALT HOLD the pitch swung 1.3 degrees, 740 fpm
 -- and 0.16 g every 17 s (s53), which a model of those recordings
--- reproduced; with it, from 1.2 to 2.2, the model holds level
-local AP_STAB_PER_ELEV = 1.9
+-- reproduced; with it, from 1.2 to 2.2, the model holds level. 2026-11-22:
+-- halved, 1.9 -> 0.95, with the stabilizer at 1 degree a unit (2026-11-20,
+-- dfbbf7d4: the trim ratio's stabilizer from 15 degrees to 7.5 degrees,
+-- the hydraulics' mapping; this was left at 1.9, giving back twice the
+-- elevator the stabilizer's trim stood for)
+local AP_STAB_PER_ELEV = 0.95
 local ap_trim_last = nil
 
 -- the inner loop's attitude rate (ATA22 p.330: the attitude error and the
@@ -562,8 +569,17 @@ local ap_trim_last = nil
 -- (B747.19.xt.hydraulicsmodel.lua; notes/ATA-22.md §21). Alone with the
 -- old gain it did not help (FL350: 250 to 340 fpm); with 0.1, ALT HOLD at
 -- FL350 within 12 fpm and 0.01 g. Before, the attitude error only
--- (estimate)
+-- (estimate). 2026-11-22: at least AP_PITCH_RATE_K_MIN, that is from
+-- about 200 kt up (under it the speed's schedule below, set on the
+-- approach, is more): with the downwash's correction (notes/AERO.md
+-- §3.24, 2026-11-20) the airplane's pitch stiffness about halved and at
+-- 0.03 the cruise's ALT HOLD swung 0.4 degrees of alpha and 0.7 of
+-- elevator every 3.4 s (the full run's s263, s279 and s280: FL370 M.85
+-- 238 t). tests/flight/measure/aero_cruise_pitch_osc: V/S 21 fpm rms, 1.5
+-- with the correction left out, 4.6 at twice this rate and 4.1 at three
+-- times, the swing gone (estimate)
 local AP_PITCH_RATE_K = 0.03
+local AP_PITCH_RATE_K_MIN = 0.06
 
 -- the inner loop's gains by airspeed (estimate; the gains above were set
 -- from 250 kt up: FL350, 10,000 ft): the attitude error's g = (AP_GAIN_KT /
@@ -635,7 +651,9 @@ function ap_pitch_assist(doCompute)
         end
         local speed=B747_rescale(1,3,10,10,math.abs(flight_director_pitch-simDR_AHARS_pitch_heading_deg_pilot))
         if pitchPid.output==nil then return 0 end
-        local out = math.max(-1, math.min(1, pitchPid.output - AP_PITCH_RATE_K * gain ^ AP_RATE_POW * simDR_ap_pitch_rate))
+        local rate_k = math.max(AP_PITCH_RATE_K_MIN, AP_PITCH_RATE_K * gain ^ AP_RATE_POW)
+        if B747DR_ap_dbg_rate_pct > 0 then rate_k = rate_k * B747DR_ap_dbg_rate_pct / 100 end
+        local out = math.max(-1, math.min(1, pitchPid.output - rate_k * simDR_ap_pitch_rate))
         retval=B747_interpolate_value(B747DR_sim_pitch_ratio,out,-1,1,speed) 
         
         --retval=pitchPid.output
