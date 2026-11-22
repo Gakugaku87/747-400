@@ -47,6 +47,12 @@ simDR_srm_xp_on_ground          = find_dataref("sim/flightmodel/failures/ongroun
 -- frame: X-Plane's indicated airspeed comes up from 0 over about 3 s there
 -- (2026-11-20, s217's start: 0 to 322 kt; the air data's later still)
 simDR_srm_xp_q                  = find_dataref("sim/flightmodel/misc/Qstatic")
+-- (2026-11-22) the weight, the true airspeed and the outside air's
+-- temperature for the air start's lift coefficient and Mach (right from
+-- the first frame, as the dynamic pressure)
+simDR_srm_xp_weight             = find_dataref("sim/flightmodel/weight/m_total")
+simDR_srm_xp_tas                = find_dataref("sim/flightmodel/position/true_airspeed")
+simDR_srm_xp_oat                = find_dataref("sim/weather/temperature_ambient_c")
 B747DR_srm_hyd_2                = find_dataref("laminar/B747/hydraulics/pressure_2")
 B747DR_srm_hyd_3                = find_dataref("laminar/B747/hydraulics/pressure_3")
 B747DR_srm_all_gear_down        = find_dataref("laminar/B747/gear/air_ground/all_gear_down")
@@ -186,12 +192,36 @@ local function trim_of(u) return u / 7.5 - 1 end
 -- 8.9 degrees alpha (s217: 4,900 fpm as the A/P came on; with the
 -- downwash's correction, notes/AERO.md §3.24, 26,600 ft from FL250;
 -- notes/ATA-27.md §22). X-Plane's indicated airspeed is about the
--- equivalent one (322 kt to 319 there), so the fit stands
-local function air_start_units(kt)
-    if kt < 100 then return 7.7 end
-    return math.max(1.7, math.min(7.7, 0.26 + 308800 / (kt * kt)))
+-- equivalent one (322 kt to 319 there), so the fit stands.
+-- 2026-11-22: fitted again with the pitch corrections in (the downwash's
+-- and the thrust's, notes/AERO.md §3.24-3.25: they move the balance nose
+-- up as the alpha rises, so the slow trims came 1.3 to 2 units nose down
+-- of the fit above), by the lift coefficient (the weight in) and the
+-- Mach: AS_A + AS_B x CL, plus up to AS_MACH_UNITS from AS_MACH0 to
+-- AS_MACH1 (X-Plane's balance noses down at the cruise's Mach, with less
+-- of the downwash's correction at its lower alpha). Measured with the
+-- A/P's ALT HOLD and the A/T's SPD at the kit's 270 t (30 % MAC), flaps up
+-- (tests/flight/measure/aero_airstart_trim_10k and _fl350): 10,000 ft
+-- 3.55, 3.90 and 4.39 units at CL 0.39, 0.51 and 0.63 (288, 250, 225 kt
+-- EAS; the old fit 3.99, 5.21, 6.35), FL350 4.33, 4.33 and 4.27 at M.78,
+-- .82 and .85 (CL 0.51, 0.46, 0.43); FL250 M.77 3.37 (s217). The fit
+-- within 0.06 at 10,000 ft and 0.1 at FL350, FL250 +0.06. The full run of
+-- 2026-11-20 lost s58 (a 172 kt start at 7.7 units stalled), s99 and s292
+-- (their A/P came off before it had trimmed the start's 1.3 units out) to
+-- the old fit; the 10,000 ft fit alone left FL350's start 0.6 units nose
+-- down (s261 sank 550 ft). Still an estimate, with no centre of gravity in
+-- it (notes/ATA-27.md §23)
+local AS_A, AS_B, AS_S = 2.18, 3.476, 511   -- units, units a CL, the wing's m2
+local AS_MACH0, AS_MACH1, AS_MACH_UNITS = 0.75, 0.82, 0.6
+local AS_Q_MIN = 1620                       -- Pa: about 100 kt EAS
+local function air_start_units(q, kg, mach)
+    if q < AS_Q_MIN then return 7.7 end
+    local cl = kg * 9.80665 / (q * AS_S)
+    local m = math.max(0, math.min(1, (mach - AS_MACH0) / (AS_MACH1 - AS_MACH0))) * AS_MACH_UNITS
+    return math.max(1.7, math.min(7.7, AS_A + AS_B * cl + m))
 end
-local function eas_kt(q) return math.sqrt(math.max(0, 2 * q / 1.225)) / 0.514444 end
+-- the Mach from the true airspeed (m/s) and the air's temperature (deg C)
+local function mach_of(tas, oat) return tas / math.sqrt(1.4 * 287.05 * math.max(150, oat + 273.15)) end
 -- one switch pair from two sources: either, or both the same way
 local function either(a, b)
     if a == 0 then return b end
@@ -278,7 +308,7 @@ function B747_srm()
         and not hist_has(trim_hist, xp, TRIM_SAME) and not xp_runaway) then
         S.stab_set(srm_state, units(xp))
     elseif starting then
-        S.stab_set(srm_state, air_start_units(eas_kt(simDR_srm_xp_q)))
+        S.stab_set(srm_state, air_start_units(simDR_srm_xp_q, simDR_srm_xp_weight, mach_of(simDR_srm_xp_tas, simDR_srm_xp_oat)))
     end
 
     local out = S.update(srm_state, inp, math.min(SIM_PERIOD, SRM_DT_MAX))
