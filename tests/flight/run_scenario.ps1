@@ -690,9 +690,26 @@ foreach ($step in $spec.steps) {
                 Add-Result $step 'info' "copied $($step.from) to $($step.to)"
             }
             'remove' {
-                $p = Join-Path (Join-Path $PSScriptRoot '..\..') $step.path
-                if (Test-Path $p) { Remove-Item -Force $p }
-                Add-Result $step 'info' "removed $($step.path)"
+                if ($step.path_dref) {
+                    # (2026-11-22) the file a string dataref names from
+                    # X-Plane's folder (the FMC's laminar/B747/fms/company/
+                    # fms_file and ofp_file: the latest SimBrief OFP's name
+                    # goes with the user's flight, s218), and only one in
+                    # the aircraft's simbrief folder
+                    $rel = ([string](Get-XPDataref $step.path_dref)).Trim([char]0).Trim()
+                    $sb = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\simbrief')) + '\'
+                    $full = if ($rel) { [IO.Path]::GetFullPath((Join-Path (Join-Path $PSScriptRoot '..\..\..\..') $rel)) } else { '' }
+                    if ($full -and $full.StartsWith($sb, [StringComparison]::OrdinalIgnoreCase)) {
+                        if (Test-Path -LiteralPath $full) { Remove-Item -Force -LiteralPath $full }
+                        Add-Result $step 'info' "removed $rel ($($step.path_dref))"
+                    } else {
+                        Add-Result $step 'warn' "not removed: $($step.path_dref) = '$rel' is no file in the aircraft's simbrief folder"
+                    }
+                } else {
+                    $p = Join-Path (Join-Path $PSScriptRoot '..\..') $step.path
+                    if (Test-Path $p) { Remove-Item -Force $p }
+                    Add-Result $step 'info' "removed $($step.path)"
+                }
             }
             'snapshot' {
                 $vals = [ordered]@{}
