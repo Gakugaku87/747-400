@@ -32,6 +32,7 @@
     { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
     { "do": "sleep", "seconds": 20 },
     { "do": "check", "note": "ALT", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "stop": true },
+    { "do": "wait", "note": "A/T SPD で 250 kt に落ち着く（2026-11-22 から待つ：空中開始は約 255 kt で、20 秒では 5 kt 速いまま外し、A/T が推力をアイドルまで絞って手放しの 30 秒で −4,800 fpm まで沈んだ。推力の縦揺れのモーメントの補正：notes/AERO.md §3.25）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [248.5, 251.5], "timeout": 120 },
     { "do": "record_start" },
 
     { "do": "mark", "note": "A/P を外し、F/D だけで V/S +1,000 fpm を 30 秒（バーを追わない）" },
@@ -55,7 +56,7 @@
     { "do": "check", "note": "CMD の直後の指令は姿勢の 2° 以内（前は巻き上がった 8° 上）", "dref": "laminar/B747/autopilot/pitch_cmd", "op": "between", "value": [-2, 2], "rel": "th" },
     { "do": "watch", "note": "CMD の後 20 秒、荷重倍数 0.9〜1.1（前は 1.83 g）", "dref": "sim/flightmodel2/misc/gforce_normal", "min": 0.9, "max": 1.1, "timeout": 20 },
     { "do": "snapshot", "note": "20 秒後", "drefs": [ "laminar/B747/autopilot/pitch_cmd", "sim/flightmodel/position/theta", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/FMA/active_pitch_mode" ] },
-    { "do": "check", "note": "V/S +1,000 を飛ぶ（±400）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [600, 1400] },
+    { "do": "wait", "note": "V/S +1,000 に乗る（±400。2026-11-22 から待つ：V/S の則は 0.05 g（約 97 fpm/s）で寄せるので、手放しの 30 秒の沈みしだいで 20 秒の後さらに最大 60 秒）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "between", "value": [600, 1400], "timeout": 60 },
     { "do": "record_stop" }
   ]
 }

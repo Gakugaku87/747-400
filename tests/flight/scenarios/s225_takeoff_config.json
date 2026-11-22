@@ -27,7 +27,7 @@
     { "do": "check", "note": "アイドル：離陸形態警報なし", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 0 },
 
     { "do": "mark", "note": "推力を上げる（パーキング・ブレーキのまま）" },
-    { "do": "set", "note": "推力レバー 4 本を 0.6", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0.6 },
+    { "do": "set", "note": "推力レバー 4 本を 0.8（2026-11-22 から：11-20 の 16e396c8 でレバーの途中に最大上昇の折れ点ができ、0.6 では表示の N1 が 63 で 66.5 に届かなかった：PW_PPM p.196）", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0.8 },
     { "do": "wait", "note": "エンジン 2 の N1 が 66.5 を超えて CONFIG PARK BRK（ATA27 p.730、V1 なしでも：ATA31 p.188）", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 1, "timeout": 30 },
     { "do": "snapshot", "note": "N1", "drefs": [ "laminar/B747/engines/display_N1[1]", "laminar/B747/engines/display_N1[2]", "laminar/B747/airspeed/V1", "laminar/B747/gear/air_ground/pri_gnd" ] },
     { "do": "check", "note": "CONFIG FLAPS は出ない（フラップ 10）", "dref": "laminar/B747/CAS/warning_status[2]", "op": "==", "value": 0 },
@@ -41,7 +41,7 @@
     { "do": "mark", "note": "フラップ 25、エンジン 3 だけ推力" },
     { "do": "set", "note": "フラップ 25", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.833333 },
     { "do": "wait", "note": "フラップ 25", "dref": "laminar/B747/flt_ctrls/flap/transition_status", "op": "==", "value": 0, "timeout": 40 },
-    { "do": "set", "note": "エンジン 3 の推力レバーだけ 0.6", "dref": "sim/cockpit2/engine/actuators/throttle_ratio[2]", "value": 0.6 },
+    { "do": "set", "note": "エンジン 3 の推力レバーだけ 0.8", "dref": "sim/cockpit2/engine/actuators/throttle_ratio[2]", "value": 0.8 },
     { "do": "wait", "note": "エンジン 3 だけで CONFIG FLAPS（2 か 3：FCOM p.1603）", "dref": "laminar/B747/CAS/warning_status[2]", "op": "==", "value": 1, "timeout": 30 },
     { "do": "check", "note": "パーキング・ブレーキもまだ：CONFIG PARK BRK", "dref": "laminar/B747/CAS/warning_status[5]", "op": "==", "value": 1 },
     { "do": "check", "note": "エンジン 2 はアイドルのまま", "dref": "laminar/B747/engines/display_N1[1]", "op": "<", "value": 60 },

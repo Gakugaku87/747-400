@@ -1,6 +1,6 @@
 {
   "name": "s61_nd_orientation",
-  "description": "ND の向き・方位・航跡・旗（5-2 段 5a、パネルの変更。2026-10-27 の利用者の決定で、P&W は 109、GE は 570：どちらも MAP は航跡が上）の X-Plane での確認、空中。銚子沖の海上 10,000 ft・指示 250 kt（真 290 kt）で開始（機体を読み直す。前の 200 kt（真）は指示 約 170 kt で、270 t のクリーンでは失速の手前になり、A/P の ALT HOLD で失速したことがある）。西風 50 kt を入れて、方位 007 のまま航跡を右へずらす（偏流）。機長の ND（P&W：109）：MAP（航跡が上、TRK の枠、▽ は方位 007 の位置で目盛の縁に触れる、予測線は真上）、VOR（方位が上、HDG）、APP、PLN（北が上、枠は TRK、PLN の ▽、選択方位なし）、MAP CTR（航跡が上、TRK）、VOR CTR。副操縦士の ND の VOR（副操縦士の方位で上）。GE（570）も同じ。X-Plane の地図の層の向き（map_mode：方位が上は 0、MAP 2、PLN 4）。最後に IRU L・C・R を ATT にして、MAP の MAP・VTK・TRK の旗、VOR の HDG の旗。ND を撮る（撮る間は操縦輪を隠す）。",
+  "description": "ND の向き・方位・航跡・旗（5-2 段 5a、パネルの変更。2026-10-27 の利用者の決定で、P&W は 109、GE は 570：どちらも MAP は航跡が上）の X-Plane での確認、空中。銚子沖の海上 10,000 ft・指示 250 kt（真 290 kt）で開始（機体を読み直す。前の 200 kt（真）は指示 約 170 kt で、270 t のクリーンでは失速の手前になり、A/P の ALT HOLD で失速したことがある）。西風 50 kt を入れて、方位 007 のまま航跡を右へずらす（偏流）。機長の ND（P&W：109）：MAP（航跡が上、TRK の枠、▽ は方位 007 の位置で目盛の縁に触れる、予測線は真上）、VOR（方位が上、HDG）、APP、PLN（北が上、109 は距離の円と北の矢印で枠と方位の印なし：2026-11-05 の a21be9ef から、FCOM p.1027–1028・p.1142。選択方位なし）、MAP CTR（航跡が上、TRK）、VOR CTR。副操縦士の ND の VOR（副操縦士の方位で上）。GE（570）も同じ。X-Plane の地図の層の向き（map_mode：方位が上は 0、MAP 2、PLN 4）。最後に IRU L・C・R を ATT にして、MAP の MAP・VTK・TRK の旗、VOR の HDG の旗。ND を撮る（撮る間は操縦輪を隠す）。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 0, "speed_in_meters_per_second": 149.0 },
@@ -72,8 +72,9 @@
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "PLN：北が上", "dref": "laminar/B747/nd/up/capt", "op": "==", "value": 0 },
     { "do": "check", "note": "X-Plane の地図は PLN（4）", "dref": "sim/cockpit2/EFIS/map_mode", "op": "==", "value": 4 },
-    { "do": "check", "note": "PLN の枠は TRK（4）", "dref": "laminar/B747/nd/capt/box", "op": "==", "value": 4 },
-    { "do": "check", "note": "PLN の方位の印", "dref": "laminar/B747/nd/capt/hdg_ptr_pln", "op": "==", "value": 1 },
+    { "do": "check", "note": "109 の PLAN は距離の円と北の矢印（FCOM p.1027–1028・p.1142。2026-11-05 の a21be9ef から：前は TRK の枠 4）", "dref": "laminar/B747/nd/capt/pln_style", "op": "==", "value": 1 },
+    { "do": "check", "note": "PLN に方位の枠は無い", "dref": "laminar/B747/nd/capt/box", "op": "==", "value": 0 },
+    { "do": "check", "note": "PLN に方位の印は無い（前は 1）", "dref": "laminar/B747/nd/capt/hdg_ptr_pln", "op": "==", "value": 0 },
     { "do": "check", "note": "PLN には選択方位が無い（FCOM p.1142）", "dref": "laminar/B747/nd/capt/hdg_bug", "op": "==", "value": 0 },
     { "do": "shot", "name": "nd_pln" },
     { "do": "switch", "note": "MAP に戻す", "dref": "laminar/B747/nd/mode/capt/sel_dial_pos", "value": 2, "cmd": "laminar/B747/nd/mode/capt/sel_dial_up", "cmd_down": "laminar/B747/nd/mode/capt/sel_dial_dn" },
