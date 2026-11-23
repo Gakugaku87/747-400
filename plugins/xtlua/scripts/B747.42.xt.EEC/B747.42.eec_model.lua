@@ -307,6 +307,8 @@ M.RAMP_FADE = 5                             -- s
 -- warm for that altitude). The go-around rating stands for the takeoff
 -- rating: the FCOM has no normal-mode takeoff table, and its alternate-mode
 -- takeoff and go-around tables give the same thrust (PI.15.6, estimate).
+-- (2026-11-24, ENG-2) The P&W's takeoff rating in the takeoff the FPPM's
+-- Takeoff EPR tables (TABLE.PW.to, below); the CF6's the go-around's still.
 -- The maximum continuous tables (mct, below) depend on speed as well.
 local F = false
 M.TABLE = {
@@ -509,6 +511,81 @@ M.TABLE.PW.crz = {
     nai = {alt = {20000, 22000, 37000, 38000}, v = {-0.03, -0.04, -0.04, -0.03}},
     nai_wai = {alt = {20000, 22000}, v = {-0.06, -0.08}},
 }
+
+-- (2026-11-24, ENG-2 of the 2026-11-23 review) the P&W's takeoff EPR, the
+-- FPPM's (Boeing D632U002-RZ043, 747-400F/PW4056, FAA): Takeoff EPR p.44
+-- (1.2.20), TO1 Takeoff EPR, 8 % thrust reduction p.57 (1.3.11), TO2
+-- Takeoff EPR, 20 % thrust reduction p.69 (1.3.23). Rows by airport OAT
+-- (°C, hot to cold; the last "10 & BELOW"), columns by airport pressure
+-- altitude (ft); false where blank (too hot for the altitude; TO2 at 50 °C
+-- and 10,000 ft too). For engine bleed with 3 packs on and anti-ice on or
+-- off: no anti-ice adjustment (p.22 (1.1.4)); 2 packs off +0.01, 3 packs
+-- off +0.02 (each page). Read at the OAT (the tables' `tat`), held at the
+-- ends: the FMC's TO reference (B747.42.ref_thrust_model.lua) and the
+-- EEC's maximum while the thrust limit is a takeoff's (M.update's
+-- inp.takeoff). Before, the go-around table at the TAT stood for the
+-- takeoff rating (above: "the FCOM has no normal-mode takeoff table"):
+-- 0.026 EPR over p.44 on average (0.01-0.04 at 5,000-10,000 ft and at 35
+-- to 50 °C, held from 54 °C), TO 1 and TO 2 (by the EPR model's thrust)
+-- 0.035 and 0.042 over p.57 and p.69
+do
+    local alt = {-2000, -1000, 0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000}
+    local oat = {70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10}
+    local packs = {alt = {-2000, 10000}, [2] = {0.01, 0.01}, [3] = {0.02, 0.02}}
+    M.TABLE.PW.to = {alt = alt, tat = oat, packs_off = packs, v = {      -- p.44
+        {1.25, 1.25, 1.25, F, F, F, F, F, F, F, F, F, F},
+        {1.28, 1.28, 1.29, 1.29, 1.29, 1.29, F, F, F, F, F, F, F},
+        {1.32, 1.32, 1.32, 1.32, 1.32, 1.32, 1.32, 1.32, F, F, F, F, F},
+        {1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, F, F},
+        {1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39},
+        {1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.43, 1.42, 1.42, 1.42, 1.42, 1.42},
+        {1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46},
+        {1.46, 1.48, 1.50, 1.50, 1.50, 1.50, 1.50, 1.50, 1.50, 1.50, 1.49, 1.49, 1.49},
+        {1.46, 1.48, 1.51, 1.52, 1.53, 1.53, 1.53, 1.53, 1.53, 1.53, 1.53, 1.53, 1.53},
+        {1.46, 1.48, 1.51, 1.52, 1.54, 1.55, 1.56, 1.56, 1.56, 1.56, 1.56, 1.56, 1.56},
+        {1.46, 1.48, 1.51, 1.52, 1.54, 1.55, 1.56, 1.57, 1.59, 1.59, 1.59, 1.59, 1.59},
+        {1.46, 1.48, 1.51, 1.52, 1.54, 1.55, 1.56, 1.57, 1.60, 1.61, 1.62, 1.62, 1.62},
+        {1.46, 1.48, 1.51, 1.52, 1.54, 1.55, 1.56, 1.57, 1.60, 1.61, 1.62, 1.63, 1.65},
+    }}
+    M.TABLE.PW.to1 = {alt = alt, tat = oat, packs_off = packs, v = {     -- p.57
+        {1.22, 1.22, 1.22, F, F, F, F, F, F, F, F, F, F},
+        {1.25, 1.25, 1.26, 1.26, 1.26, 1.26, F, F, F, F, F, F, F},
+        {1.29, 1.29, 1.29, 1.29, 1.29, 1.29, 1.29, 1.29, F, F, F, F, F},
+        {1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, F, F},
+        {1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35, 1.35},
+        {1.38, 1.38, 1.38, 1.38, 1.38, 1.38, 1.38, 1.38, 1.37, 1.37, 1.37, 1.37, 1.37},
+        {1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41, 1.41},
+        {1.41, 1.42, 1.44, 1.44, 1.44, 1.44, 1.44, 1.44, 1.44, 1.44, 1.43, 1.43, 1.43},
+        {1.41, 1.42, 1.45, 1.45, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46, 1.46},
+        {1.41, 1.42, 1.45, 1.45, 1.47, 1.48, 1.49, 1.49, 1.49, 1.49, 1.49, 1.49, 1.49},
+        {1.41, 1.42, 1.45, 1.45, 1.47, 1.48, 1.49, 1.49, 1.51, 1.51, 1.51, 1.51, 1.51},
+        {1.41, 1.42, 1.45, 1.45, 1.47, 1.48, 1.49, 1.49, 1.52, 1.53, 1.53, 1.53, 1.53},
+        {1.41, 1.42, 1.45, 1.45, 1.47, 1.48, 1.49, 1.49, 1.52, 1.53, 1.53, 1.54, 1.56},
+    }}
+    M.TABLE.PW.to2 = {alt = alt, tat = oat, packs_off = packs, v = {     -- p.69
+        {1.21, 1.21, 1.21, F, F, F, F, F, F, F, F, F, F},
+        {1.21, 1.21, 1.22, 1.22, 1.22, 1.22, F, F, F, F, F, F, F},
+        {1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, 1.24, F, F, F, F, F},
+        {1.26, 1.26, 1.26, 1.26, 1.26, 1.26, 1.26, 1.26, 1.26, 1.26, 1.26, F, F},
+        {1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, 1.28, F},
+        {1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.31, 1.30, 1.30, 1.30, 1.30, 1.30},
+        {1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33, 1.33},
+        {1.33, 1.34, 1.36, 1.36, 1.36, 1.36, 1.36, 1.36, 1.36, 1.36, 1.35, 1.35, 1.35},
+        {1.33, 1.34, 1.36, 1.37, 1.37, 1.37, 1.37, 1.37, 1.37, 1.37, 1.37, 1.37, 1.37},
+        {1.33, 1.34, 1.36, 1.37, 1.38, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39, 1.39},
+        {1.33, 1.34, 1.36, 1.37, 1.38, 1.39, 1.39, 1.40, 1.41, 1.41, 1.41, 1.41, 1.41},
+        {1.33, 1.34, 1.36, 1.37, 1.38, 1.39, 1.39, 1.40, 1.41, 1.42, 1.43, 1.43, 1.43},
+        {1.33, 1.34, 1.36, 1.37, 1.38, 1.39, 1.39, 1.40, 1.41, 1.42, 1.43, 1.43, 1.44},
+    }}
+end
+-- the takeoff's thrust of each table, a share of the full rating's (p.57:
+-- 8 %, p.69: 20 % thrust reduction); and FPPM p.22 (1.1.4): the minimum
+-- allowable EPR for an assumed temperature's reduced thrust, "based on 25%
+-- takeoff thrust reduction", by the MAX TAKEOFF EPR FOR ACTUAL OAT
+M.PW_TO_SHARE = {1, 0.92, 0.80}
+M.PW_TO_MIN = {less = 0.25,
+    max = {1.31, 1.35, 1.40, 1.45, 1.50, 1.55, 1.60, 1.65, 1.70, 1.75},
+    min = {1.21, 1.23, 1.26, 1.29, 1.32, 1.35, 1.37, 1.40, 1.42, 1.44}}
 -- Max Continuous %N1, CF6-80C2B1F (PI.23.1-23.3, FCOM p.379-381), 5,000 to
 -- 39,000 ft (held below 5,000: estimate): by pressure altitude the KIAS
 -- rows and the TAT columns (°C, cold to warm) of N1. The packs' adjustment
@@ -778,6 +855,47 @@ function M.lookup_crz(t, tat, alt)
     end
 end
 
+-- (2026-11-24, ENG-2) y at x on points (xs, ys; xs rising or falling):
+-- linear between them, on the end segments' lines beyond
+local function on_points(xs, ys, x)
+    local n = #xs
+    local up = xs[n] > xs[1]
+    local i = 2
+    while i < n and ((up and x > xs[i]) or (not up and x < xs[i])) do i = i + 1 end
+    local d = xs[i] - xs[i - 1]
+    if d == 0 then return ys[i] end
+    return ys[i - 1] + (ys[i] - ys[i - 1]) * (x - xs[i - 1]) / d
+end
+
+-- (ENG-2) FPPM p.22 (1.1.4): the minimum allowable takeoff EPR (25 % less
+-- thrust) for a MAX TAKEOFF EPR: linear between its rows, on its end rows'
+-- lines beyond them (estimate: the hot rows' EPRs under 1.31, and the
+-- derated EPRs below)
+function M.pw_to_min(e)
+    return on_points(M.PW_TO_MIN.max, M.PW_TO_MIN.min, e)
+end
+
+-- (ENG-2) the P&W's takeoff thrust (a share of the full rating's) against
+-- its EPR at an OAT (°C) and pressure altitude (ft), for 3 packs on: the
+-- three FPPM tables at 1, 0.92 and 0.80 (PW_TO_SHARE), and each one's 25 %
+-- less thrust by p.22's table at 0.75, 0.69 and 0.60 (the TO1's and TO2's
+-- an estimate: p.22's is the full rating's), the EPRs falling. Filled into
+-- es and ss, the caller's tables (no new ones a frame). Between the points
+-- linear, beyond them on the end segments' lines (estimates): pw_to_epr
+-- for a share (a derate the operator sets other than 8 and 20 %, 25 % less
+-- than a derate), pw_to_share for an EPR (an assumed temperature's)
+function M.pw_to_points(oat, alt, es, ss)
+    local T, s, q = M.TABLE.PW, M.PW_TO_SHARE, 1 - M.PW_TO_MIN.less
+    local e0, e1, e2 = M.lookup(T.to, oat, alt), M.lookup(T.to1, oat, alt), M.lookup(T.to2, oat, alt)
+    es[1], es[2], es[3] = e0, e1, e2
+    es[4], es[5], es[6] = M.pw_to_min(e0), M.pw_to_min(e1), M.pw_to_min(e2)
+    ss[1], ss[2], ss[3] = s[1], s[2], s[3]
+    ss[4], ss[5], ss[6] = s[1] * q, s[2] * q, s[3] * q
+    return es, ss
+end
+function M.pw_to_epr(es, ss, share) return on_points(ss, es, share) end
+function M.pw_to_share(es, ss, epr) return on_points(es, ss, epr) end
+
 -- X-Plane's idle ratio (M.IDLE): approach idle, or minimum idle in the air
 -- or on the ground, at a pressure altitude (ft)
 function M.idle_ratio(air, alt, approach)
@@ -810,6 +928,8 @@ local function adjustment(t, inp, alt, nai)
     end
     return d
 end
+-- (ENG-2) for the P&W's takeoff reference (B747.42.ref_thrust_model.lua)
+M.adjustment = adjustment
 
 -- (the FMC's step 9g3) a table's rating with its bleed adjustments at a TAT
 -- and pressure altitude: the reference thrust limit's (B747.42.
@@ -836,6 +956,11 @@ function M.inputs()
         type = "PW",                         -- "PW" or "GE" (anything else: P&W)
         alt = 0,                             -- pressure altitude, ft
         tat = 15,                            -- °C
+        -- (2026-11-24, ENG-2) the OAT (°C; nil: the TAT's) and a takeoff's
+        -- thrust limit (the FMC's TO, TO 1, TO 2 or D-): the P&W's maximum
+        -- then the FPPM's Takeoff EPR at the OAT (TABLE.PW.to)
+        oat = nil,
+        takeoff = false,
         kias = 0,
         packs_on = 3,                        -- packs operating (their valves open)
         nai = {false, false, false, false},  -- engine anti-ice valve open
@@ -1077,7 +1202,17 @@ function M.update(s, inp, dt)
     local to_share, tla_full = M.rating_mix(inp.alt, inp.kias)
     -- the go-around tables stop at 10,000 ft: held above (estimate)
     local ga_alt = math.min(inp.alt, tables.ga.alt[#tables.ga.alt])
-    local ga = M.lookup(tables.ga, inp.tat, ga_alt)
+    -- (2026-11-24, ENG-2) the P&W's (not the RB211's) takeoff rating while
+    -- the thrust limit is a takeoff's: the FPPM's Takeoff EPR at the OAT
+    -- (FPPM p.44, p.22: the Max Takeoff EPR; TABLE.PW.to, also to 10,000
+    -- ft), not the go-around table at the TAT (0.026 EPR over it on average).
+    -- In the go-around and the other limits the go-around table's as before
+    -- (the two are the same rating, PW_PPM p.196; which table at which mode
+    -- change: estimate, so the TO reference stays under the maximum after
+    -- the liftoff, where the TAT rises over the OAT)
+    local ga_t = tables.ga
+    if inp.takeoff and inp.type ~= "GE" and not inp.rr and tables.to then ga_t = tables.to end
+    local ga = M.lookup(ga_t, ga_t == tables.ga and inp.tat or (inp.oat or inp.tat), ga_alt)
     local clb = M.lookup(tables.clb, inp.tat, inp.alt)
     -- (the FMC's step 9h1) the maximum continuous band: the table's to
     -- 22,000 ft, not under the maximum climb's, gone by 25,000 ft (the CF6;
@@ -1115,8 +1250,9 @@ function M.update(s, inp, dt)
         else
             -- (B2) the P&W's: the go-around's, above its table the higher
             -- of the table's held and the maximum continuous plus
-            -- PW_MAX_OVER_MCT (estimate)
-            max = ga + adjustment(tables.ga, inp, ga_alt, nai)
+            -- PW_MAX_OVER_MCT (estimate). (ENG-2) In a takeoff the FPPM's
+            -- Takeoff EPR (ga_t)
+            max = ga + adjustment(ga_t, inp, ga_alt, nai)
             if inp.alt > ga_alt then
                 local mct_n = mct_pw and (mct_pw + adjustment(tables.mct, inp, inp.alt, nai)) or clb_n
                 if inp.alt > M.PW_TO_ALT then

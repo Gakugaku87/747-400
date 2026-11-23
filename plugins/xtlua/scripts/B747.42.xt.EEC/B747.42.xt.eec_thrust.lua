@@ -99,6 +99,10 @@ function B747_eec_update()
     if B747DR_engineType == 1 then inp.type = "GE" else inp.type = "PW" end
     inp.alt = simDR_eec_pressure_alt
     inp.tat = simDR_TAT
+    -- (2026-11-24, ENG-2) the P&W's maximum in a takeoff: the FPPM's
+    -- Takeoff EPR at the OAT (B747.42.eec_model.lua's TABLE.PW.to)
+    inp.oat = simDR_temperature
+    inp.takeoff = B747_ref_thrust_model.is_takeoff(B747_eec_thrlim_mode())
     inp.kias = simDR_ias_pilot
     inp.packs_on = B747DR_packs_operating     -- the packs with their valves open (the pack model)
     inp.wai = B747DR_eec_wing_ai_valve[0] > 0.5 or B747DR_eec_wing_ai_valve[1] > 0.5
@@ -214,6 +218,7 @@ local refIn = {}
 function B747_eec_reference(engine)
     local inp = eec_inputs
     refIn.type, refIn.alt, refIn.tat = inp.type, inp.alt, inp.tat
+    refIn.oat = inp.oat     -- (2026-11-24, ENG-2) the P&W's takeoff's
     refIn.packs_on, refIn.wai, refIn.nai = inp.packs_on, inp.wai, inp.nai[engine + 1]
     refIn.mach = simDR_epr_mach
     refIn.kias = inp.kias

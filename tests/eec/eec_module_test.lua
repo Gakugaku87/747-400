@@ -64,6 +64,44 @@ frames(0.2)
 T.near(get(ENG .. "display_EPR_max", 0), 1.53, 0.005, "P&W: 3 packs off raise the max EPR by 0.02")
 rt:set("laminar/B747/air/packs_operating", 3)    -- the pack model (B747.55.xt.packs.lua)
 
+-- (2026-11-24, ENG-2 of the 2026-11-23 review) in a takeoff's thrust limit
+-- the P&W's reference and maximum the FPPM's Takeoff EPR (747-400F/PW4056)
+-- at the OAT: 5,000 ft, OAT 25, TAT 28. Before, the go-around table at the
+-- TAT (1.572) for both
+rt:set("sim/flightmodel2/position/pressure_altitude", 5000)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 25)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 28)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_max", 0), 1.56, 0.0005, "P&W TO at 5,000 ft, OAT 25 (TAT 28): the max EPR p.44's 1.56 (before 1.572)")
+T.near(get(ENG .. "display_EPR_ref", 0), 1.56, 0.0005, "TO's reference p.44's 1.56")
+-- TO 2 (the FMS's number 12, its 20 %): p.69, the maximum the full rating's
+rt:set("laminar/B747/fms/thrlim/code", 12)
+rt:set("laminar/B747/fms/thrlim/to_pct", 20)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 0), 1.39, 0.0005, "TO 2's reference p.69's 1.39 (before 1.435: 20 % less thrust by the EPR model)")
+T.near(get(ENG .. "to_reduction"), 20, 1e-6, "TO 2: 20 % less thrust for the FMC's climb derate")
+T.near(get(ENG .. "display_EPR_max", 0), 1.56, 0.0005, "TO 2: the max EPR the full rating's")
+-- D-TO (110), SEL 60: p.44's 1.32 at 60 °C under p.22's minimum for 1.56
+-- (1.354): the minimum, 25 % less thrust
+rt:set("laminar/B747/fms/thrlim/code", 110)
+rt:set("laminar/B747/fms/thrlim/to_pct", 0)
+rt:set("laminar/B747/fms/thrlim/sel", 60)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 0), 1.354, 0.0005, "D-TO, SEL 60: p.22's minimum 1.354 for p.44's 1.56 (before 1.402: 25 % less thrust by the EPR model)")
+T.near(get(ENG .. "to_reduction"), 25, 1e-6, "D-TO, SEL 60: 25 % less, the most (FCOM p.1273)")
+-- GA (50) on the ground: the go-around table at the TAT, its maximum too
+rt:set("laminar/B747/fms/thrlim/code", 50)
+rt:set("laminar/B747/fms/thrlim/sel", -99)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 0), 1.572, 0.0005, "GA: the go-around table at the TAT 28, 1.572 (PI.10.37)")
+T.near(get(ENG .. "display_EPR_max", 0), 1.572, 0.0005, "GA: the max EPR the go-around table's")
+rt:set("laminar/B747/fms/thrlim/code", 0)
+rt:set(ENG .. "ref_thr_limit_mode", "")
+rt:set("sim/flightmodel2/position/pressure_altitude", 0)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
+frames(0.2)
+
 -- in the climb above 25,000 ft the lever reaches the climb rating at 35°
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
