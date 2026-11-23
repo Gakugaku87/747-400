@@ -106,29 +106,9 @@ function round_thrustcalc(x, input_type)
     end
   end
 
-  function find_closest_temperature(table_in, temp_target)
-	local temp_table = {}
-	local closest_match
-	local last_difference = 99999999
-	local counter = 1
-
-	for i, v in pairs(table_in) do
-		for i, v in pairs(v) do
-			table.insert(temp_table, i)
-		end
-	end
-	table.sort(temp_table)
-
-	for i,v in pairs(temp_table) do
-		local distance = math.abs(temp_target - v) --Distance away
-		if distance < last_difference then
-			closest_match = v
-			last_difference = distance
-		end
-	end
-
-	return closest_match
-  end
+  -- (2026-11-24, ENG-7) find_closest_temperature is gone with the GE's
+  -- go-around branch, its only caller; the RB211's cruise table still uses
+  -- find_closest_weight and find_closest_altitude
 
 	function find_closest_weight(table_in, weight_target)
 		local temp_table = {}

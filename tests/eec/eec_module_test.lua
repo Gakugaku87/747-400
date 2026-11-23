@@ -124,6 +124,29 @@ end
 T.equal(ns.find_closest_weight(ns.P85M_epr_PW4062, 270), 260, "the cruise table (a namespace): the nearest weight, the lower on a tie: 260 t for 270")
 T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 35), 35, "its nearest altitude: 35 kft")
 T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 36), 35, "on a tie the lower one")
+-- (2026-11-24, ENG-7 of the 2026-11-23 review) the upstream's takeoff,
+-- climb, cruise and go-around branches of PW() and GE() are gone: the FMC's
+-- reference and the EEC's maximum overwrote what they set. The P&W in CRZ
+-- looks up no cruise table (before, two lookups a frame, each building and
+-- sorting a table), the RB211 still does (its own branches); the functions
+-- only they called are gone
+do
+    local calls = 0
+    local fw, fa = ns.find_closest_weight, ns.find_closest_altitude
+    ns.find_closest_weight = function(...) calls = calls + 1; return fw(...) end
+    ns.find_closest_altitude = function(...) calls = calls + 1; return fa(...) end
+    rt:set("laminar/B747/engines/type", 0)
+    rt:set("laminar/B747/fms/thrlim/code", 30)
+    frames(1)
+    T.equal(calls, 0, "P&W in CRZ: no cruise table lookups (ENG-7; before, two a frame)")
+    rt:set("laminar/B747/engines/type", 2)
+    frames(0.2)
+    T.check(calls > 0, "the RB211 in CRZ: its own cruise table lookups still run (" .. calls .. ")")
+    ns.find_closest_weight, ns.find_closest_altitude = fw, fa
+    T.check(ns.take_off_EPR_PW == nil and ns.in_flight_EPR_PW == nil and ns.in_flight_N1_GE == nil
+        and ns.find_closest_temperature == nil, "take_off_EPR_PW, in_flight_EPR_PW, in_flight_N1_GE and find_closest_temperature are gone")
+    T.check(type(ns.take_off_N1_GE) == "function", "take_off_N1_GE stays (the GE's takeoff N1 factor: ENG-4, not changed)")
+end
 rt:set("laminar/B747/engines/type", 0)
 rt:set("laminar/B747/fms/thrlim/code", 0)
 rt:set(ENG .. "ref_thr_limit_mode", "")
