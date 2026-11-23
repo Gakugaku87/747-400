@@ -2367,6 +2367,37 @@ function B747_fms_vnav_exec()
   vnavMod = nil
 end
 function B747_fms_vnav_erase() vnavMod = nil end
+-- (2026-11-24, review FMC-8) the takeoff's reference altitude: the
+-- barometric altitude the FMC records as the airplane accelerates through
+-- 100 kt on the ground (FCOM p.667 (4.20.9): for LNAV and VNAV, the flap
+-- retraction's acceleration and the climb thrust), the base of ACCEL HT,
+-- E/O ACCEL HT and THR REDUCTION's height (FCOM p.1318-1319
+-- (11.40.42-43): the runway's elevation added). None before a takeoff (an
+-- air start) or on the ground below 100 kt: the origin's elevation, as
+-- before. Before, always the origin airport's elevation from the
+-- navigation data, off by the altimeter setting's error and the runway's
+-- height on the airport (KDEN RW26 140 ft below it). (Locals in a block:
+-- the main chunk is at Lua's 200 locals)
+do
+  local toBaro, toIasPrev = nil, nil
+  function B747_fms_to_ref_alt()
+    if toBaro then return toBaro end
+    local r = B747_fmc_route.rte
+    return (r and r.origin and r.origin.elev) or 0
+  end
+  -- each frame
+  function B747_fms_to_baro_update()
+    local ias = simDR_ias_pilot
+    if simDR_onGround == 1 then
+      if ias < 100 then
+        toBaro = nil
+      elseif toIasPrev ~= nil and toIasPrev < 100 then
+        toBaro = simDR_pressureAlt1
+      end
+    end
+    toIasPrev = ias
+  end
+end
 local vnavGaSeen = nil
 local vnavEoNext = 0
 local function update_vnav()
@@ -2437,13 +2468,14 @@ local function update_vnav()
   -- the takeoff (step 9c; FCOM p.1255): V2 selected on TAKEOFF REF (999
   -- none), ACCEL HT above the origin, the flap handle; the airspeed, VNAV
   -- engaged (the AFDS's)
-  local rte = B747_fmc_route.rte
+  -- (review FMC-8) above the takeoff's reference altitude (the barometric
+  -- altitude at 100 kt: B747_fms_to_ref_alt)
   local v2 = B747DR_airspeed_V2
   vnavTakeoff.v2 = (v2 > 0 and v2 < 900) and v2 or nil
-  vnavTakeoff.accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].accelht) or 1000)
+  vnavTakeoff.accel_alt = B747_fms_to_ref_alt() + (tonumber(fmsModules["data"].accelht) or 1000)
   -- (step 9h3b) the E/O ACCEL HT above the origin; an engine failure
   -- sensed, VREF 30 (FCOM p.1265-1266)
-  vnavTakeoff.eo_accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].eoaccelht) or 1000)
+  vnavTakeoff.eo_accel_alt = B747_fms_to_ref_alt() + (tonumber(fmsModules["data"].eoaccelht) or 1000)
   vnavTakeoff.flaps = simDR_fms_vnav_flaps
   inp.takeoff = vnavTakeoff
   inp.eo, inp.vref = B747_fms_eng_out(), B747DR_airspeed_Vf30
@@ -2639,7 +2671,7 @@ local THRLIM_PITCH = {[4] = "VNAV", [5] = "VNAV", [6] = "VNAV", [8] = "FLCH"}
 local function update_thrlim()
   local inp, r = thrlimIn, B747_fmc_route.rte
   inp.ground = simDR_onGround == 1
-  inp.alt_agl = simDR_pressureAlt1 - ((r and r.origin and r.origin.elev) or 0)
+  inp.alt_agl = simDR_pressureAlt1 - B747_fms_to_ref_alt()   -- (review FMC-8)
   inp.thr_red = tonumber(fmsModules["data"].thrred) or 5
   inp.flaps = simDR_fms_vnav_flaps
   local pitch = B747DR_fms_afds_pitch
@@ -6549,6 +6581,7 @@ function after_physics()
     update_perf()
     update_econ()
     update_preds()
+    B747_fms_to_baro_update()     -- (review FMC-8) before VNAV's and the thrust limit's
     update_vnav()
     update_thrlim()
     update_navdb()
