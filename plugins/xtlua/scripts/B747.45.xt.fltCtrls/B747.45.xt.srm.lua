@@ -210,9 +210,19 @@ local function trim_of(u) return u / 7.5 - 1 end
 -- (their A/P came off before it had trimmed the start's 1.3 units out) to
 -- the old fit; the 10,000 ft fit alone left FL350's start 0.6 units nose
 -- down (s261 sank 550 ft). Still an estimate, with no centre of gravity in
--- it (notes/ATA-27.md §23)
-local AS_A, AS_B, AS_S = 2.18, 3.476, 511   -- units, units a CL, the wing's m2
-local AS_MACH0, AS_MACH1, AS_MACH_UNITS = 0.75, 0.82, 0.6
+-- it (notes/ATA-27.md §23).
+-- 2026-11-24: fitted again with the pitch corrections of that day (the
+-- thrust's a quarter of its size and the downwash's 0.36 a degree up to
+-- M.58: notes/AERO.md §3.27-3.28; less of them, so the slow trims came 0.4
+-- to 0.7 units nose up of the fit of 2026-11-22). The same two measures,
+-- the balance (the units less the elevator left over 2.5): 10,000 ft 3.64,
+-- 4.37 and 5.06 units at CL 0.39, 0.51 and 0.63 (the fit before 3.52,
+-- 3.96, 4.37), FL350 4.44, 4.31 and 4.29 at M.85, .82 and .78. AS_A +
+-- AS_B x CL fits the three at 10,000 ft within 0.01; over it FL350 is
+-- -0.08, +0.22 and +0.53 at M.78, .82 and .85: up to AS_MACH_UNITS from
+-- AS_MACH0 to AS_MACH1 (within 0.08) (notes/ATA-27.md §25)
+local AS_A, AS_B, AS_S = 1.41, 5.80, 511    -- units, units a CL, the wing's m2
+local AS_MACH0, AS_MACH1, AS_MACH_UNITS = 0.79, 0.85, 0.5
 local AS_Q_MIN = 1620                       -- Pa: about 100 kt EAS
 local function air_start_units(q, kg, mach)
     if q < AS_Q_MIN then return 7.7 end
