@@ -593,6 +593,30 @@ T.check(ns.B747_eec_target(2) < get(ENG .. "TRA", 2) - 0.2, "overspeed: GE N2 at
 T.equal(get(ADV, RPM_LIM + 2), 1, ">ENG 3 RPM LIM: GE from the EEC")
 rt:frame(1 / 30)
 T.equal(get(ADV, RPM_LIM + 2), 0, "GE: RPM LIM goes with N2 back below its limit")
+-- (2026-11-24, PNL-5) the EICAS's command N1 (TRA) of a running engine at
+-- the idle lever: the idle N1 the display is pinned to (FCOM p.873: the
+-- command equals the actual N1 once stable), not the EEC's own idle end
+-- (25 %, under any idle); the display's pin still works off the EEC's own
+-- command; a stopped engine's: the EEC's
+local running_was = get("sim/flightmodel/engine/ENGN_running", 1)
+rt:set(USER, 1, 0)
+rt:set("sim/flightmodel/engine/ENGN_running", 1, 0)
+frames(3)
+T.near(ns.B747_eec_command(1), 25, 1e-6, "GE: the idle lever's own command 25 % (under any idle)")
+T.near(get(ENG .. "TRA", 1), 25, 1e-6, "GE: engine 2 stopped: the EICAS's command the EEC's")
+local n1_was = get(ENG .. "display_N1", 1)
+rt:set("sim/flightmodel/engine/ENGN_running", 1, 1)
+frames(10)
+local pin = ns.B747_ge_idle_pin(1, 0)
+T.near(pin, 25.9, 1e-6, "GE: the ground's idle pin 25.9 %")
+T.near(get(ENG .. "TRA", 1), pin, 1e-6, "GE: engine 2 running at idle: the EICAS's command the idle pin")
+T.check(get(ENG .. "display_N1", 1) > n1_was + 5 and get(ENG .. "display_N1", 1) < pin,
+    string.format("GE: the display goes to the idle pin as before (%.1f from %.1f)", get(ENG .. "display_N1", 1), n1_was))
+rt:set(USER, 1, 1.0)
+frames(3)
+T.near(get(ENG .. "TRA", 1), ns.B747_eec_command(1), 1e-6, "GE: the lever forward: the EICAS's command the EEC's")
+rt:set("sim/flightmodel/engine/ENGN_running", 1, running_was)
+frames(1)
 
 -- (ENG-31) GE in reverse: X-Plane's maximum reverse throttle 1, the
 -- reverse throttle the ECU's share of the maximum rated thrust (0.9 at full

@@ -119,6 +119,10 @@ end
 
 local last_thrust_n = {0.0, 0.0, 0.0, 0.0}
 local last_N1 = {0.0, 0.0, 0.0, 0.0}
+-- (2026-11-24, PNL-5) the EEC's own command, last frame's, for the display's
+-- idle pin below (it read laminar/B747/engines/TRA, which now carries the
+-- EICAS's command: at least the idle N1 the display is pinned to)
+local eec_cmd_ge = {[0] = 0, 0, 0, 0}
 -- (2026-11-10) the N1 shown in the air for a thrust (N) at this frame's air
 -- data (the corrected thrust's polynomial below, no state): N1_display_GE's,
 -- and the EEC's thrust control takes its slope against the thrust from it
@@ -213,7 +217,7 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
 
     --Engine Idle Logic (Minimum / Approach)
     N1_low_idle = B747_ge_idle_pin(engine_in, altitude_ft_in)
-    if simDR_reverser_on[engine_in] ==0 and B747DR_throttle_resolver_angle[engine_in] < tonumber(N1_low_idle) and simDR_engine_running[engine_in] == 1 then
+    if simDR_reverser_on[engine_in] ==0 and eec_cmd_ge[engine_in] < tonumber(N1_low_idle) and simDR_engine_running[engine_in] == 1 then
      -- N1_actual = N1_low_idle
       N1_actual = B747_animate_value(last_N1[engine_in],N1_low_idle,0,115,0.1) 
       --print(" pin N1_actual 2 "..N1_actual)
@@ -389,7 +393,19 @@ function GE(altitude_ft_in)
     --(2026-11-10) the EGT model, from the N1 just shown (B747.42.xt.egt.lua)
     B747DR_display_GE_EGT[i] = B747_egt(i, "GE")
 
-    B747DR_throttle_resolver_angle[i] = throttle_resolver_angle_GE(i)
+    --(2026-11-24, PNL-5) the EICAS's command N1: the EEC's command, a running
+    --engine's at least the idle N1 the display is pinned to (FCOM p.873: the
+    --command N1 equals the actual N1 once stable). The EEC's own idle end
+    --commands 25 %, under any idle, so that its control comes back to
+    --X-Plane's idle (B747.42.xt.eec_thrust.lua): the mark stood 0.9 % under
+    --the idle bar's end on the ground, 10-25 % under it in the air. The
+    --display's pin still tests the EEC's own command
+    local cmd = throttle_resolver_angle_GE(i)
+    eec_cmd_ge[i] = cmd
+    if simDR_engine_running[i] == 1 and simDR_reverser_on[i] == 0 then
+      cmd = math.max(cmd, B747_ge_idle_pin(i, altitude_ft_in))
+    end
+    B747DR_throttle_resolver_angle[i] = cmd
 	end
 
   if B747DR_log_level >= 1 then

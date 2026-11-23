@@ -145770,65 +145770,65 @@ GROUP Upper EICAS
             GROUP Thrust Command N1 G
               SHOW_EQUAL 1.000000 laminar/B747/engines/type
               gen_pointer Engine 4
-                POS 1748.500000 883.500000
+                POS 1748.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[3]
                 SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
               gen_pointer Engine 3
-                POS 1642.500000 883.500000
+                POS 1642.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[2]
                 SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
               gen_pointer Engine 2
-                POS 1536.500000 883.500000
+                POS 1536.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[1]
                 SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
               gen_pointer Engine 1
-                POS 1430.500000 883.500000
+                POS 1430.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[0]
                 SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
