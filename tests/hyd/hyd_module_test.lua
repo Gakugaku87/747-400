@@ -552,6 +552,32 @@ co_frames(1)
 T.near(get("sim/flightmodel/controls/wing3l_spo2def"), 45 * 0.36 * 240 / 340, 0.1, "340 kt: 0.36 x 240 / 340 of it (FCTM's 340 kt)")
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 200)
 co_frames(1)
+-- (2026-11-23 review FCTL-5) the lever moved in the air: X-Plane's spoiler
+-- follows the 3D's at 0.36 of it frame by frame. Before, the frame the lever
+-- went DN it jumped from 16.2 to 40.5 degrees (the whole lag of the 3D's
+-- spoiler, with nothing taken off), and going out it stayed at 0 for 9 frames
+do
+    local XSP3, SPL, SBL = "sim/flightmodel/controls/wing3l_spo2def", FC .. "spoilers", "laminar/B747/flt_ctrls/speedbrake_lever"
+    local function watch(lever, seconds)
+        rt:set(SBL, lever)
+        local peak, off, first = 0, 0, nil
+        for f = 1, math.floor(seconds * 30 + 0.5) do
+            rt:apply_control_objects()
+            rt:frame(1 / 30)
+            local x, a = get(XSP3), get(SPL, 3)
+            peak, off = math.max(peak, x), math.max(off, math.abs(x - 0.36 * a))
+            first = first or x
+        end
+        return peak, off, first
+    end
+    local peak, off = watch(0, 2)
+    T.check(peak <= 45 * 0.36 + 0.01, "in the air, lever DN: X-Plane's spoiler 3 never above its 16.2 degrees (" .. peak .. ")")
+    T.check(off < 0.01, "... and at 0.36 of the 3D's spoiler 3 every frame (" .. off .. " off)")
+    local _, off2, first = watch(0.53, 4)
+    T.check(first > 0, "lever back to the flight detent: X-Plane's spoiler 3 moves the first frame (" .. first .. ")")
+    T.check(off2 < 0.01, "... at 0.36 of the 3D's every frame (" .. off2 .. " off)")
+    T.near(get(XSP3), 45 * 0.36, 0.01, "... and at 16.2 again")
+end
 rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0.5)
 co_frames(2)
 T.near(get("sim/flightmodel/controls/wing3l_spo2def"), 0, 0.1, "roll right: X-Plane's left spoiler 3 down to 0 (the 3D's 45 less the roll's 19.4)")

@@ -550,3 +550,10 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
   - リバースレバー 2・4 を上げている間は、クラッチパックのカムがレバーを DN から持ち上げる（ATA27 p.174 (p.38)）。この間に DN へ押したレバーは、DN の外（S217 が閉じる 0.07 のすぐ上）まで持ち上げる（前は UP まで押し上げていた）。カムの持ち上げ量は資料に無いので、S217 が閉じるところまでにした（**推定**）。
 - 試験：`tests/fltctrls/speedbrake_model_test.lua`（UP の後に FLIGHT DETENT・ARM・DN へ戻すと、それぞれ 3 秒そのまま、SPEEDBRAKE AUTO なし、作動器は DN で格納、もう一度 ARM で伸びる。伸びる途中の戻し。リバース 2 の間の DN）、`tests/fltctrls/fltctrls_module_test.lua`（接地で UP の後、`speed_brakes_up_one` を 3 回で 0.53・0.125・0、3 秒後も 0、X-Plane の比 0）。直す前のコードでは、模型の 4 件と、モジュールの 5 件が落ちる。
 - X-Plane の確かめ：レビューの `v08_speedbrake_stow`（合格が正しい動き：4 回押して 3 秒後にレバー < 0.01）。
+
+## 25. 空中でスピードブレーキを動かした瞬間の、X-Plane のスポイラーの跳ね（FCTL-5、2026-11-23 の段 4 のレビュー）
+
+- 指摘：空中のスピードブレーキの**補正**（notes/AERO.md §3.15：X-Plane のスポイラーの面には、実際の角度からスピードブレーキの program の角度の (1 − k) を引いて渡す。k は 240 kt まで 0.36）は、引く量をレバーの位置からその場で作っていた。実際の角度（3D の `laminar/B747/flt_ctrls/spoilers`）は 1 フレームに残りの 1/10 ずつ動くので、レバーを DN にしたフレームに引く量だけが 0 になり、X-Plane のスポイラー 3 が 16.2° → 40.5° に跳ねて、約 0.2 秒は定常より大きかった。出すときは逆に 9 フレーム 0° のまま。資料の話ではなく、補正の作りの誤り（補正の意図は「スピードブレーキの割り当てを k 倍」）。
+- 直したこと（`B747.19.xt.hydraulics_override.lua`）：引く量を、program の角度を 3D のスポイラーと同じ遅れ（`B747_animate_value`、速さ 10）で追った値から作る。ロールの無いスポイラーは、X-Plane の角度がいつも実際の角度の k 倍になる。止まっているときの値は前と同じ（k、地上の全量、ロールの割り当ては変えていない）。3D と表示は実際の角度のまま。
+- 試験：`tests/hyd/hyd_module_test.lua`（空中 200 kt・FLIGHT DETENT から DN：X-Plane のスポイラー 3 が 16.2° を超えず、毎フレーム 3D の 0.36 倍。FLIGHT DETENT へ戻す：最初のフレームから動き、毎フレーム 0.36 倍、16.2° に戻る）。直す前のコードでは 4 件が落ちる（40.5°、25.9° のずれ、出すときの 0°）。
+- X-Plane の確かめ：見るなら、空中（例：280 kt・FLIGHT DETENT）から `speed_brakes_up_one` を押し、毎フレームの記録で `sim/flightmodel/controls/wing3l_spo2def` が定常の値（0.36 × 240 ÷ IAS × 45°）を超えないこと。
