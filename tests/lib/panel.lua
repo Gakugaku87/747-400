@@ -162,10 +162,10 @@ function M.own_shown(e, values)
     return true
 end
 
--- shown with all its groups
-function M.shown(e, values)
+-- shown with all its groups (up to, not with, the group top if given)
+function M.shown(e, values, top)
     local p = e
-    while p do
+    while p and p ~= top do
         if not M.own_shown(p, values) then return false end
         p = p.parent
     end

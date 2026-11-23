@@ -413,6 +413,22 @@ end
 function B747_eec_reset_reverse(engine)
     E.reset_thrust_control(rev_state, engine + 1)
 end
+-- (2026-11-24, the stage 4 review's PNL-4) the EICAS's command EPR
+-- (laminar/B747/engines/TRA) of a P&W with its reverser out: the EPR of
+-- the reverse N1 command (the lever's with the sleeves deployed, reverse
+-- idle while they move) at the present Mach and TAT, as the N1 mode's
+-- (N19-ENG-05). FCOM p.832 (7.10.4): the 109's command EPR stays in reverse
+-- (the reference EPR goes); p.833 (7.10.5): the reversing engine's mark at
+-- its bar's end; p.873: the command is the actual EPR once stable. What it
+-- shows in reverse is in neither the FCOM nor PW_PPM (estimate). Before,
+-- the forward lever's idle command (the mark was hidden in reverse)
+function B747_eec_reverse_command(engine)
+    local lever = 0
+    if simDR_reverser_deploy_ratio[engine] > 0.98 then
+        lever = (-B747DR_throttle_reversor[engine] - REV_IDLE_LEVER) / (1 - REV_IDLE_LEVER)
+    end
+    return epr_of_n1(E.pw_reverse_n1(lever, simDR_TAT))
+end
 -- X-Plane's maximum reverse throttle (sim/aircraft/engine/acf_throtmax_REV):
 -- GE 1, the ECU's share above giving the thrust; P&W the custom acf's 0.8
 -- as before (the N1 control above sets the throttle under it); RR its own

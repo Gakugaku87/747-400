@@ -143901,7 +143901,7 @@ GROUP Upper EICAS
             GROUP EPR Target Markers
               SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
               GROUP Engine 4 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 gen_pointer Engine 4 REF
                   POS 1748.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143920,7 +143920,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 gen_pointer Engine 3 REF
                   POS 1642.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143939,7 +143939,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 gen_pointer Engine 2 REF
                   POS 1536.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143958,7 +143958,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 gen_pointer Engine 1 REF 
                   POS 1430.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143977,7 +143977,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 4 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 GROUP Engine 4 REF MAGENT and 2
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 942.000000
@@ -143998,7 +143998,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 GROUP Engine 3 REF MAGENT and 2
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 942.000000
@@ -144019,7 +144019,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 GROUP Engine 2 REF MAGENT and 2
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 942.000000
@@ -144040,7 +144040,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 GROUP Engine 1 REF MAGENT and 2
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 942.000000
@@ -144239,7 +144239,7 @@ GROUP Upper EICAS
             GROUP EPR Target Markers
               SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
               GROUP Engine 4 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 gen_pointer Engine 4 REF
                   POS 1748.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144258,7 +144258,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 gen_pointer Engine 3 REF
                   POS 1642.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144277,7 +144277,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 gen_pointer Engine 2 REF
                   POS 1536.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144296,7 +144296,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 gen_pointer Engine 1 REF 
                   POS 1430.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144315,7 +144315,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 4 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 GROUP Engine 4 REF MAGENT and 2
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 942.000000
@@ -144336,7 +144336,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 GROUP Engine 3 REF MAGENT and 2
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 942.000000
@@ -144357,7 +144357,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 GROUP Engine 2 REF MAGENT and 2
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 942.000000
@@ -144378,7 +144378,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 GROUP Engine 1 REF MAGENT and 2
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 942.000000
@@ -144461,13 +144461,13 @@ GROUP Upper EICAS
             END_GROUP
           END_GROUP
           GROUP Thrust Command EPR and 1
-            SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
             GROUP Thrust Command EPR 
               SHOW_EQUAL 2.000000 laminar/B747/engines/type
               gen_pointer Engine 4
                 POS 1748.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[3]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144483,6 +144483,7 @@ GROUP Upper EICAS
                 POS 1642.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[2]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144498,6 +144499,7 @@ GROUP Upper EICAS
                 POS 1536.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[1]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144513,6 +144515,7 @@ GROUP Upper EICAS
                 POS 1430.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[0]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144527,7 +144530,6 @@ GROUP Upper EICAS
             END_GROUP
           END_GROUP
           GROUP Thrust Command EPR and 1
-            SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
             GROUP Thrust Command EPR 
               SHOW_EQUAL 0.000000 laminar/B747/engines/type
               gen_pointer Engine 4
@@ -144969,7 +144971,7 @@ GROUP Upper EICAS
             GROUP N1 Target Markers
               SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
               GROUP Engine 4 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 gen_pointer Engine 4 REF
                   POS 1748.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -144986,7 +144988,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 gen_pointer Engine 3 REF
                   POS 1642.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -145003,7 +145005,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 gen_pointer Engine 2 REF
                   POS 1536.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -145020,7 +145022,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 gen_pointer Engine 1 REF 
                   POS 1430.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -145037,7 +145039,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 4 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 GROUP Engine 4 REF MAGENT and 2
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 890.000000
@@ -145056,7 +145058,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 GROUP Engine 3 REF MAGENT and 2
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 890.000000
@@ -145075,7 +145077,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 GROUP Engine 2 REF MAGENT and 2
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 890.000000
@@ -145094,7 +145096,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 GROUP Engine 1 REF MAGENT and 2
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 890.000000
@@ -145765,14 +145767,13 @@ GROUP Upper EICAS
 
           END_GROUP
           GROUP Thrust Command N1 G and 1
-            SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
             GROUP Thrust Command N1 G
               SHOW_EQUAL 1.000000 laminar/B747/engines/type
               gen_pointer Engine 4
                 POS 1748.500000 883.500000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[3]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145788,7 +145789,7 @@ GROUP Upper EICAS
                 POS 1642.500000 883.500000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[2]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145804,7 +145805,7 @@ GROUP Upper EICAS
                 POS 1536.500000 883.500000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[1]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -145820,7 +145821,7 @@ GROUP Upper EICAS
                 POS 1430.500000 883.500000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[0]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2

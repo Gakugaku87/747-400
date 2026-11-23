@@ -324,7 +324,14 @@ function engine_idle_control_PW(altitude_ft_in)
       --(2026-11-10) the EGT model, from the EPR just shown (B747.42.xt.egt.lua)
       B747DR_display_EGT[i] = B747_egt(i, "PW")
 
-      B747DR_throttle_resolver_angle[i] = throttle_resolver_angle_PW(i)
+      --(2026-11-24, PNL-4) with the reverser out the EICAS's command EPR is
+      --the reverse N1 command's (B747_eec_reverse_command, an estimate); the
+      --mark now stays in reverse (FCOM p.832)
+      if simDR_reverser_deploy_ratio[i] > 0.01 then
+        B747DR_throttle_resolver_angle[i] = B747_eec_reverse_command(i)
+      else
+        B747DR_throttle_resolver_angle[i] = throttle_resolver_angle_PW(i)
+      end
 
     end
     --Manage Thrust

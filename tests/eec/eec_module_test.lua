@@ -639,19 +639,36 @@ frames(0.1)
 T.check(th1 > 0 and th1 < 1 and get(THRO, 1) > th1,
     string.format("P&W full reverse from idle, the shown N1 %.1f: the throttle opens gradually (%.3f, then %.3f)",
         get(ENG .. "display_N1", 1), th1, get(THRO, 1)))
+-- (2026-11-24, PNL-4) the EICAS's command EPR (TRA) with the reverser out:
+-- the EPR of the reverse N1 command (an estimate; the mark now stays in
+-- reverse: FCOM p.832-833); the other engines keep their forward command.
+-- Before, the forward lever's idle command (1.00 standing)
+local tat = get("sim/cockpit2/temperature/outside_air_LE_temp_degc")
+local rev_full = ns.B747_eec_epr_of_n1(ns.B747_eec_model.pw_reverse_n1(1, tat))
+local rev_idle = ns.B747_eec_epr_of_n1(ns.B747_eec_model.pw_reverse_n1(0, tat))
+T.near(get(ENG .. "TRA", 1), rev_full, 1e-6, "P&W full reverse: the command EPR is the reverse N1 command's (87 % N1)")
+T.check(rev_full > 1.25 and rev_full < 1.35, string.format("P&W full reverse standing: command EPR %.3f (the shown EPR in s341: 1.28)", rev_full))
+T.near(get(ENG .. "TRA", 0), ns.B747_eec_command(0), 1e-6, "P&W: engine 1 not in reverse keeps its forward command")
 rt:set(REVL, 1, -0.01)
 frames(2)
 T.equal(get(THRO, 1), 0, "P&W: back to reverse idle: throttle 0")
+T.near(get(ENG .. "TRA", 1), rev_idle, 1e-6, "P&W reverse idle: the reverse idle N1's EPR")
+T.check(rev_idle > 0.97 and rev_idle < 1.1, string.format("P&W reverse idle standing: command EPR %.3f", rev_idle))
 rt:set(REVL, 1, -1)
 rt:set(DEPLOY, 1, 0.5)                                          -- the sleeves moving
 frames(0.2)
 T.equal(get(THRO, 1), 0, "P&W: the sleeves in transit: idle (PW_PPM p.250)")
+T.near(get(ENG .. "TRA", 1), rev_idle, 1e-6, "P&W: the sleeves in transit: the command EPR reverse idle's")
 -- stowing (forward again) with the thrust lever advanced: idle until stowed
 rt:set(REVL, 1, 0)
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
 rt:set(USER, 1, 0.8)
 frames(1)
 T.equal(get(THRO, 1), 0, "P&W: the sleeves still stowing, the lever advanced: idle (PW_PPM p.552)")
+T.near(get(ENG .. "TRA", 1), rev_idle, 1e-6, "P&W: still stowing: the command EPR reverse idle's")
+rt:set(DEPLOY, 1, 0)                                            -- stowed
+frames(0.2)
+T.near(get(ENG .. "TRA", 1), ns.B747_eec_command(1), 1e-6, "P&W stowed: the forward lever's command again")
 rt:set(USER, 1, user_was)
 rt:set(DEPLOY, 1, 1)
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)
