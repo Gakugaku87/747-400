@@ -1,0 +1,80 @@
+{
+  "name": "at_lever_gain_ge_10000",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：A/T の SPD の利得の倍率の G（B747.70.at_model.lua の lever_accel：レバー 1 単位あたりの IAS の加速、kt/s）を GE（Saudia、CF6-80C2B1F）の 10,000 ft・290 kt で測る（at_lever_gain_ge_fl370 の続き）（2026-11-22：s280 の GE の巡航で A/T が約 21 秒ごとに揺れた。レバー 0.48〜0.66、N1 73〜87 %、1 発の推力 26〜49 kN。11-13 の 84dfb5c8 の G は P&W の線で合わせたもので、GE のレバーの線は 11-13 の B2 から 35°（レバー 0.70）で最大上昇の N1 に折れる）。10,000 ft・290 kt・238 t・ISA の静穏な大気の空中開始で ALT HOLD・HDG SEL・A/T SPD に入れてから A/T を切り、レバーを A/T を切ったときの値に置いて、+0.04・0・-0.04・0・+0.08・0 の段を 40 秒ずつ。1 発の推力・N1・スロットル・IAS を記録し、段ごとの推力の差と IAS の傾きの差から G を出す。結果（2026-11-22）：推力から 7.50、IAS の傾きから 7.12 kt/s、式（P&W）の 6.54 の 1.15 倍",
+  "reload": true,
+  "livery": "Saudia",
+  "flight": {
+    "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 3048.0, "heading_true": 90, "speed_in_meters_per_second": 173.6 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 3901.4, 4106.8, 4928.1, 6365.5, 1232, 10287.5, 9178.6, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 3750, 3750, 3750, 3750, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "wait", "note": "FMC の空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "sleep", "seconds": 8 },
+    { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "as": "alt0" },
+    { "do": "set", "note": "MCP 高度は今の高さ", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 0, "rel": "alt0", "round": 100 },
+    { "do": "set", "note": "MCP を IAS に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 0 },
+    { "do": "set", "note": "窓 290 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 290 },
+    { "do": "set", "note": "MCP 方位 098（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 98 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "FMA の A/T が SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10, "level": "warn" },
+    { "do": "wait", "note": "IAS が 290 kt の近く", "dref": "sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "op": "between", "value": [287, 293], "timeout": 300, "level": "warn" },
+    { "do": "sleep", "seconds": 90, "note": "落ち着かせる" },
+    { "do": "record_start" },
+    { "do": "remember", "note": "747 のレバー（X-Plane の throttle_ratio は別の値：2026-11-22 の P&W の回は 0.50 で、レバーは 0.42）", "dref": "laminar/B747/engine/throttle[0]", "as": "lev0" },
+    { "do": "cmd", "note": "A/T を切る（左の A/T 切断ボタン）", "name": "laminar/B747/autopilot/button_switch/autothrottle_disco_L" },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "mark", "note": "L0（A/T を切ったときのレバー）" },
+    { "do": "set", "note": "レバー 4 本を A/T を切ったときの値に", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "mark", "note": "+0.04" },
+    { "do": "set", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0.04, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "mark", "note": "0" },
+    { "do": "set", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "mark", "note": "-0.04" },
+    { "do": "set", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": -0.04, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "mark", "note": "0" },
+    { "do": "set", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "mark", "note": "+0.08" },
+    { "do": "set", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0.08, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "mark", "note": "0" },
+    { "do": "set", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0, "rel": "lev0" },
+    { "do": "sleep", "seconds": 40 },
+    { "do": "record_stop" }
+  ]
+}

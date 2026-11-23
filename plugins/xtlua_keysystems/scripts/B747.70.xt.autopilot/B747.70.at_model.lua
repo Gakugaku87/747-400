@@ -104,6 +104,25 @@ M.SPD_DOWN_KT = {5, 15}
 -- 3.8 for it (4.2 before: the levers rang on a +10 kt step)
 M.G_C, M.G_MACH, M.G_SCALE_MAX = 4029, 0.66, 8
 M.G_TGT = {{0.66, 5.0}, {0.37, 3.8}, {0.194, 2.7}}
+-- (2026-11-22) G for the GE (CF6-80C2, laminar/B747/engines/type 1: the
+-- servo's `engine`). G_C and G_MACH are the P&W's (the EEC's and the
+-- engines' models above are the P&W's only), and the CF6's lever line (B2:
+-- idle to the maximum climb N1 at TLA_CLB, 0.70 of the lever) gives much
+-- more thrust a unit of lever up high. Measured in X-Plane with the A/T
+-- off and the levers stepped by 0.04 and 0.08 (tests/flight/measure/
+-- at_lever_gain_*, 238 t, the thrust's change over the weight:
+-- tests/flight/tools/lever_gain.lua): 7.50 kt/s a unit of lever at 10,000
+-- ft and 290 kt, 5.29 at FL250 and 300 kt, 3.47 at FL370 and M.85, so 1.15,
+-- 2.31 and 3.82 times the P&W's estimate. On the P&W's G the gains came
+-- some 3 times G_TGT's in the GE's cruise, and s280's A/T swung the levers
+-- 0.48 to 0.66 every 21 s (N1 73 to 87 %). GE_K: the GE's G over the
+-- P&W's estimate by the pressure ratio, the first point's below it, on past
+-- the last point along the last two's line above (G the more there: the
+-- gains the less). The RR as the P&W (not measured: estimate). The P&W's
+-- own G measured 1.21 at FL370 and M.85 (1.4 times its estimate:
+-- at_lever_gain_fl370); its gains stay as they are (s262, s277 and s279
+-- pass in X-Plane)
+M.GE_K = {{0.688, 1.15}, {0.371, 2.31}, {0.214, 3.82}}
 M.SPD_DOWN_UP = 0.75
 -- (2026-11-14) B5's thrust following the path's change (the inertial V/S's
 -- rate) only with a vertical speed: none under FF_VS_FPM[1], all of it
@@ -425,11 +444,28 @@ function M.g_target(alt)
     end
     return tg[#tg][2] * math.sqrt(d / tg[#tg][1])
 end
+-- (2026-11-22) the GE's G over the P&W's estimate at a pressure ratio (GE_K)
+local function ge_k(d)
+    local t = M.GE_K
+    if d >= t[1][1] then return t[1][2] end
+    for i = 2, #t do
+        if d >= t[i][1] then
+            local f = (d - t[i][1]) / (t[i - 1][1] - t[i][1])
+            return t[i][2] + f * (t[i - 1][2] - t[i][2])
+        end
+    end
+    local a, b = t[#t - 1], t[#t]
+    return b[2] + (d - b[1]) * (a[2] - b[2]) / (a[1] - b[1])
+end
 -- (B5) G, the acceleration a unit of lever gives (kt/s of IAS), estimated
--- from the servo's inputs (weight kg, mach, tas kt, ias, alt); nil without
+-- from the servo's inputs (weight kg, mach, tas kt, ias, alt; engine, the
+-- engine type: 1 the GE's GE_K, 2026-11-22); nil without
 function M.lever_accel(inp)
     if not (inp.weight and inp.weight > 0 and inp.tas and inp.tas > 50 and inp.mach and inp.alt) then return nil end
-    return M.G_C * delta_of(inp.alt) * (inp.ias / inp.tas) * (1 - M.G_MACH * inp.mach) / (inp.weight / 1000)
+    local d = delta_of(inp.alt)
+    local g = M.G_C * d * (inp.ias / inp.tas) * (1 - M.G_MACH * inp.mach) / (inp.weight / 1000)
+    if inp.engine == 1 then g = g * ge_k(d) end
+    return g
 end
 
 -- the speed law's lever rate to a speed: the error and the acceleration,
