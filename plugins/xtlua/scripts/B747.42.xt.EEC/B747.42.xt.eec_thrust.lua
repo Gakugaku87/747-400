@@ -132,9 +132,16 @@ function B747_eec_update()
     -- (N19-ENG-05) a P&W engine in its N1 mode: the EICAS's command EPR
     -- (laminar/B747/engines/TRA, FCOM p.834) the EPR of its N1 command at
     -- the present Mach and TAT (estimate: the FCOM does not say what the
-    -- indicator shows in the alternate mode)
+    -- indicator shows in the alternate mode). (2026-11-24, DSP-5 of the
+    -- 2026-11-23 review) Not under the EPR mode's idle command (the lever's
+    -- idle end, B747_epr_model.idle_command): at idle in the air the N1
+    -- command (about 20 %) is under the EPR model's N1, flat under EPR 0.9
+    -- there, and the halving stuck at its low end 0.5 (3,000 ft, M.34: 0.500
+    -- for the EPR mode's 0.919, the marker at the scale's foot under the
+    -- bar). Estimate as the rest: the marker at idle as in the EPR mode
+    local idle_cmd = idle_command(inp.type)
     for n = 1, 4 do
-        if eec_out.n1_mode[n] then command_epr[n] = epr_of_n1(eec_out.command[n]) end
+        if eec_out.n1_mode[n] then command_epr[n] = math.max(epr_of_n1(eec_out.command[n]), idle_cmd) end
     end
 
     local approach = false

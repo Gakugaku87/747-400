@@ -319,6 +319,32 @@ T.equal(get(ADV, 314), 0, "ALTN: back in the normal mode")
 T.equal(get(CAUTION, 76), 0, "no LIM PROT in the normal mode")
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "the A/T can be armed again with all EECs normal")
 T.near(get(ENG .. "TRA", 1), 1.51, 0.005, "NORM: the EPR command again")
+-- (2026-11-24, DSP-5 of the 2026-11-23 review) the N1 mode at idle in the
+-- air: the EICAS's command EPR (TRA) not under the EPR mode's idle command
+-- (the lever's idle end, B747_epr_model.idle_command). At 3,000 ft, M.34
+-- the N1 command at idle (about 20 %) is under the EPR model's N1, flat
+-- under EPR 0.9 there: the EPR of that N1 stuck at the halving's low end
+-- 0.5, the marker at the scale's foot under the bar (c30c5ef5)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("sim/flightmodel2/position/pressure_altitude", 3000)
+rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * (1 - 6.87559e-6 * 3000) ^ 5.25588)
+rt:set("sim/flightmodel/misc/machno", 0.337)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 18)
+for i = 0, 3 do rt:set(USER, i, 0) end
+frames(3)
+rt:set("laminar/B747/button_switch/position", 8, 0)
+frames(1)
+local idle34 = EP.idle_command(0.337)
+T.check(get(ENG .. "TRA", 1) > 0.85, string.format("ALTN 2 at idle, 3,000 ft, M.34: the command EPR %.3f, not the halving's low end 0.5 (DSP-5)", get(ENG .. "TRA", 1)))
+T.near(get(ENG .. "TRA", 1), idle34, 0.002, string.format("ALTN 2 at idle: the EPR mode's idle command %.3f (estimate: the FCOM gives no ALTN marker)", idle34))
+T.near(get(ENG .. "TRA", 0), idle34, 0.002, "engine 1 (EPR mode) at idle: the same idle command")
+rt:set("laminar/B747/button_switch/position", 8, 1)
+rt:set("sim/flightmodel/misc/machno", 0)
+rt:set("sim/flightmodel2/position/pressure_altitude", 0)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 1, 0)
 rt:set("sim/flightmodel/engine/ENGN_N2_", 1, 0)
 rt:set("sim/flightmodel/engine/ENGN_running", 1, was_running)
