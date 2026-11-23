@@ -422,6 +422,7 @@ sim/flightmodel/engine/POINT_thrust	array[16]
 sim/flightmodel/failures/onground_all	int number
 sim/flightmodel/failures/onground_any	int number
 sim/flightmodel/failures/stallwarning	int number
+sim/flightmodel/forces/M_prop	number
 sim/flightmodel/forces/g_nrml	number
 sim/flightmodel/forces/g_side	number
 sim/flightmodel/misc/Qstatic	number
