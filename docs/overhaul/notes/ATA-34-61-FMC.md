@@ -3393,25 +3393,25 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 試験：`thrlim_model_test` 83（81 から。405・570 の組を書き直し：GE の TO 1 の 5 % で CLB 1、TO 2 の 15 % で CLB 2、TO 1 の 20 % で CLB 2、D-TO の 20 % で CLB 2・10 % で CLB 1、D-TO 1 の 22 % で CLB 2 とフラップ 5 で CLB 2、乗員の CLB 1 が TO 2 の後も残る。古い入力 `by_rating` を渡しても変わらない）、`takeoff_ref_test` 78（FMS のつなぎ：減らし方 27 % の TO 1 で、旅客機・P&W の貨物機・GE とも CLB 2）。直す前のコードでは 5 件と 2 件が落ちる（確かめた）。
 - X-Plane のシナリオ `s336_clb_arm_405`（ICL 4X-ICB、地上）の期待を直した：TO 1 で CLB 1、TO 2 で CLB 2、TO と SEL 50（11-21 の回で EEC の減らし方 16.6 %）で CLB 2 と 9 行目の `<ARM> CLB 2>`、TO 1 と SEL 50（23.3 %）で CLB 2、SEL を消すと TO 1 の 8 % で CLB 1。減らし方 15 % 以上の確かめは warn から fail にした（CLB 2 の前提）。
 
-### 177.2 flight complete の後の TAKEOFF REF の空白（CDU-2 = PERF-3。e682bb80 の後戻り）
+### 179.2 flight complete の後の TAKEOFF REF の空白（CDU-2 = PERF-3。e682bb80 の後戻り）
 
 - 見たこと（レビューの担当 1・3 のモック）：乗員が TAKEOFF REF の 4R に CG を入れた便の flight complete の後、TAKEOFF REF の 13 行が題も含めて全部空白。flight complete はデータの `cg_mac` を既定の「--」に戻すが、ページの大きい字の文字 `cg_lineLg` は残るので、`takeoff.lua` の `string.format("%2.0f%%", tonumber("--"))` が nil で落ちる（ページは pcall の中で、誤りはどこにも出ない）。次の便の ZFW でも戻らない：e682bb80（§175 の N19-WB-03）の前は ZFW の入力で `calc_CGMAC` が `cg_mac` を数に書き直していたが、109・570 ではそれをやめたため。PERF INIT の CRZ CG も、大きい字の文字 `crzcg_lineLg` が残って既定の 20.0 が大きい字。FMC のトリム（`laminar/B747/fmc/elevator_trim`、緑の帯の選択：ATA27 p.514）は前の便のまま。
 - 資料：FCOM p.1320 (11.40.44)：TRIM/CG は「Initially displays dashes」。ATA34_2 p.540：TAKEOFF REF の欄は空中では持ち、flight completion で消える。FCOM p.1311 (11.40.35)：CRZ CG の既定 20.0 は小さい字。
 - 直したこと：
   - `B747_fms_flight_complete`：`cg_lineLg`・`crzcg_lineLg` を空に、`B747DR_elevator_trim` を 0 に（帯の選択は「トリムなし」の MID：`B747.45.greenband_model.lua` の `select`）。
   - `B744.fms.pages.takeoff.lua`：CG のデータが数でなければダッシュ（大きい字の文字も消す）。TRIM は数のときだけ書く。どちらも、データと文字が食い違っても、ページ全体が空白にならないための守り。
-  - CG を DELETE したときの `elevator_trim` は今までどおり残る（帯の選び方は資料に無い：ATA27 p.514 は FMC の CG・重さ・推力から選ぶとだけ。§177 の範囲の外）。
+  - CG を DELETE したときの `elevator_trim` は今までどおり残る（帯の選び方は資料に無い：ATA27 p.514 は FMC の CG・重さ・推力から選ぶとだけ。§179 の範囲の外）。
 - 試験：`flight_complete_test` 23（14 から +9）：便の前に ZFW 220・CRZ CG 25.5・CG 22 とトリム、flight complete の後に FMC のトリム 0、TAKEOFF REF の題と CG のダッシュ・トリムなし、CRZ CG 20.0 が小さい字、次の便の ZFW 230 の後も TAKEOFF REF と CG のダッシュ、CG 24 で大きい字とトリム。直す前のコードでは 5 件が落ちる（確かめた）。
 - X-Plane のシナリオ：新しい `s350_flight_complete_cg`（s163 と同じ RJAA 34L の進入路からの自動着陸、243.5 t）。空中では TAKEOFF REF に行けない（INIT/REF INDEX の <TAKEOFF は空中で消える：CDU-12、直さない）ので、止まってから PERF INIT の CRZ CG 25.5 と TAKEOFF REF の CG 22 を入れ、エンジンを止めて 30 秒。flight complete の後に FMC のトリム 0、TAKEOFF REF の題と `--%`、PERF INIT の小さい字の `20.0%`、次の便の ZFW 230 の後も TAKEOFF REF。CDU を 2 枚撮る。
 
-### 177.3 TAKEOFF REF の TRIM の重さを PERF INIT の GR WT に（PERF-2。e682bb80 の直し残し）
+### 179.3 TAKEOFF REF の TRIM の重さを PERF INIT の GR WT に（PERF-2。e682bb80 の直し残し）
 
 - 見たこと（レビューの担当 3 のモック）：同じ CG・同じ GR WT でも、CG を入れた直後（CDU の GR WT で計算）と、ZFW か GR WT を入れ直した後（`calc_CGMAC` が OEW＋燃料＋FMC の PAX/CARGO の区画の和で計算）で TRIM が違った。X-Plane の荷物 60 t・区画は空・燃料 86.5 t で 6.5 → 5.3。荷物を X-Plane の Weight & Balance やシナリオの `payload_weight_in_kilograms` で積んだとき、乗員の ZFW がシムと違うときに出る。
 - 資料：FCOM p.1320 (11.40.44)：CG を入れると FMC がトリムを計算する。FMC の重さは PERF INIT の GR WT（p.1309 (11.40.33)）。
 - 直したこと：`calc_CGMAC` のトリム（乗員の CG を持つとき、405 の WBS の CG のとき）を、データの `grwt`（PERF INIT の GR WT、t）で計算する。区画の和は CG（% MAC）の計算にだけ使う（X-Plane に書く重心は PERF-1 で別の担当が直す。ここでは触らない）。
 - 試験：`wb_n19_test` 36（+3）：燃料 100 t・区画は空で ZFW 240（GR WT 340、区画の和 280）、CG 20 のトリムが 340 t の値、同じ ZFW をもう一度入れても同じ。直す前のコードでは 1 件が落ちる（5.5、340 t の値は 6.7）。
 
-### 177.4 TAKEOFF REF の TRIM を FPPM の定格ごとの表に（FCTL-4 = PERF-4）
+### 179.4 TAKEOFF REF の TRIM を FPPM の定格ごとの表に（FCTL-4 = PERF-4）
 
 - 見たこと（レビューの担当 3・6）：`calc_stab_trim` は重さ（ポンド）と CG の 2 次式 1 本で、推力の定格を見ない。FPPM の TO の表の全 74 ますと比べて rms 0.31、隅で外れる（200 t・33 % で 1.07、表は 2.0）。TO2 の表（20 %）とは平均 −0.68・最大 −1.78 units（軽いと機首下げ側）。表の外（2〜9½ の外）でも止まらない。
 - 資料：FPPM p.44 (1.2.20) TO、p.57 (1.3.11) TO1（8 %）、p.69 (1.3.23) TO2（20 %）の Stab Trim Setting（747-400F/PW4056。重さ 200〜400 t の 20 t 刻み、CG 9〜33 % MAC の 4 % 刻み。9 % の 200〜240 t は空欄）。図から読んだ（`_ref/text/img/FPPM/p0044.png` ほか）。TO1 は TO と 1 ますだけ違う（380 t・13 %：TO 8、TO1 9。TO の 8 は 360 t の 8½ と 400 t の 9 の間で山になり、誤植らしいが、表のとおりにした）。ATA27 p.514：MAWEA は CG・重さ・推力の定格で帯を選ぶ。FCOM p.1320 (11.40.44)：トリムは 0.1 unit 刻み、緑の帯の範囲の外なら空白（表の値は 2〜9½ で、帯の全体 1.35〜10.15 の内）。
@@ -3421,7 +3421,7 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 試験：新しい `to_trim_model_test` 21：3 つの表の 74 ますが印刷どおり、380 t・13 % の TO 8 と TO1 9、ますの間の直線、レビューの例（220 t・17 %・TO 2 で 6、前の式は 4.4）、空欄と表の外の端の値、0〜40 %・150〜450 t で 2〜9½ に収まる。`wb_n19_test` 40（+4）：TO の表の値、THRUST LIM で TO 2 にすると TO2 の表の値と緑の帯のトリム、TO に戻すと TO の値。`cg_mac_test` の 270 t・22 % は表の 5.0 に（前の式の 4.8）。
 - X-Plane のシナリオ：新しい `s351_takeoff_trim_rating`（RJAA 34L の地上、220 t）：ZFW 183.5・CG 17 で TO 4.0、TO 2 で 6.0（前の式はどちらも 4.4）、TO 1 で 4.0、緑の帯のトリムも同じ。CDU を撮る。
 
-### 177.5 TAKEOFF REF の WIND/SLOPE の既定と POS SHIFT の単位（CDU-8）
+### 179.5 TAKEOFF REF の WIND/SLOPE の既定と POS SHIFT の単位（CDU-8）
 
 - 見たこと：WIND/SLOPE は入れるまで大きい字の「---/----」（§15 の「入れるまでダッシュ」は FCOM p.1319 の「Displays wind and runway slope after crew entry」の 1 文から）。POS SHIFT は GE でも「--00M」、滑走路が無いと「RW*** --00M」。
 - 資料：
@@ -3433,7 +3433,7 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 試験：`takeoff_ref_test` 82（+4 と書き直し）：既定の H00/U0.0 が小さい字、滑走路なしで POS SHIFT の行が空白、DELETE で既定に戻る、勾配だけの入力（/U1.5 が大きい字、H00 が小さい字）、両方の入力、POS SHIFT は値を持つ（+03・−03）、31 は INVALID ENTRY。`rte_pages_test` 68（+5）：RTE 1 の滑走路 RW16R で +0300M、31 は INVALID ENTRY、GE で +0300FT、−45 で −4500FT、DELETE で --00FT。直す前のコードでは 6 件と 4 件が落ちる。TRIM を小さい字の行から読む試験（`takeoff_ref_test`・`wb_n19_test`・`flight_complete_test`）は、TRIM の 17〜20 桁だけを見るようにした（同じ行の頭に H00/U0.0 が出るため）。
 - X-Plane のシナリオ：`s83_takeoff_ref` に既定の H00/U0.0（小さい字）と POS SHIFT の行の空白（経路が無い）、POS SHIFT の値は `fms/data` の `+03` で見るように直した（前は「+0300M」の行）。`s256`・`s257` の TRIM の正規表現を 17〜20 桁に。
 
-### 177.6 APPROACH REF の FLAP/SPEED：重い VREF を受ける、VREF より大きい速さでフラップの速さを上げる（CDU-5 = PERF-5）
+### 179.6 APPROACH REF の FLAP/SPEED：重い VREF を受ける、VREF より大きい速さでフラップの速さを上げる（CDU-5 = PERF-5）
 
 - 見たこと（レビューの担当 1・3）：(a) 4R は 110〜180 kt の外を INVALID ENTRY（本家からの値、出典なし）。357 t より重いと VREF25、385 t より重いと VREF30 が 180 kt を超え、1R・2R で scratchpad に出した FMC 自身の値を 4R が拒み、PFD に REF が出ない（離陸直後の引き返し、重量超過の着陸）。(b) VREF より大きい速さを入れても、フラップの機動速度のバグが動かない。
 - 資料：FCOM p.1412 (11.43.24)：有効な入力は XX/YYY、/YYY、YYY で、範囲は書いていない（FMSPG p.205、ATA34_2 p.544 にも無い）。VREF より大きい速さの入力は、フラップの速さの予定の全体をその分だけ上げる。
@@ -3443,22 +3443,22 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 試験：`fmc_fixes_test` 47（+5）：25/190 と 30/182 を受ける、105 を受ける、251 と 99 は INVALID ENTRY。`speedtape_model_test` 33（+5）：30/158（VREF30 150）で UP〜20 が 8 kt 上がり 25・30 は FMC の値、25/170（VREF25 164）で 6 kt、VREF25 より小さい 160 では足さない、着陸フラップなし（DELETE）では足さない。`speedtape_module_test` 54（+3）：つなぎ（30/VREF30 + 5 で UP のバグ VREF30 + 85、Vf30 はそのまま、戻すと + 80）。直す前のコードでは 3 件・2 件・1 件が落ちる。
 - X-Plane のシナリオ：新しい `s352_appr_ref_heavy`（RJAA 34L の地上）：APPROACH REF の GROSS WT 390.0、1R → 4R で INVALID ENTRY が出ず VREF が 180 kt を超える、25/210 で UP のバグが 15 kt 以上上がり `Vf30` は変わらない。CDU を撮る。
 
-### 177.7 重量の単位が LBS のとき PERF INIT の入力が違う数で出る（CDU-7）
+### 179.7 重量の単位が LBS のとき PERF INIT の入力が違う数で出る（CDU-7）
 
 - 見たこと（レビューの担当 1）：ZFW と RESERVES はデータに 0.1 t（`%5.1f`）で持つので、ポンドで入れた値が kg に直して丸めた後に戻ると違う数になる。レビューの 14 件中 9 件（RESERVES 10 → 9.9、ZFW 480 → 479.9 など）。GR WT の入力も（700.3 → 700.4）。
 - 資料：FCOM p.1309-1311 (11.40.33-35)：入力は XXX か XXX.X で、入れた値が出る。
 - 直したこと（`B744.fms.pages.lua`）：ZFW（GR WT の入力からの ZFW も）と RESERVES のデータを 0.1 kg（`%.4f` t）で持つ。表示は前と同じ `%5.1f` の千 kg か千ポンド。データを読む所はどれも `tonumber`（PERF INIT、TAKEOFF REF の PRE-FLT、燃料のモデルの RESERVES）で、桁が増えても変わらない。KGS では表示も同じ（GR WT の入力の後の GR WT は、前は ZFW の 0.1 t の丸めの分だけ入力からずれ得た）。
 - 試験：`perf_init_test` 40（+2）：LBS でレビューの 14 件（ZFW 6・RESERVES 8）が入れたとおりに出る、GR WT 700.3 も。直す前のコードでは 2 件が落ちる（9 件と 700.4）。
 
-### 177.8 PERF INIT の CRZ CG の桁（CDU-11）
+### 179.8 PERF INIT の CRZ CG の桁（CDU-11）
 
-- 見たこと（レビューの担当 1、X-Plane の写真 `shot_137`）：flight complete の後、CRZ CG の既定 20.0 が大きい字（§177.2 で直した）。行は 25 文字で、% が 25 桁目（ICAO の右端より 1 桁右）に出る：書式が `%5.1f%%`（6 文字）。
+- 見たこと（レビューの担当 1、X-Plane の写真 `shot_137`）：flight complete の後、CRZ CG の既定 20.0 が大きい字（§179.2 で直した）。行は 25 文字で、% が 25 桁目（ICAO の右端より 1 桁右）に出る：書式が `%5.1f%%`（6 文字）。
 - 資料：FCOM p.1308 (11.40.32) の図：CRZ CG の「20.0%」は題の右端の 24 桁目まで。p.1311 (11.40.35)：既定の 20.0 は小さい字。
 - 直したこと（`B744.fms.pages.perfinit.lua`）：大きい字・小さい字とも `%4.1f%%`（5 文字）。8.5 % も「 8.5%」で 24 桁に収まる。
 - 試験：`fmc_fixes_test` 49（+2）：25.5 % が 20〜24 桁、DELETE の後の小さい字の 20.0 % も。直す前のコードでは 2 件が落ちる。
-- 直し：§177.6 の試験の数を `fmc_fixes_test` 47 に（前は 52 と書いていた）。
+- 直し：§179.6 の試験の数を `fmc_fixes_test` 47 に（前は 52 と書いていた）。
 
-### 177.9 PERF INIT の ZFW の上限 270 t（PERF-6）
+### 179.9 PERF INIT の ZFW の上限 270 t（PERF-6）
 
 - 見たこと（レビューの担当 3）：ZFW の入力は 130〜270 t、GR WT は 150〜400 t（本家からの値、出典なし）。405・570 の最大零燃料重量は 276,691 kg なのに 270.1 t から INVALID ENTRY。貨物機で FREIGHT の「F」（満載 107,717 kg）を積むと、acf の OEW 183.5 t で ZFW 291.2 t になり、シムの値の入力も拒まれて PERF INIT が埋まらない（V 速度・VNAV が出ない）。
 - 資料：FCOM p.78 (L.10.2)：最大零燃料重量は 109 が 244,939 kg、405 が 276,691 kg、570 が 610,000 lb（276,691 kg）。FCOM p.1310 (11.40.34)：入力の形は XXX か XXX.X で、範囲は書いていない（FMSPG p.96 にも無い）。
@@ -3466,7 +3466,7 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 試験：`perf_init_test` 45（+5）：燃料 100 t で ZFW 276.6・291.2・300.0 を受ける、300.1（GR WT 400.1）と 129.9 は INVALID ENTRY。直す前のコードでは 3 件が落ちる。
 - 満載で最大零燃料重量を超えること自体は acf の OEW（旅客機の値）の問題で、ここでは扱わない（レビューのとおり別件）。
 
-### 177.10 加速高度・減推力高度の基準を、100 kt で記録した気圧高度に（FMC-8）
+### 179.10 加速高度・減推力高度の基準を、100 kt で記録した気圧高度に（FMC-8）
 
 - 見たこと（レビューの担当 2、読んだだけ）：ACCEL HT・E/O ACCEL HT（VNAV の `vnavTakeoff.accel_alt`・`eo_accel_alt`）と THR REDUCTION の高さ（推力制限の `alt_agl`）の基準が、航法データの出発空港の標高。高度計の指示と比べるので、規正の誤り（約 27 ft/hPa）と、空港の標高と滑走路の差（KDEN RW26 −140 ft、KLAS RW26R −139 ft など）だけずれる。
 - 資料：FCOM p.667 (4.20.9)：離陸で 100 kt を通るとき、FMC が気圧高度を記録し、LNAV・VNAV の作動、A/T の作動、フラップ上げの加速、上昇推力に使う。FCOM p.1318-1319 (11.40.42-43)：入れた ACCEL HT・THR REDUCTION の高さに滑走路の標高を足して MSL の高度にする。

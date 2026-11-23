@@ -1,5 +1,5 @@
 -- 747-400 takeoff stabilizer trim without X-Plane (2026-11-24, review
--- FCTL-4 = PERF-4; docs/overhaul/notes/ATA-34-61-FMC.md §177): TAKEOFF
+-- FCTL-4 = PERF-4; docs/overhaul/notes/ATA-34-61-FMC.md §179): TAKEOFF
 -- REF's TRIM (FCOM p.1320 (11.40.44): the FMC's from the CG, in 0.1 unit
 -- steps) from the FPPM's Stab Trim Setting tables for the takeoff's rating
 -- (747-400F/PW4056: TO p.44 (1.2.20), TO1 8 % p.57 (1.3.11), TO2 20 %

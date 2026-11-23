@@ -1,6 +1,6 @@
 {
   "name": "s351_takeoff_trim_rating",
-  "description": "段 4 のレビュー FCTL-4 = PERF-4（2026-11-24、notes/ATA-34-61-FMC.md §177.4）の X-Plane での確認、地上。TAKEOFF REF の TRIM を FPPM の定格ごとの Stab Trim Setting の表（TO p.44、TO1 p.57、TO2 p.69）で計算し、THRUST LIM で定格を変えると計算し直す。RJAA 34L でエンジン運転中に始め（機体を読み直す）、重さ 220 t（OEW と燃料 36.5 t）。PERF INIT の ZFW 183.5（GR WT 220.0）、TAKEOFF REF の CG 17：TO で 4.0、TO 2 で 6.0（前の式はどちらも 4.4）、TO 1 で 4.0。緑の帯のトリム（laminar/B747/fmc/elevator_trim）も同じ値。CDU を撮る。Lua の誤りも確かめる",
+  "description": "段 4 のレビュー FCTL-4 = PERF-4（2026-11-24、notes/ATA-34-61-FMC.md §179.4）の X-Plane での確認、地上。TAKEOFF REF の TRIM を FPPM の定格ごとの Stab Trim Setting の表（TO p.44、TO1 p.57、TO2 p.69）で計算し、THRUST LIM で定格を変えると計算し直す。RJAA 34L でエンジン運転中に始め（機体を読み直す）、重さ 220 t（OEW と燃料 36.5 t）。PERF INIT の ZFW 183.5（GR WT 220.0）、TAKEOFF REF の CG 17：TO で 4.0、TO 2 で 6.0（前の式はどちらも 4.4）、TO 1 で 4.0。緑の帯のトリム（laminar/B747/fmc/elevator_trim）も同じ値。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },

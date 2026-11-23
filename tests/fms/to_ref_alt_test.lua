@@ -1,6 +1,6 @@
 -- Run from the repository root with LuaJIT: luajit tests/fms/to_ref_alt_test.lua
 -- The takeoff's reference altitude (2026-11-24, review FMC-8; notes/
--- ATA-34-61-FMC.md §177): the barometric altitude the FMC records as the
+-- ATA-34-61-FMC.md §179): the barometric altitude the FMC records as the
 -- airplane accelerates through 100 kt on the ground (FCOM p.667 (4.20.9)),
 -- above which THR REDUCTION's, ACCEL HT's and E/O ACCEL HT's heights count
 -- (FCOM p.1318-1319 (11.40.42-43): the runway elevation added); none

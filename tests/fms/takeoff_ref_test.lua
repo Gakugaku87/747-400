@@ -278,7 +278,7 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
--- (2026-11-24, review FMC-1, notes/ATA-34-61-FMC.md §177) the armed climb
+-- (2026-11-24, review FMC-1, notes/ATA-34-61-FMC.md §179) the armed climb
 -- by the takeoff's whole reduction on every airplane (the EEC's, with an
 -- assumed temperature: 27 % CLB 2, FCOM p.1273 (11.32.3); its paragraph has
 -- no effectivity: rule 2, p.11 (0.2.5)). From 2026-11-19 (§172) the 405 (a

@@ -1,7 +1,7 @@
 -- Run from the repository root with LuaJIT: luajit tests/fms/to_trim_model_test.lua
 -- The FMC's takeoff stabilizer trim (plugins/xtlua_keysystems/scripts/
 -- B747.68.xt.fms/B747.68.to_trim_model.lua; 2026-11-24, review FCTL-4 =
--- PERF-4, notes/ATA-34-61-FMC.md §177): the FPPM's Stab Trim Setting
+-- PERF-4, notes/ATA-34-61-FMC.md §179): the FPPM's Stab Trim Setting
 -- tables by the takeoff's rating (747-400F/PW4056: TO p.44 (1.2.20), TO1
 -- p.57 (1.3.11), TO2 p.69 (1.3.23)), every printed cell, linear between
 -- them, the edge's value outside the table and in its blank cells
