@@ -641,8 +641,11 @@ function calc_CGMAC()
 		calc_stab_trim(GW, CG_MAC)
 	end
 
-	simDR_cg_adjust = CG_shift * -1  --Value is flipped from what is in the XP slider
-	
+	-- (2026-11-24, the 2026-11-23 review's PERF-1) X-Plane's CG: the payload's
+	-- shift alone (inflight_update_CG). Before, this whole CG's shift, the
+	-- fuel in it
+	inflight_update_CG()
+
 	--print("Dist = "..dist_default_CG.." - "..CG)
 	--print("CG Shift = "..CG_shift)
 	--print("OEW weight = "..wb.OEW_weight)
@@ -654,7 +657,7 @@ function calc_CGMAC()
 	--print("GW = "..GW)
 end
 
-function inflight_update_CG()
+function inflight_update_CG(loaded)
 
 	local inch_to_meters	= 39.3700787
 	
@@ -690,12 +693,140 @@ function inflight_update_CG()
 
 	local CG				= total_moment / GW
 	local dist_default_CG	= 1243.32  --103.61 feet (from the aircraft .acf file)
-	local cg_shift			= (dist_default_CG - CG) / inch_to_meters  --determine how far ahead or behind the OEW CG we are
 
-	simDR_cg_adjust = cg_shift * -1  --Value is flipped from what is in the XP slider
+	-- (2026-11-24, the 2026-11-23 review's PERF-1) X-Plane's CG for this
+	-- load: the payload's zones onto X-Plane's payload stations
+	-- (B747_fms_xp_payload below). Before (upstream's), the whole airplane's
+	-- shift (CG - 1243.32, the fuel in it) to cgz_ref_to_default
+	B747_fms_xp_payload({
+		{wb.passenger_zoneA_weight, wb.passenger_zoneA_distance}, {wb.passenger_zoneB_weight, wb.passenger_zoneB_distance},
+		{wb.passenger_zoneC_weight, wb.passenger_zoneC_distance}, {wb.passenger_zoneD_weight, wb.passenger_zoneD_distance},
+		{wb.passenger_zoneE_weight, wb.passenger_zoneE_distance}, {wb.fwd_lower_cargo_weight, wb.fwd_lower_cargo_distance},
+		{wb.aft_lower_cargo_weight, wb.aft_lower_cargo_distance}, {wb.bulk_lower_cargo_weight, wb.bulk_lower_cargo_distance},
+		{wb.freight_zoneA_weight, wb.freight_zoneA_distance}, {wb.freight_zoneB_weight, wb.freight_zoneB_distance},
+		{wb.freight_zoneC_weight, wb.freight_zoneC_distance}, {wb.freight_zoneD_weight, wb.freight_zoneD_distance},
+		{wb.freight_zoneE_weight, wb.freight_zoneE_distance}}, dist_default_CG, wb.OEW_weight, loaded)
 
 	--print("Dist = "..dist_default_CG.." - "..CG)
-	--print("CG Shift = "..cg_shift)
+end
+
+-- (2026-11-24, the 2026-11-23 review's PERF-1) The FMC's payload into
+-- X-Plane. X-Plane 12 keeps the payload at the acf's payload stations
+-- (sim/flightmodel/weight/m_stations, kg; their arms acf_stations_ref_z, m
+-- aft of the reference CG; the custom acf has seven) and the fuel at the
+-- acf's tanks: its ZFW CG is the stations' moment over (acf_m_empty +
+-- m_fixed), which cgz_ref_to_default only reads back (measured on the
+-- ground, 2026-11-24: 30,000 kg written to station 0 and the others'
+-- 14,867 kg gave -2.5737 m, the sum to the digit). A value written to
+-- cgz_ref_to_default is met only by moving what the first station holds
+-- to the last (0.5 m asked with 20 t aboard: 0.337 m), with no payload not
+-- at all, and upstream wrote there the whole airplane's shift with the
+-- fuel in it: X-Plane, adding the fuel itself, counted it twice and its
+-- CG came ahead of the FMC's (340 t with 74 t of fuel: 23.0 % MAC for the
+-- FMC's 27.4; a full load up to 7 %).
+-- So each zone's weight (kg, at its arm in inches aft of the nose) goes to
+-- the two stations its arm lies between, in the lever's proportion: the
+-- weight and the moment are the zone's, and X-Plane's CG is the FMC's
+-- (calc_CGMAC's: the tanks' arms there are the acf's). A zone ahead of
+-- the first station or behind the last (zone A, the freighter's zones A
+-- and E) goes to that station, and its moment's rest is made by moving
+-- load from the other stations to that one as far as they hold any.
+-- The stations are the FMC's from when the PAX/CARGO page (or the sim's
+-- weight window through it) loads the airplane (`loaded`) until its zones
+-- are empty again or a new flight starts (B747_fms_xp_payload_release):
+-- X-Plane's own payload, loaded on its Weight & Balance screen or by a
+-- test's flight, stays while the FMC has loaded none. While they are the
+-- FMC's, the 60 s timer and a ZFW or GR WT entry (calc_CGMAC) set them
+-- anew, and every frame each station that is not at its weight is written
+-- again (B747_fms_xp_payload_keep): X-Plane spreads the stations its own
+-- way when m_fixed is written (the page writes the total) or
+-- cgz_ref_to_default (this module's start), and of nine elements written
+-- in one go from XTLua one reached X-Plane (X-Plane, 2026-11-24: the
+-- third station alone; the fuel module writes its tanks every frame the
+-- same way). Nothing is written before the stations' arms are read. An
+-- acf without stations: the payload's shift, its moment over (OEW +
+-- payload), to cgz_ref_to_default
+simDR_fms_station_kg		= find_dataref("sim/flightmodel/weight/m_stations")
+simDR_fms_station_z			= find_dataref("sim/aircraft/weight/acf_stations_ref_z")
+simDR_fms_station_max		= find_dataref("sim/aircraft/weight/acf_m_station_max")
+-- (their state local in a block: the main chunk is at Lua's 200 locals, and
+-- a table in a global would be an XTLua namespace)
+do
+local stations_own, stations_kg = false, nil  --the FMC's load on X-Plane's stations: kg by station
+function B747_fms_xp_payload_release()
+	stations_own, stations_kg = false, nil
+end
+function B747_fms_xp_payload_keep()
+	local kg = stations_kg
+	if kg == nil then return end
+	for i = 0, 8 do
+		if math.abs(simDR_fms_station_kg[i] - kg[i]) > 0.5 then simDR_fms_station_kg[i] = kg[i] end
+	end
+end
+function B747_fms_xp_payload(zones, ref_in, oew, loaded)
+	local IN_M = 0.0254
+	local payload, moment = 0, 0  --kg, kg m about the reference CG
+	for _, z in ipairs(zones) do
+		payload = payload + z[1]
+		moment = moment + z[1] * (z[2] - ref_in) * IN_M
+	end
+	if payload < 0.5 then
+		B747_fms_xp_payload_release()
+		return
+	end
+	if loaded then stations_own = true end
+	if not stations_own then return end
+	local st = {}  --the stations with a maximum, by their arms
+	for i = 0, 8 do
+		if simDR_fms_station_max[i] > 0 then st[#st + 1] = {i = i, z = simDR_fms_station_z[i]} end
+	end
+	if #st < 2 then
+		if oew + payload > 0 then simDR_cg_adjust = moment / (oew + payload) end
+		return
+	end
+	table.sort(st, function(a, b) return a.z < b.z end)
+	local n = #st
+	if st[n].z - st[1].z < 0.1 then return end  --the arms not read yet
+	local kg = {}
+	for i = 0, 8 do kg[i] = 0 end
+	local rest = 0  --kg m the end stations could not take
+	for _, z in ipairs(zones) do
+		local w, a = z[1], (z[2] - ref_in) * IN_M
+		if w > 0 then
+			if a <= st[1].z then
+				kg[st[1].i] = kg[st[1].i] + w
+				rest = rest + w * (a - st[1].z)
+			elseif a >= st[n].z then
+				kg[st[n].i] = kg[st[n].i] + w
+				rest = rest + w * (a - st[n].z)
+			else
+				for k = 1, n - 1 do
+					if a <= st[k + 1].z then
+						local f = (a - st[k].z) / (st[k + 1].z - st[k].z)
+						kg[st[k].i] = kg[st[k].i] + w * (1 - f)
+						kg[st[k + 1].i] = kg[st[k + 1].i] + w * f
+						break
+					end
+				end
+			end
+		end
+	end
+	if rest > 0 then  --to the last station, from the first on
+		for k = 1, n - 1 do
+			local d = math.min(kg[st[k].i], rest / (st[n].z - st[k].z))
+			kg[st[k].i], kg[st[n].i] = kg[st[k].i] - d, kg[st[n].i] + d
+			rest = rest - d * (st[n].z - st[k].z)
+		end
+	elseif rest < 0 then  --to the first station, from the last on
+		for k = n, 2, -1 do
+			local d = math.min(kg[st[k].i], -rest / (st[k].z - st[1].z))
+			kg[st[k].i], kg[st[1].i] = kg[st[k].i] - d, kg[st[1].i] + d
+			rest = rest + d * (st[k].z - st[1].z)
+		end
+	end
+	stations_kg = kg
+	B747_fms_xp_payload_keep()
+end
 end
 --Marauder28
 
@@ -6260,6 +6391,9 @@ function do_flight_start()
     end
 
 	simDR_cg_adjust = 0  --reset CG slider to begin current flight
+	-- (2026-11-24) a new flight's payload is X-Plane's until the PAX/CARGO
+	-- page loads the airplane again
+	B747_fms_xp_payload_release()
 	
 	--Ensure that CG location gets updated periodically so that the CG slider repositions automatically as fuel is burned during flight
 	run_at_interval(inflight_update_CG, 60)
@@ -6531,6 +6665,9 @@ function after_physics()
 	--Ensure DR's are updated in time for use in calc_CGMAC()
 	local payload_weight = B747DR_payload_weight
 	local fuel_qty = simDR_fuel_qty
+	-- (2026-11-24) and X-Plane's payload stations for B747_fms_xp_payload
+	local station_kg, station_z, station_max = simDR_fms_station_kg, simDR_fms_station_z, simDR_fms_station_max
+	B747_fms_xp_payload_keep()
 	local simconfig = B747DR_simconfig_data
 	throttleDataRefresh()
 end

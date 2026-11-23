@@ -767,8 +767,10 @@ function calc_pax_cargo()
 	--print("Freight Tot = "..freight_weight_tot)
 	-- (2026-11-05) X-Plane's CG for the new load now (inflight_update_CG:
 	-- the zones', the cargo's and the tanks' arms, as every 60 s), so that
-	-- the sim's weight and balance window shows it at once
-	inflight_update_CG()
+	-- the sim's weight and balance window shows it at once. (2026-11-24,
+	-- the 2026-11-23 review's PERF-1) As the load's owner: this page has just
+	-- written the payload's total, and the zones go to X-Plane's stations
+	inflight_update_CG(true)
 end
 --Marauder28
 
