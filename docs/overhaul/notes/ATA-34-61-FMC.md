@@ -3320,6 +3320,17 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 直したこと（`B747.68.xt.fms.lua` の `update_spd_trans`、毎フレーム）：空中で気圧高度が制限の高度を越えたら、`clbrestspd`・`clbrestalt` を `---`・`-----`（入力の前と同じ）に戻す。予測と VNAV も制限なしになる。入力は今の高度以上に限る（FMSPG p.114）ので、入れた直後に消えることは無い。
 - 試験：`vnav_spd_rest_test` 16（+6：地上で入れる、7,900 ft で残る、8,100 ft でダッシュと 4L、後の上昇の 3,000 ft でも無い。直す前は 3 件が落ちる）。
 
+### 177.5 ND の現用点と DATA の ETA を FMC の予測から（FMC-6＝DSP-2）
+
+- 見たこと：ND の右上の現用点の ETA（`laminar/B747/nd/waypoint_eta`）と DATA の各点の ETA（`laminar/B747/fms/route_eta`）は、本家の式「直線距離 ÷ max(275 kt, GS)」のままだった。CDU の PROGRESS・LEGS・RTE DATA は段 8d から予測の時刻なので、275 kt より遅い所（進入・低い上昇と降下）で ND が早く、同じ点で CDU と食い違った（180 kt・20 NM で約 2 分）。地上では、経路が有効でも ND の右上は伏せ字、DATA の ETA も無かった。
+- 資料：FCOM p.1147 (10.40.39)：MAP・MAP CTR・PLAN の現用点、その距離、「FMS-calculated ETA」（地上を除く条件は無い）。p.1148 (10.40.40)：DATA の ETA も同じ。notes/ATA-31.md：ND の右上を FMC の予測と一致させる。
+- 直したこと（`B747.68.xt.fms.lua`）：
+  - `B747_fms_row_pred_t(k)`：xtlua/fms の行 k の点の予測の時刻（PROGRESS・RTE DATA と同じ `B747_fms_preds()` の点。行と脚の対応は X-Plane に渡した計画の `routeMap`、目的地の行は予測の目的地）。脚の無い行（ホールドや弧の点）、X-Plane の計画がまだ前のもの（行の名前が違う）間は無し。DATA は RTE DATA と同じく E/D の後（進入復行）は無し。
+  - 右上の現用点・次の点の ETA と DATA の ETA を、その時刻から PROGRESS と同じ式（今の時刻に足す）で出す。予測が無いときは、空中なら前の式、地上なら無し（`------Z`、`-1`）。
+  - 右上の現用点と距離を地上でも出す（ETA は予測があれば）。
+- 残したもの：距離は前と同じ飛行機から点までの大円距離（FCOM は「Distance to active waypoint」だけ）。予測は 10 秒ごとなので、ETA の 0.1 分の桁は PROGRESS と同じく最大 10 秒ずれる。
+- 試験：`tests/fms/nd_eta_pred_test.lua`（23 件：地上で予測なしは点と距離だけ、予測ありで ND と PROGRESS の TO の ETA が同じ、DATA は予測の時刻と目的地、空中 160 kt で予測の ETA・前の式とは別、予測が無い空中は前の式。直す前は 7 件が落ちる）。`nd_data_test`（予測の無い所の前の式）はそのまま通る。
+
 ## 178. G/A の後の水平飛行の A/T の速度の保護（2026-11-23 夜：段 4 のフルレビューの AFDS-1。利用者の決定「A と B を直す」。worktree `D:/b747_fix_afds`）
 
 - 見たこと：TO/GA 1 回の G/A（A/T は THR、2,000 fpm）で MCP 高度を捕捉すると、ピッチは ALT、A/T は THR のまま（ここまでは FCOM どおり）。THR の則は 2,000 fpm のエネルギーの率を保ち続けるので、水平では加速し続けた。親の確かめ `v07_ga_leveloff`（X-Plane、2026-11-23、P&W・270 t、フラップ 20・Vmax 230）で、捕捉の後 69 秒で 163 → 238 kt。2 回目の押し（THR REF）には前から限界速度の則がある（§60）。

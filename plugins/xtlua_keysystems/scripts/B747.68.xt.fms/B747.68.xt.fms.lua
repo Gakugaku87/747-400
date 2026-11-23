@@ -5965,7 +5965,7 @@ function get_ETA_for_Distance(distance,additionalTime)
 	local mins = 0
 	local secs = 0
 	local time_to_waypoint = 0
-	local default_speed = 275 -- kt (FMC-21; the predictions come in step 8)
+	local default_speed = 275 -- kt (FMC-21; the ND's estimate without the FMC's predictions: FMC-6 2026-11-24)
 	local actual_speed = simDR_groundspeed * meters_per_second_to_kts
 	time_to_waypoint = additionalTime + (distance / math.max(default_speed, actual_speed)) * 3600
 	
@@ -6015,13 +6015,37 @@ end
 
 -- each route entry's ETA for the ND's route data (5-2 step 5c: the DATA
 -- switch shows the FMC's ETA at each waypoint, FCOM p.1040, p.1148): from
--- the active waypoint on, the distance along the route by
--- get_ETA_for_Distance, as the active and next waypoints' ETAs (the FMC's
--- predictions come with its rebuild: FMC-20, FMC-21); the zulu time of day
--- in minutes for each entry of xtlua/fms, -1 before the active waypoint, on
--- the ground and for an entry without a position; a JSON array
--- (laminar/B747/fms/route_eta) written when it changes, once a second
+-- the active waypoint on; the zulu time of day in minutes for each entry
+-- of xtlua/fms, -1 before the active waypoint and for an entry without a
+-- position; a JSON array (laminar/B747/fms/route_eta) written when it
+-- changes, once a second. (2026-11-24, stage 4 review FMC-6 = DSP-2;
+-- notes/ATA-34-61-FMC.md §177.5) The FMC's predicted times, as RTE DATA's
+-- (B747_fms_row_pred_t: none past the E/D), on the ground too; without
+-- predictions, in the air only, the distance along the route by
+-- get_ETA_for_Distance as before (the greater of the ground speed and 275
+-- kt: 2.2 instead of 4.3 minutes for 10 NM at 140 kt)
 B747DR_fms_route_eta = find_dataref("laminar/B747/fms/route_eta")
+-- the FMC's predicted time (s from now) to the waypoint of xtlua/fms's row
+-- k, as PROGRESS, LEGS and RTE DATA have it (the predictions' points); the
+-- destination's row the predictions' destination; nil without predictions,
+-- for a row of no leg (a racetrack's or an arc's point) and while
+-- X-Plane's plan is not yet the route's (the row's name another); with
+-- past_ed nil, none past the E/D either (RTE DATA's: the missed approach)
+function B747_fms_row_pred_t(k, past_ed)
+  local p, map, st = predResult, routeMap, B747_fmc_route
+  if not (p and p.pts and map and st.active) then return nil end
+  local i = map.leg[k]
+  if not i then
+    local d = st.rte.dest
+    if k == map.n and d and p.dest and map.ident[k] == d.ident then return p.dest.t end
+    return nil
+  end
+  if not past_ed and p.ed_i and i > p.ed_i then return nil end
+  local l, q = st.rte.legs[i], p.pts[i]
+  if not (l and q and q.t) then return nil end
+  if map.ident[k] ~= (l.fix and l.fix.ident or l.name) then return nil end
+  return q.t
+end
 local route_eta_t = -1
 -- (2026-11-13; the 2026-11-12 review DSP-2) the transition level in the
 -- FMC's data ("translvl") for the PFD's barometric setting's amber box and
@@ -6047,14 +6071,23 @@ function B747_route_eta(fms, airborne)
 	local k = B747DR_fmscurrentIndex
 	if k >= 1 and k <= table.getn(fms) then active = k end
 	local dist, lat, lon = 0, simDR_latitude, simDR_longitude
+	local pred = predResult ~= nil and B747_fmc_route.active
 	for i = 1, table.getn(fms) do
 		local v = -1
 		local wlat, wlon = fms[i][5], fms[i][6]
-		if airborne and active ~= nil and i >= active and not (wlat == 0 and wlon == 0) then
-			dist = dist + getDistance(lat, lon, wlat, wlon)
-			lat, lon = wlat, wlon
-			local _, h, m = get_ETA_for_Distance(dist, 0)
-			v = h * 60 + m
+		if active ~= nil and i >= active and not (wlat == 0 and wlon == 0) then
+			local t = nil
+			if pred then
+				t = B747_fms_row_pred_t(i)
+			elseif airborne then
+				dist = dist + getDistance(lat, lon, wlat, wlon)
+				lat, lon = wlat, wlon
+				t = (get_ETA_for_Distance(dist, 0))
+			end
+			if t then
+				local _, h, m = get_ETA_for_Distance(0, t)
+				v = h * 60 + m
+			end
 		end
 		out[i] = v
 	end
@@ -6079,6 +6112,7 @@ function waypoint_eta_display()
 	local time_to_waypoint = 0
 	local fms_distance_to_waypoint = 0
 	local fms_distance_to_next_waypoint = 0
+	local etaOk, nextEtaOk = true, true
 	if string.len(fmsJSON) > 2 then
 		fms = fms_route()
 		if fms[table.getn(fms)][8]~="LATLON" then
@@ -6086,16 +6120,27 @@ function waypoint_eta_display()
 		else
 			B747DR_destination="----"
 		end
-		if simDR_onGround ~= 1 then
-		--print(fmsJSON)
-			
+		-- (2026-11-24, stage 4 review FMC-6 = DSP-2; notes/ATA-34-61-FMC.md
+		-- §177.5) on the ground too (FCOM p.1147, 10.40.39: the active
+		-- waypoint, its distance and the FMS-calculated ETA in MAP, MAP CTR
+		-- and PLAN, no exception; PROGRESS shows them there). Before, dashes
+		-- on the ground with an active route
 		fms_current_waypoint, fms_latitude, fms_longitude = getCurrentWayPoint(fms,false)
-		--print(string.match(fms_current_waypoint, "%("))
 		fms_distance_to_waypoint,time_to_waypoint,hours,mins,secs = get_waypoint_estimate(simDR_latitude, simDR_longitude,fms_current_waypoint, fms_latitude, fms_longitude,0)
-		
+
 		fms_next_waypoint, fms_next_latitude, fms_next_longitude = getCurrentWayPoint(fms,true)
-		--print(string.match(fms_current_waypoint, "%("))
 		fms_distance_to_next_waypoint,time_to_waypoint,nhours,nmins,nsecs = get_waypoint_estimate(fms_latitude, fms_longitude,fms_next_waypoint, fms_next_latitude, fms_next_longitude,time_to_waypoint)
+		-- the ETAs the FMC's predicted ones, PROGRESS's (before, the distance
+		-- over the greater of the ground speed and 275 kt: early under 275
+		-- kt, two minutes at 180 kt 20 NM out); without predictions the old
+		-- estimate in the air, none on the ground
+		if (predResult ~= nil and B747_fmc_route.active) or simDR_onGround == 1 then
+			local k = B747DR_fmscurrentIndex
+			local t = B747_fms_row_pred_t(k, true)
+			local t2 = B747_fms_row_pred_t(k + 1, true)
+			etaOk, nextEtaOk = t ~= nil, t2 ~= nil
+			if t then time_to_waypoint, hours, mins, secs = get_ETA_for_Distance(0, t) end
+			if t2 then time_to_waypoint, nhours, nmins, nsecs = get_ETA_for_Distance(0, t2) end
 		end
 		B747_route_eta(fms, simDR_onGround ~= 1)
 		B747_fms_publish_trans_lvl()
@@ -6125,7 +6170,7 @@ function waypoint_eta_display()
 		end
 		B747DR_ND_current_waypoint = fms_current_waypoint
 		B747DR_ND_waypoint_distance = string.format("%5.1f".."nm", fms_distance_to_waypoint)
-		B747DR_ND_waypoint_eta = string.format("%02d%02d.%d".."z", hours, mins, secs * 10)			
+		B747DR_ND_waypoint_eta = etaOk and string.format("%02d%02d.%d".."z", hours, mins, secs * 10) or "------Z"
 	end
 	if B747DR_last_waypoint=="" then
 	  B747DR_last_waypoint="-----"
@@ -6142,7 +6187,7 @@ function waypoint_eta_display()
 	else
 		B747DR_next_waypoint = fms_next_waypoint
 		B747DR_next_waypoint_dist=fms_distance_to_next_waypoint
-		B747DR_next_waypoint_eta = string.format("%02d%02d.%d".."z", nhours, nmins, nsecs * 10)			
+		B747DR_next_waypoint_eta = nextEtaOk and string.format("%02d%02d.%d".."z", nhours, nmins, nsecs * 10) or "------Z"
 	end
 end
 
