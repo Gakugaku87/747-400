@@ -255,21 +255,22 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
--- (2026-11-19, notes/ATA-34-61-FMC.md §172) the armed climb by the FCOM's
--- effectivity: the 109 (a P&W passenger) by the takeoff's whole reduction
--- (the EEC's, with an assumed temperature: 27 % CLB 2, FCOM p.1273); the
--- 405 (a P&W freighter: laminar/B747/freighter) and 570 (GE: engines/type 1)
--- by the takeoff's rating, TO 1's CLB 1 (FCOM p.1315)
+-- (2026-11-24, review FMC-1, notes/ATA-34-61-FMC.md §177) the armed climb
+-- by the takeoff's whole reduction on every airplane (the EEC's, with an
+-- assumed temperature: 27 % CLB 2, FCOM p.1273 (11.32.3); its paragraph has
+-- no effectivity: rule 2, p.11 (0.2.5)). From 2026-11-19 (§172) the 405 (a
+-- P&W freighter: laminar/B747/freighter) and 570 (GE: engines/type 1) armed
+-- TO 1's CLB 1
 rt:set("laminar/B747/engines/to_reduction", 27)
 frames(0.2)
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "the 109's TO 1 of 27 % in all: CLB 2 armed")
 rt:set("laminar/B747/freighter", 1)
 frames(0.2)
-T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "a P&W freighter (the 405): TO 1's CLB 1")
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "a P&W freighter (the 405): TO 1 of 27 % in all CLB 2")
 rt:set("laminar/B747/freighter", 0)
 rt:set("laminar/B747/engines/type", 1)
 frames(0.2)
-T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "GE (the 570): TO 1's CLB 1")
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "GE (the 570): TO 1 of 27 % in all CLB 2")
 rt:set("laminar/B747/engines/type", 0)
 frames(0.2)
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "a P&W passenger again: CLB 2")

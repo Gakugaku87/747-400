@@ -3379,3 +3379,16 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 推定：新しい値は無い（保護の目標と則は THR REF のもの。則の利得は §60 の推定のまま）。
 - 試験：`at_model_test` 187（+4：ALT の G/A の THR で 226 kt・加速中はレバーを下げる、180 kt では 2,000 fpm の率のまま、V/S では保護なし、ALT で THR のまま）、新しい `ga_leveloff_test` 13。全 301 本・checks 19670（この worktree の基準 d88c12c6 は 300 本・19651）。
 - X-Plane（親が回す）：新しい `s380_ga_leveloff_spd`（`v07_ga_leveloff` と同じ流れ。捕捉の後 150 秒、速さ ≤ 233 kt、A/T は THR のまま、速さは 215〜233 kt、SPD を押すと 30 秒で 215 kt 未満）。
+
+## 179. 段 4 のレビューの直し：推力制限・TAKEOFF REF・PERF INIT・APPROACH REF（2026-11-24、担当 perf。[REVIEW_2026-11-23.md](../REVIEW_2026-11-23.md) の利用者の決定「A と B を直す」）
+
+### 179.1 上昇の減格の待機は全機体で離陸の減らし方から（FMC-1。§172 の読み違いの直し）
+
+- 資料（開発 PC の `_ref` で開いた）：
+  - FCOM p.11 (0.2.5) の決まり 2：有効番号は、その直後の段落（と下位の項目）だけに掛かる。次の同じ段の段落には掛からない。
+  - FCOM p.1273 (11.32.3)：「405, 570」「109」の番号は、それぞれ「Two fixed climb thrust derates…」の段落（消え方の高度）だけ。その次の「assumed temperature か減格の離陸が上昇の減格の自動の選択に効く」（5 % 未満 CLB、15 % 未満 CLB 1、15 % 以上 CLB 2）は番号の無い段落で、全機体。
+  - FCOM p.1315 (11.40.39)（絵で確かめた）：「405, 570」は「Takeoff thrust derate can be entered by uplink.」だけに掛かる（変更の印もその行だけ）。次の「Selecting TO 1 arms CLB 1.」は全機体。既定の減格（GE 5・15 %、P&W 8・20 %）なら、減らし方の規則でも TO 1 → CLB 1、TO 2 → CLB 2 になり、2 つの文は同時に成り立つ。
+- 前（§172、a465b930。クラウドのセッションが `_ref` なしに notes の要約から作った）：405・570（貨物機か GE）は離陸の rating だけで待機させ、assumed temperature を数えなかった。TO と SEL で 20 % 減でも CLB、D-TO 1 で全部 22〜27 % でも CLB 1 だった。
+- 直したこと：`B747.68.thrlim_model.lua` の `armed_clb` と入力 `by_rating`（状態 `s.by_rating`）を消し、地上の待機と THRUST LIM の TO・TO 1・TO 2 の選択を、全機体で `auto_clb`（離陸の減らし方の %：減格の % と EEC の assumed temperature を含む減らし方の大きい方）に戻した。FMS のつなぎの `inp.by_rating` も消した。`laminar/B747/freighter` は `B747_fms_is_405` のために毎フレーム読む（ほかのプラグインの dataref の読みは 1 回分遅れる）。消え方の高度の有効番号分け（`B747.42.ref_thrust_model.lua` の `CLB_GONE`、109 は 30,000・35,000 ft、405・570 は 15,000 ft）は p.1273 の番号の段落どおりなので、そのまま。§172 の推定のうち「405・570 の TO が CLB」「assumed temperature で変えない」は無くなった（減らし方の規則で決まる）。
+- 試験：`thrlim_model_test` 83（81 から。405・570 の組を書き直し：GE の TO 1 の 5 % で CLB 1、TO 2 の 15 % で CLB 2、TO 1 の 20 % で CLB 2、D-TO の 20 % で CLB 2・10 % で CLB 1、D-TO 1 の 22 % で CLB 2 とフラップ 5 で CLB 2、乗員の CLB 1 が TO 2 の後も残る。古い入力 `by_rating` を渡しても変わらない）、`takeoff_ref_test` 78（FMS のつなぎ：減らし方 27 % の TO 1 で、旅客機・P&W の貨物機・GE とも CLB 2）。直す前のコードでは 5 件と 2 件が落ちる（確かめた）。
+- X-Plane のシナリオ `s336_clb_arm_405`（ICL 4X-ICB、地上）の期待を直した：TO 1 で CLB 1、TO 2 で CLB 2、TO と SEL 50（11-21 の回で EEC の減らし方 16.6 %）で CLB 2 と 9 行目の `<ARM> CLB 2>`、TO 1 と SEL 50（23.3 %）で CLB 2、SEL を消すと TO 1 の 8 % で CLB 1。減らし方 15 % 以上の確かめは warn から fail にした（CLB 2 の前提）。

@@ -6,8 +6,7 @@
 --   on the ground TO (the selected TO, TO 1 or TO 2: ATA34_2 p.535), the
 --   climb's rating armed with it (by the takeoff's thrust reduction: under
 --   5 % CLB, under 15 % CLB 1, else CLB 2, unless the crew chose one: FCOM
---   p.1273, p.1316; (2026-11-19) the 405's and 570's, a freighter or GE, by
---   the takeoff's rating: TO 1 CLB 1, TO 2 CLB 2, FCOM p.1315);
+--   p.1273, p.1316; every airplane: 2026-11-24, review FMC-1);
 --   the armed climb at the thrust reduction point (THR REDUCTION: flaps 5 or
 --   a height above the airport) with VNAV engaged (FCOM p.667; FMSPG
 --   p.105, p.111), or by the THR switch above 400 ft with VNAV or FLCH
@@ -54,7 +53,6 @@ function M.new()
     return {mode = "TO",                -- the active: "TO", "CLB", "CRZ", "CON", "GA"
         to = 0, clb = 0,                -- the takeoff's and the climb's ratings (0, 1, 2)
         clb_manual = false,             -- the climb's chosen on the ground
-        by_rating = false,              -- (2026-11-19) the climb's armed by the takeoff's rating (the 405, 570)
         con = false,                    -- CON selected (the THR switch after GA)
         d = false,                      -- (step 9g3) the assumed temperature's D- on TO
         no_sel = false,                 -- the assumed temperature removed (a TO/GA push)
@@ -77,22 +75,20 @@ function M.auto_clb(pct)
     return 2
 end
 
--- the climb's rating armed with the takeoff's rating n (0 to 2) of pct %
--- reduction: the 109 (P&W and RR passengers) by the reduction (FCOM
--- p.1273); (2026-11-19) the 405 and 570 (a freighter or GE, as the EEC's
--- CON: B747.42.eec_model.lua) the takeoff's, TO 1 CLB 1 and TO 2 CLB 2
--- (FCOM p.1315; TO CLB, the assumed temperature not counted: estimate)
-function M.armed_clb(s, n, pct)
-    if s.by_rating then return n end
-    return M.auto_clb(pct)
-end
-
 -- TO, TO 1 or TO 2 (n 0 to 2) of pct % reduction, on the ground only
--- (FCOM p.1315): the climb's armed with it unless the crew chose one
+-- (FCOM p.1315): the climb's armed with it unless the crew chose one, by
+-- the reduction on every airplane (FCOM p.1273 (11.32.3): the paragraph
+-- after the 109's washout has no effectivity, and the FCOM's rule 2, p.11
+-- (0.2.5), keeps one to its own paragraph; p.1315 (11.40.39)'s "Selecting
+-- TO 1 arms CLB 1" too, after the 405's and 570's uplink line. With the
+-- default derates (GE 5/15 %, P&W 8/20 %) TO 1 arms CLB 1 and TO 2 CLB 2
+-- either way. 2026-11-24, review FMC-1: from 2026-11-19 (a465b930) the
+-- 405 and 570 armed by the takeoff's rating alone, the assumed
+-- temperature not counted)
 function M.select_to(s, n, pct, ground)
     if not ground then return false end
     s.to = n
-    if not s.clb_manual then s.clb = M.armed_clb(s, n, pct) end
+    if not s.clb_manual then s.clb = M.auto_clb(pct) end
     return true
 end
 
@@ -134,11 +130,8 @@ end
 --   eo_vnav      (step 9h4a) the engine-out VNAV active (ENG OUT executed:
 --                CON kept as with an engine inoperative; not in TO)
 --   crz_clb      (step 12c1) PERF FACTORS' THR/CRZ CLB: CLB at the T/C
---   by_rating    (2026-11-19) the FCOM's 405 or 570 (a freighter or GE): the
---                climb armed by the takeoff's rating (FCOM p.1315)
 -- returns the mode's text
 function M.update(s, inp)
-    s.by_rating = inp.by_rating == true
     local flaps = inp.flaps or 0
     local landing = flaps >= M.FLAPS_LAND - 0.01
     local eo = (inp.eo or 0) >= 1 or (s.mode ~= "TO" and inp.eo_vnav == true)
@@ -146,11 +139,11 @@ function M.update(s, inp)
     s.flch_prev = inp.flch_up and true or false
     if inp.ground then
         -- on the ground TO, the selections kept (ATA34_2 p.535); the climb's
-        -- by the takeoff's whole reduction unless chosen (FCOM p.1273; the
-        -- 405's and 570's by the takeoff's rating: p.1315)
+        -- by the takeoff's whole reduction unless chosen (FCOM p.1273, every
+        -- airplane: review FMC-1)
         s.mode, s.locked, s.con, s.no_sel, s.eo_to = "TO", false, false, false, false
         s.flaps_prev, s.phase_prev, s.vnav_prev = flaps, inp.phase, inp.vnav
-        if not s.clb_manual and (inp.to_red or s.by_rating) then s.clb = M.armed_clb(s, s.to, inp.to_red) end
+        if not s.clb_manual and inp.to_red then s.clb = M.auto_clb(inp.to_red) end
         s.d = inp.sel_up == true
         return M.label(s)
     end

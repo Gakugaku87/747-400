@@ -2595,8 +2595,7 @@ B747DR_fms_thrlim_eicas = find_dataref("laminar/B747/fms/thrlim/eicas")
 -- not see this one's string writes: s152 and s141's references were TO's)
 B747DR_fms_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
 local THRLIM_CODE = {TO = 1, CLB = 2, CRZ = 3, CON = 4, GA = 5}
--- (2026-11-19) a freighter (the simconfig's aircraft type): with GE the
--- FCOM's 405 and 570, the climb armed by the takeoff's rating (FCOM p.1315)
+-- (2026-11-19) a freighter (the simconfig's aircraft type)
 B747DR_fms_freighter = find_dataref("laminar/B747/freighter")
 -- the FCOM's 405 (a freighter: EFFECTIVITY_405.md; read every frame by
 -- update_thrlim, so a page's read is fresh)
@@ -2661,9 +2660,9 @@ local function update_thrlim()
   inp.eo_vnav = B747_fms_eo().active
   -- (step 12c1) PERF FACTORS' THR/CRZ: the cruise's limit CLB or CRZ
   inp.crz_clb = B747_fms_perf_factors().thr_crz == "CLB"
-  -- (2026-11-19) the 405 and 570 (a freighter or GE): the climb armed by
-  -- the takeoff's rating (FCOM p.1315); the 109 by its reduction (p.1273)
-  inp.by_rating = B747DR_fms_engine_type == 1 or B747DR_fms_freighter == 1
+  -- the freighter flag read every frame (another plugin's: B747_fms_is_405
+  -- on a page then reads it fresh; review FMC-1 took its use here away)
+  thrlimSeen.freighter = B747DR_fms_freighter
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
   local s = thrlimState
