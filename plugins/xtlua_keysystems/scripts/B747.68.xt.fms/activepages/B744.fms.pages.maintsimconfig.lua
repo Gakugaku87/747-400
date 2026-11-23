@@ -121,10 +121,14 @@ fmsPages["MAINTSIMCONFIG"].getPage=function(self,pgNo,fmsID)
     fmsFunctionsDefs["MAINTSIMCONFIG"]["R6"]=nil
     local LineA="<ENABLE PAUSE AT T/D    "	
     local LineB="<PAUSE AT ***NM TO DEST "	
-    if B747DR_ap_vnav_pause ==1.0 then 
+    if B747DR_ap_vnav_pause ==1.0 then
         LineA="<DISABLE PAUSE AT T/D   "
-        if B747BR_tod>0 then 
-          LineB="<PAUSE AT ".. string.format("%03d",B747BR_tod) .."NM TO DEST "
+        -- (2026-11-24, stage 4 review FMC-9) the T/D's distance to the
+        -- destination from VNAV's T/D and the predictions' (before, the old
+        -- AP's, never set)
+        local td, togo = B747_fms_vnav_td(), B747_fms_dest_dtg()
+        if td and togo and togo - td > 0 then
+          LineB="<PAUSE AT ".. string.format("%03d",math.min(999, math.floor(togo - td + 0.5))) .."NM TO DEST "
         end
   
     elseif B747DR_ap_vnav_pause >1.0 then 

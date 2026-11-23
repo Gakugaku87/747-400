@@ -3331,6 +3331,20 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 残したもの：距離は前と同じ飛行機から点までの大円距離（FCOM は「Distance to active waypoint」だけ）。予測は 10 秒ごとなので、ETA の 0.1 分の桁は PROGRESS と同じく最大 10 秒ずれる。
 - 試験：`tests/fms/nd_eta_pred_test.lua`（23 件：地上で予測なしは点と距離だけ、予測ありで ND と PROGRESS の TO の ETA が同じ、DATA は予測の時刻と目的地、空中 160 kt で予測の ETA・前の式とは別、予測が無い空中は前の式。直す前は 7 件が落ちる）。`nd_data_test`（予測の無い所の前の式）はそのまま通る。
 
+### 177.6 旧式の T/D を消し、COST INDEX の窓と SIM CONFIG の PAUSE を VNAV の T/D に（FMC-9）
+
+- 見たこと：旧 AP の `setDistances`（`B747.70.xt.autopilot.lua`：T/D を (CRZ ALT − E/D) ÷ 290 NM、残りの距離、T/D の位置）はどこからも呼ばれず、`autopilot/dist/top_of_descent`・`remaining_distance`・`distance_to_toc` は 0 のままだった。これを読む 2 つは、ずれた所で働くのではなく働いていなかった：
+  - PERF INIT の COST INDEX の「T/D の 10 NM 以内は INVALID ENTRY」（FMSPG p.97）：いつも入力できた。
+  - SIM CONFIG の 3/5 CONFIG PAUSE（`laminar/B747/autopilot/vnav_pause`：1 で T/D、それより大きい値でその NM を目的地の手前に、止める。旧フォークの便利機能）：一度も止まらず、ページの「PAUSE AT ***NM TO DEST」も *** のまま。Plugins → 747-400 の「Pause before T/D」（§126）は別で、前から VNAV の T/D を使う。
+- 直したこと：
+  - `setDistances` を消した（autopilot の `vnav_pause` と `pause_toggle` の結び付けと、止める判定も）。
+  - COST INDEX：VNAV の T/D（`B747_fms_vnav_td`：残りの NM、過ぎると負）で、前のコードと同じく「T/D の 10 NM 手前から先」を INVALID ENTRY（`B744.fms.pages.lua`）。
+  - CONFIG PAUSE の判定を FMS へ（`B747_fms_simopts_update`、0.5 秒ごと、空中だけ）：1 は VNAV の T/D の 1 NM 手前から、それより大きい値は予測の目的地までの距離（`B747_fms_dest_dtg`：PROGRESS の DEST と同じ）がその値以下で、`sim/operation/pause_on` を 1 回、オプションを 0 に戻す（前と同じ）。ページの 2 行目は T/D から目的地までの距離（予測の目的地までの距離 − T/D までの距離）。
+- 推定：目的地までの距離は 10 秒ごとの予測の値なので、止まるのが最大 10 秒（巡航で約 1.3 NM）遅れる。
+- 問い：FMSPG p.97 の「within 10 miles of the Top-of-Descent point」は、T/D の前後 10 NM（過ぎた後は入力できる）とも読める。前のコードの「10 NM 手前から先（降下中ずっと）」のままにした。
+- 残したもの（いつも 0 を読む旧式の所。ほかの担当の範囲か、直さない）：PROGRESS の予測が無いときの古いページ（`B744.fms.pages.progress.lua` の T/D・DEST の行）、autopilot の旧 VNAV（`B747.70.xt.autopilot.monitor.lua`・`.vnav.lua`、`B747.70.xt.autopilot.lua` の `after_physics` の `tDist`・`tod`）、FDR の記録（`B747.01.xt.fdr.lua`）。
+- 試験：`simopts_glue_test` 38（+13：T/D の 120 NM 手前は止まらず、ページは 180NM、T/D で 1 回止まりオプションが 0、150 NM の設定で 160 NM は止まらず 149.5 NM で止まる、COST INDEX は T/D の 50 NM 手前で入り 8 NM 手前で INVALID ENTRY、T/D が無いと入る。直す前は 8 件が落ちる）。
+
 ## 178. G/A の後の水平飛行の A/T の速度の保護（2026-11-23 夜：段 4 のフルレビューの AFDS-1。利用者の決定「A と B を直す」。worktree `D:/b747_fix_afds`）
 
 - 見たこと：TO/GA 1 回の G/A（A/T は THR、2,000 fpm）で MCP 高度を捕捉すると、ピッチは ALT、A/T は THR のまま（ここまでは FCOM どおり）。THR の則は 2,000 fpm のエネルギーの率を保ち続けるので、水平では加速し続けた。親の確かめ `v07_ga_leveloff`（X-Plane、2026-11-23、P&W・270 t、フラップ 20・Vmax 230）で、捕捉の後 69 秒で 163 → 238 kt。2 回目の押し（THR REF）には前から限界速度の則がある（§60）。

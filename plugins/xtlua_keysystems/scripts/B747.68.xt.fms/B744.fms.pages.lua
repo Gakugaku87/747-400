@@ -1559,11 +1559,14 @@ function fmsFunctions.setdata(fmsO,value)
 	setFMSData(value, string.format("%5.1f", perf_in(v)))
   elseif value == "costindex" then
 	-- COST INDEX: 0 to 9999 (FCOM p.1311); not within 10 NM of the T/D
-	-- (FMSPG p.97)
+	-- (FMSPG p.97). (2026-11-24, stage 4 review FMC-9) The T/D VNAV's
+	-- (B747_fms_vnav_td: NM to go, negative past it), as before 10 NM short
+	-- of it and on; before, the old AP's (setDistances, never called: its
+	-- distances 0, entries taken there too)
 	if del then fmsO["notify"]="INVALID DELETE" return end
 	local ci = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 9999)
-	local nearTD = simDR_onGround ~= 1 and B747BR_tod > 0 and B747BR_totalDistance > 0
-		and (B747BR_totalDistance - B747BR_tod) < 10
+	local td = simDR_onGround ~= 1 and B747_fms_vnav_td() or nil
+	local nearTD = td ~= nil and td < 10
 	if ci == nil or nearTD then fmsO["notify"]="INVALID ENTRY" return end
 	setFMSData(value, string.format("%d", ci))
 	B747_fms_econ_now()

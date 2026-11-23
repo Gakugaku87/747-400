@@ -144,6 +144,64 @@ frames(1)
 td = 10
 frames(1)
 T.equal(commands(PAUSE), 2, "the option off: no pause")
+
+-- (2026-11-24, stage 4 review FMC-9) SIM CONFIG's CONFIG PAUSE
+-- (laminar/B747/autopilot/vnav_pause: 1 at the T/D, more that many NM to
+-- the destination) and PERF INIT's COST INDEX window (FMSPG p.97: not
+-- within 10 NM of the T/D) on VNAV's T/D and the predictions' distance to
+-- go. Before, both on the old AP's (setDistances, never called: 0): no
+-- pause ever, the entry taken at the T/D
+local dtg = 300
+local realDtg = fms.ns.B747_fms_dest_dtg
+fms.ns.B747_fms_dest_dtg = function() return dtg end
+local VP = "laminar/B747/autopilot/vnav_pause"
+local n0 = commands(PAUSE)
+td = 120
+rt:set(VP, 1)
+frames(1)
+T.equal(commands(PAUSE), n0, "PAUSE AT T/D on, the T/D 120 NM ahead: no pause")
+-- the page 3/5 CONFIG PAUSE: the T/D's distance to the destination
+key("func_key/fix")
+key("ls_key/R6")                 -- SIM CONFIG
+key("func_key/next_pg")
+key("func_key/next_pg")
+T.check(line(1):find("CONFIG PAUSE"), "CONFIG PAUSE: " .. line(1))
+T.equal(line(5), "<PAUSE AT 180NM TO DEST ", "the T/D 180 NM from the destination (300 - 120; before: ***)")
+td = 0.8
+frames(1)
+T.equal(commands(PAUSE), n0 + 1, "at the T/D: X-Plane's pause, once (before: none)")
+T.equal(rt:get(VP), 0, "and the option off again")
+dtg = 160
+rt:set(VP, 150)
+frames(1)
+T.equal(commands(PAUSE), n0 + 1, "PAUSE AT 150 NM TO DEST, 160 NM to go: no pause")
+dtg = 149.5
+frames(1)
+T.equal(commands(PAUSE), n0 + 2, "149.5 NM: the pause, once (before: none)")
+T.equal(rt:get(VP), 0, "off again")
+-- COST INDEX in the air (PERF INIT: INIT REF, <INDEX, PERF INIT)
+key("func_key/index")
+key("ls_key/L6")
+key("ls_key/L3")
+T.check(line(1):find("PERF INIT"), "PERF INIT: " .. line(1))
+local function ci() return (fms.ns.fmsModules.data.costindex:gsub("%s+$", "")) end
+local function pad() return (rt:get("laminar/B747/fms3/Line14_L"):gsub("%s+$", "")) end
+td = 50
+type_in("120")
+key("ls_key/L5")
+T.equal(ci(), "120", "the T/D 50 NM ahead: COST INDEX 120 taken")
+td = 8
+type_in("130")
+key("ls_key/L5")
+T.equal(pad(), "INVALID ENTRY", "8 NM before the T/D: INVALID ENTRY (FMSPG p.97; before: taken)")
+T.equal(ci(), "120", "COST INDEX kept")
+for _ = 1, 30 do rt:command("laminar/B747/fms1/key/clear") end
+frames(0.1)
+td = nil
+type_in("140")
+key("ls_key/L5")
+T.equal(ci(), "140", "no T/D (no VNAV path): taken")
 fms.ns.B747_fms_vnav_td = realTd
+fms.ns.B747_fms_dest_dtg = realDtg
 
 T.done()

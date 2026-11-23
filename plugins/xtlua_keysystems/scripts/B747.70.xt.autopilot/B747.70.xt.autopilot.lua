@@ -137,8 +137,6 @@ simCMD_ATOff = find_command("sim/autopilot/autothrottle_hard_off")
 simCMD_ATOffXP11 = find_command("sim/autopilot/autothrottle_off")
 simCMD_ThrottleDown = find_command("sim/engines/throttle_down")
 simCMD_ThrottleUp = find_command("sim/engines/throttle_up")
-B747DR_ap_vnav_pause = find_dataref("laminar/B747/autopilot/vnav_pause")
-simCMD_pause = find_command("sim/operation/pause_toggle")
 simDRTime = find_dataref("sim/time/total_running_time_sec")
 simDR_autopilot_autothrottle_enabled = find_dataref("sim/cockpit2/autopilot/autothrottle_enabled")
 simDR_autopilot_autothrottle_arm = find_dataref("sim/cockpit2/autopilot/autothrottle_arm")
@@ -2843,164 +2841,10 @@ function B747_ap_ias_mach_mode()
 end
 
 
-function setDistances(fmsO)
-	--print("set distances")
-	if B747BR_cruiseAlt>0 and B747DR_ap_flightPhase<2 then
-		local useFPM=2000
-		if B744_fpm>2000 then useFPM=B744_fpm end
-		local altDiff=B747BR_cruiseAlt-simDR_pressureAlt1
-		local minsToAlt=altDiff/useFPM
-		if simDR_groundspeed<150 then minsToAlt=minsToAlt+15 end
-		local meters_per_second_to_kts = 1.94384449
-		local default_speed = 250 -- kt (FMC-21; the predictions come in step 8)
-  		local actual_speed = simDR_groundspeed * meters_per_second_to_kts
-		B747BR_toc=(math.max(default_speed, actual_speed)*minsToAlt)/60
-	else
-		B747BR_toc=-1
-	end
-	if (fmsO) == nil then
-		B747BR_distance_to_dest=-1
-		B747BR_totalDistance = 0
-		return
-	end
-	if table.getn(fmsO) == 0 then
-		B747BR_distance_to_dest=-1
-		B747BR_totalDistance = 0
-		return
-	end
-
-	local start = B747DR_fmscurrentIndex
-	if start == 0 then
-		start = 1
-	end
-	local iLat = simDR_latitude
-	local iLong = simDR_longitude
-	local endI = table.getn(fmsO)
-	B747BR_distance_to_dest= getDistance(iLat, iLong, fmsO[endI][5], fmsO[endI][6])
-	if table.getn(fmsO) <= 2 then
-		B747BR_totalDistance = 0
-		return
-	end
-	if fmsO[start] == nil then
-		B747BR_totalDistance = 0
-		print("empty data")
-		return
-	end
-	local LastLeg = getDistance(simDR_latitude, simDR_longitude, fmsO[start][5], fmsO[start][6])
-
-	local eLat = fmsO[start][5]
-	local eLong = fmsO[start][6]
-	local totalDistance = LastLeg
-	local nextDistanceInFeet = totalDistance * 6076.12
-
-	local eod = endI
-	local setTOD = false
-	local setTOC = false
-	local todDist = B747BR_totalDistance - B747BR_tod
-	local vnavData={}
-	local vnavI=1
-	local lastVnavAlt=-9999
-	--print("setDistances")
-	local usedToD=false
-	for i = 1, endI - 1, 1 do
-		if i >= start then
-			iLat = fmsO[i][5]
-			iLong = fmsO[i][6]
-			eLat = fmsO[i + 1][5]
-			eLong = fmsO[i + 1][6]
-			LastLeg = getDistance(fmsO[i][5], fmsO[i][6], fmsO[i + 1][5], fmsO[i + 1][6])
-			totalDistance = totalDistance + LastLeg
-		end
-
-		if totalDistance > todDist and setTOD == false and B747BR_totalDistance > 0 and todDist > 0 then
-			setTOD = true
-			--interpolate last leg
-			local backingDist = totalDistance - todDist
-			local legFrac = (LastLeg - backingDist) / LastLeg
-			if legFrac >= 0 and legFrac <= 1 and totalDistance - LastLeg < todDist then
-				B747BR_todLat = iLat + (eLat - iLat) * legFrac
-				B747BR_todLong = iLong + (eLong - iLong) * legFrac
-			end
-		end
-		if B747BR_toc>=0 and totalDistance > B747BR_toc and setTOC == false and B747BR_totalDistance > 0 then
-			setTOC = true
-			local backingDist = totalDistance - B747BR_toc
-			local legFrac = (LastLeg - backingDist) / LastLeg
-			if legFrac >= 0 and legFrac <= 1 and totalDistance - LastLeg < B747BR_toc then
-				B747BR_tocLat = iLat + (eLat - iLat) * legFrac
-				B747BR_tocLong = iLong + (eLong - iLong) * legFrac
-			end
-		end
-		--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9])
-		dtoAirport = getDistance(fmsO[i][5], fmsO[i][6], fmsO[endI][5], fmsO[endI][6])
-		--print("i=".. i .." B747DR_fmscurrentIndex="..B747DR_fmscurrentIndex .." speed="..simDR_groundspeed .. " distance="..totalDistance.." dtoAirport="..dtoAirport.. " ".. fmsO[i][5].." ".. fmsO[i][6].." ".. fmsO[i+1][5].." ".. fmsO[i+1][6])
-		if dtoAirport < 10 then
-			eod = i
-			--print("end fms"..i.."=at alt "..fms[i][3])
-			break
-		end
-		if fmsO[i][9]>0 then
-			--construct vnav profile
-			--[[local isNext="false"
-			if i==start then
-				isNext="true"
-			end]]--
-			if fmsO[i][9]~=lastVnavAlt or i==start then
-				local vAlt=0
-				local tAlt=fmsO[i][9]
-				if i>1 then
-					local distance=getDistance(fmsO[i-1][5],fmsO[i-1][6], fmsO[i][5],fmsO[i][6])
-					if fmsO[i][9]<lastVnavAlt and not(usedToD) and B747BR_totalDistance > 0 and B747BR_todLat ~=0 and B747BR_todLong ~=0 then
-						distance=getDistance(B747BR_todLat,B747BR_todLong, fmsO[i][5],fmsO[i][6])
-						usedToD=true
-					end
-					if distance>0.1 then
-					  vAlt=(lastVnavAlt-fmsO[i][9])/distance
-					else
-						vAlt=0
-						tAlt=lastVnavAlt
-					end
-				end
-				local vNavdataI={fmsO[i][5],fmsO[i][6],tAlt,i>=start,vAlt}
-				vnavData[vnavI]=vNavdataI
-				vnavI=vnavI+1
-				lastVnavAlt=fmsO[i][9]
-				--print("setVNAV "..i.." "..fmsO[i][5]..":"..fmsO[i][6].."/"..fmsO[i][9].." "..vAlt)
-			end
-		end
-	end
-	local vAlt=0
-	if lastVnavAlt>0 then
-		local distance=getDistance(vnavData[vnavI-1][1],vnavData[vnavI-1][2], fmsO[endI][5],fmsO[endI][6])
-		if distance>0.1 then
-			vAlt=(lastVnavAlt-fmsO[endI][9])/distance
-        else
-            vAlt=0
-          end
-	end
-	if vnavI==1 and vAlt==0 then
-		-- we dont have any altitude data, just make a glideslope to the airport
-		vAlt=257
-	end
-	local vNavdataI={fmsO[endI][5],fmsO[endI][6],fmsO[endI][9],(endI>=start),vAlt}
-	vnavData[vnavI]=vNavdataI
-	B747BR_vnavProfile = json.encode(vnavData)
-	--print("setVNAV "..B747BR_vnavProfile)
-	totalDistance = totalDistance + getDistance(fmsO[eod][5], fmsO[eod][6], fmsO[endI][5], fmsO[endI][6])
-	--simDR_autopilot_altitude_ft
-	B747BR_eod_index = eod
-	B747BR_totalDistance = totalDistance
-	if B747BR_totalDistance<15 then
-		local dtoAirport = getDistance(simDR_latitude, simDR_longitude, fmsO[endI][5], fmsO[endI][6])
-		local glideAlt= dtoAirport*290 +fmsO[endI][9]
-		B747BR_fpe	= simDR_pressureAlt1-glideAlt
-	end
-	B747BR_nextDistanceInFeet = nextDistanceInFeet
-	local cruiseTOD = ((B747BR_cruiseAlt - fmsO[eod][3]) / 100) / 2.9
-	local currentTOD = ((simDR_pressureAlt1 - fmsO[eod][3]) / 100) / 2.9
-	
-	B747BR_tod = cruiseTOD
-end
+-- (2026-11-24, stage 4 review FMC-9; notes/ATA-34-61-FMC.md §177.6) the old
+-- AP's setDistances (its T/D as (CRZ ALT - E/D) / 290 NM, the remaining
+-- distance, the T/D's position) taken out: nothing called it (its
+-- datarefs stayed 0); the FMC's T/D is VNAV's (B747_fms_vnav_td)
 
 ----- ALTITUDE SELECTED -----------------------------------------------------------------
 function B747_getCurrentWayPoint(fmsO)
@@ -3190,13 +3034,10 @@ function B747_ap_altitude(fms)
 	-- 	  B747DR_ap_vnav_state=0
 	-- 	  return
 	-- 	end --no nav
-	if (B747BR_totalDistance>0 and B747BR_tod >0) and (
-		(B747DR_ap_vnav_pause > 1 and B747BR_totalDistance <= B747DR_ap_vnav_pause) or
-			(B747DR_ap_vnav_pause == 1 and B747BR_totalDistance - B747BR_tod <= 1))
-	 then
-		B747DR_ap_vnav_pause = 0
-		simCMD_pause:once()
-	end
+	-- (2026-11-24, stage 4 review FMC-9) SIM CONFIG's CONFIG PAUSE (vnav_pause)
+	-- the FMC's now, with VNAV's T/D (B747.68.xt.fms.lua's
+	-- B747_fms_simopts_update): the old AP's T/D and remaining distance here
+	-- stayed 0 (setDistances never called), the pause never came
 	-- (the FMC's VNAV not valid no longer cancels VNAV's arm nor ends it:
 	-- the FMC's step 9i, ATA22 p.340-341; before, step 9c, here)
 end

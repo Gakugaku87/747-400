@@ -5772,6 +5772,20 @@ do
         gs = simDR_groundspeed * 1.94384}) then
       simCMD_pause_on:once()
     end
+    -- (2026-11-24, stage 4 review FMC-9; notes/ATA-34-61-FMC.md §177.6) SIM
+    -- CONFIG's CONFIG PAUSE (laminar/B747/autopilot/vnav_pause: 1 at the
+    -- T/D, more that many NM to the destination), once, then off as before:
+    -- the T/D VNAV's, the distance the predictions' (PROGRESS's DEST).
+    -- Before, the old AP's T/D and distance (setDistances, never called:
+    -- 0), so it never paused
+    local vp = B747DR_ap_vnav_pause
+    if vp > 0 and air then
+      local td, togo = B747_fms_vnav_td(), B747_fms_dest_dtg()
+      if (vp == 1 and td and td <= 1) or (vp > 1 and togo and togo <= vp) then
+        B747DR_ap_vnav_pause = 0
+        simCMD_pause_on:once()
+      end
+    end
   end
 end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
@@ -6045,6 +6059,14 @@ function B747_fms_row_pred_t(k, past_ed)
   if not (l and q and q.t) then return nil end
   if map.ident[k] ~= (l.fix and l.fix.ident or l.name) then return nil end
   return q.t
+end
+-- (2026-11-24, stage 4 review FMC-9) the distance to go to the destination
+-- (NM along the route: the predictions', PROGRESS's DEST), nil without
+-- predictions
+function B747_fms_dest_dtg()
+  local p = predResult
+  if not (p and p.dest and B747_fmc_route.active) then return nil end
+  return p.dest.x
 end
 local route_eta_t = -1
 -- (2026-11-13; the 2026-11-12 review DSP-2) the transition level in the
