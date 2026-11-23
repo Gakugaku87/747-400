@@ -1656,7 +1656,8 @@ function fmsFunctions.setdata(fmsO,value)
 	-- WIND/SLOPE (FCOM p.1319): HXX, XX (headwind) or TXX; UX.X, X.X
 	-- (upslope) or DX.X, 0.0 to 2.0 (FMSPG p.106); the wind goes into the
 	-- V1 (the flight instruments' takeoff speeds); a change deletes the
-	-- selected speeds. DELETE: dashes
+	-- selected speeds. DELETE: none (the page's defaults H00/U0.0 small:
+	-- review CDU-8)
 	if del then setFMSData("towind", "---") setFMSData("toslope", "----") takeoff_speeds_deleted() return end
 	local w, s = B747_cdu_model.pair(fmsO["scratchpad"], "L")
 	if w == nil then fmsO["notify"] = "INVALID ENTRY" return end
@@ -1670,11 +1671,12 @@ function fmsFunctions.setdata(fmsO,value)
 	if sv then setFMSData("toslope", (sd == "D" and "D" or "U") .. sv) end
 	takeoff_speeds_deleted()
   elseif value == "posshift" then
-	-- POS SHIFT (FCOM p.1321, 109): +/- X or XX hundreds of meters past the
-	-- threshold; DELETE: none
+	-- POS SHIFT (FCOM p.1321): +/- X or XX hundreds of meters past the
+	-- threshold, of feet on the 570 (GE); DELETE: none. (2026-11-24, review
+	-- CDU-8) meters within +/-30, feet +/-99 (FMSPG p.108 (3.2-48))
 	if del then setFMSData("posshift", "---") return end
 	local sg, n = string.match(fmsO["scratchpad"], "^([+-]?)(%d%d?)$")
-	if not n then fmsO["notify"] = "INVALID ENTRY" return end
+	if not n or tonumber(n) > (B747_fms_shift_ft() and 99 or 30) then fmsO["notify"] = "INVALID ENTRY" return end
 	setFMSData("posshift", string.format("%s%02d", sg == "-" and "-" or "+", tonumber(n)))
   elseif value == "topreflt" then
 	-- PRE-FLT: the first page not complete, else THRUST LIM (FCOM p.1321)

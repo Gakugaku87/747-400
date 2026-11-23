@@ -79,7 +79,8 @@ local function delete_cg()
     frames(0.1)
     key("ls_key/R4")
 end
-local function trim_text() return small(9):match("(%d+%.%d)") end
+-- the TRIM's columns 17-20 (WIND/SLOPE's small defaults before them: review CDU-8)
+local function trim_text() return small(9):sub(17, 20):match("(%d+%.%d)") end
 
 -- (N19-WB-03) the 109 (P&W, a passenger airplane): dashes after ZFW
 zfw("220")

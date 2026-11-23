@@ -3420,3 +3420,15 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - `calc_stab_trim`：重さを 1000 kg に（kg で来たら 1/1000）、定格は FMC の推力制限の状態（`B747_fms_thrlim().to`）。THRUST LIM で定格が変わったら、出ているトリムを同じ CG・GR WT で計算し直す（`B747_fms_trim_again`、`update_thrlim` の `toderate` の変わり目）。緑の帯の選択（`laminar/B747/fmc/elevator_trim`）も同じ値。
 - 試験：新しい `to_trim_model_test` 21：3 つの表の 74 ますが印刷どおり、380 t・13 % の TO 8 と TO1 9、ますの間の直線、レビューの例（220 t・17 %・TO 2 で 6、前の式は 4.4）、空欄と表の外の端の値、0〜40 %・150〜450 t で 2〜9½ に収まる。`wb_n19_test` 40（+4）：TO の表の値、THRUST LIM で TO 2 にすると TO2 の表の値と緑の帯のトリム、TO に戻すと TO の値。`cg_mac_test` の 270 t・22 % は表の 5.0 に（前の式の 4.8）。
 - X-Plane のシナリオ：新しい `s351_takeoff_trim_rating`（RJAA 34L の地上、220 t）：ZFW 183.5・CG 17 で TO 4.0、TO 2 で 6.0（前の式はどちらも 4.4）、TO 1 で 4.0、緑の帯のトリムも同じ。CDU を撮る。
+
+### 177.5 TAKEOFF REF の WIND/SLOPE の既定と POS SHIFT の単位（CDU-8）
+
+- 見たこと：WIND/SLOPE は入れるまで大きい字の「---/----」（§15 の「入れるまでダッシュ」は FCOM p.1319 の「Displays wind and runway slope after crew entry」の 1 文から）。POS SHIFT は GE でも「--00M」、滑走路が無いと「RW*** --00M」。
+- 資料：
+  - FCOM p.1317 (11.40.41)（109・405 の図、絵で確かめた）と p.1318 (11.40.42)（570 の図）：何も入れていない TAKEOFF REF の 4L は小さい字の「H00/U0.0」。FMSPG p.106 (3.2-46)：既定の H00/U0.0 を小さい字で、乗員の入力で上書き。
+  - FCOM p.1321 (11.40.45)：POS SHIFT は 109・405 が 100 m 単位、570 が 100 ft 単位（形は X、XX と ±）。p.1318 の 570 の図は「RW31L --00FT」。FMSPG p.108 (3.2-48)：滑走路の番号が出たときにその後に 00FT か 00M が付く。範囲は ±99（100 ft）か ±30（100 m）。
+- 直したこと（`B744.fms.pages.takeoff.lua`、`B744.fms.pages.lua`）：
+  - WIND/SLOPE：入れていない部分は小さい字の H00・U0.0、入れた部分は大きい字（風だけ・勾配だけの入力もそれぞれ）。DELETE で両方とも小さい字の既定に戻る。データの「---」「----」（入力なし）はそのまま（V1 の風を読む `fltInst02` は前と同じ）。
+  - POS SHIFT：GE（`laminar/B747/engines/type` 1、プロジェクトでは 570）は FT、ほかは M。行は右に寄せ、FT の 25 桁目をはみ出さない。RTE 1 の滑走路が無ければ行を空白。入力は M で ±30、FT で ±99（それを超えると INVALID ENTRY）。
+- 試験：`takeoff_ref_test` 82（+4 と書き直し）：既定の H00/U0.0 が小さい字、滑走路なしで POS SHIFT の行が空白、DELETE で既定に戻る、勾配だけの入力（/U1.5 が大きい字、H00 が小さい字）、両方の入力、POS SHIFT は値を持つ（+03・−03）、31 は INVALID ENTRY。`rte_pages_test` 68（+5）：RTE 1 の滑走路 RW16R で +0300M、31 は INVALID ENTRY、GE で +0300FT、−45 で −4500FT、DELETE で --00FT。直す前のコードでは 6 件と 4 件が落ちる。TRIM を小さい字の行から読む試験（`takeoff_ref_test`・`wb_n19_test`・`flight_complete_test`）は、TRIM の 17〜20 桁だけを見るようにした（同じ行の頭に H00/U0.0 が出るため）。
+- X-Plane のシナリオ：`s83_takeoff_ref` に既定の H00/U0.0（小さい字）と POS SHIFT の行の空白（経路が無い）、POS SHIFT の値は `fms/data` の `+03` で見るように直した（前は「+0300M」の行）。`s256`・`s257` の TRIM の正規表現を 17〜20 桁に。

@@ -99,7 +99,7 @@ T.check(line(9):find("25%.5%%") ~= nil, "CRZ CG 25.5 large: " .. line(9))
 takeoff_page()
 enter("22", "R4")
 clear()
-T.check(line(9):find("22%%") ~= nil and small(9):find("%d%.%d") ~= nil, "CG 22 large, its trim small: " .. line(9) .. "|" .. small(9))
+T.check(line(9):find("22%%") ~= nil and small(9):sub(17, 20):find("%d%.%d") ~= nil, "CG 22 large, its trim small: " .. line(9) .. "|" .. small(9))
 T.check(rt:get(ETRIM) > 0, "the FMC's trim for the green band: " .. rt:get(ETRIM))
 key("func_key/fpln")             -- RTE 1 again (the last block enters its origin)
 
@@ -164,7 +164,7 @@ T.equal(fms.ns.B747_fmc_route.rte.origin and fms.ns.B747_fmc_route.rte.origin.id
 T.equal(rt:get(ETRIM), 0, "the FMC's trim gone")
 takeoff_page()
 T.check(line(1):find("TAKEOFF REF") ~= nil, "TAKEOFF REF shown: " .. line(1))
-T.check(small(9):find("%-%-%%") ~= nil and not line(9):find("%%") and not small(9):find("%d%.%d"),
+T.check(small(9):find("%-%-%%") ~= nil and not line(9):find("%%") and not small(9):sub(17, 20):find("%d%.%d"),
     "CG dashes, no trim: " .. line(9) .. "|" .. small(9))
 perf_page()
 T.check(small(9):find("20%.0%%") ~= nil and not line(9):find("20%.0"), "CRZ CG 20.0 small: " .. line(9) .. "|" .. small(9))
@@ -175,6 +175,6 @@ T.check(line(1):find("TAKEOFF REF") ~= nil and small(9):find("%-%-%%") ~= nil, "
     .. line(1) .. "|" .. small(9))
 enter("24", "R4")
 clear()
-T.check(line(9):find("24%%") ~= nil and small(9):find("%d%.%d") ~= nil and rt:get(ETRIM) > 0,
+T.check(line(9):find("24%%") ~= nil and small(9):sub(17, 20):find("%d%.%d") ~= nil and rt:get(ETRIM) > 0,
     "a new CG 24: large, its trim: " .. line(9) .. "|" .. small(9))
 T.done()
