@@ -1,0 +1,82 @@
+{
+  "name": "aero_trim_flaps",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：フラップを出した水平飛行の釣り合い（2026-11-23 のレビューの FCTL-3、2026-11-24：notes/AERO.md §3.29）。5,000 ft・249.5 t・重心 約 15 % MAC（空中開始では重量の窓の入力が効かない（地上だけ）ので、荷物 30,050 kg は X-Plane の積み荷の置き場所に直に：ドア 2〜3 と 3〜4 に 9,000 kg ずつ、前方貨物 9,466 kg、後方貨物 2,584 kg。最初の置き場所は空にする：開始時の重心の書き込みで X-Plane が最初と最後の置き場所の間で荷物を移すため。燃料 36 t）の ALT HOLD・A/T の SPD で、フラップ 10／167 kt、20／159 kt、25／155 kt（脚上げ、続けて脚下げ）、30・脚下げ／150 kt。各形で A/P のオートトリムが合わせた安定板と残った昇降舵を読む（釣り合い＝units − 昇降舵 ÷ 2.5）。747-100 の釣り合いの照合の表（NASA_SIM p.338 (14.1-13) の 4.0.12〜4.0.16：550,000 lb・重心 15 %・5,000 ft で 7.8・8.5・8.6・9.2 units、-100 の値。1970-09 の改訂（p.613）より前の表）と比べる。読むのは tests/flight/tools/trim_marks.lua（mark の前 20 秒の平均）",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.4, "longitude": 141.3, "elevation_in_meters": 1524, "heading_true": 90, "speed_in_meters_per_second": 105.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 0, 9000, 9000, 0, 0, 9466, 2584, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 3000, 15000, 15000, 3000, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "set", "note": "荷物を X-Plane の積み荷の置き場所に（開始の後にもう一度）", "dref": "sim/flightmodel/weight/m_stations[0]", "value": 0 },
+    { "do": "set", "dref": "sim/flightmodel/weight/m_stations[1]", "value": 9000 },
+    { "do": "set", "dref": "sim/flightmodel/weight/m_stations[2]", "value": 9000 },
+    { "do": "set", "dref": "sim/flightmodel/weight/m_stations[3]", "value": 0 },
+    { "do": "set", "dref": "sim/flightmodel/weight/m_stations[4]", "value": 0 },
+    { "do": "set", "dref": "sim/flightmodel/weight/m_stations[5]", "value": 9466 },
+    { "do": "set", "dref": "sim/flightmodel/weight/m_stations[6]", "value": 2584 },
+    { "do": "sleep", "seconds": 2 },
+    { "do": "record_start" },
+    { "do": "wait", "note": "空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 90, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "set", "note": "MCP 高度 5,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 5000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 5000 },
+    { "do": "set", "note": "MCP を IAS に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 0 },
+    { "do": "set", "note": "MCP 方位 098（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 98 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（空中の初期化の ALT HOLD。違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "A/T SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "snapshot", "note": "開始の重さと重心（実機の % MAC は (1243.31 + cg_offset_z × 39.37 − 1168) / 3.278）", "drefs": [ "sim/flightmodel/weight/m_total", "sim/flightmodel/weight/m_fixed", "sim/flightmodel2/misc/cg_offset_z", "sim/flightmodel2/misc/zfw_cg_offset_z" ] },
+    { "do": "set", "note": "フラップのレバー フラップ 10・167 kt", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.5 },
+    { "do": "set", "note": "窓 167 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 167 },
+    { "do": "sleep", "seconds": 200, "note": "落ち着かせる" },
+    { "do": "mark", "note": "フラップ 10・167 kt" },
+    { "do": "snapshot", "note": "フラップ 10・167 kt", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/l_elev_inner", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/engine/POINT_thrust[0]", "sim/flightmodel/engine/POINT_thrust[1]", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "sim/flightmodel2/gear/deploy_ratio[1]", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+    { "do": "set", "note": "フラップのレバー フラップ 20・159 kt", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.6667 },
+    { "do": "set", "note": "窓 159 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 159 },
+    { "do": "sleep", "seconds": 100, "note": "落ち着かせる" },
+    { "do": "mark", "note": "フラップ 20・159 kt" },
+    { "do": "snapshot", "note": "フラップ 20・159 kt", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/l_elev_inner", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/engine/POINT_thrust[0]", "sim/flightmodel/engine/POINT_thrust[1]", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "sim/flightmodel2/gear/deploy_ratio[1]", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+    { "do": "set", "note": "フラップのレバー フラップ 25・155 kt（脚上げ）", "dref": "sim/cockpit2/controls/flap_ratio", "value": 0.8333 },
+    { "do": "set", "note": "窓 155 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 155 },
+    { "do": "sleep", "seconds": 100, "note": "落ち着かせる" },
+    { "do": "mark", "note": "フラップ 25・155 kt（脚上げ）" },
+    { "do": "snapshot", "note": "フラップ 25・155 kt（脚上げ）", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/l_elev_inner", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/engine/POINT_thrust[0]", "sim/flightmodel/engine/POINT_thrust[1]", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "sim/flightmodel2/gear/deploy_ratio[1]", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+    { "do": "cmd", "note": "脚下げ", "name": "sim/flight_controls/landing_gear_down" },
+    { "do": "sleep", "seconds": 70, "note": "落ち着かせる" },
+    { "do": "mark", "note": "フラップ 25・155 kt（脚下げ）" },
+    { "do": "snapshot", "note": "フラップ 25・155 kt（脚下げ）", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/l_elev_inner", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/engine/POINT_thrust[0]", "sim/flightmodel/engine/POINT_thrust[1]", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "sim/flightmodel2/gear/deploy_ratio[1]", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+    { "do": "set", "note": "フラップのレバー フラップ 30・150 kt（脚下げ）", "dref": "sim/cockpit2/controls/flap_ratio", "value": 1 },
+    { "do": "set", "note": "窓 150 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 150 },
+    { "do": "sleep", "seconds": 100, "note": "落ち着かせる" },
+    { "do": "mark", "note": "フラップ 30・150 kt（脚下げ）" },
+    { "do": "snapshot", "note": "フラップ 30・150 kt（脚下げ）", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/l_elev_inner", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/engine/POINT_thrust[0]", "sim/flightmodel/engine/POINT_thrust[1]", "laminar/B747/flt_ctrls/fcu/te_deg[0]", "sim/flightmodel2/gear/deploy_ratio[1]", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode" ] },
+    { "do": "record_stop" }
+  ]
+}

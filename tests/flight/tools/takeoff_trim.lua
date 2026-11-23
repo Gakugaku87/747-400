@@ -9,6 +9,39 @@
 -- the elevator over 2.5 degrees a unit (§3.23); against FPPM p.44's stab
 -- trim setting (747-400F PW4056, max takeoff thrust; by the weight and the
 -- centre of gravity, every flap), interpolated in both.
+-- (2026-11-24) A second line from the recording (session.csv): the same
+-- balance (the units less the left inner elevator over 2.5 degrees) as the
+-- mean over the climb with the A/P on from 600 to 1,400 ft of radio
+-- altitude at the takeoff's thrust, with its range there, the alpha, the
+-- pitch, the IAS and the thrust an engine. The two snapshots alone moved
+-- with the elevator (2026-11-20: up to 1.8 units between 1,000 and 1,400
+-- ft in one run); the mean is the figure to fit by.
+local RA_LO, RA_HI = 600, 1400
+local function climb_mean(dir)
+    local f = io.open(dir .. "/session.csv", "rb")
+    if not f then return nil end
+    local h, n = {}, 0
+    for name in f:read("*l"):gmatch("[^,]+") do n = n + 1; h[name:gsub("\r", "")] = n end
+    for _, k in ipairs{"ra", "servos_on", "trim", "elev_deg", "alpha", "pitch", "ias", "thrust", "thro_1"} do
+        if not h[k] then f:close() return nil end
+    end
+    local s = {u = 0, e = 0, a = 0, p = 0, v = 0, th = 0, n = 0, lo = math.huge, hi = -math.huge}
+    for line in f:lines() do
+        local c, k = {}, 0
+        for v in (line .. ","):gmatch("([^,]*),") do k = k + 1; c[k] = tonumber(v) end
+        local ra = c[h.ra]
+        if ra and c[h.servos_on] == 1 and ra >= RA_LO and ra <= RA_HI and (c[h.thro_1] or 0) > 0.9 then
+            local u = (c[h.trim] + 1) * 7.5
+            local b = u - c[h.elev_deg] / 2.5
+            s.u, s.e, s.a, s.p, s.v, s.th, s.n = s.u + u, s.e + c[h.elev_deg], s.a + c[h.alpha], s.p + c[h.pitch],
+                s.v + c[h.ias], s.th + c[h.thrust], s.n + 1
+            s.lo, s.hi = math.min(s.lo, b), math.max(s.hi, b)
+        end
+    end
+    f:close()
+    if s.n == 0 then return nil end
+    return s
+end
 local CG = {9, 13, 17, 21, 25, 29, 33}
 local FPPM = {   -- weight (1000 kg) -> units at CG
     {400, {9.5, 9, 8, 7, 6, 5, 4}},
@@ -69,5 +102,11 @@ for _, dir in ipairs(arg) do
             end
         end
         io.write("\n")
+        local s = climb_mean(dir)
+        if s then
+            local bal = (s.u - s.e / 2.5) / s.n
+            io.write(string.format("%-34s   RA %d-%d ft mean: %.2f units, elev %+.2f, balance %.2f (%+.2f) [%.2f..%.2f] | alpha %.1f, pitch %.1f, IAS %.0f, %.0f kN an engine\n",
+                "", RA_LO, RA_HI, s.u / s.n, s.e / s.n, bal, want and bal - want or 0, s.lo, s.hi, s.a / s.n, s.p / s.n, s.v / s.n, s.th / s.n / 1000))
+        end
     end
 end

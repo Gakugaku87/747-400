@@ -44,6 +44,14 @@ T.near(A.stab_flap(22), F[20] + 0.2 * (F[30] - F[20]), 1e-12, "flaps 25 (the tra
 T.near(A.stab_flap(35), F[30], 1e-12, "past 30: as 30")
 T.near(A.stab_flap(5), F[10] / 2, 1e-12, "flaps 5: half flaps 10's (estimate)")
 T.near(A.stab_flap(15), (F[10] + F[20]) / 2, 1e-12, "halfway from 10 to 20: between")
+-- (2026-11-24, the 2026-11-23 review's FCTL-3; notes/AERO.md §3.29) fitted
+-- again to the takeoff (FPPM p.44) and to level flight (the 747-100's trim
+-- table) with the thrust's correction a quarter of its size before: the
+-- flaps' share is less (before 5.2, 6.2 and 6.05) and grows with the flaps
+T.near(F[10], 2.2, 0.5, "flaps 10: about 2.2 degrees (before 5.2)")
+T.near(F[20], 4.0, 0.5, "flaps 20: about 4.0 (before 6.2)")
+T.near(F[30], 6.2, 0.5, "flaps 30: about 6.2")
+T.check(F[10] < F[20] and F[20] < F[30], "more with more flap (before flaps 20's was over 30's)")
 T.check(F[10] > 0 and F[20] < 10 and F[30] < 10, "within the hydraulics' mapping of the correction (10 degrees)")
 local mono = true
 for te = 0, 19.5, 0.5 do if A.stab_flap(te + 0.5) < A.stab_flap(te) - 1e-12 then mono = false end end
