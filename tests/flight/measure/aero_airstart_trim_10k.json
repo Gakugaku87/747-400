@@ -1,0 +1,61 @@
+{
+  "name": "aero_airstart_trim_10k",
+  "description": "測定（合否なし、全シナリオの実行に入れない）：空中開始の安定板の式（B747.45.xt.srm.lua の air_start_units）を、縦の空力の補正（notes/AERO.md §3.24 の吹き下ろし・§3.25 の推力、2026-11-20）を入れた後の釣り合いで合わせ直すため（2026-11-22：全シナリオの s58・s99・s292 が空中開始の後の機首上げで落ちた）。キットの 270 t（積荷なし、主タンクに 86,535 kg）、10,000 ft、フラップ上げ、無風の ISA で、A/P の ALT HOLD・A/T SPD で 290・250・220 kt に落ち着けて、安定板の units・補正の角度・迎角・姿勢を読む（200 kt は窓に入れても A/T が約 223 kt で止まった：2026-11-22 の 1 回目）。結果（2026-11-22）：EAS 288 kt で 3.55 units、250 kt で 3.90、225 kt で 4.39（迎角 2.8・4.7・6.9°、補正 −0.5・−1.5・−2.7°）。式は aero_airstart_trim_fl350 と合わせて 2.18 + 3.476 × 揚力係数 ＋ M.75〜.82 で 0〜0.6 units（notes/ATA-27.md §23）",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 3048.0, "heading_true": 0, "speed_in_meters_per_second": 149.2 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0 ]
+    },
+    "weather": {
+      "definition": {
+        "latitude_in_degrees": 35.4, "longitude_in_degrees": 141.3, "elevation_in_meters": 0,
+        "visibility_in_kilometers": 40, "temperature_in_degrees_celsius": 15, "altimeter_setting_in_hpa": 1013.25,
+        "precipitation_ratio": 0, "clouds": [],
+        "wind": [
+          { "altitude_in_feet_msl": 0, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 10000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 20000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 30000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 38000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 },
+          { "altitude_in_feet_msl": 46000, "speed_in_knots": 0, "direction_in_degrees_true": 0, "gust_increase_in_knots": 0, "shear_in_degrees": 0, "turbulence_ratio": 0 }
+        ]
+      },
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "record_start" },
+    { "do": "snapshot", "note": "開始の直後", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "sim/flightmodel/misc/Qstatic", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/servos_on" ] },
+    { "do": "sleep", "seconds": 10, "note": "空中開始の揺れと FMC の空中の初期化" },
+    { "do": "snapshot", "note": "10 秒", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/servos_on" ] },
+    { "do": "wait", "note": "空中の初期化で A/P CMD L", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 30, "level": "warn" },
+    { "do": "switch", "note": "CMD L（初期化が入れていなければ）", "dref": "laminar/B747/autopilot/servos_on", "value": 1, "cmd": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "set", "note": "MCP 高度 10,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 10000 },
+    { "do": "set", "dref": "laminar/B747/autopilot/altitude_dial_ft", "value": 10000 },
+    { "do": "set", "note": "MCP を IAS に", "dref": "sim/cockpit2/autopilot/airspeed_is_mach", "value": 0 },
+    { "do": "set", "note": "窓 290 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 290 },
+    { "do": "set", "note": "MCP 方位 007（空中開始の磁方位）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 7 },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "switch", "note": "ALT（空中の初期化の ALT HOLD。違えば押す）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "value": 9, "cmd": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "SPD（空中の初期化は A/T を ARM にするだけ）", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "wait", "note": "A/T は SPD", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 3, "timeout": 10, "level": "warn" },
+    { "do": "sleep", "seconds": 100, "note": "290 kt で落ち着く" },
+    { "do": "snapshot", "note": "290 kt", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/Qstatic", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z_mac", "laminar/B747/flt_ctrls/l_elev_inner" ] },
+    { "do": "set", "note": "窓 250 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 250 },
+    { "do": "sleep", "seconds": 110, "note": "250 kt で落ち着く" },
+    { "do": "snapshot", "note": "250 kt", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/Qstatic", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z_mac", "laminar/B747/flt_ctrls/l_elev_inner" ] },
+    { "do": "set", "note": "窓 220 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 220 },
+    { "do": "sleep", "seconds": 110, "note": "220 kt で落ち着く" },
+    { "do": "snapshot", "note": "220 kt", "drefs": [ "laminar/B747/flt_ctrls/stab_trim/units", "laminar/B747/flt_ctrls/stab_corr_deg", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/gauges/indicators/airspeed_kts_pilot", "sim/flightmodel/misc/Qstatic", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/vh_ind_fpm", "sim/flightmodel/weight/m_total", "sim/flightmodel2/misc/cg_offset_z_mac", "laminar/B747/flt_ctrls/l_elev_inner" ] },
+    { "do": "record_stop" }
+  ]
+}

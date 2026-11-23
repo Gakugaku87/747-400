@@ -771,25 +771,49 @@ rt:set("laminar/B747/fmc/elevator_trim", 0)
 frames(0.2)
 
 -- an air start: the stabilizer for level flight at the speed (estimate:
--- 0.26 + 308,800 / IAS^2 units, 1.7 to 7.7, since 2026-11-20 at 1 degree
--- a unit; before 3.78 + 154,400 / IAS^2, 4.5 to 7.5, the same angles),
--- not a fixed 7.5 units (a 334 kt start pitched up to 13 degrees before
--- the A/P came on). The speed from X-Plane's dynamic pressure (the
--- equivalent airspeed), right from the start: X-Plane's indicated airspeed
--- comes up from 0 over about 3 s there (2026-11-20: up to 204 kt the
--- fit's 7.7 cap held for the first second, a 322 kt start up to 12.7
--- degrees pitch)
+-- since 2026-11-22 2.18 + 3.476 x CL units plus up to 0.6 from M.75 to
+-- M.82, 1.7 to 7.7, fitted with the pitch corrections in; 2026-11-20 0.26
+-- + 308,800 / IAS^2 at 1 degree a unit; before 3.78 + 154,400 / IAS^2,
+-- 4.5 to 7.5, the same angles), not a fixed 7.5 units (a 334 kt start
+-- pitched up to 13 degrees before the A/P came on). The lift coefficient
+-- from X-Plane's dynamic pressure and the weight, right from the start:
+-- X-Plane's indicated airspeed comes up from 0 over about 3 s there
+-- (2026-11-20: up to 204 kt the fit's 7.7 cap held for the first second,
+-- a 322 kt start up to 12.7 degrees pitch); the Mach from the true
+-- airspeed and the air's temperature
 local function q_of(kt) return 0.5 * 1.225 * (kt * 0.514444) ^ 2 end
+local function as_units(q, kg, mach)
+    local m = math.max(0, math.min(1, (mach - 0.75) / 0.07)) * 0.6
+    return math.max(1.7, math.min(7.7, 2.18 + 3.476 * kg * 9.80665 / (q * 511) + m))
+end
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
 rt:set("sim/flightmodel/position/indicated_airspeed", 0)
-for _, c in ipairs({{334, 0.26 + 308800 / 334 ^ 2}, {231, 0.26 + 308800 / 231 ^ 2}, {150, 7.7}}) do
-    rt:set("sim/flightmodel/misc/Qstatic", q_of(c[1]))
+rt:set("sim/flightmodel/weight/m_total", 270000)
+-- (2026-11-22: 10,000 ft at 250 kt EAS 3.96 units where the A/P trimmed to
+-- 3.90, not the old fit's 5.21; a 172 kt start 5.94, not the 7.7 that
+-- stalled s58; FL350 at M.85 4.28 where the A/P trimmed to 4.27, not the
+-- 10,000 ft fit's 3.68 that sank s261 550 ft. The true airspeed and the
+-- temperature as at 10,000 ft ISA or FL350 ISA)
+for _, c in ipairs({
+    {q = q_of(334), tas = 334 * 1.16 * 0.514444, oat = -5, mach = 334 * 1.16 * 0.514444 / math.sqrt(1.4 * 287.05 * 268.15), name = "334 kt at 10,000 ft"},
+    {q = q_of(250), tas = 250 * 1.16 * 0.514444, oat = -5, mach = 250 * 1.16 * 0.514444 / math.sqrt(1.4 * 287.05 * 268.15), name = "250 kt at 10,000 ft"},
+    {q = q_of(172), tas = 172 * 1.16 * 0.514444, oat = -5, mach = 172 * 1.16 * 0.514444 / math.sqrt(1.4 * 287.05 * 268.15), name = "172 kt at 10,000 ft"},
+    {q = 11991, tas = 251, oat = -54.3, mach = 251 / math.sqrt(1.4 * 287.05 * 218.85), name = "M.85 at FL350"},
+    {q = q_of(120), tas = 120 * 1.16 * 0.514444, oat = -5, mach = 0.21, name = "120 kt (the cap)", want = 7.7},
+    {q = q_of(90), tas = 90 * 1.16 * 0.514444, oat = -5, mach = 0.16, name = "90 kt (under 100 kt)", want = 7.7},
+}) do
+    local want = c.want or as_units(c.q, 270000, c.mach)
+    rt:set("sim/flightmodel/misc/Qstatic", c.q)
+    rt:set("sim/flightmodel/position/true_airspeed", c.tas)
+    rt:set("sim/weather/temperature_ambient_c", c.oat)
     rt:callout("flight_start")
     frames(1)
-    T.near(units(), c[2], 0.01, "air start at " .. c[1] .. " kt (indicated 0): " .. string.format("%.2f", c[2]) .. " units")
-    T.near(get(TRIM), units() / 7.5 - 1, 1e-6, "X-Plane's trim written (" .. c[1] .. " kt)")
+    T.near(units(), want, 0.01, "air start " .. c.name .. " (indicated 0): " .. string.format("%.2f", want) .. " units")
+    T.near(get(TRIM), units() / 7.5 - 1, 1e-6, "X-Plane's trim written (" .. c.name .. ")")
 end
+T.near(as_units(11991, 270000, 251 / math.sqrt(1.4 * 287.05 * 218.85)), 4.28, 0.02, "FL350 M.85 at 270 t: 4.28 units (the A/P trimmed to 4.27)")
+T.near(as_units(q_of(250), 270000, 0.44), 3.96, 0.02, "10,000 ft 250 kt at 270 t: 3.96 units (the A/P trimmed to 3.90)")
 rt:set("sim/flightmodel/misc/Qstatic", q_of(334))
 rt:callout("flight_start")
 frames(4)

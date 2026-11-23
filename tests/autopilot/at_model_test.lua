@@ -790,4 +790,41 @@ T.equal(A.fma(sg), A.HOLD, "FLCH's HOLD (the setup)")
 for _ = 1, 2 do A.servo(sg, sv{dt = DTG, lever = 0, flaps_up = true, tas = 455, accel_in = 0.2}) end
 T.near(sg.gust_v, 455 + 0.2 * DTG * (1 - DTG / A.GUST_TAU), 1e-9, "the complement runs in HOLD too")
 
+-- (2026-11-22) G by the engine type (lever_accel): the GE's (laminar/B747/
+-- engines/type 1) GE_K times the P&W's estimate by the pressure ratio,
+-- measured in X-Plane with the A/T off and the levers stepped
+-- (tests/flight/measure/at_lever_gain_ge_*, 238 t): 7.50 kt/s a unit of
+-- lever at 10,000 ft and 290 kt, 5.29 at FL250 and 300 kt, 3.47 at FL370
+-- and M.85. On the P&W's G the SPD law's gains were some 3 times G_TGT's
+-- for the GE at FL370 (s280's A/T swung the levers every 21 s)
+do
+    local function g(engine, alt, ias, mach, tas)
+        return A.lever_accel{weight = 238000, alt = alt, ias = ias, mach = mach, tas = tas, engine = engine}
+    end
+    local pw37 = g(nil, 37009, 278, 0.851, 487.6)
+    T.near(g(1, 37009, 278, 0.851, 487.6), 3.47, 0.15, "GE at FL370, M.85, 238 t: the measured 3.47 kt/s a unit of lever")
+    T.near(g(1, 25004, 300.5, 0.72, 433.4), 5.29, 0.25, "GE at FL250, 300 kt: the measured 5.29")
+    T.near(g(1, 9994, 295, 0.535, 341.5), 7.50, 0.4, "GE at 10,000 ft, 290 kt: the measured 7.50")
+    T.near(g(0, 37009, 278, 0.851, 487.6), pw37, 1e-12, "P&W (0): as before")
+    T.near(g(2, 37009, 278, 0.851, 487.6), pw37, 1e-12, "RR (2): the P&W's (estimate)")
+    T.check(g(1, 41000, 238, 0.85, 487.6) / g(nil, 41000, 238, 0.85, 487.6) > A.GE_K[#A.GE_K][2],
+        "GE above FL370: the ratio on past the last point's line")
+    T.near(g(1, 1000, 250, 0.38, 254) / g(nil, 1000, 250, 0.38, 254), A.GE_K[1][2], 1e-12, "GE low: the first point's ratio")
+    -- the servo's SPD law, flaps up, 5 kt slow at FL370: the gains' scale
+    -- G_TGT / G is 1 for the GE (G over G_TGT), about 3.1 for the P&W
+    local function step(engine)
+        local s = A.new()
+        A.update(s, inp{pitch = "ALT", spd = true})
+        local v = sv{dt = 0.05, ias = 278, target = 283, alt = 37009, mcp_alt = 37000, flaps_up = true,
+            tas = 487.6, mach = 0.851, weight = 238000, engine = engine, lever = 0.5}
+        A.servo(s, v)
+        local c0 = s.cmd
+        A.servo(s, v)
+        return s.cmd - c0
+    end
+    local ge, pw = step(1), step(nil)
+    T.near(ge, A.K_SPD * 5 * 0.05, 1e-9, "GE: SPD's gains as the base (k 1)")
+    T.check(pw / ge > 3 and pw / ge < 3.3, string.format("P&W: about 3.1 times (as before): %.2f", pw / ge))
+end
+
 T.done()

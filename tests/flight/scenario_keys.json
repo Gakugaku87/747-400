@@ -19,7 +19,7 @@
     "remember": { "need": ["dref", "as"], "may": [] },
     "sleep": { "need": ["seconds"], "may": [] },
     "copy": { "need": ["from", "to"], "may": [] },
-    "remove": { "need": ["path"], "may": [] },
+    "remove": { "need": [], "may": ["path", "path_dref"], "need_one_of": [["path"], ["path_dref"]] },
     "snapshot": { "need": ["drefs"], "may": [] },
     "cas": { "need": [], "may": ["has", "lacks", "level"] },
     "view": { "need": [], "may": ["name", "the", "psi", "fov"], "need_one_of": [["name"], ["the", "psi"]] },

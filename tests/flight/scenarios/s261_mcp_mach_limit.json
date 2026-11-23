@@ -30,7 +30,7 @@
     { "do": "sleep", "seconds": 2 },
     { "do": "snapshot", "note": "M.91 の時", "drefs": [ "sim/cockpit2/autopilot/airspeed_dial_kts", "sim/cockpit2/autopilot/airspeed_dial_kts_mach", "laminar/B747/autopilot/ias_bug_value", "laminar/B747/airspeed/Vmo" ] },
     { "do": "check", "note": "目標は上限（今の高度の Vmo − 10 kt。空中開始の後に約 35,800 ft まで上がると約 306 kt：2026-11-06 の 1 回目）", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts", "op": "between", "value": [300, 316] },
-    { "do": "check", "note": "その Mach は約 M.90", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts_mach", "op": "between", "value": [0.893, 0.906] },
+    { "do": "check", "note": "その Mach は約 M.89〜.90（Vmo − 10 kt の Mach は高さしだい：ISA で 35,000 ft 約 M.889、35,800 ft 約 M.894。2026-11-22 に下を 0.893 → 0.885：空中開始の上昇が無くなり、11-21 の回は 35,270 ft で M.8928 だった）", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts_mach", "op": "between", "value": [0.885, 0.906] },
     { "do": "set", "note": "窓を M.85 に戻す", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 85 },
     { "do": "sleep", "seconds": 2 },
     { "do": "check", "note": "M.85 が目標（前は上限の約 M.90 に張り付いた）", "dref": "sim/cockpit2/autopilot/airspeed_dial_kts_mach", "op": "between", "value": [0.849, 0.851] },

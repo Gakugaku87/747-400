@@ -55,7 +55,7 @@
     { "do": "snapshot", "note": "進入路の上", "drefs": [ "sim/cockpit2/radios/indicators/hsi_hdef_dots_pilot", "sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot",
       "laminar/B747/pfd/capt/loc_scale", "laminar/B747/pfd/capt/loc_ptr", "laminar/B747/pfd/capt/gs_scale", "laminar/B747/pfd/capt/gs_ptr",
       "laminar/B747/pfd/fo/loc_ptr", "laminar/B747/pfd/fo/gs_ptr", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot" ] },
-    { "do": "check", "note": "中心線の 1/2 ドット内：拡大 LOC 目盛（FCOM p.988）", "dref": "laminar/B747/pfd/capt/loc_scale", "op": "==", "value": 3 },
+    { "do": "wait", "note": "中心線の 1/2 ドット内：拡大 LOC 目盛（FCOM p.988。2026-11-22 から待つ：同調の約 5 秒後の NAV1 の偏位がまだ落ち着かず、2026-11-22 の全シナリオでは −0.77 ドットを読んで 2.7 秒後に拡大になった）", "dref": "laminar/B747/pfd/capt/loc_scale", "op": "==", "value": 3, "timeout": 10 },
     { "do": "check", "note": "G/S の目盛は白（偏位過大の条件に無い）", "dref": "laminar/B747/pfd/capt/gs_scale", "op": "==", "value": 1 },
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },

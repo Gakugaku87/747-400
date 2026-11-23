@@ -33,7 +33,7 @@
     { "do": "cdu", "note": "LEGS：ATMUG へ DIRECT TO（1L）、EXEC", "keys": ["LEGS", "ATMUG", "L1", "EXEC"] },
     { "do": "check", "note": "1 行目が ATMUG", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "ATMUG" },
     { "do": "cdu", "note": "PERF INIT：COST INDEX 100、CRZ ALT FL350", "keys": ["INITREF", "L6", "L3", "100", "L5", "350", "R1"] },
-    { "do": "check", "note": "CRZ ALT FL350", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "FL350" },
+    { "do": "wait", "note": "CRZ ALT FL350（入力の後の予測の計算は約 0.7 秒：前は待たずに見て、2026-11-21 の全シナリオで ***.* を読んだ）", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "FL350", "timeout": 5 },
     { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
     { "do": "cmd", "note": "LNAV", "name": "laminar/B747/autopilot/button_switch/LNAV" },
     { "do": "set", "note": "MCP 高度 35,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 35000 },

@@ -1,9 +1,9 @@
 {
   "name": "s102_afds_app",
-  "description": "AFDS の作り直し 6-3 段 1d（進入のモード：LOC・G/S・APP）の X-Plane での確認、空中。RJAA 34L の進入路の G/S のアンテナから 20 NM、3,000 ft・210 kt で開始（機体を読み直す）。A/P CMD L・ALT HOLD・HDG SEL 330。ILS を同調する前に（信号が無いので捕まえない）APP で LOC と G/S の arm（ILS が無くても arm：前は RW/ILS CRS ERROR）、2 回目で disarm、LOC だけの arm と 2 回目、APP の arm を LNAV の arm が解き、APP が LNAV の arm を解く（ATA22 p.343、p.354、p.357；FCOM p.651）。CDU で ILS（111.90/337）を同調すると LOC を捕まえ（捕捉の判定は段 2 まで前の作り：両受信機の信号）、MCP の方位が進入のコース 337 になる（ATA22 p.290。前は APP を押した時）。G/S の前の HDG SEL で APP が外れる（FCOM p.652）。APP をもう一度押して LOC、G/S の下から水平に入って G/S を捕まえる。LOC と G/S の後は HDG SEL も V/S も受け付けない（表 p.351、p.335）。TO/GA で LOC と G/S が終わる。PFD を撮る。",
+  "description": "AFDS の作り直し 6-3 段 1d（進入のモード：LOC・G/S・APP）の X-Plane での確認、空中。RJAA 34L の進入路の G/S のアンテナから 23 NM・進入路の 1 NM 左、3,000 ft・210 kt で開始（2026-11-22 から：前は進入路の上 20 NM で、007 に向けて APP を押すときにはビームのすぐ際か、もう右へ出て離れる途中で、2026-11-20 の全シナリオでは LOC を捕まえなかった。ATA22 p.290 の捕捉はビームへ寄っているか 0.7° 以内なので、捕まえないのが正しい）（機体を読み直す）。A/P CMD L・ALT HOLD・HDG SEL 330。ILS を同調する前に（信号が無いので捕まえない）APP で LOC と G/S の arm（ILS が無くても arm：前は RW/ILS CRS ERROR）、2 回目で disarm、LOC だけの arm と 2 回目、APP の arm を LNAV の arm が解き、APP が LNAV の arm を解く（ATA22 p.343、p.354、p.357；FCOM p.651）。CDU で ILS（111.90/337）を同調すると LOC を捕まえ（捕捉の判定は段 2 まで前の作り：両受信機の信号）、MCP の方位が進入のコース 337 になる（ATA22 p.290。前は APP を押した時）。G/S の前の HDG SEL で APP が外れる（FCOM p.652）。APP をもう一度押して LOC、G/S の下から水平に入って G/S を捕まえる。LOC と G/S の後は HDG SEL も V/S も受け付けない（表 p.351、p.335）。TO/GA で LOC と G/S が終わる。PFD を撮る。",
   "reload": true,
   "flight": {
-    "lle_air_start": { "latitude": 35.458372, "longitude": 140.596090, "elevation_in_meters": 914.4, "heading_true": 329.6, "speed_in_meters_per_second": 108.0 },
+    "lle_air_start": { "latitude": 35.406812, "longitude": 140.609504, "elevation_in_meters": 914.4, "heading_true": 329.6, "speed_in_meters_per_second": 108.0 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
     "weather": {
@@ -67,6 +67,7 @@
     { "do": "check", "note": "APP（LOC の arm）", "dref": "laminar/B747/autopilot/FMA/armed_roll_mode", "op": "==", "value": 3 },
 
     { "do": "mark", "note": "ILS の同調で LOC を捕まえる、MCP の方位がコースに" },
+    { "do": "record_start" },
     { "do": "set", "note": "MCP 方位 007（ビームの左から 30° で入る：6-3 段 2b の捕捉は対地速度・進入角・偏位で決まる）", "dref": "laminar/B747/autopilot/heading/degrees", "value": 7 },
     { "do": "sleep", "seconds": 15, "note": "007 へ回る" },
     { "do": "cmd", "note": "APP の 2 回目（同調の間は arm しない：受信機が切り替わる一瞬の偏位を、前の簡単な検出が捕捉と取るので）", "name": "laminar/B747/autopilot/approach" },
@@ -74,6 +75,7 @@
     { "do": "sleep", "seconds": 5, "note": "受信機が落ち着く" },
     { "do": "snapshot", "note": "同調の後", "drefs": [ "sim/cockpit2/radios/indicators/nav1_display_horizontal", "sim/cockpit2/radios/indicators/nav1_display_vertical", "sim/cockpit2/radios/indicators/hsi_vdef_dots_pilot", "sim/cockpit2/radios/indicators/nav1_flag_glideslope", "sim/cockpit2/radios/indicators/nav2_display_horizontal", "sim/cockpit/radios/nav1_freq_hz", "sim/cockpit/radios/nav2_freq_hz", "laminar/B747/radio/ilsData" ] },
     { "do": "check", "note": "NAV2 も LOC の信号（CDU の ILS の同調が両受信機に通った。LOC の捕捉は両方の信号が要る：6-3 段 2b。一度ここが通らず、LOC を捕まえなかった）", "dref": "sim/cockpit2/radios/indicators/nav2_display_horizontal", "op": "==", "value": 1 },
+    { "do": "check", "note": "まだビームの左（2026-11-22 から：左から 30° で入る捕捉を見るため）", "dref": "sim/cockpit2/radios/indicators/nav1_hdef_dots_pilot", "op": ">", "value": 0.5 },
     { "do": "cmd", "note": "APP", "name": "laminar/B747/autopilot/approach" },
     { "do": "wait", "note": "LOC を捕まえる（FMA のロール 3）", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 3, "timeout": 120 },
     { "do": "check", "note": "MCP の方位がコース 337 に（ATA22 p.290）", "dref": "laminar/B747/autopilot/heading/degrees", "op": "==", "value": 337 },
@@ -112,6 +114,7 @@
     { "do": "view", "note": "機長の PFD：TO/GA", "the": -24, "psi": -1, "fov": 24 },
     { "do": "shot", "name": "pfd_toga" },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
+    { "do": "record_stop" },
     { "do": "view", "name": "forward" }
   ]
 }

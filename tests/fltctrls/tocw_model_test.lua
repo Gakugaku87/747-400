@@ -128,4 +128,35 @@ do
     T.check(out.armed, "engine 3 alone, lever up, stowed: armed")
 end
 
+-- (2026-11-22) the 10 s from the N1's drop below the value, not from the
+-- levers' closing (ATA27 p.730: "10 seconds after removal of takeoff
+-- thrust", the takeoff thrust the inboard N1 indication's; s225: the levers
+-- closed, the N1 past 66.5 some seconds later); the lever still arms only
+do
+    local s, inp = ready()
+    inp.park_brake = true
+    inp.n1[2], inp.lever[2] = 72, 0.8
+    local out = run(s, inp, 0.2)
+    T.check(out.armed and out.park_brk, "engine 2 at N1 72, its lever 0.8: CONFIG PARK BRK")
+    inp.lever = {0, 0, 0, 0}                          -- the levers closed, the N1 coming down
+    out = run(s, inp, 5)
+    T.check(not out.armed and out.park_brk, "levers closed, N1 still 72 after 5 s: not armed, the message stays")
+    inp.n1[2] = 60                                    -- below 66.5
+    out = run(s, inp, 9.5)
+    T.check(out.park_brk, "N1 below 66.5 for 9.5 s: still shown (before: gone 10 s after the levers closed)")
+    out = run(s, inp, 1)
+    T.check(not out.park_brk, "10 s after the N1's drop: gone")
+    -- not armed before: the N1 high with the levers closed shows nothing (s341)
+    inp.n1[2] = 80
+    out = run(s, inp, 2)
+    T.check(not out.park_brk, "N1 80 with the levers closed, nothing shown before: none")
+    -- in reverse the takeoff thrust is gone: the 10 s run
+    inp.n1[2], inp.lever[2] = 72, 0.8
+    out = run(s, inp, 0.2)
+    T.check(out.park_brk, "lever 0.8 again: CONFIG PARK BRK")
+    inp.lever[2], inp.reverser[2] = 0, true
+    out = run(s, inp, 10.5)
+    T.check(not out.park_brk, "reverser out with N1 72: 10 s, gone")
+end
+
 T.done()

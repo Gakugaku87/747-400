@@ -13,6 +13,9 @@ local A = B747_aero_corr_model
 simDR_ac_fuse_cd                = find_dataref("sim/aircraft/bodies/acf_fuse_cd")
 simDR_ac_gear                   = find_dataref("sim/flightmodel2/gear/deploy_ratio")
 B747DR_ac_off                   = find_dataref("laminar/B747/debug/aero_corr_off")
+-- (2026-11-22) the downwash's or the thrust's correction alone left out
+B747DR_ac_dw_off                = find_dataref("laminar/B747/debug/aero_dw_off")
+B747DR_ac_tm_off                = find_dataref("laminar/B747/debug/aero_tm_off")
 -- (2026-11-07) the cruise's drag above about M.83 by the Mach, the weight
 -- and the lift (the dynamic pressure, in Pa: notes/ATA-22.md §53)
 simDR_ac_mach                   = find_dataref("sim/flightmodel/misc/machno")
@@ -47,10 +50,10 @@ function B747_aero_corr()
     if B747DR_ac_off == 0 then
         for i = 0, 3 do te = te + B747DR_fcu_te_deg[i] end
         te = te / 4
-        dw = A.stab_downwash(simDR_ac_alpha, simDR_ac_ias)
+        if B747DR_ac_dw_off ~= 1 then dw = A.stab_downwash(simDR_ac_alpha, simDR_ac_ias) end
         for i = 1, 4 do ac_thrust[i] = simDR_ac_thrust[i - 1] end
         local q = 0.5 * simDR_ac_rho * simDR_ac_tas * simDR_ac_tas
-        tm = A.stab_thrust(A.thrust_moment(ac_thrust, ac_eta), q, simDR_ac_ias)
+        if B747DR_ac_tm_off ~= 1 then tm = A.stab_thrust(A.thrust_moment(ac_thrust, ac_eta), q, simDR_ac_ias) end
     end
     local stab = A.stab_flap(te) + dw + tm
     if math.abs(B747DR_ac_stab_corr - stab) > 1e-6 then B747DR_ac_stab_corr = stab end

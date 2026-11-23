@@ -1,11 +1,15 @@
 {
   "name": "s164_fuel",
-  "description": "6-1/6-2 段 11a（FMC の燃料の監視と PROGRESS 2）の X-Plane での確認。空中、成田の北の FL350（機体を読み直す、経路なし）。PROGRESS 2/3（FCOM p.1380）の風・TAS・SAT・FUEL USED（空中開始から）・TOTALIZER と CALCULATED が同じ、PERF INIT の FUEL は CALC。予備タンク 2・3 の燃料を外から空にして漏れを模すと、FUEL DISAGREE - PROG 2（FCOM p.1432）と <USE・USE>、<USE（TOTALIZER）で CALCULATED と FUEL USED が空白、PERF INIT は SENSED（FCOM p.1381）。CDU を撮る。Lua の誤りも確かめる",
+  "description": "6-1/6-2 段 11a（FMC の燃料の監視と PROGRESS 2）の X-Plane での確認。空中、成田の北の FL350（機体を読み直す、経路なし）。PROGRESS 2/3（FCOM p.1380）の風・TAS・SAT・FUEL USED（空中開始から）・TOTALIZER と CALCULATED が同じ、PERF INIT の FUEL は CALC。予備タンク 2・3 の燃料（重さの組で 3,100 kg ずつ：2026-11-22 から。キットの 270 t は予備タンクが空で、空にしても減らず FUEL DISAGREE が出なかった）を外から空にして漏れを模すと、FUEL DISAGREE - PROG 2（FCOM p.1432）と <USE・USE>、<USE（TOTALIZER）で CALCULATED と FUEL USED が空白、PERF INIT は SENSED（FCOM p.1381）。CDU を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.95, "longitude": 140.25, "elevation_in_meters": 10668, "heading_true": 340, "speed_in_meters_per_second": 245 },
     "engine_status": { "all_engines": { "running": true } },
     "local_time": { "day_of_year": 300, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+      "fueltank_weight_in_kilograms": [ 0, 10513.5, 29598.6, 29598.6, 10513.5, 3100.1, 3100.1, 0, 0 ]
+    },
     "weather": {
       "definition": "vfr_few_clouds",
       "vertical_speed_in_thermal_in_feet_per_minute": 0,

@@ -1168,6 +1168,8 @@ local function afds_at()
 	-- (2026-11-13, B5) SPD's gains by the acceleration a unit of lever gives
 	-- (B747.70.at_model.lua's lever_accel): the Mach and the gross weight
 	i.mach, i.weight = simDR_airspeed_mach, simDR_afds_weight
+	-- (2026-11-22) the engine type for the GE's G (lever_accel's GE_K)
+	i.engine = B747DR_ap_engine_type
 	i.accel_in = B747_at_model.path_accel(simDR_at_acc_x, simDR_at_acc_y, simDR_at_acc_z,
 		simDR_at_vel_x, simDR_at_vel_y, simDR_at_vel_z, simDR_at_wind_x, simDR_at_wind_y, simDR_at_wind_z)
 	-- (2026-11-11 review) X-Plane's time faster than XTLua's frames (the
