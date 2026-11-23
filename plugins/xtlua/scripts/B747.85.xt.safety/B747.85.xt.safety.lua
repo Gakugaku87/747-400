@@ -62,7 +62,7 @@ function deferred_dataref(name,nilType,callFunction)
 end
 simDR_startup_running               = find_dataref("sim/operation/prefs/startup_running")
 simDR_door_open_ratio               = find_dataref("sim/flightmodel2/misc/door_open_ratio")
-simDR_sfty_throttle_ratio           = find_dataref("sim/cockpit2/engine/actuators/throttle_ratio")
+B747DR_sfty_to_thrust_range         = find_dataref("laminar/B747/flt_ctrls/takeoff_thrust_range")
 simDR_sfty_time                     = find_dataref("sim/time/total_running_time_sec")
 simDR_cockpit2_no_smoking_switch    = find_dataref("sim/cockpit2/switches/no_smoking")
 simDR_cockpit2_seat_belt_switch     = find_dataref("sim/cockpit2/switches/fasten_seat_belts")
@@ -215,12 +215,17 @@ B747CMD_door_mode_manual_all        = deferred_command("laminar/B747/door/mode_m
 --    takeoff power until 1 minute after landing
 --  - DOORS MANUAL: every one MANUAL, on the ground only
 --  - DOORS AUTO/MAN: mixed
--- Takeoff power: a thrust lever at 0.6 or more on the ground (estimate),
--- or 10 s in the air (an air start); the inhibit ends after 60 s on the
--- ground with the levers below it (after a landing or a rejected takeoff;
--- reverse thrust counts as power: estimate). A new flight starts without
--- it
-local DOORS_TO_POWER = 0.6
+-- Takeoff power: an engine in the takeoff thrust range on the ground, or
+-- 10 s in the air (an air start); the inhibit ends after 60 s on the
+-- ground without it (after a landing or a rejected takeoff). A new flight
+-- starts without it. (2026-11-23 review NAV-1) The takeoff thrust range
+-- is the takeoff configuration warning's (laminar/B747/flt_ctrls/
+-- takeoff_thrust_range: the N1 indication above the takeoff value, the
+-- airplane's thrust lever not closed, the reverser stowed; ATA27 p.730;
+-- which engines and the lever are estimates). Before, X-Plane's throttle
+-- ratio at 0.6 (the hardware throttle, which the A/T does not move: an
+-- A/T takeoff with it low kept DOORS AUTO up on the takeoff roll), and
+-- reverse thrust counted
 local DOORS_AIR_S = 10
 local DOORS_AFTER_LANDING_S = 60
 local doorsInhibit = {on = false, since = nil, air = nil}
@@ -235,7 +240,7 @@ function B747_doors_mode_memo()
     local ground = B747DR_sfty_pseu_gnd > 0.5
     local power = false
     for i = 0, 3 do
-        if simDR_sfty_throttle_ratio[i] >= DOORS_TO_POWER then power = true end
+        if B747DR_sfty_to_thrust_range[i] > 0.5 then power = true end
     end
     local inh = doorsInhibit
     local now = simDR_sfty_time

@@ -56,22 +56,26 @@ end
 -- (7-1c) the CALL chime (laminar/B747/comm/call_chime, 1 for a second: the
 -- .snd's cockpit chime) as a call comes, not from takeoff thrust to 400 ft
 -- RA nor from 800 ft RA to 75 kt (FCOM p.1588, p.1599-1601: the attendant
--- call's; for SELCAL and ACARS the same, ATA31 p.218). Takeoff thrust: a
--- thrust lever at 0.6 or more (estimate); no chime afterwards for a call
--- that came inhibited (estimate)
+-- call's; for SELCAL and ACARS the same, ATA31 p.218). Takeoff thrust: any
+-- engine in the takeoff thrust range (FCOM p.1593), as the takeoff
+-- configuration warning's (laminar/B747/flt_ctrls/takeoff_thrust_range:
+-- the N1 indication above the takeoff value, the airplane's thrust lever
+-- not closed, the reverser stowed; estimate. 2026-11-23 review NAV-1:
+-- before, X-Plane's throttle ratio at 0.6, which the A/T does not move);
+-- no chime afterwards for a call that came inhibited (estimate)
 B747DR_acp_call_chime = find_dataref("laminar/B747/comm/call_chime")
 simDR_acp_time = find_dataref("sim/time/total_running_time_sec")
 simDR_acp_ra = find_dataref("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 simDR_acp_ias = find_dataref("sim/cockpit2/gauges/indicators/airspeed_kts_pilot")
 simDR_acp_vs = find_dataref("sim/flightmodel/position/vh_ind_fpm")
-simDR_acp_throttle = find_dataref("sim/cockpit2/engine/actuators/throttle_ratio")
+B747DR_acp_to_thrust_range = find_dataref("laminar/B747/flt_ctrls/takeoff_thrust_range")
 B747DR_acp_pseu_gnd = find_dataref("laminar/B747/gear/air_ground/pri_gnd")
 local CHIME_S = 1
 local chimeT = nil
 local function chime_inhibited()
     if B747DR_acp_pseu_gnd > 0.5 then
         if simDR_acp_ias > 75 then return true end
-        for i = 0, 3 do if simDR_acp_throttle[i] >= 0.6 then return true end end
+        for i = 0, 3 do if B747DR_acp_to_thrust_range[i] > 0.5 then return true end end
         return false
     end
     if simDR_acp_vs >= 0 then return simDR_acp_ra < 400 end

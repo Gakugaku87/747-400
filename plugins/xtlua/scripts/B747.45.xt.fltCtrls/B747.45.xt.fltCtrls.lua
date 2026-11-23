@@ -811,6 +811,7 @@ local TOCW_DETENT_POS = {[0] = 0, 1, 5, 10, 20, 25, 30}     -- the flap lever's 
 -- takeoff inhibit lasts (nil: none) (below)
 local config_gear_thrust, config_gear_flaps = false, false
 B747DR_cfg_gear_lever           = find_dataref("laminar/B747/flt_ctrls/config_gear_lever")
+B747DR_to_thrust_range          = find_dataref("laminar/B747/flt_ctrls/takeoff_thrust_range")
 local config_gear_after_lo = nil
 function B747_fltCtrols_EICAS_msg()
     
@@ -869,6 +870,12 @@ function B747_fltCtrols_EICAS_msg()
     tw.stab_in_band = B747_greenband_model.within(B747_greenband_sel,
         B747_rescale(-1.0, 0.0, 1.0, 15.0, simDR_elevator_trim))
     local tocw = B747_tocw_model.update(tocw_state, tw, SIM_PERIOD)
+    -- (2026-11-23 review NAV-1) each engine in the takeoff thrust range, as
+    -- the warning's (the DOORS AUTO memo and the CALL chime read it)
+    for i = 1, 4 do
+        local v = B747_tocw_model.takeoff_range(tw, i) and 1 or 0
+        if B747DR_to_thrust_range[i - 1] ~= v then B747DR_to_thrust_range[i - 1] = v end
+    end
     -- the configuration warning card failed (the failure window, notes/
     -- ATA-27.md §20): its takeoff and landing CONFIG messages "may or may
     -- not be displayed" (FCOM p.1558): none here (estimate); >CONFIG WARN

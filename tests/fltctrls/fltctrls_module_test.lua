@@ -608,6 +608,28 @@ T.equal(get(WARNING, 4), 0, "locked: none")
 rt:set("laminar/B747/engines/display_N1", 2, 0)
 for i = 1, 2 do rt:set("laminar/B747/engine/throttle", i, 0) end
 rt:set("laminar/B747/airspeed/V1", 0)
+-- (2026-11-23 review NAV-1) each engine in the takeoff thrust range, as the
+-- warning's (its N1 indication above the value, its lever not closed, its
+-- reverser stowed), for the DOORS AUTO memo and the CALL chime: any engine
+-- (FCOM p.1593), X-Plane's throttle ratio not read
+local RANGE = "laminar/B747/flt_ctrls/takeoff_thrust_range"
+rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 1)
+frames(0.2)
+for i = 0, 3 do T.equal(get(RANGE, i), 0, "idle (X-Plane's throttle 1): engine " .. (i + 1) .. " not in the takeoff thrust range") end
+rt:set("laminar/B747/engines/display_N1", 0, 90)
+rt:set("laminar/B747/engine/throttle", 0, 0.9)
+frames(0.2)
+T.equal(get(RANGE, 0), 1, "engine 1 at N1 90, its lever 0.9: in the takeoff thrust range")
+T.equal(get(RANGE, 1), 0, "engine 2 not")
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 0, 3)
+frames(0.2)
+T.equal(get(RANGE, 0), 0, "engine 1 in reverse: not")
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 0, 1)
+rt:set("laminar/B747/engine/throttle", 0, 0)
+frames(0.2)
+T.equal(get(RANGE, 0), 0, "its lever closed: not")
+rt:set("laminar/B747/engines/display_N1", 0, 0)
+rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 0)
 
 -- CONFIG GEAR (GEAR-17; FCOM p.1557-1558): in flight with a gear not down
 -- and locked (the PSEU's ALL GR DN). For a thrust lever closed below 800 ft

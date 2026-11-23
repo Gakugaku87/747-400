@@ -226,6 +226,10 @@ B747DR_ac_stab_corr             = deferred_dataref("laminar/B747/flt_ctrls/stab_
 -- (1): its siren and master WARNING lights stop on a master reset (FCOM
 -- p.1556); with the flaps a cause it is not resettable
 B747DR_cfg_gear_lever           = deferred_dataref("laminar/B747/flt_ctrls/config_gear_lever", "number")
+-- (2026-11-23 review NAV-1) engines 1-4 in the takeoff thrust range (1), as
+-- the takeoff configuration warning's (B747.45.tocw_model.lua): the DOORS
+-- AUTO memo and the CALL chime's inhibits read it
+B747DR_to_thrust_range          = deferred_dataref("laminar/B747/flt_ctrls/takeoff_thrust_range", "array[4]")
 -- the speedbrakes (B747.45.xt.speedbrake.lua; step 3): the auto speedbrake
 -- actuator does not move (1)
 B747DR_sb_fail                  = deferred_dataref("laminar/B747/flt_ctrls/fail/auto_speedbrake", "number")
