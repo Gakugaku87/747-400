@@ -1,0 +1,50 @@
+{
+  "name": "s411_ap_pitch_220_clean",
+  "description": "フラップ UP・220 kt・3,000 ft の ALT HOLD で A/P の縦が揺れないこと（2026-11-23 のレビューの FCTL-1、2026-11-24：notes/ATA-22.md §68）。270 t（燃料 86.5 t、積み荷なし）、迎角 約 7°。前は周期 約 5.7 秒で揺れ続けた（120 秒の荷重 0.938〜1.053 g、ピッチ 5.82〜6.92°：v04、2026-11-23）。合格：120 秒の荷重の幅 0.03 g 以下、30 秒のピッチの幅 0.2° 以下。そのあと FLCH で 2,000 ft へアイドルの降下（s198 の 216 kt の降下と同じ形）をして、降下の間 40 秒の荷重の幅 0.05 g 以下。",
+  "reload": true,
+  "flight": {
+    "lle_air_start": { "latitude": 35.406812, "longitude": 140.609504, "elevation_in_meters": 914.4, "heading_true": 329.6, "speed_in_meters_per_second": 113.0 },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 13400, 29840, 29840, 13400, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 5, "note": "空中開始の揺れ" },
+    { "do": "record_start" },
+    { "do": "set", "note": "MCP 高度 3,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 3000 },
+    { "do": "set", "note": "MCP 方位 330", "dref": "laminar/B747/autopilot/heading/degrees", "value": 330 },
+    { "do": "set", "note": "MCP 速度 220 kt", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 220 },
+    { "do": "cmd", "note": "A/T ARM", "name": "laminar/B747/authrottle_arm" },
+    { "do": "cmd", "note": "A/P CMD L", "name": "laminar/B747/autopilot/button_switch/cmd_L" },
+    { "do": "wait", "note": "A/P のサーボ", "dref": "laminar/B747/autopilot/servos_on", "op": "==", "value": 1, "timeout": 10 },
+    { "do": "cmd", "note": "ALT HOLD", "name": "laminar/B747/autopilot/button_switch/alt_hold_mode" },
+    { "do": "cmd", "note": "HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },
+    { "do": "cmd", "note": "SPD", "name": "laminar/B747/autopilot/button_switch/speed_mode" },
+    { "do": "sleep", "seconds": 90, "note": "水平と 220 kt に落ち着く" },
+    { "do": "snapshot", "note": "状態", "drefs": ["sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/alpha", "sim/flightmodel/position/theta", "laminar/B747/autopilot/FMA/active_pitch_mode", "sim/flightmodel/weight/m_total", "sim/cockpit2/controls/flap_ratio"] },
+
+    { "do": "mark", "note": "1：そのまま 120 秒" },
+    { "do": "watch", "note": "FCTL-1：荷重の幅 0.03 g 以下", "dref": "sim/flightmodel/forces/g_nrml", "timeout": 120, "spread": 0.03 },
+    { "do": "watch", "note": "ピッチの幅 0.2° 以下（30 秒）", "dref": "sim/flightmodel/position/theta", "timeout": 30, "spread": 0.2 },
+
+    { "do": "mark", "note": "2：FLCH で 2,000 ft へ（アイドルの降下、220 kt）" },
+    { "do": "set", "note": "MCP 高度 2,000 ft", "dref": "laminar/B747/autopilot/heading/altitude_dial_ft", "value": 2000 },
+    { "do": "cmd", "note": "FLCH", "name": "laminar/B747/autopilot/button_switch/flch_mode" },
+    { "do": "sleep", "seconds": 12, "note": "降下の入り" },
+    { "do": "snapshot", "note": "降下の間", "drefs": ["sim/cockpit2/gauges/indicators/airspeed_kts_pilot", "sim/cockpit2/gauges/indicators/altitude_ft_pilot", "sim/flightmodel/position/alpha", "sim/flightmodel/position/vh_ind_fpm", "laminar/B747/autopilot/FMA/active_pitch_mode", "laminar/B747/autopilot/FMA/autothrottle_mode"] },
+    { "do": "watch", "note": "FCTL-1：降下の間の荷重の幅 0.05 g 以下（前の s198 は 0.24 g）", "dref": "sim/flightmodel/forces/g_nrml", "timeout": 25, "spread": 0.05 },
+    { "do": "record_stop" }
+  ]
+}
