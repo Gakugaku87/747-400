@@ -128,6 +128,7 @@ function M.new()
         -- windows: since engine start, flown since then, landing
         status_seen = {},
         status_start = false, status_flown = false, status_landing = false,
+        status_liftoff_at = nil,  -- the last lift-off since the engine start, kept on the ground
         out = nil,
     }
 end
@@ -204,13 +205,18 @@ local function phases(s, inp)
     -- ground (estimate), until 30 min after lift-off, or until all are
     -- CUTOFF again on the ground; after a flight a new start begins it
     -- again. And from RA 800 ft until 75 kt on landing (FCOM p.1593, p.1600).
+    -- (2026-11-23 review WARN-6) the lift-off's time kept after the landing
+    -- (liftoff_at goes at the touchdown): the 30 min end on the ground too.
+    -- Before, after a flight of less than 30 min the cue stayed inhibited
+    -- until every FUEL CONTROL was CUTOFF
+    if not inp.on_ground and s.liftoff_at then s.status_liftoff_at = s.liftoff_at end
+    if s.status_liftoff_at and s.t - s.status_liftoff_at >= M.STATUS_CUE_AFTER_LIFTOFF_S then s.status_start = false end
     if inp.on_ground then
-        if all_cutoff then s.status_flown, s.status_start = false, false
+        if all_cutoff then s.status_flown, s.status_start, s.status_liftoff_at = false, false, nil
         elseif not s.status_flown then s.status_start = true end
         if inp.ias < M.STATUS_CUE_LANDING_IAS then s.status_landing = false end
     else
         s.status_flown = true
-        if s.liftoff_at and s.t - s.liftoff_at >= M.STATUS_CUE_AFTER_LIFTOFF_S then s.status_start = false end
         s.status_landing = not s.status_start and inp.radio_alt < M.STATUS_CUE_LANDING_RA
     end
     ph.status_cue_inhibit = s.status_start or s.status_landing

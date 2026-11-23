@@ -607,6 +607,32 @@ do
     T.check(out.status_cue, "STATUS cue: below 75 kt")
 end
 
+-- (2026-11-23 review WARN-6) after a flight of less than 30 min the 30 min
+-- from lift-off end on the ground too (FCOM p.1593 (15.20.47): from engine
+-- start until 30 min after lift-off). Before, the cue stayed inhibited on
+-- the ground until every FUEL CONTROL was CUTOFF
+do
+    local s, inp = A.new(), A.inputs()
+    run(s, inp, 0.5)
+    inp.fuel_cutoff = {false, false, false, false}
+    run(s, inp, 0.5)
+    inp.status_active = {"HYD PRESS DEM 2"}
+    inp.on_ground, inp.nose_gear_down, inp.radio_alt, inp.ias = false, false, 3000, 250
+    local out = run(s, inp, 20 * 60)
+    T.check(not out.status_cue, "STATUS cue: 20 min flight, inhibited")
+    inp.on_ground, inp.nose_gear_down, inp.radio_alt, inp.ias = true, true, 0, 70
+    out = run(s, inp, 5 * 60)
+    T.check(not out.status_cue, "STATUS cue: on the ground 25 min after lift-off, still inhibited")
+    out = run(s, inp, 6 * 60)
+    T.check(out.status_cue, "STATUS cue: on the ground 31 min after lift-off, the engines running: shown")
+    inp.fuel_cutoff = {true, true, true, true}
+    run(s, inp, 0.5)
+    inp.fuel_cutoff = {false, false, false, false}
+    inp.status_active = {"HYD PRESS DEM 2", "BLEED ASCTU A"}
+    out = run(s, inp, 0.5)
+    T.check(not out.status_cue, "STATUS cue: shut down and started again: inhibited from the new start")
+end
+
 -- the GPWS's PULL UP and WINDSHEAR light master WARNING; the master reset
 -- puts it out (FCOM p.1532, p.1555)
 do

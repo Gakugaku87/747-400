@@ -503,3 +503,11 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
 - 前：メッセージからは原因が分からないので、どちらもリセットできない扱いだった（推定）。
 - 直したこと：飛行制御（`B747.45.xt.fltCtrls.lua`）が原因を新しい dataref `laminar/B747/flt_ctrls/config_gear_lever`（1：レバーだけが原因）に書き、警報（`B747.87.xt.alerts.lua` → `B747.87.alert_model.lua` の `inp.config_gear_lever`）が、レバーだけが原因の間は CONFIG GEAR の siren をリセットで止める。リセットの後にフラップが原因に加わると siren は戻る（リセットできない原因）。メッセージが消えて新しく出れば、また鳴る。master WARNING 灯は前どおりリセットで消える（§3.4：リセットできない siren でも灯は消える）。
 - 試験：`tests/warning/alert_model_test.lua` に 6 件、`tests/fltctrls/fltctrls_module_test.lua` に 2 件（レバーで 1、フラップで 0）。直す前は落ちる。
+
+## 15. STATUS cue の抑止の 30 分は地上でも終わる（WARN-6、2026-11-23 の段 4 のレビュー）
+
+- 指摘：STATUS cue の抑止（エンジン始動からリフトオフの 30 分後まで：§4.13）は、30 分を空中でだけ数えていた（`B747.87.alert_model.lua`：リフトオフの時刻 `liftoff_at` は接地で消える）。30 分より短い飛行の後は、地上で全 FUEL CONTROL を CUTOFF にするまで抑止が続いた。
+- 資料：FCOM p.1593 (15.20.47)：STATUS cue は「Engine start」から「30 minutes after lift-off」まで抑止。空中に限るとは書いていない。
+- 直したこと：STATUS cue のためにリフトオフの時刻（`status_liftoff_at`：最後のリフトオフ）を接地の後も持ち、地上でも 30 分で抑止を解く。全 CUTOFF でほかと一緒に消す（次の始動から数え直す）。着陸の RA 800 ft〜75 kt の抑止（FCOM p.1600）はそのまま。
+- 試験：`tests/warning/alert_model_test.lua`（20 分の飛行の後、地上でリフトオフの 25 分後はまだ抑止、31 分後はエンジン運転のままで cue が出る。止めて始動し直すと、また抑止）。直す前のコードでは 1 件が落ちる。
+- X-Plane の確かめ：シナリオは足していない（地上で 30 分待つ）。見るなら、短い飛行の後の地上で、リフトオフの 30 分後に `laminar/B747/CAS/status_cue` が（新しい STATUS メッセージがあれば）1。
