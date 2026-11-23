@@ -154,6 +154,19 @@ T.equal(trimCG, want340, "CG 20 at GR WT 340: its trim")
 zfw("240")
 takeoff()
 T.equal(trim_text(), want340, "the same ZFW again: the same trim, GR WT 340's (before, the zones' 280 t)")
+-- (2026-11-24, review FCTL-4 = PERF-4) the FPPM's table for the takeoff's
+-- rating (B747.68.to_trim_model.lua: TO p.44, TO1 p.57, TO2 p.69); a new
+-- rating on THRUST LIM recomputes it, the green band's trim with it
+local TM = ns.B747_to_trim_model
+local function fmt(v) return string.format("%3.1f", tonumber(string.format("%4.1f", v))) end
+T.equal(trimCG, fmt(TM.trim(0, 340, 20)), "TO: the TO table's 340 t 20 %: " .. tostring(trimCG))
+ns.B747_fms_thrlim_to(2)
+frames(0.2)
+T.equal(trim_text(), fmt(TM.trim(2, 340, 20)), "TO 2 selected: the TO2 table's (p.69)")
+T.near(rt:get("laminar/B747/fmc/elevator_trim"), TM.trim(2, 340, 20), 0.051, "the green band's trim with it")
+ns.B747_fms_thrlim_to(0)
+frames(0.2)
+T.equal(trim_text(), fmt(TM.trim(0, 340, 20)), "TO again: the TO table's")
 delete_cg()
 
 -- (N19-WB-04) the lower holds' arms (B.A. less the nose's 90 in)

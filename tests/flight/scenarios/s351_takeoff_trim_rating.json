@@ -1,0 +1,48 @@
+{
+  "name": "s351_takeoff_trim_rating",
+  "description": "段 4 のレビュー FCTL-4 = PERF-4（2026-11-24、notes/ATA-34-61-FMC.md §177.4）の X-Plane での確認、地上。TAKEOFF REF の TRIM を FPPM の定格ごとの Stab Trim Setting の表（TO p.44、TO1 p.57、TO2 p.69）で計算し、THRUST LIM で定格を変えると計算し直す。RJAA 34L でエンジン運転中に始め（機体を読み直す）、重さ 220 t（OEW と燃料 36.5 t）。PERF INIT の ZFW 183.5（GR WT 220.0）、TAKEOFF REF の CG 17：TO で 4.0、TO 2 で 6.0（前の式はどちらも 4.4）、TO 1 で 4.0。緑の帯のトリム（laminar/B747/fmc/elevator_trim）も同じ値。CDU を撮る。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 6000, 12250, 12250, 6000, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "check", "note": "重さ 220 t（±0.5 t）", "dref": "sim/flightmodel/weight/m_total", "op": "between", "value": [219500, 220500], "stop": true },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "INIT REF、<INDEX、PERF：ZFW 183.5（L3）", "keys": ["INITREF", "L6", "L3", "183.5", "L3"] },
+    { "do": "check", "note": "GR WT 220.0（小さい字）", "dref": "laminar/B747/fms3/Line03_S", "op": "contains", "value": "220.0" },
+    { "do": "cdu", "note": "INIT REF、<INDEX、<TAKEOFF、CG 17（R4）", "keys": ["INITREF", "L6", "L5", "17", "R4"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "TAKEOFF REF", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "TAKEOFF REF" },
+    { "do": "check", "note": "CG 17 % は大きい字", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "17%" },
+    { "do": "check", "note": "TO の表の 220 t・17 %：4.0", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^.{16}4[.]0 ", "cite": "FPPM p.44" },
+    { "do": "check", "note": "緑の帯のトリムも 4.0", "dref": "laminar/B747/fmc/elevator_trim", "op": "between", "value": [3.95, 4.05] },
+    { "do": "cdu", "note": "INIT REF、<INDEX、THRUST LIM、<TO 2（L4）、TAKEOFF>（R6）", "keys": ["INITREF", "L6", "L4", "L4", "R6"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "TO 2", "dref": "laminar/B747/engine/derate/TO", "op": "==", "value": 2 },
+    { "do": "check", "note": "TO2 の表の 220 t・17 %：6.0（前の式は 4.4）", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^.{16}6[.]0 ", "cite": "FPPM p.69" },
+    { "do": "check", "note": "緑の帯のトリムも 6.0", "dref": "laminar/B747/fmc/elevator_trim", "op": "between", "value": [5.95, 6.05] },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_takeoff_ref_to2_trim" },
+    { "do": "cdu", "note": "INIT REF、<INDEX、THRUST LIM、<TO 1（L3）、TAKEOFF>（R6）", "keys": ["INITREF", "L6", "L4", "L3", "R6"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "TO1 の表の 220 t・17 %：4.0", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^.{16}4[.]0 ", "cite": "FPPM p.57" },
+    { "do": "view", "name": "forward" }
+  ]
+}

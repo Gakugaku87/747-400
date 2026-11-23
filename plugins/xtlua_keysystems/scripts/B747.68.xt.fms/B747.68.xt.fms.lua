@@ -530,32 +530,32 @@ wb = {
 }
 
 --Calculate CG %MAC & Trim
+-- (2026-11-24, review FCTL-4 = PERF-4) the FPPM's Stab Trim Setting table
+-- for the takeoff's rating (TO, TO 1, TO 2: B747.68.to_trim_model.lua,
+-- FPPM p.44, p.57, p.69; ATA27 p.514: the rating counts) at the weight
+-- (1000 kg, or kg) and the CG (% MAC). Before, one curve in pounds for
+-- every rating (0.8 to 1.8 units nose down from TO 2's table when light)
+dofile("B747.68.to_trim_model.lua")
 function calc_stab_trim(GW, CG_MAC)
-	local stab_trim = 0
 	-- (2026-11-05 review) numbers only: a weight not entered yet ("***.*")
 	-- leaves the trim as it is (arithmetic on text stopped the whole plugin)
 	GW, CG_MAC = tonumber(GW), tonumber(CG_MAC)
 	if GW == nil or CG_MAC == nil then return end
+	if GW > 1000 then GW = GW / 1000 end
+	local thr = B747_fms_thrlim and B747_fms_thrlim()
+	local stab_trim = B747_to_trim_model.trim(thr and thr.to or 0, GW, CG_MAC)
 
-	GW = GW * simConfigData["data"].SIM.kgs_to_lbs  --Formula uses LBS to calculate Stab TRIM.  GW passed in should always be in KGS.
-	--print("GWin = "..GW.." MACin = "..CG_MAC)
-
-	if GW > 1000 then
-		GW = GW / 1000  --GW must be in 1000s of LBS
-	end
-
-	stab_trim = (0.000000717 * GW^2 - 0.001217 * GW + 0.24) * CG_MAC + (-0.0000309 * GW^2 + 0.05558 * GW - 12.24)  --GW must be in 1000s of LBS
-	
-	--Stab Trim can never be less than zero
-	if stab_trim < 0 then
-		stab_trim = 0
-	end
-	
 	wb.stab_trim	= stab_trim
 	fmsModules["data"].stab_trim 	= string.format("%4.1f", wb.stab_trim)
 	B747DR_elevator_trim = fmsModules["data"].stab_trim  --Set STAB TRIM for green band calculation
 	--print("Setting trim_mid = "..B747DR_elevator_trim)
 	--print("Trim = "..fmsModules["data"].stab_trim)
+end
+-- (review FCTL-4) a new takeoff rating (THRUST LIM's TO, TO 1, TO 2):
+-- TAKEOFF REF's trim, when there is one, again for it at the CG and GR WT
+function B747_fms_trim_again()
+	if tonumber(fmsModules["data"].stab_trim) == nil then return end
+	calc_stab_trim(fmsModules["data"].grwt, fmsModules["data"].cg_mac)
 end
 
 -- (2026-11-20, GAP_ANALYSIS.md N19-WB-01, N19-WB-02) a CG in % MAC from its
@@ -2688,7 +2688,10 @@ local function update_thrlim()
   if B747DR_fms_thrlim_sel ~= selOut then B747DR_fms_thrlim_sel = selOut end
   local pct = B747_fms_thrlim_pct(thrlimState.to)
   if B747DR_fms_thrlim_to_pct ~= pct then B747DR_fms_thrlim_to_pct = pct end
-  if toderate ~= thrlimState.to then toderate = thrlimState.to end
+  if toderate ~= thrlimState.to then
+    toderate = thrlimState.to
+    B747_fms_trim_again()             -- (review FCTL-4) its stab trim table
+  end
   if clbderate ~= thrlimState.clb then clbderate = thrlimState.clb end
 end
 -- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
