@@ -3432,3 +3432,13 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - POS SHIFT：GE（`laminar/B747/engines/type` 1、プロジェクトでは 570）は FT、ほかは M。行は右に寄せ、FT の 25 桁目をはみ出さない。RTE 1 の滑走路が無ければ行を空白。入力は M で ±30、FT で ±99（それを超えると INVALID ENTRY）。
 - 試験：`takeoff_ref_test` 82（+4 と書き直し）：既定の H00/U0.0 が小さい字、滑走路なしで POS SHIFT の行が空白、DELETE で既定に戻る、勾配だけの入力（/U1.5 が大きい字、H00 が小さい字）、両方の入力、POS SHIFT は値を持つ（+03・−03）、31 は INVALID ENTRY。`rte_pages_test` 68（+5）：RTE 1 の滑走路 RW16R で +0300M、31 は INVALID ENTRY、GE で +0300FT、−45 で −4500FT、DELETE で --00FT。直す前のコードでは 6 件と 4 件が落ちる。TRIM を小さい字の行から読む試験（`takeoff_ref_test`・`wb_n19_test`・`flight_complete_test`）は、TRIM の 17〜20 桁だけを見るようにした（同じ行の頭に H00/U0.0 が出るため）。
 - X-Plane のシナリオ：`s83_takeoff_ref` に既定の H00/U0.0（小さい字）と POS SHIFT の行の空白（経路が無い）、POS SHIFT の値は `fms/data` の `+03` で見るように直した（前は「+0300M」の行）。`s256`・`s257` の TRIM の正規表現を 17〜20 桁に。
+
+### 177.6 APPROACH REF の FLAP/SPEED：重い VREF を受ける、VREF より大きい速さでフラップの速さを上げる（CDU-5 = PERF-5）
+
+- 見たこと（レビューの担当 1・3）：(a) 4R は 110〜180 kt の外を INVALID ENTRY（本家からの値、出典なし）。357 t より重いと VREF25、385 t より重いと VREF30 が 180 kt を超え、1R・2R で scratchpad に出した FMC 自身の値を 4R が拒み、PFD に REF が出ない（離陸直後の引き返し、重量超過の着陸）。(b) VREF より大きい速さを入れても、フラップの機動速度のバグが動かない。
+- 資料：FCOM p.1412 (11.43.24)：有効な入力は XX/YYY、/YYY、YYY で、範囲は書いていない（FMSPG p.205、ATA34_2 p.544 にも無い）。VREF より大きい速さの入力は、フラップの速さの予定の全体をその分だけ上げる。
+- 直したこと：
+  - (a) `B744.fms.pages.lua`：入力の範囲を 100〜250 kt に（**推定**：資料に範囲が無い。FMC の VREF は 150 t で約 112 kt、397 t で VREF25 約 191 kt、それに風の加算を入れて収まる幅）。
+  - (b) `B747.60.speedtape_model.lua`（入力 `vref_sel`、つなぎ `B747.60.xt.speedtape.lua` が `laminar/B747/airspeed/Vref` を渡す）：着陸フラップが選ばれていて、選んだ速さがそのフラップの FMC の VREF より大きいとき、その差を UP〜20 のバグ（`Vf0`〜`Vf20`）に足す。25・30 のバグ（`Vf25`・`Vf30`）は FMC の VREF のまま：FMC が `Vf30` を VREF 30 として読む（VNAV の VREF+100、片発の VREF+98 など）ため、また選んだフラップのものは REF のバグが代わる（レビューの直す案の vf[0..4]）。
+- 試験：`fmc_fixes_test` 52（+5）：25/190 と 30/182 を受ける、105 を受ける、251 と 99 は INVALID ENTRY。`speedtape_model_test` 33（+5）：30/158（VREF30 150）で UP〜20 が 8 kt 上がり 25・30 は FMC の値、25/170（VREF25 164）で 6 kt、VREF25 より小さい 160 では足さない、着陸フラップなし（DELETE）では足さない。`speedtape_module_test` 54（+3）：つなぎ（30/VREF30 + 5 で UP のバグ VREF30 + 85、Vf30 はそのまま、戻すと + 80）。直す前のコードでは 3 件・2 件・1 件が落ちる。
+- X-Plane のシナリオ：新しい `s352_appr_ref_heavy`（RJAA 34L の地上）：APPROACH REF の GROSS WT 390.0、1R → 4R で INVALID ENTRY が出ず VREF が 180 kt を超える、25/210 で UP のバグが 15 kt 以上上がり `Vf30` は変わらない。CDU を撮る。

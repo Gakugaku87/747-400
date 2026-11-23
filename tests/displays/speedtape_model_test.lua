@@ -46,6 +46,24 @@ T.equal(shown(), "5", "landing flaps 30 selected: the REF bug is VREF30, 25 stay
 inp.land_flap = M.LAND_25
 lever(M.F25); run()
 T.equal(shown(), "4", "flaps 25 with landing flaps 25: 20 (25 is the REF bug)")
+-- (2026-11-24, review PERF-5) a FLAP/SPEED above the FMC's VREF for its
+-- flaps raises the flap speed schedule by the difference (FCOM p.1412
+-- (11.43.24)): UP to 20; the 25 and 30 bugs stay the FMC's VREFs
+inp.land_flap, inp.vref_sel = M.LAND_30, 158
+run()
+T.check(out.vf[M.UP] == 238 and out.vf[M.F1] == 218 and out.vf[M.F5] == 198 and out.vf[M.F10] == 178
+    and out.vf[M.F20] == 168, "30/158 over VREF30 150: UP to 20 up 8 kt")
+T.check(out.vf[M.F25] == 164 and out.vf[M.F30] == 150, "the 25 and 30 bugs the FMC's VREFs")
+inp.land_flap, inp.vref_sel = M.LAND_25, 170
+run()
+T.equal(out.vf[M.UP], 236, "25/170 over VREF25 164: up 6 kt")
+inp.vref_sel = 160
+run()
+T.equal(out.vf[M.UP], 230, "25/160 under VREF25 164: as VREF30's")
+inp.land_flap, inp.vref_sel = M.LAND_NONE, 170
+run()
+T.equal(out.vf[M.F10], 170, "no landing flaps selected (deleted): as VREF30's")
+inp.vref_sel = 0
 inp.land_flap = M.LAND_NONE
 lever(M.UP); inp.alt_ft = 21000; run()
 T.equal(shown(), "", "above about 20,000 ft: no bugs (FCOM p.972)")

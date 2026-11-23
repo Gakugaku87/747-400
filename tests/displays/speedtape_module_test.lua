@@ -71,6 +71,15 @@ rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 0)
 frames(1)
 T.equal(rt:get(A .. "VrefFlap"), 2, "at 0 ft RA the CDU's landing flaps 30 kept")
 T.equal(bugs(), "5", "and the 30 bug still left to the REF bug")
+-- (2026-11-24, review PERF-5) APPROACH REF's 30/VREF30 + 5: the flap
+-- speeds UP to 20 up 5 kt (FCOM p.1412 (11.43.24)); 30 the FMC's VREF
+rt:set(A .. "Vref", vref30 + 5)
+frames(0.2)
+T.near(rt:get(A .. "Vf0"), vref30 + 85, 1e-6, "30/VREF30 + 5: UP's bug VREF30 + 85")
+T.near(rt:get(A .. "Vf30"), vref30, 1e-6, "Vf30 the FMC's VREF30 still")
+rt:set(A .. "Vref", vref30)
+frames(0.2)
+T.near(rt:get(A .. "Vf0"), vref30 + 80, 1e-6, "30/VREF30: UP's bug VREF30 + 80 again")
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 1000)
 frames(0.2)
 

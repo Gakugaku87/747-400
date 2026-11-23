@@ -30,6 +30,7 @@ function M.inputs()
         alt_ft = 0,             -- altitude (the bugs' 20,000 ft)
         flap_ratio = 0,         -- the flap lever
         land_flap = M.LAND_NONE,
+        vref_sel = 0,           -- kt: APPROACH REF's FLAP/SPEED (laminar/B747/airspeed/Vref)
         air = false,            -- the PSEU's air mode
         ias = 0,                -- kt
         v2 = 999,               -- kt: the V2 selected on the CDU (999: none)
@@ -61,7 +62,18 @@ function M.update(s, inp, dt)
     local out = s.out
     local d = math.max(M.UP, math.min(M.F30, math.floor(inp.flap_ratio * 6 + 0.5)))
     out.vref25 = inp.vref25
-    for k = M.UP, M.F20 do out.vf[k] = inp.vref30 + VREF30_PLUS[k] end
+    -- (2026-11-24, review PERF-5) a FLAP/SPEED above the FMC's VREF for its
+    -- flaps raises the flap speed schedule by the difference (FCOM p.1412
+    -- (11.43.24)): UP to 20 here; the 25 and 30 bugs stay the FMC's VREFs
+    -- (the FMC reads laminar/B747/airspeed/Vf30 as its VREF 30; the
+    -- selected one is the REF bug)
+    local add = 0
+    if inp.land_flap == M.LAND_25 or inp.land_flap == M.LAND_30 then
+        local ref = inp.land_flap == M.LAND_25 and inp.vref25 or inp.vref30
+        local sel = inp.vref_sel or 0
+        if ref > 0 and sel > ref then add = sel - ref end
+    end
+    for k = M.UP, M.F20 do out.vf[k] = inp.vref30 + VREF30_PLUS[k] + add end
     out.vf[M.F25] = out.vref25
     out.vf[M.F30] = inp.vref30
     -- the bugs for the current flap setting and the next lesser one, not

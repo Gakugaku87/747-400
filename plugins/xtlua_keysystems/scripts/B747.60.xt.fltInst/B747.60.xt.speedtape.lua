@@ -91,6 +91,7 @@ function B747_speedtape()
     inp.alt_ft = B747DR_fi_adc_alt_capt
     inp.flap_ratio = simDR_flap_ratio_control
     inp.land_flap = math.floor(B747DR_airspeed_VrefFlap + 0.5)
+    inp.vref_sel = B747DR_airspeed_Vref       -- (review PERF-5) FLAP/SPEED's
     inp.air = simDR_spd_air > 0.5
     inp.ias = simDR_airspeed
     inp.v2 = B747DR_airspeed_V2

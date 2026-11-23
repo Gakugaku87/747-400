@@ -1510,7 +1510,10 @@ function fmsFunctions.setdata(fmsO,value)
 	if not spd then flap, spd = "", string.match(fmsO["scratchpad"], "^(%d+)$") end
 	local vref=tonumber(spd or "")
 	if flap == "" then flap = string.match(cur, "^(%d%d)/") or "30" end
-	if vref==nil or vref<110 or vref>180 or (flap ~= "25" and flap ~= "30") then
+	-- (2026-11-24, review CDU-5 = PERF-5) 100 to 250 kt (estimate: FCOM
+	-- p.1412 (11.43.24) gives no range); before 110 to 180, which refused
+	-- the FMC's own VREF 25 from 357 t and VREF 30 from 385 t (1R/2R)
+	if vref==nil or vref<100 or vref>250 or (flap ~= "25" and flap ~= "30") then
 		fmsO["notify"]="INVALID ENTRY"
 		return
 	end
