@@ -3442,3 +3442,10 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - (b) `B747.60.speedtape_model.lua`（入力 `vref_sel`、つなぎ `B747.60.xt.speedtape.lua` が `laminar/B747/airspeed/Vref` を渡す）：着陸フラップが選ばれていて、選んだ速さがそのフラップの FMC の VREF より大きいとき、その差を UP〜20 のバグ（`Vf0`〜`Vf20`）に足す。25・30 のバグ（`Vf25`・`Vf30`）は FMC の VREF のまま：FMC が `Vf30` を VREF 30 として読む（VNAV の VREF+100、片発の VREF+98 など）ため、また選んだフラップのものは REF のバグが代わる（レビューの直す案の vf[0..4]）。
 - 試験：`fmc_fixes_test` 52（+5）：25/190 と 30/182 を受ける、105 を受ける、251 と 99 は INVALID ENTRY。`speedtape_model_test` 33（+5）：30/158（VREF30 150）で UP〜20 が 8 kt 上がり 25・30 は FMC の値、25/170（VREF25 164）で 6 kt、VREF25 より小さい 160 では足さない、着陸フラップなし（DELETE）では足さない。`speedtape_module_test` 54（+3）：つなぎ（30/VREF30 + 5 で UP のバグ VREF30 + 85、Vf30 はそのまま、戻すと + 80）。直す前のコードでは 3 件・2 件・1 件が落ちる。
 - X-Plane のシナリオ：新しい `s352_appr_ref_heavy`（RJAA 34L の地上）：APPROACH REF の GROSS WT 390.0、1R → 4R で INVALID ENTRY が出ず VREF が 180 kt を超える、25/210 で UP のバグが 15 kt 以上上がり `Vf30` は変わらない。CDU を撮る。
+
+### 177.7 重量の単位が LBS のとき PERF INIT の入力が違う数で出る（CDU-7）
+
+- 見たこと（レビューの担当 1）：ZFW と RESERVES はデータに 0.1 t（`%5.1f`）で持つので、ポンドで入れた値が kg に直して丸めた後に戻ると違う数になる。レビューの 14 件中 9 件（RESERVES 10 → 9.9、ZFW 480 → 479.9 など）。GR WT の入力も（700.3 → 700.4）。
+- 資料：FCOM p.1309-1311 (11.40.33-35)：入力は XXX か XXX.X で、入れた値が出る。
+- 直したこと（`B744.fms.pages.lua`）：ZFW（GR WT の入力からの ZFW も）と RESERVES のデータを 0.1 kg（`%.4f` t）で持つ。表示は前と同じ `%5.1f` の千 kg か千ポンド。データを読む所はどれも `tonumber`（PERF INIT、TAKEOFF REF の PRE-FLT、燃料のモデルの RESERVES）で、桁が増えても変わらない。KGS では表示も同じ（GR WT の入力の後の GR WT は、前は ZFW の 0.1 t の丸めの分だけ入力からずれ得た）。
+- 試験：`perf_init_test` 40（+2）：LBS でレビューの 14 件（ZFW 6・RESERVES 8）が入れたとおりに出る、GR WT 700.3 も。直す前のコードでは 2 件が落ちる（9 件と 700.4）。

@@ -1537,7 +1537,10 @@ function fmsFunctions.setdata(fmsO,value)
 	local zfw = value == "grwt" and t - fuel or t
 	local gw = zfw + fuel
 	if zfw < 130 or zfw > 270 or gw < 150 or gw > 400 then fmsO["notify"]="INVALID ENTRY" return end
-	setFMSData("zfw", string.format("%5.1f", zfw))
+	-- (2026-11-24, review CDU-7) kept to 0.1 kg: an entry in pounds shows
+	-- back as entered (FCOM p.1309-1310: XXX.X); before, to 0.1 t (480.0
+	-- thousand pounds came back 479.9)
+	setFMSData("zfw", string.format("%.4f", zfw))
 	setFMSData("gwsrc", value == "grwt" and "GW" or "ZFW")
 	update_perf()
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
@@ -1559,7 +1562,7 @@ function fmsFunctions.setdata(fmsO,value)
 	if del then fmsO["notify"]="INVALID DELETE" return end
 	local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
 	if v == nil or perf_in(v) > 180 then fmsO["notify"]="INVALID ENTRY" return end
-	setFMSData(value, string.format("%5.1f", perf_in(v)))
+	setFMSData(value, string.format("%.4f", perf_in(v)))   -- (review CDU-7) to 0.1 kg, as ZFW
   elseif value == "costindex" then
 	-- COST INDEX: 0 to 9999 (FCOM p.1311); not within 10 NM of the T/D
 	-- (FMSPG p.97). (2026-11-24, stage 4 review FMC-9) The T/D VNAV's
