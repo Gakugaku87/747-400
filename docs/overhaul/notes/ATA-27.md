@@ -557,3 +557,11 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 - 直したこと（`B747.19.xt.hydraulics_override.lua`）：引く量を、program の角度を 3D のスポイラーと同じ遅れ（`B747_animate_value`、速さ 10）で追った値から作る。ロールの無いスポイラーは、X-Plane の角度がいつも実際の角度の k 倍になる。止まっているときの値は前と同じ（k、地上の全量、ロールの割り当ては変えていない）。3D と表示は実際の角度のまま。
 - 試験：`tests/hyd/hyd_module_test.lua`（空中 200 kt・FLIGHT DETENT から DN：X-Plane のスポイラー 3 が 16.2° を超えず、毎フレーム 3D の 0.36 倍。FLIGHT DETENT へ戻す：最初のフレームから動き、毎フレーム 0.36 倍、16.2° に戻る）。直す前のコードでは 4 件が落ちる（40.5°、25.9° のずれ、出すときの 0°）。
 - X-Plane の確かめ：見るなら、空中（例：280 kt・FLIGHT DETENT）から `speed_brakes_up_one` を押し、毎フレームの記録で `sim/flightmodel/controls/wing3l_spo2def` が定常の値（0.36 × 240 ÷ IAS × 45°）を超えないこと。
+
+## 26. STAT の方向舵の針の目盛（2026-11-24：段 4 のフルレビューの PNL-7）
+
+- 前の状態（本家から）：カスタム acf の STAT の舵面の位置の方向舵の針（`gen_pointer Upper Rudder`・`Lower Rudder`、`laminar/B747/flt_ctrls/rudder_upr_pos`・`rudder_lwr_pos`、度）が `-25 → -82 / 25 → 82` の 2 点だけ。目盛の端（±82 px）は 25°。ペダルいっぱいの 32°（`B747.19.xt.hydraulicsmodel.lua`）では 105 px で「RUD」の字に重なり、ヨーダンパーの 4° が乗ると 118 px。
+- 資料：FCOM p.939 (9.10.13)：針がいっぱいに振れるのは舵面がいっぱいのとき。ATA27 p.658：上下の方向舵は低速（150 kt 未満）で左右 32°（p.682 の地上の試験は 31.5 ± 1.5°）。
+- 直したこと：2 本とも `-99 → -82 / -32 → -82 / 32 → 82 / 99 → 82`（32° で目盛の端、その先は端で止まる）。変更前後の値は ACF_DIFF.md §5。
+- 試験：`tests/fltctrls/panel_stat_rudder_test.lua`（24 件）：0° で真ん中、16° で半分、±32° で目盛の端、±33〜60° は端のまま。直す前の acf では 18 件が落ちる。
+- X-Plane の確かめ（親）：`s24`（STAT の舵面、地上・油圧あり）で、ペダルを左いっぱいにして `rudder_upr_pos` が −31 以下になったら STAT を寄せて撮る。針が目盛の左端にあり、「RUD」の字に重ならないこと。
