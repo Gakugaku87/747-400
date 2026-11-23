@@ -286,6 +286,30 @@ do
     local out = run(s, inp, 10)
     T.check(not out.cas.oj2_fwd and not out.cas.oj3_aft, "after tank to engine, mains 2 and 3 50 kg over 1 and 4: no FUEL OVRD")
     T.check(not out.cas.xfeed_config, "and no >X FEED CONFIG")
+    -- (2026-11-23 review SYS-2) held through the touchdown and the taxi:
+    -- before, the latch reset on the ground and FUEL OVRD 2 AFT, 2 FWD, 3
+    -- AFT, 3 FWD and >X FEED CONFIG came 1 s after the touchdown, to the
+    -- gate (FCOM p.1474 (12.30.2), p.1479 (12.30.7): shown before the
+    -- tank-to-engine configuration). A new load on the ground (a
+    -- refuelling) starts it again (estimate: no source says when)
+    inp.on_ground = true
+    out = run(s, inp, 1.5)
+    local any = false
+    for _, id in ipairs(OJS) do any = any or out.cas[id] end
+    T.check(not any, "touchdown with mains 2 and 3 over 1 and 4: no FUEL OVRD")
+    T.check(not out.cas.xfeed_config, "touchdown: no >X FEED CONFIG")
+    out = run(s, inp, 600)
+    any = false
+    for _, id in ipairs(OJS) do any = any or out.cas[id] end
+    T.check(not any and not out.cas.xfeed_config, "after 10 min on the ground: still none")
+    for n = 1, 4 do inp.fuel_control[n], inp.running[n], inp.ff[n] = false, false, 0 end
+    out = run(s, inp, 5)
+    T.check(not out.cas.oj2_fwd and not out.cas.xfeed_config, "engines shut down at the gate: still none")
+    s.qty.m2, s.qty.m3 = 20000, 20000
+    out = run(s, inp, 1)
+    T.check(out.cas.oj2_fwd and out.cas.oj2_aft and out.cas.oj3_fwd and out.cas.oj3_aft,
+        "refuelled on the ground (mains 2 and 3 to 20 t): FUEL OVRD with their switches OFF again")
+    T.check(out.cas.xfeed_config, "and >X FEED CONFIG with X FEED 1 and 4 OFF")
 end
 
 -- (2026-11-12 review FA-2) a jettison down to main 2's standpipe: its
