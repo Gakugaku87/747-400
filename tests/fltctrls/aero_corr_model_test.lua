@@ -66,29 +66,45 @@ T.check(A.DW_K > 0.3 and A.DW_K < 0.6, "DW_K a downwash gradient's size (the fit
 -- matches the 747-100's revised chart (NASA_SIM p.620; notes/AERO.md §3.26)
 T.equal(A.ge_factor, nil, "no ground effect factor (taken out)")
 
--- (2026-11-20, N19-AERO-01) the thrust's missing pitching moment: the
--- 747-100's effective arms (14.6 / 5.4 ft air, 9.2 / 7.3 ground) less the
--- acf's (5.2 / 1.0 ft), through the stabilizer
+-- (2026-11-20, N19-AERO-01) the thrust's missing pitching moment through
+-- the stabilizer. (2026-11-24, the 2026-11-23 review's FCTL-2) The
+-- 747-100's effective arms of NASA_SIM p.613 (19.0-2), the revision of
+-- September 1970: 8.3 / 3.1 ft in the air, 8.5 / 4.8 on the ground (before,
+-- p.22 (1.1-3)'s 14.6 / 5.4 and 9.2 / 7.3, which that page marks as revised
+-- in section 19), less X-Plane's own moment (its M_prop: before, arms from
+-- the acf's file, 5.2 / 1.0 ft, where X-Plane's mean arm measures 4.37 ft)
 local FT = 0.3048
-T.near(A.TM_ARM_AIR[2], 9.4 * FT, 1e-9, "inboard in the air: 9.4 ft missing")
-T.near(A.TM_ARM_AIR[1], 4.4 * FT, 1e-9, "outboard in the air: 4.4 ft")
-T.near(A.TM_ARM_GND[3], 4.0 * FT, 1e-9, "inboard on the ground: 4.0 ft")
-T.near(A.TM_ARM_GND[4], 6.3 * FT, 1e-9, "outboard on the ground: 6.3 ft")
+T.near(A.TM_ARM_AIR[2], 8.3 * FT, 1e-9, "inboard in the air: 8.3 ft (before the revision 14.6)")
+T.near(A.TM_ARM_AIR[1], 3.1 * FT, 1e-9, "outboard in the air: 3.1 ft (5.4)")
+T.near(A.TM_ARM_GND[3], 8.5 * FT, 1e-9, "inboard on the ground: 8.5 ft (9.2)")
+T.near(A.TM_ARM_GND[4], 4.8 * FT, 1e-9, "outboard on the ground: 4.8 ft (7.3)")
+T.near(A.TM_ARM_GND[1] - A.TM_ARM_AIR[1], 1.7 * FT, 1e-9, "the outboard's ground less air: the page's 1.7 ft")
+T.near(A.TM_ARM_GND[2] - A.TM_ARM_AIR[2], 0.2 * FT, 1e-9, "the inboard's: 0.2 ft")
 local four = {180e3, 180e3, 180e3, 180e3}
-local m_air = A.thrust_moment(four, 0)
-T.near(m_air, 180e3 * 2 * (9.4 + 4.4) * FT, 1, "180 kN each in the air: " .. math.floor(m_air / 1000) .. " kN m nose up")
-T.near(A.thrust_moment(four, 1), 180e3 * 2 * (4.0 + 6.3) * FT, 1, "on the ground: the ground's arms")
-T.near(A.thrust_moment(four, 0.5), (m_air + A.thrust_moment(four, 1)) / 2, 1, "half way: between")
-T.equal(A.thrust_moment({-50e3, -50e3, -50e3, -50e3}, 0), 0, "reverse: none")
-T.equal(A.thrust_moment(nil, 0), 0, "no thrust: none")
--- at liftoff (160 kt at sea level: q 4,149 Pa) about 1.9 degrees leading edge down
+-- X-Plane's own at its measured mean arm of 1.333 m (270 t, 2026-11-24)
+local own = 4 * 180e3 * 1.333
+local m_air = A.thrust_moment(four, 0, own)
+T.near(m_air, 180e3 * 2 * (8.3 + 3.1) * FT - own, 1, "180 kN each in the air: the 747-100's less X-Plane's own, " .. math.floor(m_air / 1000) .. " kN m nose up")
+T.check(m_air > 250e3 and m_air < 330e3, "about 0.4 m of arm missing (the 747-100's mean 1.74 m, X-Plane's 1.33)")
+T.near(A.thrust_moment(four, 1, own), 180e3 * 2 * (8.5 + 4.8) * FT - own, 1, "on the ground: the ground's arms")
+T.near(A.thrust_moment(four, 0.5, own), (m_air + A.thrust_moment(four, 1, own)) / 2, 1, "half way: between")
+T.near(A.thrust_moment(four, 0, 180e3 * 2 * (8.3 + 3.1) * FT), 0, 1e-6, "X-Plane's own as much as the 747-100's: none")
+T.check(A.thrust_moment(four, 0, own * 1.5) < 0, "X-Plane's own more: the other way")
+T.equal(A.thrust_moment({-50e3, -50e3, -50e3, -50e3}, 0, -4 * 50e3 * 1.333), 0, "reverse: none")
+T.equal(A.thrust_moment({180e3, -50e3, -50e3, 180e3}, 0, 100e3), 0, "two engines in reverse: none")
+T.near(A.thrust_moment({180e3, 180e3, 180e3, -3e3}, 0, own * 0.75), 180e3 * (3.1 + 8.3 + 8.3) * FT - own * 0.75, 1, "an engine windmilling (a little drag): the three's")
+T.equal(A.thrust_moment(nil, 0, own), 0, "no thrust: none")
+T.equal(A.thrust_moment(four, 0, nil), 0, "X-Plane's own moment not read: none")
+-- at liftoff (160 kt at sea level: q 4,149 Pa)
 local q160 = 0.5 * 1.225 * (160 * 0.51444) ^ 2
 local d = A.stab_thrust(m_air, q160, 160)
-T.check(d < -1.7 and d > -2.1, string.format("liftoff: %.2f degrees leading edge down (about 1.9)", d))
+T.near(d, -m_air / (A.TM_CMDS / 57.2958 * q160 * A.TM_S * A.TM_C), 1e-9, "the moment over the stabilizer's moment a degree, leading edge down")
+T.check(d < -0.15 and d > -0.5, string.format("liftoff: %.2f degrees leading edge down (1.9 with the arms before)", d))
 T.near(A.stab_thrust(m_air, q160 * 2, 160), d / 2, 1e-9, "twice the dynamic pressure: half")
 T.equal(A.stab_thrust(m_air, q160, A.TM_V0), 0, "at TM_V0 kt: none")
 T.near(A.stab_thrust(m_air, q160, (A.TM_V0 + A.TM_V1) / 2), d / 2, 1e-9, "half way through the fade: half")
 T.near(A.stab_thrust(1e9, q160, 160), -A.TM_MAX, 1e-9, "within TM_MAX")
+T.near(A.stab_thrust(-1e9, q160, 160), A.TM_MAX, 1e-9, "and the other way")
 T.equal(A.stab_thrust(m_air, 0, 160), 0, "no dynamic pressure: none")
 
 T.near(cl_of(340, 0.860, 35000), 0.499, 0.001, "340 t FL350 M.860: CL 0.499")

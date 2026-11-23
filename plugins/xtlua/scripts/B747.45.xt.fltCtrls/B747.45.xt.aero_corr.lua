@@ -16,6 +16,9 @@ B747DR_ac_off                   = find_dataref("laminar/B747/debug/aero_corr_off
 -- (2026-11-22) the downwash's or the thrust's correction alone left out
 B747DR_ac_dw_off                = find_dataref("laminar/B747/debug/aero_dw_off")
 B747DR_ac_tm_off                = find_dataref("laminar/B747/debug/aero_tm_off")
+-- (2026-11-24) the downwash's correction in percent of its own (0: its own)
+B747DR_ac_dw_pct                = find_dataref("laminar/B747/debug/aero_dw_pct")
+B747DR_ac_tm_pct                = find_dataref("laminar/B747/debug/aero_tm_pct")
 -- (2026-11-07) the cruise's drag above about M.83 by the Mach, the weight
 -- and the lift (the dynamic pressure, in Pa: notes/ATA-22.md §53)
 simDR_ac_mach                   = find_dataref("sim/flightmodel/misc/machno")
@@ -30,6 +33,9 @@ simDR_ac_ias                    = find_dataref("sim/flightmodel/position/indicat
 -- airspeed, the ground (X-Plane's onground_any, bound in
 -- B747.45.xt.fltCtrls.lua) blended over about 2 s on X-Plane's clock
 simDR_ac_thrust                 = find_dataref("sim/flightmodel/engine/POINT_thrust")
+-- (2026-11-24) X-Plane's own engines' pitching moment about its centre of
+-- gravity (N m, nose up plus), taken off the 747-100's
+simDR_ac_mprop                  = find_dataref("sim/flightmodel/forces/M_prop")
 simDR_ac_rho                    = find_dataref("sim/weather/rho")
 simDR_ac_tas                    = find_dataref("sim/flightmodel/position/true_airspeed")
 simDR_ac_time                   = find_dataref("sim/time/total_running_time_sec")
@@ -51,9 +57,11 @@ function B747_aero_corr()
         for i = 0, 3 do te = te + B747DR_fcu_te_deg[i] end
         te = te / 4
         if B747DR_ac_dw_off ~= 1 then dw = A.stab_downwash(simDR_ac_alpha, simDR_ac_ias) end
+        if B747DR_ac_dw_pct > 0 then dw = dw * B747DR_ac_dw_pct / 100 end
         for i = 1, 4 do ac_thrust[i] = simDR_ac_thrust[i - 1] end
         local q = 0.5 * simDR_ac_rho * simDR_ac_tas * simDR_ac_tas
-        if B747DR_ac_tm_off ~= 1 then tm = A.stab_thrust(A.thrust_moment(ac_thrust, ac_eta), q, simDR_ac_ias) end
+        if B747DR_ac_tm_off ~= 1 then tm = A.stab_thrust(A.thrust_moment(ac_thrust, ac_eta, simDR_ac_mprop), q, simDR_ac_ias) end
+        if B747DR_ac_tm_pct > 0 then tm = tm * B747DR_ac_tm_pct / 100 end
     end
     local stab = A.stab_flap(te) + dw + tm
     if math.abs(B747DR_ac_stab_corr - stab) > 1e-6 then B747DR_ac_stab_corr = stab end

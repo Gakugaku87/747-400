@@ -19,7 +19,7 @@
 --   FlyWithLua/B747_flighttest/mark    add a "mark" row to events.csv
 -- Does nothing unless the 747-400 is the user aircraft.
 
-local VERSION = "13"
+local VERSION = "14"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true)
     or XPLMFindDataRef("laminar/B747/engines/type") == nil then
@@ -141,6 +141,16 @@ local COLUMNS = {
     -- column its length (tests/flight/tools/frame_jumps.lua; the jumps right
     -- after X-Plane stood still, PROGRESS.md)
     {"wall"},
+    -- the pitching moments X-Plane's flight model has about the centre of
+    -- gravity (N m, nose up plus): the aerodynamic, the engines' and the
+    -- total; X-Plane's stabilizer (degrees, leading edge up plus) and the
+    -- aerodynamic corrections' part of it (2026-11-24: v14; the thrust's
+    -- pitching moment and the stabilizer's moment a degree, the 2026-11-23
+    -- review's FCTL-2: notes/AERO.md §3.27, tests/flight/tools/moment_fit.lua)
+    {"m_aero", "sim/flightmodel/forces/M_aero"}, {"m_prop", "sim/flightmodel/forces/M_prop"},
+    {"m_total", "sim/flightmodel/forces/M_total"},
+    {"stab_deg", "sim/flightmodel2/controls/stabilizer_deflection_degrees"},
+    {"stab_corr", "laminar/B747/flt_ctrls/stab_corr_deg"},
 }
 -- the four engines' thrust, for the "thrust" column
 local THRUST = {{"sim/flightmodel/engine/POINT_thrust", 0}, {"sim/flightmodel/engine/POINT_thrust", 1},

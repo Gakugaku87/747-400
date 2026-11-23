@@ -131,12 +131,21 @@ rt:set("sim/flightmodel/position/alpha", ACM.DW_ALPHA0)
 rt:set("sim/weather/rho", 1.225)
 rt:set("sim/flightmodel/position/true_airspeed", 200 * 0.51444)
 for i = 0, 3 do rt:set("sim/flightmodel/engine/POINT_thrust", i, 150e3) end
+-- (2026-11-24) X-Plane's own engines' moment (M_prop) taken off the 747-100's
+local own200 = 4 * 150e3 * 1.333
+rt:set("sim/flightmodel/forces/M_prop", own200)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 frames(3)
 local q200 = 0.5 * 1.225 * (200 * 0.51444) ^ 2
-local tm = ACM.stab_thrust(ACM.thrust_moment({150e3, 150e3, 150e3, 150e3}, 0), q200, 200)
+local tm = ACM.stab_thrust(ACM.thrust_moment({150e3, 150e3, 150e3, 150e3}, 0, own200), q200, 200)
+T.check(tm < -0.05, "the 747-100's moment over X-Plane's own: some, leading edge down")
 T.near(get(STAB_CORR), ACM.stab_flap(10) + tm, 0.02,
     string.format("150 kN each at 200 kt in the air: the thrust's %.2f degrees", tm))
+rt:set("laminar/B747/debug/aero_tm_off", 1)
+frames(0.1)
+T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "aero_tm_off 1: the thrust's left out")
+rt:set("laminar/B747/debug/aero_tm_off", 0)
+rt:set("sim/flightmodel/forces/M_prop", 0)
 for i = 0, 3 do rt:set("sim/flightmodel/engine/POINT_thrust", i, 0) end
 rt:set("sim/flightmodel/position/indicated_airspeed", 0)
 rt:set("sim/flightmodel/position/true_airspeed", 0)
