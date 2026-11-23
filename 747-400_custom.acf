@@ -74613,14 +74613,15 @@ GROUP Captain PFD
           gen_pointer Symbol
             POS 315.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
             BUS_SRC 2
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -78897,14 +78898,15 @@ GROUP Captain PFD
           gen_pointer Symbol
             POS 315.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
             BUS_SRC 2
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -83170,14 +83172,15 @@ GROUP First Officer PFD
           gen_pointer Symbol 2
             POS 994.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg_copilot
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
             BUS_SRC 4
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -87411,14 +87414,15 @@ GROUP First Officer PFD
           gen_pointer Symbol 2
             POS 994.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg_copilot
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
             BUS_SRC 4
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
