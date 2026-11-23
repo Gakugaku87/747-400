@@ -145,6 +145,9 @@ type_in("L", "AB")
 local defs = fms.ns.fmsFunctionsDefs["PROGRESS"]
 local own = defs["next"]
 defs["next"] = {"custom2fmc", "next"}
+-- (2026-11-24, CDU-1) a key takes its CDU's keys as its page was drawn
+-- (B744.createfms.lua's copy of the page's table): a frame for the drawing
+frames(0.05)
 key("L", "func_key/next_pg")
 defs["next"] = own
 rt:set(NATIVE, "[DELETE                ]")

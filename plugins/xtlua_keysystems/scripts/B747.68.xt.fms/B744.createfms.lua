@@ -176,6 +176,36 @@ function B747_cdu_page_changes(active)
   end
   vnavWas = active
 end
+-- (2026-11-24, stage 4 review CDU-1; notes/ATA-34-61-FMC.md §177.1) each
+-- CDU's keys as its own page was drawn. A page writes its line select
+-- keys' functions into one table by its name (fmsFunctionsDefs[page]),
+-- shared by the three CDUs and drawn L, C, R each frame: with two CDUs
+-- on pages of one name (VNAV CLB and DES, RTE 1/2 and 2/2, PROGRESS 1/3
+-- and 3/3) a key took the functions of the CDU drawn last (an ENG OUT
+-- MOD from DES's FORECAST>, CLB's SEL SPD into the descent's). Both pilots
+-- work on the same or different pages at once (FMSPG p.49, 2.8.6.1): now a
+-- copy of the table after each CDU's drawing, the key from its own copy
+-- while its page and page number are the ones drawn (else the shared
+-- table, as before)
+local drawnKeys = {}
+local function keepDrawnKeys(id, page, pgNo)
+  local d = drawnKeys[id]
+  if not d then d = {keys = {}} drawnKeys[id] = d end
+  local keys = d.keys
+  for k in pairs(keys) do keys[k] = nil end
+  local defs = fmsFunctionsDefs[page]
+  local values = defs ~= nil and rawget(defs, 'values') or nil
+  if values then
+    for k, v in pairs(values) do keys[k] = v end
+  end
+  d.page, d.pgNo = page, pgNo
+end
+local function pageKeyDef(id, page, pgNo, key)
+  local d = drawnKeys[id]
+  if d and d.page == page and d.pgNo == pgNo then return d.keys[key] end
+  if hasChild(fmsFunctionsDefs[page], key) then return fmsFunctionsDefs[page][key] end
+  return nil
+end
 local RETURN_KEY = {}
 -- the page's keys: the function keys, the line select keys, NEXT, PREV,
 -- EXEC, and the keys passed to X-Plane's CDU on its pages
@@ -291,10 +321,9 @@ local function pageKey(fmsModule,key)
     return
   end
   local page=fmsO.targetPage
-  if hasChild(fmsFunctionsDefs[page],key) then
-    print(fmsModule.. " found " .. fmsFunctionsDefs[page][key][1] .. " for " .. key)
-    fmsFunctions[ fmsFunctionsDefs[page][key][1] ](fmsO,fmsFunctionsDefs[page][key][2])
-    print(fmsModule.. " did " .. key .. " for " .. page)
+  local def=pageKeyDef(fmsModule,page,fmsO.targetpgNo,key)
+  if def~=nil then
+    fmsFunctions[ def[1] ](fmsO,def[2])
   elseif key=="next" then
     -- NEXT on the last page: the first (FMSPG p.42)
     local n = fmsPages[page] and fmsPages[page]:getNumPages(fmsModule) or 1
@@ -847,6 +876,8 @@ function fms:B747_fms_display()
         end
         fmsPage,fmsPagesmall={},{}
       end
+      -- (CDU-1) this CDU's keys as its page now has them
+      keepDrawnKeys(thisID, page, self.pgNo)
       for i=1,13,1 do
 	      B747DR_fms[thisID][i]=fmsPage[i] or BLANK
 	      B747DR_fms_s[thisID][i]=fmsPagesmall[i] or BLANK
