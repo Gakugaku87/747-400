@@ -427,6 +427,24 @@ function Get-XPAircraftLogErrors([string[]]$Lines, [string]$AircraftRel) {
     return $found.ToArray()
 }
 
+# --- a scenario's remove {path_dref} (2026-11-24, the stage 4 review's NAV-2)
+# The file a string dataref names (from X-Plane's folder) that a scenario may
+# delete: one in the aircraft's simbrief folder, written since the scenario
+# began. The FMC's fms_file and ofp_file name that folder's newest files:
+# after a SimBrief fetch that failed, those are older ones (the user's own
+# OFP), not the scenario's. Returns @{ path = <full path or $null>; why = ''
+# or 'empty' | 'outside' | 'missing' | 'older' }.
+function Get-XPRemovablePath([string]$Rel, [string]$AircraftDir, [datetime]$Since) {
+    $r = ([string]$Rel).Trim([char]0).Trim()
+    if (-not $r) { return @{ path = $null; why = 'empty' } }
+    $sb = [IO.Path]::GetFullPath((Join-Path $AircraftDir 'simbrief')) + '\'
+    $full = [IO.Path]::GetFullPath((Join-Path (Join-Path $AircraftDir '..\..') $r))
+    if (-not $full.StartsWith($sb, [StringComparison]::OrdinalIgnoreCase)) { return @{ path = $null; why = 'outside' } }
+    if (-not (Test-Path -LiteralPath $full)) { return @{ path = $null; why = 'missing' } }
+    if ((Get-Item -LiteralPath $full).LastWriteTime -lt $Since) { return @{ path = $null; why = 'older' } }
+    return @{ path = $full; why = '' }
+}
+
 # --- the state of a long test (2026-11-12, TESTING.md 4.6) ----------------
 # A line a run in the runs folder's STATUS.md (tests\flight\runs): what ran
 # and how it ended, what the kit changed in X-Plane and put back, the

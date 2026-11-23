@@ -72,6 +72,11 @@
 #                                                aircraft folder (SimBrief's files for
 #                                                the company datalink: simbrief\)
 #   remove  {path}                               delete such a file (none: nothing)
+#   remove  {path_dref}                          delete the file a string dataref
+#                                                names (from X-Plane's folder): only
+#                                                one in the aircraft's simbrief\,
+#                                                written since the scenario began
+#                                                (else warn, nothing deleted)
 #   snapshot {drefs: [...]}                      log values
 #   cas     {[has], [lacks], [level]}            log the EICAS message lines; with
 #                                                "has" / "lacks" (a text or a list),
@@ -695,13 +700,20 @@ foreach ($step in $spec.steps) {
                     # X-Plane's folder (the FMC's laminar/B747/fms/company/
                     # fms_file and ofp_file: the latest SimBrief OFP's name
                     # goes with the user's flight, s218), and only one in
-                    # the aircraft's simbrief folder
+                    # the aircraft's simbrief folder. (2026-11-24, the stage
+                    # 4 review's NAV-2) Only one written since the scenario
+                    # began: after a fetch that failed, those datarefs name
+                    # the folder's newest older file, the user's own OFP.
                     $rel = ([string](Get-XPDataref $step.path_dref)).Trim([char]0).Trim()
-                    $sb = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\simbrief')) + '\'
-                    $full = if ($rel) { [IO.Path]::GetFullPath((Join-Path (Join-Path $PSScriptRoot '..\..\..\..') $rel)) } else { '' }
-                    if ($full -and $full.StartsWith($sb, [StringComparison]::OrdinalIgnoreCase)) {
-                        if (Test-Path -LiteralPath $full) { Remove-Item -Force -LiteralPath $full }
+                    $began = (Get-Date).AddSeconds(-$wall.Elapsed.TotalSeconds)
+                    $rm = Get-XPRemovablePath $rel ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))) $began
+                    if ($rm.path) {
+                        Remove-Item -Force -LiteralPath $rm.path
                         Add-Result $step 'info' "removed $rel ($($step.path_dref))"
+                    } elseif ($rm.why -eq 'older') {
+                        Add-Result $step 'warn' "not removed: $($step.path_dref) = '$rel' was written before the scenario began (not this run's file)"
+                    } elseif ($rm.why -eq 'missing') {
+                        Add-Result $step 'info' "nothing to remove: $($step.path_dref) = '$rel' is no file"
                     } else {
                         Add-Result $step 'warn' "not removed: $($step.path_dref) = '$rel' is no file in the aircraft's simbrief folder"
                     }

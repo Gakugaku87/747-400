@@ -340,6 +340,33 @@ Check (($got -join "`n") -notmatch 'Exterior_Wiper') 'the exterior''s textures a
 Check (($got -join "`n") -notmatch 'GFX|W/TEX|E/APT|Aircraft/Other') 'X-Plane''s graphics, a W/ line, the scenery''s and another aircraft''s lines left out'
 Equal @(Get-XPAircraftLogErrors @() 'Aircraft/747-400-master/').Count 0 'no line: none'
 
+# --- remove {path_dref}: only this run's file (2026-11-24, the stage 4 review's NAV-2)
+# The FMC's fms_file and ofp_file name the simbrief folder's newest files:
+# after a failed fetch, the user's own older OFP. s218 must not delete it.
+$sbDir = Join-Path $dev 'simbrief'
+New-Item -ItemType Directory -Force -Path $sbDir | Out-Null
+$old = Join-Path $sbDir 'KSEAKLAX.xml'
+$new = Join-Path $sbDir 'RJCHRKSI.xml'
+Set-Content -LiteralPath $old -Value 'old'
+(Get-Item -LiteralPath $old).LastWriteTime = (Get-Date).AddDays(-14)
+$began = (Get-Date).AddMinutes(-5)
+Set-Content -LiteralPath $new -Value 'new'
+$r = Get-XPRemovablePath 'Aircraft/747-400-master/simbrief/RJCHRKSI.xml' $dev $began
+Equal $r.path ([IO.Path]::GetFullPath($new)) 'a file the run wrote: removable'
+$r = Get-XPRemovablePath 'Aircraft/747-400-master/simbrief/KSEAKLAX.xml' $dev $began
+Check ($null -eq $r.path -and $r.why -eq 'older') "the user's older OFP (a failed fetch): kept, why 'older' ($($r.why))"
+$r = Get-XPRemovablePath ('Aircraft/747-400-master/simbrief/RJCHRKSI.xml' + [char]0 + [char]0) $dev $began
+Equal $r.path ([IO.Path]::GetFullPath($new)) 'a string dataref''s trailing zero bytes trimmed'
+$r = Get-XPRemovablePath 'Aircraft/747-400-master/747-400_custom.acf' $dev ((Get-Date).AddYears(-1))
+Check ($null -eq $r.path -and $r.why -eq 'outside') "a file outside simbrief: kept ($($r.why))"
+$r = Get-XPRemovablePath 'Aircraft/747-400-master/simbrief/../747-400_custom.acf' $dev ((Get-Date).AddYears(-1))
+Check ($null -eq $r.path -and $r.why -eq 'outside') "a path climbing out of simbrief: kept ($($r.why))"
+$r = Get-XPRemovablePath 'Aircraft/747-400-master/simbrief/NONE.fms' $dev $began
+Check ($null -eq $r.path -and $r.why -eq 'missing') "no such file: nothing ($($r.why))"
+$r = Get-XPRemovablePath '' $dev $began
+Check ($null -eq $r.path -and $r.why -eq 'empty') "an empty dataref: nothing ($($r.why))"
+Check ((Test-Path -LiteralPath $old) -and (Test-Path -LiteralPath $new)) 'the function deletes nothing itself'
+
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
