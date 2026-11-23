@@ -337,8 +337,30 @@ end
 -- alpha over DW_ALPHA0 (the cruise's, so the cruise's trim stays), DW_K the
 -- missing stability over the stabilizer's moment per degree (Cm_delta_s
 -- about 2.6 /rad: 2.5 degrees of elevator a unit, §3.23). Under DW_V0 kt
--- none (alpha means nothing at rest), full from DW_V1; within DW_MAX
-M.DW_K = 0.50
+-- none (alpha means nothing at rest), full from DW_V1; within DW_MAX.
+-- (2026-11-24, the 2026-11-23 review's FCTL-1; notes/AERO.md §3.28) DW_K by
+-- the Mach, measured anew from X-Plane's own aerodynamic moment
+-- (tests/flight/tools/moment_fit.lua on the A/P-off stabilizer steps,
+-- column steps and doublets: Cm fitted to the alpha, the pitch rate, the
+-- elevator and X-Plane's stabilizer; no inertia in it): X-Plane's
+-- Cm_alpha without the correction is -2.57 /rad at 150 kt with flaps 30,
+-- -2.49 at 165 kt with flaps 20, -2.16 at 220 kt with the flaps up, -2.04
+-- at 22,400 ft M.58 and -3.35 at FL350 M.83 (it grows with the Mach as the
+-- lift slope does); the stabilizer's Cm_delta_s -2.8 to -3.2 /rad up to
+-- M.6 and -3.55 at M.83. The 747-100's Cm_alpha: -1.45 (landing), -1.26
+-- (power approach), -1.14 (FC5, 20,000 ft M.5 alpha 6.8), -1.03 (20,000 ft
+-- M.6), about -1.14 (35,000 ft M.84, between the figure's 20,000 and
+-- 40,000 ft lines) (NASA_HQ p.222-223 tables IX-1 and IX-2, p.227 the
+-- Cm_alpha figure, p.236 table IX-4; -100 values). DW_K = (X-Plane's less
+-- the 747-100's) / Cm_delta_s: 0.36, 0.39, 0.36, 0.35 and 0.62: DW_K[1] up
+-- to its Mach, DW_K[2] from its Mach, straight between
+-- (estimates: the values between and beyond, and the 747-100's at M.84 read
+-- from a steep part of the figure: 0.58 to 0.66). Until then one value,
+-- 0.50, from the angular acceleration's fits with an assumed pitch inertia
+-- and the stabilizer at 2.5 times the elevator (it measures 2.1 to 2.3
+-- times): at 220 kt with the flaps up that left Cm_alpha -0.76 /rad, a
+-- third less stable than the 747-100
+M.DW_K = {{0.58, 0.36}, {0.83, 0.60}}
 M.DW_ALPHA0 = 2.0
 M.DW_V0, M.DW_V1 = 40, 60
 M.DW_MAX = 5
@@ -352,12 +374,21 @@ M.DW_MAX = 5
 -- day took it to +2.30 and grew with the alpha far faster than the revised
 -- chart: the rotation's column 0.69 -> 0.96 at liftoff
 
+-- the degrees of stabilizer a degree of alpha at a Mach (nil: the low
+-- Mach's)
+function M.dw_k(mach)
+    local a, b = M.DW_K[1], M.DW_K[2]
+    if not mach or mach <= a[1] then return a[2] end
+    if mach >= b[1] then return b[2] end
+    return a[2] + (b[2] - a[2]) * (mach - a[1]) / (b[1] - a[1])
+end
+
 -- the degrees (leading edge up, as stab_flap) for the body's alpha
--- (degrees) at an indicated airspeed (kt)
-function M.stab_downwash(alpha, kt)
+-- (degrees) at an indicated airspeed (kt) and a Mach
+function M.stab_downwash(alpha, kt, mach)
     if not alpha or not kt or kt <= M.DW_V0 then return 0 end
     local fade = math.min(1, (kt - M.DW_V0) / (M.DW_V1 - M.DW_V0))
-    local d = -M.DW_K * (alpha - M.DW_ALPHA0)
+    local d = -M.dw_k(mach) * (alpha - M.DW_ALPHA0)
     return math.max(-M.DW_MAX, math.min(M.DW_MAX, d)) * fade
 end
 

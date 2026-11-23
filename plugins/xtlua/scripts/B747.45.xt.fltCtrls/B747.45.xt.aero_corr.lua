@@ -56,7 +56,7 @@ function B747_aero_corr()
     if B747DR_ac_off == 0 then
         for i = 0, 3 do te = te + B747DR_fcu_te_deg[i] end
         te = te / 4
-        if B747DR_ac_dw_off ~= 1 then dw = A.stab_downwash(simDR_ac_alpha, simDR_ac_ias) end
+        if B747DR_ac_dw_off ~= 1 then dw = A.stab_downwash(simDR_ac_alpha, simDR_ac_ias, simDR_ac_mach) end
         if B747DR_ac_dw_pct > 0 then dw = dw * B747DR_ac_dw_pct / 100 end
         for i = 1, 4 do ac_thrust[i] = simDR_ac_thrust[i - 1] end
         local q = 0.5 * simDR_ac_rho * simDR_ac_tas * simDR_ac_tas

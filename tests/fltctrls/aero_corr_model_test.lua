@@ -56,12 +56,31 @@ T.equal(A.stab_downwash(10, 0), 0, "at rest: none")
 T.equal(A.stab_downwash(10, A.DW_V0), 0, "at DW_V0: none")
 T.equal(A.stab_downwash(nil, 250), 0, "no alpha: none")
 T.near(A.stab_downwash(A.DW_ALPHA0, 250), 0, 1e-12, "the cruise's alpha: none (the cruise's trim stays)")
-T.near(A.stab_downwash(6, 250), -A.DW_K * (6 - A.DW_ALPHA0), 1e-12, "alpha 6: the leading edge down DW_K a degree")
-T.near(A.stab_downwash(0, 250), A.DW_K * A.DW_ALPHA0, 1e-12, "alpha 0: leading edge up")
-T.near(A.stab_downwash(6, (A.DW_V0 + A.DW_V1) / 2), -A.DW_K * (6 - A.DW_ALPHA0) / 2, 1e-12, "half way through the fade: half")
+-- (2026-11-24, the 2026-11-23 review's FCTL-1) DW_K by the Mach: the low
+-- Mach's to M.58, the cruise's from M.83, straight between; no Mach given:
+-- the low Mach's
+local K_LO, K_HI = A.DW_K[1][2], A.DW_K[2][2]
+T.near(A.dw_k(nil), K_LO, 1e-12, "no Mach: the low Mach's")
+T.near(A.dw_k(0.27), K_LO, 1e-12, "M.27 (the approach): the low Mach's")
+T.near(A.dw_k(A.DW_K[1][1]), K_LO, 1e-12, "to its Mach")
+T.near(A.dw_k(0.84), K_HI, 1e-12, "M.84: the cruise's")
+T.near(A.dw_k((A.DW_K[1][1] + A.DW_K[2][1]) / 2), (K_LO + K_HI) / 2, 1e-12, "half way: between")
+T.check(K_LO > 0.3 and K_LO < 0.45, "the low Mach's about 0.36 (measured 0.35 to 0.39; before 0.50)")
+T.check(K_HI > 0.5 and K_HI < 0.7, "the cruise's about 0.6 (measured 0.58 to 0.66)")
+-- X-Plane's Cm_alpha with the correction against the 747-100's (the
+-- measured Cm_alpha and Cm_delta_s, /rad: notes/AERO.md §3.28)
+for _, c in ipairs({{"150 kt flaps 30", 0.23, -2.57, -3.11, -1.45}, {"165 kt flaps 20", 0.27, -2.49, -3.16, -1.26},
+    {"220 kt flaps up", 0.36, -2.16, -2.81, -1.14}, {"22,400 ft M.58", 0.58, -2.04, -2.86, -1.03},
+    {"FL350 M.83", 0.83, -3.35, -3.55, -1.14}}) do
+    local eff = c[3] - A.dw_k(c[2]) * c[4]
+    T.near(eff, c[5], 0.2, string.format("%s: Cm_alpha %.2f /rad with the correction, the 747-100's %.2f", c[1], eff, c[5]))
+end
+T.near(A.stab_downwash(6, 250), -K_LO * (6 - A.DW_ALPHA0), 1e-12, "alpha 6: the leading edge down DW_K a degree")
+T.near(A.stab_downwash(6, 250, 0.84), -K_HI * (6 - A.DW_ALPHA0), 1e-12, "at M.84: the cruise's a degree")
+T.near(A.stab_downwash(0, 250), K_LO * A.DW_ALPHA0, 1e-12, "alpha 0: leading edge up")
+T.near(A.stab_downwash(6, (A.DW_V0 + A.DW_V1) / 2), -K_LO * (6 - A.DW_ALPHA0) / 2, 1e-12, "half way through the fade: half")
 T.near(A.stab_downwash(40, 250), -A.DW_MAX, 1e-12, "a stall's alpha: within DW_MAX")
 T.near(A.stab_downwash(-30, 250), A.DW_MAX, 1e-12, "and the other way")
-T.check(A.DW_K > 0.3 and A.DW_K < 0.6, "DW_K a downwash gradient's size (the fit: 0.42 to 0.49)")
 -- (2026-11-20, N19-AERO-03) no ground effect of its own: X-Plane's own
 -- matches the 747-100's revised chart (NASA_SIM p.620; notes/AERO.md §3.26)
 T.equal(A.ge_factor, nil, "no ground effect factor (taken out)")
