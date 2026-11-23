@@ -3311,7 +3311,7 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 資料：FCOM p.1390 (11.43.2) の 109・405 の図にこの行は無い。570 の図（p.1391）は 3R に WPT/ALT、4R に FPA V/B V/S。p.1393 (11.43.5) の 10：WPT/ALT は（DES のページが空でも）見出しが出て、AT の行（1R）と同じ点・高度の制限を出す。乗員の入力で書き換えられる。p.1394 (11.43.6) の 11：FPA V/B V/S ははじめダッシュ、WPT/ALT を入れた後に現在の経路角・その点と高度への V/B・それを保つ V/S。
 - 直したこと（`activepages/B744.fms.pages.vnav.lua`）：P&W・RR（109）は 3R・4R の見出しも値も出さない。GE（570、`laminar/B747/engines/type` 1）は WPT/ALT の見出しと AT の行の点・高度（`ALPHA/11000A15000B` の形：AT の行の高度の書き方のまま）、FPA V/B V/S の見出しとダッシュ（`-.- -.- ----`）。使っていなかった旧 AP の値（`navadata/fpa`・`vb`）は読まなくなった（`fms/data` の `fpa`・`vb`・`vs` の既定値は残る）。
 - 作っていないもの（問い）：WPT/ALT の乗員の入力（3R は今も KEY/FUNCTION INOP）と、入力の後の FPA・V/B・V/S。V/B の距離を経路に沿って測るか直線か、入力の点が経路に無いとき、p.1394 の「climbs or descends below the entered altitude」で消える条件は、資料で決まらない。
-- 試験：`vnav_wpts_test` 30（+6：P&W は見出しと値が無い、GE は見出し・ダッシュ・WPT/ALT。直す前は 6 件が落ちる）。
+- 試験：`vnav_wpts_test` 30（+7：P&W は見出しと値が無い、GE は見出し・ダッシュ・WPT/ALT。直す前は 6 件が落ちる：GE の FPA V/B V/S の見出しは前から出ていた）。
 
 ### 177.4 上昇の SPD RESTR を過ぎたらダッシュに（FMC-5）
 
