@@ -5791,6 +5791,11 @@ function B747_fms_flight_complete()
   for _,k in ipairs(FC_KEYS) do
     if d[k]~=nil and fmsModules["data"][k]~=d[k] then fmsModules:setData(k,d[k]) end
   end
+  -- (2026-11-24, stage 4 review FMC-2) CRZ ALT's value too, not only its
+  -- text: the next flight's same entry did not show (its value unchanged)
+  -- and VNAV and the pressurization had the last one (FCOM p.1307; FMSPG
+  -- p.97: cleared at flight completion)
+  B747BR_cruiseAlt=0
   B747_route_model.clear(B747_fmc_route)
   B747_fmc_route_changed()
   renew(rtaState,B747_rta_model.new())

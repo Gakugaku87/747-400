@@ -121,6 +121,17 @@ T.equal(rt:get("laminar/B747/airspeed/flapsRef"), 0, "the takeoff flaps gone (AT
 local inh = fms.ns.B747_fmc_nav_inhibits()
 T.check(inh.navaid[1] == nil and not inh.vordme, "REF NAV DATA's inhibits blank (FCOM p.1356-1357)")
 T.check(not np.gps_inhibit and np.rnp_man == nil, "GPS NAV enabled again (FCOM p.1369), the RNP entry gone (estimate)")
+-- (2026-11-24, stage 4 review FMC-2) CRZ ALT's value too (VNAV's and the
+-- pressurization's laminar/B747/autopilot/dist/cruise_alt): the next
+-- flight's same CRZ ALT shows (before: boxes, its value unchanged)
+T.equal(rt:get("laminar/B747/autopilot/dist/cruise_alt"), 0, "CRZ ALT's value cleared (before: 35000)")
+key("func_key/index")
+T.check(line(1):find("PERF INIT"), "PERF INIT: " .. line(1))
+enter("350", "R1")
+frames(0.2)
+T.equal(data("crzalt"), "FL350", "the same CRZ ALT entered again: FL350 (before: boxes)")
+T.equal(rt:get("laminar/B747/autopilot/dist/cruise_alt"), 35000, "its value 35000")
+key("func_key/fpln")
 
 -- once: the next shutdown without a flight clears nothing again
 enter("ZZAA", "L1")

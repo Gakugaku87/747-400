@@ -3298,6 +3298,13 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - PROGRESS は描いた行を 1 秒とっておき、その間はキーを書かなかった（1/3 が 3/3 の RTA PROGRESS のキーのまま）。1/3・2/3 のキーを、とっておいた行を返す前に書くようにした（`B744.fms.pages.progress.lua`）。
 - 試験：`tests/fms/cdu_two_pages_test.lua`（21 件。直す前は 9 件が落ちる）。
 
+### 177.2 flight complete で CRZ ALT の値も消す（FMC-2）
+
+- 見たこと：flight complete（§89）は PERF INIT の CRZ ALT の文字（`crzalt`）だけを □ に戻し、値の dataref `laminar/B747/autopilot/dist/cruise_alt` は前の飛行の最後の値のままだった。次の飛行で同じ高度を入れると、値が変わらないので文字を書き直さず □ のまま（`monitorCRZALT`）。VNAV と与圧も古い値を読んでいた。X-Plane でも再現（`v02_turnaround`：35000 のまま、350 を入れても □）。
+- 資料：FCOM p.1307 (11.40.31)：入力した値はエンジン停止（飛行の後）で消える。FMSPG p.97 (3.2-37)：CRZ ALT の表示は flight completion で消える。
+- 直したこと（`B747.68.xt.fms.lua` の `B747_fms_flight_complete`）：値も 0 にする（`monitorCRZALT` が □ を書く。与圧は 0 を「無し」として読む）。
+- 試験：`flight_complete_test` 18（+4：値が 0、同じ 350 を入れ直して FL350 と 35000。直す前は 2 件が落ちる）。
+
 ## 178. G/A の後の水平飛行の A/T の速度の保護（2026-11-23 夜：段 4 のフルレビューの AFDS-1。利用者の決定「A と B を直す」。worktree `D:/b747_fix_afds`）
 
 - 見たこと：TO/GA 1 回の G/A（A/T は THR、2,000 fpm）で MCP 高度を捕捉すると、ピッチは ALT、A/T は THR のまま（ここまでは FCOM どおり）。THR の則は 2,000 fpm のエネルギーの率を保ち続けるので、水平では加速し続けた。親の確かめ `v07_ga_leveloff`（X-Plane、2026-11-23、P&W・270 t、フラップ 20・Vmax 230）で、捕捉の後 69 秒で 163 → 238 kt。2 回目の押し（THR REF）には前から限界速度の則がある（§60）。
