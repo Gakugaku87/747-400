@@ -221,6 +221,11 @@ B747DR_pidPitchD = deferred_dataref("laminar/B747/flt_ctrls/pid/pitch/d", "numbe
 -- its own (0: its own; B747.19.xt.afds_control.lua), for finding the
 -- cruise's pitch swing in X-Plane
 B747DR_dbg_ap_rate_pct = deferred_dataref("laminar/B747/debug/ap_pitch_rate_pct", "number")
+-- (2026-11-24) the same for the attitude error's gain (the proportional
+-- and the integral), for finding the low speed's pitch swing (the
+-- 2026-11-23 review's FCTL-1)
+B747DR_dbg_ap_gain_pct = deferred_dataref("laminar/B747/debug/ap_pitch_gain_pct", "number")
+B747DR_dbg_ap_int_pct = deferred_dataref("laminar/B747/debug/ap_pitch_int_pct", "number")
 
 B747DR_pidyawP = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/p", "number")
 B747DR_pidyawI = deferred_dataref("laminar/B747/flt_ctrls/pid/yaw/i", "number")

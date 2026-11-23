@@ -565,3 +565,10 @@ STAB TRIM UNSCHD = (autotrim/speed trim/default mode で有効な指令なしに
 - 直したこと：2 本とも `-99 → -82 / -32 → -82 / 32 → 82 / 99 → 82`（32° で目盛の端、その先は端で止まる）。変更前後の値は ACF_DIFF.md §5。
 - 試験：`tests/fltctrls/panel_stat_rudder_test.lua`（24 件）：0° で真ん中、16° で半分、±32° で目盛の端、±33〜60° は端のまま。直す前の acf では 18 件が落ちる。
 - X-Plane の確かめ（親）：`s24`（STAT の舵面、地上・油圧あり）で、ペダルを左いっぱいにして `rudder_upr_pos` が −31 以下になったら STAT を寄せて撮る。針が目盛の左端にあり、「RUD」の字に重ならないこと。
+
+## 27. 安定板の写しの 2 行目の範囲（2026-11-24：2026-11-23 のレビューの FCTL-6）
+
+- 指摘：`B747.19.xt.hydraulicsmodel.lua` の写し（controlObject）は、トリムの角度（+3〜−12°：ATA22 p.132）の行と、空力の補正（`laminar/B747/flt_ctrls/stab_corr_deg`：notes/AERO.md §3.23〜§3.25）の行の和を X-Plane の安定板（`sim/flightmodel2/controls/stabilizer_deflection_degrees`）に書く。XTLua は同じ行き先の 2 行目からを足し、和をその行の出力の範囲（それまでの値まで広げる）で切る（§6.1 の controlObject の規則）。2 行目の範囲が ±10 だったので、トリムが 8 units を超えると前縁下げの補正が −10° で切られた（9 units と −5° で −11° のはずが −10°。13 units から上は前縁下げの補正が全部消える）。当たるのはフラップ UP・高い迎角・8 units 以上で、ふつうの飛行では当たらない。
+- 直したこと：2 行目の範囲を ±22 に（トリムの +3〜−12° と、補正の最大（フラップ 6.2、吹き下ろしと推力がそれぞれ ±5）の和 +19.2〜−22° が入る）。レビューの案の `"min"`・`"max"` の鍵は使わず、前からある範囲の鍵だけで直した（XTLua 本体の読み方に頼らない）。
+- 試験：新しい `tests/hyd/stab_rows_test.lua`（23 件：トリムだけの 0・3・15 units、補正との和 17 通り、両端。前の作りでは 9 units・−5° などが落ちる）。
+- X-Plane（カスタム acf、2026-11-24）：飛行の記録（v14 の `stab_deg`）では、X-Plane の安定板はどの回でも「3 − units ＋ `stab_corr_deg`」と同じ（例：4.49 units・補正 −2.68° で −4.18°）。切られていた所は、地上で fltCtrls のモジュールを止め（`laminar/B747/debug/fltctrls` 1）、トリムと補正を Web API で書いて確かめた：12 units・−8° で −17.0°、13.5 units・−5° で −15.5°、15 units・−10° で −22.0°、9 units・−6° で −12.0°、0 units・+16° で +19.0°（前の作りでは −10・−10.5・−12・−10・+10° で切られる）。

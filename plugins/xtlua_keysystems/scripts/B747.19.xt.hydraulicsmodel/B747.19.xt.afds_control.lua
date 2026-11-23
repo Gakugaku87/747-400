@@ -23,6 +23,9 @@ simDR_ap_pitch_rate = find_dataref("sim/flightmodel/position/Q")
 -- (2026-11-22) the attitude rate gain in percent of its own (0: its own), for
 -- finding the cruise's pitch swing in X-Plane
 B747DR_ap_dbg_rate_pct = find_dataref("laminar/B747/debug/ap_pitch_rate_pct")
+-- (2026-11-24) the same for the attitude error's gain
+B747DR_ap_dbg_gain_pct = find_dataref("laminar/B747/debug/ap_pitch_gain_pct")
+B747DR_ap_dbg_int_pct = find_dataref("laminar/B747/debug/ap_pitch_int_pct")
 -- the roll and yaw rates (the same: the inner roll loop, 6-3 step 4d)
 simDR_ap_roll_rate = find_dataref("sim/flightmodel/position/P")
 simDR_ap_yaw_rate = find_dataref("sim/flightmodel/position/R")
@@ -580,6 +583,49 @@ local ap_trim_last = nil
 -- times, the swing gone (estimate)
 local AP_PITCH_RATE_K = 0.03
 local AP_PITCH_RATE_K_MIN = 0.06
+-- (2026-11-24, the 2026-11-23 review's FCTL-1; notes/ATA-22.md §69) The
+-- attitude error's integral: AP_PITCH_INT of the proportional a second
+-- (before, as much: 1). With the flaps up from about 195 to 240 kt the
+-- pitch swung every 4.4 to 5.7 s in ALT HOLD and in FLCH's descents (220
+-- kt, 270 t: 0.94 to 1.05 g, the pitch 1.1 degrees). The airplane there
+-- (measured with the A/P off: X-Plane's 747 with the downwash's
+-- correction, M_alpha -0.8, its short period 1.1 rad/s) is about as stable
+-- as the 747-100; at that frequency the integral as fast as the
+-- proportional turns the command some 40 degrees back, and with the
+-- elevator's 0.2 s behind its command (the hydraulics module's surfaces)
+-- the attitude loop rang at 2.5 times its command, enough for ALT's path
+-- law to keep it going. A model of the loop on the measured airplane swung
+-- as X-Plane did (5.4 s, 0.117 g) and, with a third, settles in 5 to 15 s
+-- from 150 kt with the flaps down to the cruise; twice the attitude rate
+-- instead only moved the swing to 7 s (X-Plane and the model). Estimate:
+-- ATA22 p.330-333 has the elevator trim integrator on the attitude error,
+-- no gains
+local AP_PITCH_INT = 1 / 3
+-- (2026-11-24, FCTL-1) The command in degrees of elevator the same both
+-- ways. The elevator's travel is 22 degrees up and 17 down (X-Plane's
+-- acf_elev_up, acf_elev_dn) and the control mapping takes the pitch ratio
+-- as a share of the travel on its side, so the same command moved the
+-- elevator 17 / 22 as far nose down as nose up: the loop's gain a quarter
+-- less whenever the elevator stood trailing edge down of neutral. That
+-- quarter was the difference at 220 kt: held a little trailing edge up
+-- (what the autotrim's band leaves, 0.4 degrees either way) the swing died
+-- out, a little down it grew (X-Plane, 2026-11-24: the same flight with
+-- the thrust's correction 0.14 degrees more or less of stabilizer). The
+-- loop's command (the PID's and the attitude rate's) is in the up travel's
+-- units; nose down it is written times up over down. The FCC commands
+-- the elevator's position (ATA22 p.330); the travels are its limits
+local function ap_elev_ratio(u)
+    if u >= 0 then return u end
+    local up, dn = simDR_ap_elev_up, simDR_ap_elev_dn
+    if up > 0 and dn > 0 then return math.max(-1, u * up / dn) end
+    return u
+end
+local function ap_elev_units(r)
+    if r >= 0 then return r end
+    local up, dn = simDR_ap_elev_up, simDR_ap_elev_dn
+    if up > 0 and dn > 0 then return r * dn / up end
+    return r
+end
 
 -- the inner loop's gains by airspeed (estimate; the gains above were set
 -- from 250 kt up: FL350, 10,000 ft): the attitude error's g = (AP_GAIN_KT /
@@ -629,10 +675,15 @@ function ap_pitch_assist(doCompute)
     else
         B747DR_pidPitchI=B747DR_pidPitchP
     end
-    B747DR_pidPitchI=B747DR_pidPitchP--*0.1 --scale this with P
+    B747DR_pidPitchI=B747DR_pidPitchP*AP_PITCH_INT
     local gain = ap_gain_scale()
     pitchPid.kp=B747DR_pidPitchP * gain
     pitchPid.ki=B747DR_pidPitchI * gain
+    if B747DR_ap_dbg_gain_pct > 0 then
+        pitchPid.kp = pitchPid.kp * B747DR_ap_dbg_gain_pct / 100
+        pitchPid.ki = pitchPid.ki * B747DR_ap_dbg_gain_pct / 100
+    end
+    if B747DR_ap_dbg_int_pct > 0 then pitchPid.ki = pitchPid.ki * B747DR_ap_dbg_int_pct / 100 end
     pitchPid.kd=B747DR_pidPitchD
     
     -- (a pitch law's command too: NOSE LETDOWN on the ground has no FMA
@@ -654,7 +705,7 @@ function ap_pitch_assist(doCompute)
         local rate_k = math.max(AP_PITCH_RATE_K_MIN, AP_PITCH_RATE_K * gain ^ AP_RATE_POW)
         if B747DR_ap_dbg_rate_pct > 0 then rate_k = rate_k * B747DR_ap_dbg_rate_pct / 100 end
         local out = math.max(-1, math.min(1, pitchPid.output - rate_k * simDR_ap_pitch_rate))
-        retval=B747_interpolate_value(B747DR_sim_pitch_ratio,out,-1,1,speed) 
+        retval=B747_interpolate_value(B747DR_sim_pitch_ratio,ap_elev_ratio(out),-1,1,speed) 
         
         --retval=pitchPid.output
 
@@ -666,7 +717,7 @@ function ap_pitch_assist(doCompute)
         -- surface (ATA22 p.332), the pilot's column and the A/P's own
         -- command going back, so that the A/P goes in holding the column
         -- where it is (before, from the integrator's last value)
-        pitchPid.output = math.max(-1, math.min(1, simDR_yoke_pitch_ratio + B747DR_sim_pitch_ratio))
+        pitchPid.output = ap_elev_units(math.max(-1, math.min(1, simDR_yoke_pitch_ratio + B747DR_sim_pitch_ratio)))
         pitchPid:compute(true)
         ap_trim_last = nil
         autotrim_dir = 0

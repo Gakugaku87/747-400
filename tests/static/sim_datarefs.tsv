@@ -24,6 +24,8 @@ sim/aircraft/weight/acf_cgZ_original	number
 sim/aircraft/weight/acf_m_empty	number
 sim/aircraft/weight/acf_m_fuel_tot	number
 sim/aircraft/weight/acf_m_jettison	number
+sim/aircraft/weight/acf_m_station_max	array[9]
+sim/aircraft/weight/acf_stations_ref_z	array[9]
 sim/aircraft2/engine/high_idle_ratio	number
 sim/cockpit/autopilot/autopilot_state	int number
 sim/cockpit/autopilot/heading_mag	number
@@ -456,6 +458,7 @@ sim/flightmodel/weight/m_fixed	number
 sim/flightmodel/weight/m_fuel	array[9]
 sim/flightmodel/weight/m_fuel_total	number
 sim/flightmodel/weight/m_jettison	number
+sim/flightmodel/weight/m_stations	array[9]
 sim/flightmodel/weight/m_total	number
 sim/flightmodel2/controls/elevator_trim	number
 sim/flightmodel2/controls/rudder_trim	number
