@@ -75049,9 +75049,8 @@ GROUP Captain PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot
             POS 315.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch
@@ -75063,9 +75062,8 @@ GROUP Captain PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -79335,9 +79333,8 @@ GROUP Captain PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot
             POS 315.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch
@@ -79349,9 +79346,8 @@ GROUP Captain PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -83610,9 +83606,8 @@ GROUP First Officer PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_copilot
             POS 994.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch 2
@@ -83624,9 +83619,8 @@ GROUP First Officer PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -87853,9 +87847,8 @@ GROUP First Officer PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_copilot
             POS 994.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch 2
@@ -87867,9 +87860,8 @@ GROUP First Officer PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000

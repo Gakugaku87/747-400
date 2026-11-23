@@ -664,3 +664,9 @@ ND（2026-11-05：PLAN の絵を FCOM の 3 通りに。利用者の依頼「ND�
 | 2026-11-19・EICAS（利用者の写真「N1計に謎の横線が入ってる」：notes/ATA-70-80.md §22） | Upper EICAS の `GROUP Thrust Command EPR and 1` の 2 組（`laminar/B747/engines/type` 0 の P&W と 2 の RR）の `gen_pointer Engine 1`〜`Engine 4`（画像 `N1_thrust`、`laminar/B747/engines/TRA[0]`〜`[3]`：EPR の白い指令の印。変更後の acf の 144482・144497・144512・144527 行（RR）と 144548・144563・144578・144593 行（P&W）から） | key frame 2 点：`0.850000 -67.000000 1.000000`、`1.750000 67.000000`（RR は `1.950000 67.000000`）。端に平らな点が無く、X-Plane は端の傾きのまま外へ延ばした（飛行中のアイドルの指令 0.62 で y 841：N1 の数字の真ん中） | 4 点：`0.850000 -67 1`、`0.850001 -67 1`、`1.750000 67 0`、`1.760000 67`（RR は `1.950000 67 0`、`1.950001 67`）。同じ目盛の REF の印（`display_EPR_ref`）と同じ形で、目盛の両端で止まる | FCOM p.833（図：指令の印はバーの端）、p.834（Command EPR Indicator）、p.873（安定すれば実際の EPR と同じ）。目盛の外での出方は FCOM に無く、端で止めるのは推定 |
 
 上の 1 行は Edit で 8 本の key frame を書き換えた（各 2 行を 4 行に）。変更前の acf は `D:\747-400-local-assets\acf_backup\747-400_custom.acf.20261119_before_cmd_epr_clamp`。見た目の変わるのは、指令の EPR が目盛の外にあるときの EICAS の白い線だけ（X-Plane の写真：`s336_eicas_cmd_epr_idle`・`s337_eicas_cmd_epr_idle_rr`。外から見た写真：`gear_exterior_ground`）。GE の N1 の指令（`Thrust Command N1 G`）は前から両端が平ら。純正 acf（747-400.acf の同じ組）は変えていない。
+
+段 4 のフルレビュー（2026-11-23）の指摘のうち、利用者が直すと決めたパネルの項目（2026-11-24、担当 panel の worktree `fix-panel`。変更前の acf は `D:\b747_review\fix\panel_backup\747-400_custom.acf.d88c12c6_before_panel_fixes`。パネルの外は変えていない）：
+
+| 日付・系統 | 場所（パネル） | 変更前 | 変更後 | 根拠 |
+|---|---|---|---|---|
+| 2026-11-24・PFD（PNL-1：notes/ATA-31.md §48） | 各 PFD（機長・副操縦士の各 2 形式、4 組）の `GROUP Flt Dir Offset`（副操縦士は ` 2`。`pitch_AHARS_deg_pilot`／`_copilot` で上下）と中の `gen_pointer FD Bar - Pitch`（` 2`。`laminar/B747/autopilot/flight_director_pitch_deg`） | グループ `10 -68.5 1`、`1 0 1`、`-10 68.5`（降順、真ん中が 1°）。バー `-10 -68.5 1`、`0 0 1`、`10 68.5` | グループ `-30 204.333333 1`、`30 -204.333333`。バー `-30 -198.333333 1`、`30 210.333333`（ピッチの目盛 6.811 px/度、バーの絵の線が中心より 6 px 下の分を足す） | FCOM p.980 (10.10.18)：バーは F/D の指令。ピッチが指令どおりならバーは飛行機の記号の上 |
