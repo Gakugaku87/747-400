@@ -330,6 +330,19 @@ local function align(s, inp, dt, bank)
     return clamp(s.al_eo + M.EO_P * b, -M.ALIGN_MAX, M.ALIGN_MAX)
 end
 
+-- (2026-11-24, the stage 4 review's AFDS-5) an A/P's engagement: the roll
+-- attitude integrator synchronizes to the roll attitude while the A/P is
+-- not engaged (ATA22 p.348 (22-12 p.22)), so an engagement starts from the
+-- bank (the next update takes it: the command's start) and rolls on at
+-- ROLL_RATE. Before, the command an F/D-only flight had wound up with
+-- nobody following the bars stayed (HDG SEL 60 degrees off for 20 s: the
+-- 25 degrees of the bank limit with the wings level), and the engagement
+-- rolled to it at the servo's rate. As the pitch law's sync (the 2026-11-12
+-- review's AFDS-5, B747.70.afds_pitch_model.lua)
+function M.sync(s)
+    s.cmd = nil
+end
+
 -- the command (degrees of bank, right positive), or nil without a law here
 -- (no mode); s.valid false for NCD; in ROLLOUT, and in LOC with runway
 -- align, s.rudder the rudder's command (the pedals' ratio, right

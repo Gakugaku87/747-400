@@ -83,4 +83,40 @@ rt:command(CMD .. "cmd_C")
 frames(1)
 T.check(math.abs(rt:get(PC) - c2) < 0.2, string.format("CMD C with CMD L engaged: the command goes on (%.2f from %.2f)", rt:get(PC), c2))
 
+-- (2026-11-24, the stage 4 review's AFDS-5) the roll's side: the roll
+-- attitude integrator synchronizes to the bank while the A/P is not engaged
+-- (ATA22 p.348 (22-12 p.22)). F/D only, HDG SEL 60 degrees right, nobody
+-- following the bars (the wings level): the command wound up to the bank
+-- limit (25 degrees at 270 kt TAS); the engagement starts from the bank, on
+-- at 3 degrees a second. Before, it stayed at 25 and the A/P rolled to it at
+-- the servo's rate
+local RC = "laminar/B747/autopilot/roll_cmd"
+local BANK = "sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot"
+rt:command(CMD .. "yoke_disengage_capt")
+rt:command(CMD .. "yoke_disengage_capt")
+frames(5)
+T.equal(rt:get(SERVOS), 0, "the A/P disengaged, F/D L on: F/D only")
+rt:set(BANK, 0)
+rt:set("sim/flightmodel/position/mag_psi", 0)
+rt:set("sim/flightmodel/position/psi", 0)
+rt:set("laminar/B747/autopilot/heading/degrees", 60)
+rt:command(CMD .. "heading_select")
+frames(30 * 20)
+T.equal(rt:get("laminar/B747/autopilot/FMA/active_roll_mode"), 6, "HDG SEL")
+T.near(rt:get(RC), 25, 0.01, "20 s of HDG SEL 60 degrees right not followed: the F/D's command at the bank limit")
+rt:command(CMD .. "cmd_L")
+frames(1)
+T.equal(rt:get(SERVOS), 1, "CMD L: the A/P engaged")
+T.near(rt:get(RC), 0.1, 0.05, "the frame after the engagement: from the bank (ATA22 p.348; before 25)")
+frames(30)
+local r1 = rt:get(RC)
+T.near(r1, 3.1, 0.05, string.format("1 s later: %.2f, rolling in at 3 degrees a second", r1))
+-- a second channel engaging does not sync again
+rt:set(BANK, 2)
+frames(30)
+local r2 = rt:get(RC)
+rt:command(CMD .. "cmd_C")
+frames(1)
+T.check(math.abs(rt:get(RC) - r2) < 0.2, string.format("CMD C with CMD L engaged: the roll command goes on (%.2f from %.2f)", rt:get(RC), r2))
+
 T.done()

@@ -624,6 +624,7 @@ local afds = B747_afds_model.new()
 dofile("B747.70.afds_roll_model.lua")
 local afdsRoll = B747_afds_roll_model.new()
 local afdsRollIn = B747_afds_roll_model.inputs()
+local afdsRollEngaged = false   -- (2026-11-24 review AFDS-5) an A/P channel engaged at the last roll law
 B747DR_ap_roll_cmd = find_dataref("laminar/B747/autopilot/roll_cmd")
 B747DR_ap_roll_law = find_dataref("laminar/B747/autopilot/roll_law")
 B747DR_ap_roll_valid = find_dataref("laminar/B747/autopilot/roll_valid")
@@ -1523,6 +1524,13 @@ local function afds_roll_law()
 	-- runway align (step 4d): the AFDS model's, the heading magnetic
 	r.rwy_align = afds.rwy_align and not afds.roll_fail
 	r.hdg_mag = simDR_ap_mag_psi
+	-- (2026-11-24, the stage 4 review's AFDS-5) an A/P engaged (no channel
+	-- before): the law's command starts from the bank (ATA22 p.348;
+	-- B747.70.afds_roll_model.lua's sync), as the pitch law's; a second
+	-- channel engaging does not sync again
+	local engaged = (afds.L or afds.C or afds.R) and true or false
+	if engaged and not afdsRollEngaged then B747_afds_roll_model.sync(afdsRoll) end
+	afdsRollEngaged = engaged
 	local cmd = B747_afds_roll_model.update(afdsRoll, r, afds_dt())
 	local law, valid = cmd and 1 or 0, (cmd and afdsRoll.valid) and 1 or 0
 	if B747DR_ap_roll_law ~= law then B747DR_ap_roll_law = law end
@@ -1732,6 +1740,7 @@ end
 function B747_afds_reset()
 	afds = B747_afds_model.new()
 	afdsRoll = B747_afds_roll_model.new()
+	afdsRollEngaged = false
 	afdsPitch = B747_afds_pitch_model.new()
 	afdsPitchEngaged = false
 	vnavMode = B747_vnav_mode_model.new()
