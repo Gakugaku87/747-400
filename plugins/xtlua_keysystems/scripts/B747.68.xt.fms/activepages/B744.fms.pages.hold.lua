@@ -12,7 +12,8 @@
 --    of a procedure turn, HOLD AT for one ended at an altitude), QUAD/
 --    RADIAL, INBD CRS/DIR, LEG TIME, LEG DIST, SPD/TGT ALT, EFC TIME, NEXT
 --    HOLD or ERASE, EXIT HOLD and EXIT ARMED. FIX ETA, HOLD AVAIL and BEST
---    SPEED in dashes until the predictions (step 8: estimate).
+--    SPEED from the predictions and the performance data (2026-11-24,
+--    CDU-4: below; before, dashes always).
 -- Before: X-Plane's HOLD page shown through.
 local R = B747_route_model
 local BLANK = "                        "
@@ -116,6 +117,146 @@ local function exit_text(i, l)
   if l.exit or (h and h.exit) then return "EXIT ARMED" end
   return "EXIT HOLD>"
 end
+-- (2026-11-24, stage 4 review CDU-4; notes/ATA-34-61-FMC.md §177.7) 2R FIX
+-- ETA, 4R HOLD AVAIL and 5R BEST SPEED (FCOM p.1415, p.1417's figures,
+-- p.1419 (11.43.31) items 8, 10, 11; FMSPG p.161-162; ATA34_2 p.574) from
+-- the FMC's predictions and performance data; dashes without them. Before,
+-- dashes always.
+local KT = 1.94384
+-- the shown hold's leg in the active route (a modification's copies its
+-- legs: orig), for the predictions' points; nil
+local function active_index(l)
+  local st = B747_fmc_route
+  if not st.active then return nil end
+  local o = l.orig or l
+  for j, x in ipairs(st.rte.legs) do
+    if x == o then return j end
+  end
+  return nil
+end
+-- the speed limits of the phase's speed transition and restriction below
+-- their altitudes at ft (the climb's in the climb, else the descent's)
+local function limit_cas(cas, ft)
+  local clb, des = B747_fms_schedules(B747_fms_perf())
+  local s = (B747_fms_vnav_page()) == 1 and clb or des
+  if s.trans_cas and s.trans_alt and ft < s.trans_alt then cas = math.min(cas, s.trans_cas) end
+  if s.restr_cas and s.restr_alt and ft < s.restr_alt then cas = math.min(cas, s.restr_cas) end
+  return cas
+end
+-- BEST SPEED (kt): the holding table's (PI 11.6, flaps up) at the FMC's
+-- gross weight and the present altitude (ATA34_2 p.574: "for the present
+-- altitude"; FCOM p.1419: gross weight, altitude and flap setting; flaps
+-- out the flaps up table's too: estimate), limited by the hold's speed
+-- constraint and the speed transition's and restriction's below their
+-- altitudes (FMSPG p.162); nil without the FMC's gross weight
+local function best_speed(l)
+  local gw = perf_gw_t()
+  if not gw then return nil end
+  local ft = math.max(0, simDR_pressureAlt1)
+  local cas = B747_perf_db.hold(B747_fms_perf(), gw * 1000, ft)
+  if l.spd then cas = math.min(cas, l.spd) end
+  return limit_cas(cas, ft)
+end
+-- the racetrack's loop (s) at kt
+local function loop_s(r, len, kt) return (2 * len + 2 * math.pi * r) / math.max(kt, 60) * 3600 end
+-- in the hold LNAV flies (h): the time (s) to the next crossing of the fix
+-- along the rest of its racetrack at the ground speed, and the loop's;
+-- the entries' legs and turns as LNAV flies them (B747.68.lnav_model.lua:
+-- teardrop 2.95 r, parallel 2.41 r; their turns back 220 and 225 degrees,
+-- the way back to the fix as long as the leg's way out: estimates)
+local function in_hold_s(h)
+  local P, t = B747_path_model, h.t
+  local p = {lat = simDR_latitude, lon = simDR_longitude}
+  local gs = math.max(simDR_groundspeed * KT, 60)
+  local trk, r, len, sgn, u = simDR_lnav_trk, t.r, t.l, t.sgn, t.u
+  local out = (u + 180) % 360
+  local function arc(to, way) return math.rad(((to - trk) * way) % 360) * r end
+  local ph, d = h.phase, nil
+  if ph == "inbound" then
+    local _, at = P.track(t.f, u, p)
+    d = math.max(0, -at)
+  elseif ph == "outbound" then
+    local _, at = P.track(t.p1, out, p)
+    d = math.max(0, len - at) + math.pi * r + len
+  elseif ph == "turn1" or ph == "direct" then
+    d = arc(out, sgn) + len + math.pi * r + len
+  elseif ph == "turn2" then
+    d = arc(u, sgn) + len
+  elseif ph == "teardrop" then
+    local _, at = P.track(t.f, (out - 40 * sgn) % 360, p)
+    d = math.max(0, 2.95 * r - at) + math.rad(220) * r + 2.95 * r
+  elseif ph == "parallel" then
+    local _, at = P.track(t.f, out, p)
+    d = math.max(0, 2.41 * r - at) + math.rad(225) * r + 2.41 * r
+  elseif ph == "intercept" then
+    local _, dd = P.course(p, t.f)
+    d = arc(u, h.back == "L" and -1 or 1) + dd
+  end
+  if not d then return nil end
+  return d / gs * 3600, loop_s(r, len, gs)
+end
+-- FIX ETA: the next crossing of the fix (in the hold LNAV flies, the rest
+-- of its racetrack; ahead, the predictions' time there); with an EFC TIME
+-- the first crossing at or after it (FCOM p.1419 item 8), a loop at the
+-- predictions' speed there (the holding table's speed, limited as BEST
+-- SPEED, as true airspeed: estimate). "HHMM.T " or nil
+local function fix_eta(i, l)
+  local h = flown(i, l)
+  local s, loop
+  if h and h.t and h.phase ~= "to" then
+    s, loop = in_hold_s(h)
+  else
+    local pred, j = B747_fms_preds(), active_index(l)
+    local q = pred and j and pred.pts[j]
+    if not (q and q.t) then return nil end
+    s = q.t
+    local inp = B747_fms_pred_input_last()
+    if l.efc and inp then
+      local P = B747_perf_db
+      local kg = inp.gw - ((inp.fuel or 0) - (q.fuel or inp.fuel or 0))
+      local cas = limit_cas(P.hold(inp.t, kg, q.h), q.h)
+      if l.spd then cas = math.min(cas, l.spd) end
+      local tas = P.tas(P.cas_to_mach(cas, q.h), q.h, inp.isa)
+      local r, len = B747_path_model.hold_size({time = l.time, dist = l.dist, alt = l.alt}, tas, tas)
+      loop = loop_s(r, len, tas)
+    end
+  end
+  if not s then return nil end
+  local eh, em = l.efc and tonumber(l.efc:sub(1, 2)), l.efc and tonumber(l.efc:sub(3, 4))
+  if eh and em and loop then
+    local wait = ((eh * 60 + em - B747_fms_utc_min()) % 1440) * 60 - s
+    if wait > 0 and wait < 720 * 60 then s = s + math.ceil(wait / loop) * loop end
+  end
+  local _, hh, mm, frac = get_ETA_for_Distance(0, s)
+  return string.format("%02d%02d.%d ", hh, mm, math.min(9, math.floor(frac * 10)))
+end
+-- HOLD AVAIL: the holding time before the exit needed to reach the
+-- destination with RESERVES (FCOM p.1419 item 10; FMSPG p.161: 4,000 lb
+-- without a RESERVES entry), for a manually ended hold only (FMSPG p.223):
+-- the predictions' fuel at the destination (an exit at once) less
+-- RESERVES, at the holding table's fuel flow (four engines: estimate) at
+-- the weight and altitude there (in the hold LNAV flies, the present
+-- ones). "H+MM" or nil
+local RESERVES_DEFAULT_KG = 4000 / 2.20462
+local function hold_avail(i, l)
+  if l.pt ~= "HM" then return nil end
+  local pred, j, inp = B747_fms_preds(), active_index(l), B747_fms_pred_input_last()
+  local q = pred and j and pred.pts[j]
+  if not (q and inp and pred.dest and pred.dest.fuel) or pred.no_fuel then return nil end
+  if pred.ed_i and j > pred.ed_i then return nil end
+  local kg, ft = inp.gw - ((inp.fuel or 0) - (q.fuel or inp.fuel or 0)), q.h
+  local h = flown(i, l)
+  if h and h.phase ~= "to" then
+    local gw = perf_gw_t()
+    kg, ft = gw and gw * 1000 or kg, math.max(0, simDR_pressureAlt1)
+  end
+  local rsv = tonumber(fmsModules["data"]["reserves"])
+  local spare = pred.dest.fuel - (rsv and rsv * 1000 or RESERVES_DEFAULT_KG)
+  local _, ff = B747_perf_db.hold(inp.t, kg, ft)
+  if not ff or ff <= 0 then return nil end
+  local min = math.max(0, math.floor(spare / (4 * ff) * 60))
+  return string.format("%d+%02d", math.floor(min / 60), min % 60)
+end
 local FIX_LABEL = {HM = " FIX", HA = " HOLD AT", HF = " PROC HOLD"}
 
 fmsPages["RTEHOLD"]=createPage("RTEHOLD")
@@ -146,13 +287,15 @@ fmsPages["RTEHOLD"].getPage=function(self,pgNo,fmsID)
   lines[2] = BLANK
   lines[3] = lr(l.fix.ident, R.constraint_text(l, trans_alt()) or "---/-----")
   lines[4] = BLANK
-  lines[5] = lr(quad, "----.- ")
+  -- (CDU-4) FIX ETA, HOLD AVAIL and BEST SPEED, dashes without them
+  local best = best_speed(l)
+  lines[5] = lr(quad, fix_eta(i, l) or "----.- ")
   lines[6] = BLANK
   lines[7] = lr(deg(l.crs or 0) .. "/" .. dir .. " TURN", (l.efc or "----") .. " ")
   lines[8] = BLANK
-  lines[9] = lr(time, "-+--")
+  lines[9] = lr(time, hold_avail(i, l) or "-+--")
   lines[10] = BLANK
-  lines[11] = lr(dist, "---  ")
+  lines[11] = lr(dist, best and string.format("%3d  ", math.floor(best + 0.5)) or "---  ")
   lines[12] = "------------------------"
   lines[13] = lr(B747_fmc_route.mod and "<ERASE" or "<NEXT HOLD", exit_text(i, l))
   return lines

@@ -3345,6 +3345,18 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 残したもの（いつも 0 を読む旧式の所。ほかの担当の範囲か、直さない）：PROGRESS の予測が無いときの古いページ（`B744.fms.pages.progress.lua` の T/D・DEST の行）、autopilot の旧 VNAV（`B747.70.xt.autopilot.monitor.lua`・`.vnav.lua`、`B747.70.xt.autopilot.lua` の `after_physics` の `tDist`・`tod`）、FDR の記録（`B747.01.xt.fdr.lua`）。
 - 試験：`simopts_glue_test` 38（+13：T/D の 120 NM 手前は止まらず、ページは 180NM、T/D で 1 回止まりオプションが 0、150 NM の設定で 160 NM は止まらず 149.5 NM で止まる、COST INDEX は T/D の 50 NM 手前で入り 8 NM 手前で INVALID ENTRY、T/D が無いと入る。直す前は 8 件が落ちる）。
 
+### 177.7 RTE HOLD の FIX ETA・HOLD AVAIL・BEST SPEED（CDU-4）
+
+- 見たこと：RTE HOLD の 2R FIX ETA・4R HOLD AVAIL・5R BEST SPEED は、§33 の「予測（段 8）までダッシュ（推定）」のまま、段 8 の後も固定のダッシュだった。
+- 資料：FCOM p.1415 (11.43.27)・p.1417 (11.43.29) の図（1439.5z、2+45、270KT・220KT）、p.1419 (11.43.31) の 8・10・11。FMSPG p.161（FIX ETA は次に点を通る時刻、HOLD AVAIL は RESERVES を残して目的地に着くために出るまでの時間、RESERVES が無ければ 4,000 lb）、p.162（BEST SPEED は最大の滞空の速さ、フラップによる、速度の制限で抑える）、p.223（HOLD AVAIL は手で終えるホールドだけ）。ATA34_2 p.574（34-61 p.148：BEST SPEED は今の高度の、FIX ETA は次に点を通る時刻）。
+- 直したこと（`activepages/B744.fms.pages.hold.lua`、描くときに計算）：
+  - BEST SPEED：性能 DB の待機の表（PI 11.6、フラップ UP）を FMC の総重量（PERF INIT）と今の気圧高度で。ホールドの速度の制限と、その段階（上昇は CLB、ほかは DES）の SPD TRANS・SPD RESTR をその高度より下で上限にする。FMC の総重量が無いとダッシュ。
+  - FIX ETA：LNAV が飛んでいるホールドでは、レーストラックの残り（段階ごと：インバウンドは点までの距離、アウトバウンドは脚の残り＋旋回 2 つ分の半円の 1 つ＋脚、旋回は残りの角度の弧＋…）を今の GS で割る。先のホールドは予測のその点の時刻（LEGS と同じ）。EFC TIME があれば、それ以後の最初の通過（1 周の時間を足す）。
+  - HOLD AVAIL：手で終えるホールド（HM）だけ。予測の目的地の燃料（すぐ出る前提）−RESERVES（無ければ 4,000 lb）を、待機の表の燃料流量（4 発）で割る。重さと高度はその点の予測（LNAV が飛んでいる間は今の値）。E/D の後（進入復行）のホールド、CRZ ALT が MAX 以上（燃料の予測を出さない）ときはダッシュ。表示は「H+MM」。
+- 推定：フラップを出しているときも UP の表（PI にフラップを出した待機の表が無い）。エントリー（ティアドロップ・パラレル・インターセプト）の残りの距離（LNAV の 2.95 r・2.41 r と、戻りの旋回 220°・225°、戻りの直線を行きと同じ長さ）。先のホールドの 1 周の時間（その点の予測の重さ・高度での待機の表の速さを真対気速度にし、`B747_path_model.hold_size` の大きさ）。燃料流量を 4 発分（ENG OUT でも）。
+- 作っていないもの：EFC TIME を入れたときに、その後の予測（下流の ETA と燃料）をホールドを EFC まで回った前提にすること（FCOM p.1419 の 8・9、FMSPG p.161）。予測のモデルはホールドの時間を入れない（すぐ出る前提）。
+- 試験：`tests/fms/hold_preds_test.lua`（19 件：先の BRAVO のホールドで FIX ETA が予測の時刻、HOLD AVAIL、BEST SPEED が SPD TRANS の 240、EFC で次の通過が EFC 以後、HA ではダッシュ、PPOS のホールドのダイレクトのエントリーで約 1 周後、インバウンド 3 NM で約 0.8 分、FL150 で表の速さ。直す前は 8 件が落ちる）。`hold_pages_test`（予測も PERF INIT も無い所のダッシュ）はそのまま通る。
+
 ## 178. G/A の後の水平飛行の A/T の速度の保護（2026-11-23 夜：段 4 のフルレビューの AFDS-1。利用者の決定「A と B を直す」。worktree `D:/b747_fix_afds`）
 
 - 見たこと：TO/GA 1 回の G/A（A/T は THR、2,000 fpm）で MCP 高度を捕捉すると、ピッチは ALT、A/T は THR のまま（ここまでは FCOM どおり）。THR の則は 2,000 fpm のエネルギーの率を保ち続けるので、水平では加速し続けた。親の確かめ `v07_ga_leveloff`（X-Plane、2026-11-23、P&W・270 t、フラップ 20・Vmax 230）で、捕捉の後 69 秒で 163 → 238 kt。2 回目の押し（THR REF）には前から限界速度の則がある（§60）。
