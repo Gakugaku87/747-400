@@ -189,9 +189,13 @@ type_in("25.5")
 key("ls_key/R4")
 T.check(line(9):find("25%.5%%"), "CRZ CG 25.5 %: " .. line(9))
 T.check(line(1):find("PERF INIT"), "the page still drawn")
+-- (2026-11-24, review CDU-11) the % in the 24th column (FCOM p.1308
+-- (11.40.32)'s figure); before in a 25th
+T.check(#line(9) == 24 and line(9):sub(20) == "25.5%", "25.5% in columns 20-24: [" .. line(9) .. "]")
 key("key/del")
 key("ls_key/R4")
 T.check(small(9):find("20%.0%%"), "DELETE: the default 20.0 % in small font: " .. small(9))
+T.check(#small(9) == 24 and small(9):sub(20) == "20.0%", "20.0% in columns 20-24: [" .. small(9) .. "]")
 
 -- the EMERGENCY REPORT's DIVERT TO (the 570's ATC datalink: step 12a)
 rt:set("laminar/B747/engines/type", 1)

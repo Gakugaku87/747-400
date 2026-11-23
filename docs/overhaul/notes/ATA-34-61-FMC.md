@@ -3440,7 +3440,7 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 直したこと：
   - (a) `B744.fms.pages.lua`：入力の範囲を 100〜250 kt に（**推定**：資料に範囲が無い。FMC の VREF は 150 t で約 112 kt、397 t で VREF25 約 191 kt、それに風の加算を入れて収まる幅）。
   - (b) `B747.60.speedtape_model.lua`（入力 `vref_sel`、つなぎ `B747.60.xt.speedtape.lua` が `laminar/B747/airspeed/Vref` を渡す）：着陸フラップが選ばれていて、選んだ速さがそのフラップの FMC の VREF より大きいとき、その差を UP〜20 のバグ（`Vf0`〜`Vf20`）に足す。25・30 のバグ（`Vf25`・`Vf30`）は FMC の VREF のまま：FMC が `Vf30` を VREF 30 として読む（VNAV の VREF+100、片発の VREF+98 など）ため、また選んだフラップのものは REF のバグが代わる（レビューの直す案の vf[0..4]）。
-- 試験：`fmc_fixes_test` 52（+5）：25/190 と 30/182 を受ける、105 を受ける、251 と 99 は INVALID ENTRY。`speedtape_model_test` 33（+5）：30/158（VREF30 150）で UP〜20 が 8 kt 上がり 25・30 は FMC の値、25/170（VREF25 164）で 6 kt、VREF25 より小さい 160 では足さない、着陸フラップなし（DELETE）では足さない。`speedtape_module_test` 54（+3）：つなぎ（30/VREF30 + 5 で UP のバグ VREF30 + 85、Vf30 はそのまま、戻すと + 80）。直す前のコードでは 3 件・2 件・1 件が落ちる。
+- 試験：`fmc_fixes_test` 47（+5）：25/190 と 30/182 を受ける、105 を受ける、251 と 99 は INVALID ENTRY。`speedtape_model_test` 33（+5）：30/158（VREF30 150）で UP〜20 が 8 kt 上がり 25・30 は FMC の値、25/170（VREF25 164）で 6 kt、VREF25 より小さい 160 では足さない、着陸フラップなし（DELETE）では足さない。`speedtape_module_test` 54（+3）：つなぎ（30/VREF30 + 5 で UP のバグ VREF30 + 85、Vf30 はそのまま、戻すと + 80）。直す前のコードでは 3 件・2 件・1 件が落ちる。
 - X-Plane のシナリオ：新しい `s352_appr_ref_heavy`（RJAA 34L の地上）：APPROACH REF の GROSS WT 390.0、1R → 4R で INVALID ENTRY が出ず VREF が 180 kt を超える、25/210 で UP のバグが 15 kt 以上上がり `Vf30` は変わらない。CDU を撮る。
 
 ### 177.7 重量の単位が LBS のとき PERF INIT の入力が違う数で出る（CDU-7）
@@ -3449,3 +3449,11 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 資料：FCOM p.1309-1311 (11.40.33-35)：入力は XXX か XXX.X で、入れた値が出る。
 - 直したこと（`B744.fms.pages.lua`）：ZFW（GR WT の入力からの ZFW も）と RESERVES のデータを 0.1 kg（`%.4f` t）で持つ。表示は前と同じ `%5.1f` の千 kg か千ポンド。データを読む所はどれも `tonumber`（PERF INIT、TAKEOFF REF の PRE-FLT、燃料のモデルの RESERVES）で、桁が増えても変わらない。KGS では表示も同じ（GR WT の入力の後の GR WT は、前は ZFW の 0.1 t の丸めの分だけ入力からずれ得た）。
 - 試験：`perf_init_test` 40（+2）：LBS でレビューの 14 件（ZFW 6・RESERVES 8）が入れたとおりに出る、GR WT 700.3 も。直す前のコードでは 2 件が落ちる（9 件と 700.4）。
+
+### 177.8 PERF INIT の CRZ CG の桁（CDU-11）
+
+- 見たこと（レビューの担当 1、X-Plane の写真 `shot_137`）：flight complete の後、CRZ CG の既定 20.0 が大きい字（§177.2 で直した）。行は 25 文字で、% が 25 桁目（ICAO の右端より 1 桁右）に出る：書式が `%5.1f%%`（6 文字）。
+- 資料：FCOM p.1308 (11.40.32) の図：CRZ CG の「20.0%」は題の右端の 24 桁目まで。p.1311 (11.40.35)：既定の 20.0 は小さい字。
+- 直したこと（`B744.fms.pages.perfinit.lua`）：大きい字・小さい字とも `%4.1f%%`（5 文字）。8.5 % も「 8.5%」で 24 桁に収まる。
+- 試験：`fmc_fixes_test` 49（+2）：25.5 % が 20〜24 桁、DELETE の後の小さい字の 20.0 % も。直す前のコードでは 2 件が落ちる。
+- 直し：§177.6 の試験の数を `fmc_fixes_test` 47 に（前は 52 と書いていた）。
