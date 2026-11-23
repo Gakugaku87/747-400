@@ -907,6 +907,16 @@ end
 -- where the real nav DB's come from (2026-11-05 review 4: kept, no source)
 B747DR_airspeed_Vf30 = find_dataref("laminar/B747/airspeed/Vf30")
 function update_spd_trans()
+	-- (2026-11-24, stage 4 review FMC-5; notes/ATA-34-61-FMC.md §177.4)
+	-- the climb's SPD RESTR passed (the airplane above its altitude): dashes
+	-- again (ATA34_2 p.553, 34-61 p.127: "replaced by dashes"), so a later
+	-- climb (a missed approach's) has none. Before, it stayed until a flight
+	-- complete or a DELETE
+	local ra = tonumber(fmsModules["data"]["clbrestalt"])
+	if ra and simDR_onGround ~= 1 and simDR_pressureAlt1 > ra then
+		fmsModules:setData("clbrestspd", "---")
+		fmsModules:setData("clbrestalt", "-----")
+	end
 	local cur = fmsModules["data"]["transpd"]
 	if cur == nil or cur == "---" then return end
 	local vref = tonumber(B747DR_airspeed_Vf30) or 0
