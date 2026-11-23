@@ -132,6 +132,20 @@ T.check(small(2):find("AT ALPHA$"), "AT ALPHA: " .. small(2))
 local tl = fms.ns.B747_fms_trans_lvl()
 local upper = 15000 > tl and "FL150" or "15000"
 T.check(line(3):find("/11000A" .. upper .. "B$"), "the window, TRANS LVL " .. tl .. ": " .. line(3))
+-- (2026-11-24, stage 4 review CDU-3) 3R WPT/ALT and 4R FPA V/B V/S: the
+-- 570's (GE), not the 109's (P&W: FCOM p.1390 (11.43.2) has neither).
+-- Before, boxes (*.* *.* ****) on every airplane always
+T.check(not small(8):find("FPA") and not small(6):find("WPT/ALT"), "the P&W (109): no FPA V/B V/S nor WPT/ALT label: " .. small(8) .. "|" .. small(6))
+T.check(not line(9):find("[%*%-]%.[%*%-]"), "nor their data: " .. line(9))
+T.check(line(9):find("^%-%-%-/%-%-%-%-%-%s*$"), "4L SPD RESTR's dashes alone: " .. line(9))
+rt:set("laminar/B747/engines/type", 1)
+frames(0.3)
+T.check(small(8):find("FPA V/B  V/S$"), "the GE (570): FPA V/B V/S (FCOM p.1391): " .. small(8))
+T.check(line(9):find("%-%.%- %-%.%- %-%-%-%-$"), "dashes until a WPT/ALT entry (p.1394, 11.43.6; before: boxes): " .. line(9))
+T.check(small(6):find("WPT/ALT$"), "WPT/ALT's label (p.1393, 11.43.5): " .. small(6))
+T.check(line(7):find("ALPHA/11000A" .. upper .. "B$"), "WPT/ALT: the AT line's waypoint and altitude: " .. line(7))
+rt:set("laminar/B747/engines/type", 0)
+frames(0.3)
 -- an AT OR ABOVE FL200 at ZZV: predicted under it, the ERROR: feet low and
 -- NM long where the climb reaches it (p.1329)
 key("func_key/legs")
