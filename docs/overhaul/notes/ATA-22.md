@@ -1598,3 +1598,11 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - 推定：なし。
 - 試験：`afds_pitch_model_test` 238（+5：離陸 1 の片発、全部切で則なし、離陸 2 の引き起こしの速度・V2 + 10・片発なし）。全 301 本・checks 19675。
 - X-Plane：試験の飛行は無い（離陸・全部切・着陸・離陸の 2 回の離陸が要る。回帰試験で足りる：レビューの案）。
+
+### 68.2 G/A の後の SRM の autoland の印（AFDS-3）
+
+- 見たこと：グルー（`B747.70.xt.autopilot.lua`）は、G/A に入ると前の作りの着陸復行の印 `laminar/B747/autopilot/autoland` = −2 を書き、−2 の間は LAND 3・2 でも 1 を書かなかった。−2 を 0 に戻すのは、RA が 1,500 ft を越えたとき（`B747_ap_ias_mach_mode`）か A/P が全部外れたときだけ。−2 を読む所はもう無い（SRM のモジュール `B747.45.xt.srm.lua` と A/P の内側のループ `B747.19.xt.afds_control.lua` は `== 1` だけを見る。`B747.70.xt.autopilot.monitor.lua` の −1 を書く `VNAV_CLB` は呼ばれない）。A/P を入れたままの G/A が RA 1,500 ft 以下で水平になる（海面近くの 1,500 ft の場周など）と、次の進入の LAND 3 でも印は −2 のままで、SRM は autoland として扱わない（方向舵の ratio changer を全権限にせず、オートトリムの 3.5 秒の遅れが残る：ATA27 p.636 (27-20 p.46)、p.648 (27-20 p.58)）。レビューの `autoland_after_ga.lua`：1,490 ft で ALT・HDG SEL にした後の LAND 3 で −2、2,000 ft なら 1。
+- 直したこと：−2 をやめた。印は AFDS の autoland の状態（LAND 3・2 で 1）だけで決める。G/A は LOC・G/S とその arm を終える（FCOM p.660 (4.20.2)。AFDS のモデルの `toga`）ので、状態は無く印は 0。1,500 ft の戻しも消した。`afds_go_around` は A/T の待ち（`lastCommand`）だけを残す。
+- 推定：なし。G/A の間の SRM の扱い（autoland でない）は前の −2 と同じ。
+- 試験：新しい `autoland_after_ga_test` 14（1,490 ft と 2,000 ft で水平にした後の 2 回目の進入の LAND 3 で 1、G/A と水平で 0）。`afds_glue_test` 287 は G/A の印を −2 から 0 に。全 302 本・checks 19689。
+- X-Plane（親が回す）：`s104_afds_ga` の G/A の印の確かめを −2 から 0 にした。`s380_ga_leveloff_spd`（§177 の AFDS-1 の確かめ）にも、G/A と 1,500 ft の水平で 0 を足した。親の確かめの `v07_ga_leveloff`（リポジトリの外）は −2 を確かめているので、直した後は落ちる（0 が正しい）。

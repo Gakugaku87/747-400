@@ -1,6 +1,6 @@
 {
   "name": "s380_ga_leveloff_spd",
-  "description": "段 4 のレビューの AFDS-1（2026-11-23）：着陸復行（TO/GA 1 回、A/T は THR）の後に MCP 高度で水平（ALT）になっても、A/T は SPD を押すまで THR のままで、速度の保護がフラップ 20 の placard（230 kt）を越えさせない（FCOM p.673 (4.20.15)、p.675 (4.20.17)）。直す前は 69 秒で 163 → 238 kt（親の確かめ v07_ga_leveloff）。v07 と同じ流れ：銚子沖の海上 2,500 ft・160 kt で開始（機体を読み直す）、フラップ 20、FMS の空中の初期化で A/P CMD L・ALT HOLD、A/T SPD、V/S で降りて MCP 高度 300 ft で捕まえ、MCP 高度を 1,500 ft にして TO/GA。捕捉の後 150 秒、速さが placard + 3 kt 以下で A/T は THR のまま。SPD を押すと 160 kt へ戻る。",
+  "description": "段 4 のレビューの AFDS-1（2026-11-23）：着陸復行（TO/GA 1 回、A/T は THR）の後に MCP 高度で水平（ALT）になっても、A/T は SPD を押すまで THR のままで、速度の保護がフラップ 20 の placard（230 kt）を越えさせない（FCOM p.673 (4.20.15)、p.675 (4.20.17)）。直す前は 69 秒で 163 → 238 kt（親の確かめ v07_ga_leveloff）。v07 と同じ流れ：銚子沖の海上 2,500 ft・160 kt で開始（機体を読み直す）、フラップ 20、FMS の空中の初期化で A/P CMD L・ALT HOLD、A/T SPD、V/S で降りて MCP 高度 300 ft で捕まえ、MCP 高度を 1,500 ft にして TO/GA。G/A とその水平で autoland の印は 0（段 4 の AFDS-3）。捕捉の後 150 秒、速さが placard + 3 kt 以下で A/T は THR のまま。SPD を押すと 160 kt へ戻る。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 762.0, "heading_true": 0, "speed_in_meters_per_second": 82.3 },
@@ -44,9 +44,11 @@
     { "do": "sleep", "seconds": 0.5 },
     { "do": "check", "note": "G/A：ピッチは TO/GA", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 1, "stop": true },
     { "do": "check", "note": "A/T は THR（2,000 fpm：FCOM p.673）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 4, "stop": true },
+    { "do": "check", "note": "段 4 の AFDS-3：G/A の autoland の印は 0（前は -2 が 1,500 ft まで残った）", "dref": "laminar/B747/autopilot/autoland", "op": "==", "value": 0 },
     { "do": "wait", "note": "MCP 高度 1,500 ft の捕捉（ALT）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9, "timeout": 120, "stop": true },
     { "do": "snapshot", "note": "ALT の捕捉の時", "drefs": ["laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/airspeed/Vmax", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/FMA/active_pitch_mode", "sim/cockpit2/controls/flap_ratio", "laminar/B747/engine/throttle[0]", "sim/cockpit2/gauges/indicators/altitude_ft_pilot"] },
     { "do": "check", "note": "水平でも A/T は THR のまま（SPD を選ぶまで：FCOM p.673）", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 4 },
+    { "do": "check", "note": "段 4 の AFDS-3：1,500 ft で水平になっても autoland の印は 0（前は -2 のまま、次の進入の LAND 3 で 1 にならなかった）", "dref": "laminar/B747/autopilot/autoland", "op": "==", "value": 0 },
     { "do": "watch", "note": "AFDS-1：G/A の後の水平飛行で、速さがフラップ 20 の placard（230 kt）+3 を越えない（FCOM p.673、p.675）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "timeout": 150, "max": 233, "until": { "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 238 } },
     { "do": "snapshot", "note": "見張りの終わり", "drefs": ["laminar/B747/gauges/indicators/airspeed_kts_pilot", "laminar/B747/airspeed/Vmax", "laminar/B747/autopilot/FMA/autothrottle_mode", "laminar/B747/autopilot/FMA/active_pitch_mode", "sim/cockpit2/controls/flap_ratio", "laminar/B747/engine/throttle[0]", "sim/cockpit2/gauges/indicators/altitude_ft_pilot"] },
     { "do": "check", "note": "A/T はまだ THR", "dref": "laminar/B747/autopilot/FMA/autothrottle_mode", "op": "==", "value": 4 },

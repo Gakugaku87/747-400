@@ -1036,7 +1036,7 @@ frames()
 rt:set(RA, 9000)
 -- 1e: TO/GA. A push counted by the engines module (laminar/B747/autopilot/
 -- toga_pushes): G/A in the air with the flaps out of up, the old code's
--- go-around (its autoland -2 with the A/P engaged), its TO/GA flag, the
+-- go-around (no autoland since 2026-11-24: AFDS-3), its TO/GA flag, the
 -- FMA's TO/GA; with both F/D switches OFF above 80 kt the F/Ds shown and
 -- FD on both PFDs until a switch is cycled ON and OFF (FCOM p.657,
 -- p.661); T/O by the first F/D ON on the ground
@@ -1062,7 +1062,10 @@ local g0 = rt:get(PITCH_CMD)
 frames(10)
 T.check(rt:get(PITCH_CMD) > g0 + 0.1, "G/A under 600 fpm: up toward 15 degrees (FCOM p.674)")
 T.equal(rt:get(TOGA_FLAG), 1, "the old code's TO/GA flag")
-T.equal(rt:get("laminar/B747/autopilot/autoland"), -2, "the old autoland's go-around")
+-- (2026-11-24, the stage 4 review's AFDS-3) no autoland in G/A: the old
+-- go-around's -2 is gone (it held back the next approach's 1 under 1,500
+-- ft: autoland_after_ga_test.lua)
+T.equal(rt:get("laminar/B747/autopilot/autoland"), 0, "G/A: no autoland (before, the old go-around's -2)")
 T.check(rt:get(SHOWN_C) == 1 and rt:get(SHOWN_F) == 0, "the F/Ds shown: the Captain's switch ON")
 rt:command(CMD .. "yoke_disengage_capt")
 rt:command(CMD .. "yoke_disengage_capt")

@@ -1376,12 +1376,13 @@ local function afds_sync()
 	-- the SRMs' autoland (step 4c; ATA27 p.636: the rudder ratio changers at
 	-- full authority, the autotrim without its delay): a multi-channel
 	-- landing, LAND 3 or 2 through the rollout (before, the old autoland's
-	-- below 100 ft with three channels); the old go-around's -2 kept (the
-	-- A/T's G/A thrust) until 1,500 ft
-	if B747DR_ap_autoland >= 0 then
-		local al = (afds.land == "LAND3" or afds.land == "LAND2") and 1 or 0
-		if B747DR_ap_autoland ~= al then B747DR_ap_autoland = al end
-	end
+	-- below 100 ft with three channels). (2026-11-24, the stage 4 review's
+	-- AFDS-3) The status's alone: G/A has none (it ends LOC, G/S and their
+	-- arms: FCOM p.660). Before, the old go-around's -2 (read by nobody
+	-- now) was kept until 1,500 ft or all the A/Ps off, and with it no 1:
+	-- a go-around levelled under 1,500 ft left the next LAND 3 at -2
+	local al = (afds.land == "LAND3" or afds.land == "LAND2") and 1 or 0
+	if B747DR_ap_autoland ~= al then B747DR_ap_autoland = al end
 	local L, C, R = afds.L and 1 or 0, afds.C and 1 or 0, afds.R and 1 or 0
 	local on = (L + C + R) > 0 and 1 or 0
 	if on == 1 and simDR_autopilot_servos_on == 0 then B747DR_switching_servos_on = simDRTime end
@@ -1660,9 +1661,9 @@ local function afds_wheel()
 	afds_sync()
 end
 -- the old code's go-around on G/A's engage, as its TO/GA switch did in the
--- air: its autoland's (until step 4) and its A/T's debounce
+-- air: its A/T's debounce. (2026-11-24, the stage 4 review's AFDS-3: its
+-- autoland's -2 is gone, afds_sync)
 local function afds_go_around()
-	B747DR_ap_autoland = -2
 	B747DR_ap_lastCommand = simDRTime
 end
 -- (6-1/6-2 step 9i; notes/ATA-34-61-FMC.md §150) VNAV's sub-mode, its law
@@ -2683,10 +2684,8 @@ end
 
 ----- IAS/MACH MODE ---------------------------------------------------------------------
 function B747_ap_ias_mach_mode()
-	if B747DR_ap_autoland < 0 and (simDR_radarAlt1 > 1500) then
-		B747DR_ap_autoland = 0
-		print("IAS end Go Around")
-	end
+	-- (2026-11-24, the stage 4 review's AFDS-3: the old go-around's -2 is
+	-- gone, so its end above 1,500 ft too: afds_sync)
 	----- SET THE IAS/MACH WINDOW STATUS
 	if B747DR_switchingIASMode == 0 and (B747DR_ap_vnav_state < 2 or getVNAVState("manualVNAVspd") == 1) then --inop until we know speed!
 		B747DR_ap_ias_mach_window_open = 1
