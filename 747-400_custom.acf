@@ -151968,7 +151968,7 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.red
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_GREATER 9.100000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_GREATER 9.050000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -151984,8 +151984,8 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.amber
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_LESS 9.000000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_GREATER 8.900000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_LESS 9.050000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_GREATER 8.850000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -152001,8 +152001,8 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_LESS 8.800000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_GREATER -0.490000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_LESS 8.850000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_GREATER -0.450000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -152018,7 +152018,7 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.amber
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_LESS -0.500000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_LESS -0.450000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
