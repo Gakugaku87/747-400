@@ -601,6 +601,17 @@ local AP_PITCH_RATE_K_MIN = 0.06
 -- ATA22 p.330-333 has the elevator trim integrator on the attitude error,
 -- no gains
 local AP_PITCH_INT = 1 / 3
+-- (2026-11-24, the reruns after FCTL-1 to FCTL-3: notes/ATA-22.md §68) In
+-- FLARE the integral as it was, as much as the proportional a second:
+-- with a third the pitch stayed 0.8 degrees under the flare's rising
+-- command (0.4 degrees a second for 4 s; before 0.6 for a second, then
+-- closing) and the autoland touched down at 459 fpm and 1.71 g (s114 at
+-- 270 t; 332 fpm and 1.50 g before). The same flight with the integral
+-- put back from 200 ft (the debug's ap_pitch_int_pct 300) touched down at
+-- 338 fpm and 1.52 g. The flare is 5 s at the approach's speed with the
+-- flaps down, where the integral at the proportional had not swung.
+-- Estimate
+local AP_PITCH_INT_FLARE = 1
 -- (2026-11-24, FCTL-1) The command in degrees of elevator the same both
 -- ways. The elevator's travel is 22 degrees up and 17 down (X-Plane's
 -- acf_elev_up, acf_elev_dn) and the control mapping takes the pitch ratio
@@ -675,7 +686,7 @@ function ap_pitch_assist(doCompute)
     else
         B747DR_pidPitchI=B747DR_pidPitchP
     end
-    B747DR_pidPitchI=B747DR_pidPitchP*AP_PITCH_INT
+    B747DR_pidPitchI=B747DR_pidPitchP*(B747DR_ap_FMA_active_pitch_mode == 3 and AP_PITCH_INT_FLARE or AP_PITCH_INT)
     local gain = ap_gain_scale()
     pitchPid.kp=B747DR_pidPitchP * gain
     pitchPid.ki=B747DR_pidPitchI * gain

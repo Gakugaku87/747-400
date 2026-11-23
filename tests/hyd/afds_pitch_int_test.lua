@@ -9,7 +9,10 @@
 --    elevator's travel is 22 degrees up and 17 down, and nose down the
 --    pitch ratio is the command times 22 / 17 (before, the same ratio: 17 /
 --    22 of the degrees, the loop's gain a quarter less with the elevator
---    trailing edge down of neutral).
+--    trailing edge down of neutral);
+--  * in FLARE the integral is as before, as much as the proportional a
+--    second (the reruns of 2026-11-24: with a third the pitch lagged the
+--    flare's rising command and the autoland touched down at 460 fpm).
 local T = dofile("tests/lib/check.lua")("afds_pitch_int")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -78,4 +81,23 @@ rt:set("laminar/B747/autopilot/servos_on", 1)
 rt:set("sim/cockpit2/controls/yoke_pitch_ratio", 0)
 frames(0.2)
 T.near(get(ELEV), -0.1, 0.01, "engaged with the column 0.1 forward: the elevator held there (" .. get(ELEV) .. ")")
+
+-- FLARE (the pitch FMA 3): the integral as much as the proportional a
+-- second; no step in the elevator when the mode comes
+rt:set("laminar/B747/autopilot/servos_on", 0)
+frames(3)
+rt:set("laminar/B747/autopilot/servos_on", 1)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 2)
+frames(2)
+rt:set(CMD, 2.2)
+frames(2)
+local e0 = get(ELEV)
+rt:set("laminar/B747/autopilot/FMA/active_pitch_mode", 3)
+frames(1 / 30)
+T.near(get(ELEV), e0, 0.002, "FLARE comes: no step in the elevator")
+frames(1)
+local e1 = get(ELEV)
+frames(3)
+local e2 = get(ELEV)
+T.near((e2 - e1) / 3, 0.2 * 0.1, 0.002, string.format("in FLARE 0.2 degree of error held: the integral %.4f a second, the proportional's 0.02 (a third on the glide slope)", (e2 - e1) / 3))
 T.done()
