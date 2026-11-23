@@ -197,6 +197,17 @@ T.equal(pad(), "INVALID ENTRY", "8 NM before the T/D: INVALID ENTRY (FMSPG p.97;
 T.equal(ci(), "120", "COST INDEX kept")
 for _ = 1, 30 do rt:command("laminar/B747/fms1/key/clear") end
 frames(0.1)
+-- within 10 NM of the point either side (FMSPG p.97's words)
+td = -5
+type_in("130")
+key("ls_key/L5")
+T.equal(pad(), "INVALID ENTRY", "5 NM past the T/D: INVALID ENTRY")
+for _ = 1, 30 do rt:command("laminar/B747/fms1/key/clear") end
+frames(0.1)
+td = -20
+type_in("135")
+key("ls_key/L5")
+T.equal(ci(), "135", "20 NM past the T/D (the descent): taken")
 td = nil
 type_in("140")
 key("ls_key/L5")

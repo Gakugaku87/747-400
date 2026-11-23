@@ -3341,7 +3341,7 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - COST INDEX：VNAV の T/D（`B747_fms_vnav_td`：残りの NM、過ぎると負）で、前のコードと同じく「T/D の 10 NM 手前から先」を INVALID ENTRY（`B744.fms.pages.lua`）。
   - CONFIG PAUSE の判定を FMS へ（`B747_fms_simopts_update`、0.5 秒ごと、空中だけ）：1 は VNAV の T/D の 1 NM 手前から、それより大きい値は予測の目的地までの距離（`B747_fms_dest_dtg`：PROGRESS の DEST と同じ）がその値以下で、`sim/operation/pause_on` を 1 回、オプションを 0 に戻す（前と同じ）。ページの 2 行目は T/D から目的地までの距離（予測の目的地までの距離 − T/D までの距離）。
 - 推定：目的地までの距離は 10 秒ごとの予測の値なので、止まるのが最大 10 秒（巡航で約 1.3 NM）遅れる。
-- 問い：FMSPG p.97 の「within 10 miles of the Top-of-Descent point」は、T/D の前後 10 NM（過ぎた後は入力できる）とも読める。前のコードの「10 NM 手前から先（降下中ずっと）」のままにした。
+- 問い：FMSPG p.97 の「within 10 miles of the Top-of-Descent point」は、T/D の前後 10 NM（過ぎた後は入力できる）とも読める。前のコードの「10 NM 手前から先（降下中ずっと）」のままにした（→ §177.8 で資料の言葉どおり前後 10 NM に変えた）。
 - 残したもの（いつも 0 を読む旧式の所。ほかの担当の範囲か、直さない）：PROGRESS の予測が無いときの古いページ（`B744.fms.pages.progress.lua` の T/D・DEST の行）、autopilot の旧 VNAV（`B747.70.xt.autopilot.monitor.lua`・`.vnav.lua`、`B747.70.xt.autopilot.lua` の `after_physics` の `tDist`・`tod`）、FDR の記録（`B747.01.xt.fdr.lua`）。
 - 試験：`simopts_glue_test` 38（+13：T/D の 120 NM 手前は止まらず、ページは 180NM、T/D で 1 回止まりオプションが 0、150 NM の設定で 160 NM は止まらず 149.5 NM で止まる、COST INDEX は T/D の 50 NM 手前で入り 8 NM 手前で INVALID ENTRY、T/D が無いと入る。直す前は 8 件が落ちる）。
 
@@ -3356,6 +3356,11 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 推定：フラップを出しているときも UP の表（PI にフラップを出した待機の表が無い）。エントリー（ティアドロップ・パラレル・インターセプト）の残りの距離（LNAV の 2.95 r・2.41 r と、戻りの旋回 220°・225°、戻りの直線を行きと同じ長さ）。先のホールドの 1 周の時間（その点の予測の重さ・高度での待機の表の速さを真対気速度にし、`B747_path_model.hold_size` の大きさ）。燃料流量を 4 発分（ENG OUT でも）。
 - 作っていないもの：EFC TIME を入れたときに、その後の予測（下流の ETA と燃料）をホールドを EFC まで回った前提にすること（FCOM p.1419 の 8・9、FMSPG p.161）。予測のモデルはホールドの時間を入れない（すぐ出る前提）。
 - 試験：`tests/fms/hold_preds_test.lua`（19 件：先の BRAVO のホールドで FIX ETA が予測の時刻、HOLD AVAIL、BEST SPEED が SPD TRANS の 240、EFC で次の通過が EFC 以後、HA ではダッシュ、PPOS のホールドのダイレクトのエントリーで約 1 周後、インバウンド 3 NM で約 0.8 分、FL150 で表の速さ。直す前は 8 件が落ちる）。`hold_pages_test`（予測も PERF INIT も無い所のダッシュ）はそのまま通る。
+
+### 177.8 COST INDEX の窓を T/D の前後 10 NM に（FMC-9 の続き）
+
+- §177.6 では、前のコード（働いていなかった）の意図のまま「T/D の 10 NM 手前から先（降下中ずっと）」を INVALID ENTRY にした。資料の言葉は FMSPG p.97 (3.2-37) の「within 10 miles of the Top-of-Descent point」（点から 10 NM の内）なので、前後 10 NM（`math.abs(td) < 10`）にした。降下に入って 10 NM を過ぎれば入力できる（前は、旧 AP の距離が 0 で、どこでも入力できた）。
+- 試験：`simopts_glue_test` 40（+2：T/D を 5 NM 過ぎて INVALID ENTRY、20 NM 過ぎて入る。§177.6 の形では後者が落ちる）。
 
 ## 178. G/A の後の水平飛行の A/T の速度の保護（2026-11-23 夜：段 4 のフルレビューの AFDS-1。利用者の決定「A と B を直す」。worktree `D:/b747_fix_afds`）
 
