@@ -144798,7 +144798,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 3 Red
               POS 1642.500000 890.000000
@@ -144810,7 +144810,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 2 Red
               POS 1536.500000 890.000000
@@ -144822,7 +144822,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 1 Red
               POS 1430.500000 890.000000
@@ -144834,7 +144834,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 4 White
               POS 1748.500000 890.000000
@@ -144846,7 +144846,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 3 White
               POS 1642.500000 890.000000
@@ -144858,7 +144858,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 2 White
               POS 1536.500000 890.000000
@@ -144870,7 +144870,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 1 White
               POS 1430.500000 890.000000
@@ -144882,7 +144882,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             GROUP Redline Markers
               gen_rotary Engine 4
@@ -144979,7 +144979,7 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
@@ -144996,7 +144996,7 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
@@ -145013,7 +145013,7 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
@@ -145030,7 +145030,7 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
@@ -145048,7 +145048,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145067,7 +145067,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145086,7 +145086,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145105,7 +145105,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145120,7 +145120,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145133,7 +145133,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145146,7 +145146,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145159,7 +145159,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145850,7 +145850,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 3 Red
                 POS 1642.500000 596.500000
@@ -145862,7 +145865,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 2 Red
                 POS 1536.500000 596.500000
@@ -145874,7 +145880,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 1 Red
                 POS 1430.500000 596.500000
@@ -145886,7 +145895,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 4 Amber
                 POS 1748.500000 596.500000
@@ -145898,7 +145910,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 3 Amber
                 POS 1642.500000 596.500000
@@ -145910,7 +145925,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 2 Amber
                 POS 1536.500000 596.500000
@@ -145922,7 +145940,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 1 Amber
                 POS 1430.500000 596.500000
@@ -145934,7 +145955,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 4 White
                 POS 1748.500000 596.500000
@@ -145946,7 +145970,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 3 White
                 POS 1642.500000 596.500000
@@ -145958,7 +145985,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 2 White
                 POS 1536.500000 596.500000
@@ -145970,7 +146000,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 1 White
                 POS 1430.500000 596.500000
@@ -145982,7 +146015,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               GROUP Continuous  Limit
                 gen_rotary Engine 4
@@ -146251,8 +146287,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 3 Red
                 POS 1642.500000 670.500000
@@ -146264,8 +146303,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 2 Red
                 POS 1536.500000 670.500000
@@ -146277,8 +146319,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 1 Red
                 POS 1430.500000 670.500000
@@ -146290,8 +146335,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 4 Amber
                 POS 1748.500000 670.500000
@@ -146303,8 +146351,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 3 Amber
                 POS 1642.500000 670.500000
@@ -146316,8 +146367,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 2 Amber
                 POS 1536.500000 670.500000
@@ -146329,8 +146383,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 1 Amber
                 POS 1430.500000 670.500000
@@ -146342,8 +146399,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 4 White
                 POS 1748.500000 670.500000
@@ -146355,8 +146415,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 3 White
                 POS 1642.500000 670.500000
@@ -146368,8 +146431,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 2 White
                 POS 1536.500000 670.500000
@@ -146381,8 +146447,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 1 White
                 POS 1430.500000 670.500000
@@ -146394,8 +146463,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               GROUP Continuous  Limit
                 gen_rotary Engine 4
@@ -146485,7 +146557,7 @@ GROUP Upper EICAS
               END_GROUP
               GROUP Start Limit Markers
                 gen_rotary Engine 4
-                  POS 1748.500000 781.000000
+                  POS 1748.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
@@ -146506,7 +146578,7 @@ GROUP Upper EICAS
                   CLICK_DY 0
 
                 gen_rotary Engine 3
-                  POS 1642.500000 781.000000
+                  POS 1642.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
@@ -146527,7 +146599,7 @@ GROUP Upper EICAS
                   CLICK_DY 0
 
                 gen_rotary Engine 2
-                  POS 1536.500000 781.000000
+                  POS 1536.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
@@ -146548,7 +146620,7 @@ GROUP Upper EICAS
                   CLICK_DY 0
 
                 gen_rotary Engine 1
-                  POS 1430.500000 781.000000
+                  POS 1430.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
@@ -153038,8 +153110,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 3
                   POS 1642.500000 305.000000
@@ -153051,8 +153124,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 2
                   POS 1537.500000 305.000000
@@ -153064,8 +153138,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 1
                   POS 1432.500000 305.000000
@@ -153077,8 +153152,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
               END_GROUP
               GROUP White
@@ -153093,8 +153169,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 3
                   POS 1642.500000 305.000000
@@ -153106,8 +153183,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 2
                   POS 1537.500000 305.000000
@@ -153119,8 +153197,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 1
                   POS 1432.500000 305.000000
@@ -153132,8 +153211,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
               END_GROUP
               GROUP Fuel-On Ind
