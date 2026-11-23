@@ -447,7 +447,12 @@ do
     T.check(out.valve.apu == 1, "APU: fuel valve open")
     T.check(not out.pump.apu_dc and not out.cas.apu_fuel, "APU: no DC pump while main 2 AFT gives pressure, no APU FUEL")
     run(s, inp, 3600)
-    T.near(s.qty.m2, 36000 - 150, 1, "APU: 150 kg in an hour from main 2 (estimate)")
+    -- (2026-11-23 review SYS-3) FPPM p.83 (2.1.1): 300 kg/h on the ground,
+    -- 270 kg/h at normal operating altitudes. Before, 150 (estimate)
+    T.near(s.qty.m2, 36000 - 300, 1, "APU: 300 kg in an hour on the ground from main 2 (FPPM p.83)")
+    inp.on_ground = false
+    run(s, inp, 3600)
+    T.near(s.qty.m2, 36000 - 300 - 270, 1, "APU: 270 kg in an hour in the air (FPPM p.83, p.107)")
 end
 
 -- the APU on the battery (no ground service bus): the DC pump in main 2

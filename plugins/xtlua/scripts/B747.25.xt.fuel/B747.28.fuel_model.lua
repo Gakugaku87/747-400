@@ -79,7 +79,14 @@ M.RES_XFER_KGH = 3000            -- each reserve tank, by gravity
 M.MAIN14_XFER_KGH = 4000         -- each outboard main tank, by gravity
 M.STAB_PUMP_KGH = 4500           -- each stabilizer pump
 M.JETT_PUMP_KGH = 22000          -- each pump through the jettison nozzles
-M.APU_KGH = 150                  -- the APU's burn
+-- (2026-11-23 review SYS-3) the APU's burn: the FPPM's average fuel flow
+-- under normal operation, 300 kg/h on the ground and 270 kg/h at normal
+-- operating altitudes (FPPM p.83 (2.1.1); p.107 (3.1.1) adds 270 kg/h for
+-- the APU in flight). The FPPM is the 747-400F's with PW4056; the APU is the
+-- PW901A on all of them (AC_SPECS p.1), so the same for the passenger
+-- airplanes, GE and RR (estimate). Before, 150 kg/h (estimate: no source
+-- had been found), half of it
+M.APU_KGH_GND, M.APU_KGH_AIR = 300, 270
 M.STAB_LOW_OFF_S = 30            -- the stabilizer pump stops after low pressure (FCOM p.1455: "brief delay")
 M.JETT_EST_KGH = 120000          -- preprogrammed jettison rate (FCOM p.1468)
 M.JETT_UPDATE_S = 90             -- (FCOM p.1468)
@@ -414,7 +421,9 @@ function M.update(s, inp, dt)
             local kg = math.max(0, inp.ff[n]) * dt          -- X-Plane's flow goes negative in a start
             for t, share in pairs(out.feed[n]) do q[t] = math.max(0, q[t] - kg * share) end
         end
-        if inp.apu_fuel and s.valve.apu > 0.5 then move_fuel("m2", nil, M.APU_KGH) end   -- main 2 (FCOM p.1464-1465)
+        if inp.apu_fuel and s.valve.apu > 0.5 then                                   -- main 2 (FCOM p.1464-1465)
+            move_fuel("m2", nil, inp.on_ground and M.APU_KGH_GND or M.APU_KGH_AIR)
+        end
         -- by gravity (FCOM p.1464)
         if s.valve.res2a > 0.5 or s.valve.res2b > 0.5 then move_fuel("r2", "m2", M.RES_XFER_KGH) end
         if s.valve.res3a > 0.5 or s.valve.res3b > 0.5 then move_fuel("r3", "m3", M.RES_XFER_KGH) end
