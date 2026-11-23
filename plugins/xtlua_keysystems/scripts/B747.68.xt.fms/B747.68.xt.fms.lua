@@ -5831,6 +5831,14 @@ function B747_fms_flight_complete()
   navperfState.gps_inhibit,navperfState.rnp_man=false,nil
   if B747DR_airspeed_flapsRef~=0 then B747DR_airspeed_flapsRef=0 end
   if B747DR_airspeed_VrefFlap~=0 then B747DR_airspeed_VrefFlap=0 end
+  -- (2026-11-24, review CDU-2 = PERF-3) the crew's CG and CRZ CG gone with
+  -- their data: TAKEOFF REF's CG dashes (FCOM p.1320 (11.40.44)), PERF
+  -- INIT's CRZ CG the default 20.0 small (p.1311 (11.40.35)); the FMC's
+  -- trim gone, the green band's selection with it (ATA34_2 p.540: the
+  -- takeoff data cleared). Before, a crew's CG left TAKEOFF REF blank
+  -- (its line's text with the CG's data "--") until a new CG
+  cg_lineLg,crzcg_lineLg="",""
+  if B747DR_elevator_trim~=0 then B747DR_elevator_trim=0 end
   -- (step 12c1) TAKEOFF REF's defaults from PERF FACTORS again
   B747_fms_perf_to_take(true)
   -- (step 12c2) IRS MONITOR's rates

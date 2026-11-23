@@ -169,14 +169,21 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
 	-- (2026-11-20, GAP N19-WB-03) the CG (FCOM p.1320): the crew's large;
 	-- else the 405's the FMC's from the WBS inputs, small with a caret
 	-- (dashes before them), the 109's and 570's dashes
+	-- (2026-11-24, review CDU-2 = PERF-3) a CG's data not a number (the
+	-- dashes after flight completion with a crew's CG kept): dashes. Before,
+	-- string.format took nil and the whole page went blank
+	local cgV = tonumber(fmsModules["data"].cg_mac)
 	if string.len(cg_lineLg) == 0 then
-		if str_trim(fmsModules["data"].cg_mac) == "--" or not B747_fms_is_405() then
+		if cgV == nil or not B747_fms_is_405() then
 			cg_lineSm = "--%"
 		else
-			cg_lineSm = string.format("%2.0f%%>", tonumber(fmsModules["data"].cg_mac))
+			cg_lineSm = string.format("%2.0f%%>", cgV)
 		end
+	elseif cgV == nil then
+		cg_lineLg = ""
+		cg_lineSm = "--%"
 	else
-		cg_lineLg = string.format("%2.0f%%", tonumber(fmsModules["data"].cg_mac))
+		cg_lineLg = string.format("%2.0f%%", cgV)
 		cg_lineSm = ""
 	end
 	--Marauder28
@@ -214,10 +221,10 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   -- too (FCOM p.1320: small)
   if string.len(cg_lineLg) > 0
     or (B747_fms_is_405() and str_trim(fmsModules["data"].cg_mac) ~= "--") then
-	  if fmsModules["data"].stab_trim ~= "    " then
-			stab_trim = string.format("%3.1f", tonumber(fmsModules["data"].stab_trim))
-	  else
-			stab_trim = fmsModules["data"].stab_trim
+	  -- (review CDU-2) blank unless a number
+	  local trimV = tonumber(fmsModules["data"].stab_trim)
+	  if trimV then
+			stab_trim = string.format("%3.1f", trimV)
 	  end
   end
   --Marauder28

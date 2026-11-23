@@ -3392,3 +3392,14 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 直したこと：`B747.68.thrlim_model.lua` の `armed_clb` と入力 `by_rating`（状態 `s.by_rating`）を消し、地上の待機と THRUST LIM の TO・TO 1・TO 2 の選択を、全機体で `auto_clb`（離陸の減らし方の %：減格の % と EEC の assumed temperature を含む減らし方の大きい方）に戻した。FMS のつなぎの `inp.by_rating` も消した。`laminar/B747/freighter` は `B747_fms_is_405` のために毎フレーム読む（ほかのプラグインの dataref の読みは 1 回分遅れる）。消え方の高度の有効番号分け（`B747.42.ref_thrust_model.lua` の `CLB_GONE`、109 は 30,000・35,000 ft、405・570 は 15,000 ft）は p.1273 の番号の段落どおりなので、そのまま。§172 の推定のうち「405・570 の TO が CLB」「assumed temperature で変えない」は無くなった（減らし方の規則で決まる）。
 - 試験：`thrlim_model_test` 83（81 から。405・570 の組を書き直し：GE の TO 1 の 5 % で CLB 1、TO 2 の 15 % で CLB 2、TO 1 の 20 % で CLB 2、D-TO の 20 % で CLB 2・10 % で CLB 1、D-TO 1 の 22 % で CLB 2 とフラップ 5 で CLB 2、乗員の CLB 1 が TO 2 の後も残る。古い入力 `by_rating` を渡しても変わらない）、`takeoff_ref_test` 78（FMS のつなぎ：減らし方 27 % の TO 1 で、旅客機・P&W の貨物機・GE とも CLB 2）。直す前のコードでは 5 件と 2 件が落ちる（確かめた）。
 - X-Plane のシナリオ `s336_clb_arm_405`（ICL 4X-ICB、地上）の期待を直した：TO 1 で CLB 1、TO 2 で CLB 2、TO と SEL 50（11-21 の回で EEC の減らし方 16.6 %）で CLB 2 と 9 行目の `<ARM> CLB 2>`、TO 1 と SEL 50（23.3 %）で CLB 2、SEL を消すと TO 1 の 8 % で CLB 1。減らし方 15 % 以上の確かめは warn から fail にした（CLB 2 の前提）。
+
+### 177.2 flight complete の後の TAKEOFF REF の空白（CDU-2 = PERF-3。e682bb80 の後戻り）
+
+- 見たこと（レビューの担当 1・3 のモック）：乗員が TAKEOFF REF の 4R に CG を入れた便の flight complete の後、TAKEOFF REF の 13 行が題も含めて全部空白。flight complete はデータの `cg_mac` を既定の「--」に戻すが、ページの大きい字の文字 `cg_lineLg` は残るので、`takeoff.lua` の `string.format("%2.0f%%", tonumber("--"))` が nil で落ちる（ページは pcall の中で、誤りはどこにも出ない）。次の便の ZFW でも戻らない：e682bb80（§175 の N19-WB-03）の前は ZFW の入力で `calc_CGMAC` が `cg_mac` を数に書き直していたが、109・570 ではそれをやめたため。PERF INIT の CRZ CG も、大きい字の文字 `crzcg_lineLg` が残って既定の 20.0 が大きい字。FMC のトリム（`laminar/B747/fmc/elevator_trim`、緑の帯の選択：ATA27 p.514）は前の便のまま。
+- 資料：FCOM p.1320 (11.40.44)：TRIM/CG は「Initially displays dashes」。ATA34_2 p.540：TAKEOFF REF の欄は空中では持ち、flight completion で消える。FCOM p.1311 (11.40.35)：CRZ CG の既定 20.0 は小さい字。
+- 直したこと：
+  - `B747_fms_flight_complete`：`cg_lineLg`・`crzcg_lineLg` を空に、`B747DR_elevator_trim` を 0 に（帯の選択は「トリムなし」の MID：`B747.45.greenband_model.lua` の `select`）。
+  - `B744.fms.pages.takeoff.lua`：CG のデータが数でなければダッシュ（大きい字の文字も消す）。TRIM は数のときだけ書く。どちらも、データと文字が食い違っても、ページ全体が空白にならないための守り。
+  - CG を DELETE したときの `elevator_trim` は今までどおり残る（帯の選び方は資料に無い：ATA27 p.514 は FMC の CG・重さ・推力から選ぶとだけ。§177 の範囲の外）。
+- 試験：`flight_complete_test` 23（14 から +9）：便の前に ZFW 220・CRZ CG 25.5・CG 22 とトリム、flight complete の後に FMC のトリム 0、TAKEOFF REF の題と CG のダッシュ・トリムなし、CRZ CG 20.0 が小さい字、次の便の ZFW 230 の後も TAKEOFF REF と CG のダッシュ、CG 24 で大きい字とトリム。直す前のコードでは 5 件が落ちる（確かめた）。
+- X-Plane のシナリオ：新しい `s350_flight_complete_cg`（s163 と同じ RJAA 34L の進入路からの自動着陸、243.5 t）。空中では TAKEOFF REF に行けない（INIT/REF INDEX の <TAKEOFF は空中で消える：CDU-12、直さない）ので、止まってから PERF INIT の CRZ CG 25.5 と TAKEOFF REF の CG 22 を入れ、エンジンを止めて 30 秒。flight complete の後に FMC のトリム 0、TAKEOFF REF の題と `--%`、PERF INIT の小さい字の `20.0%`、次の便の ZFW 230 の後も TAKEOFF REF。CDU を 2 枚撮る。

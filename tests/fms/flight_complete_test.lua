@@ -86,6 +86,22 @@ np.gps_inhibit, np.rnp_man = true, 0.3
 T.check(fms.ns.B747_fmc_route.active and fms.ns.B747_fmc_route.rte.dest.ident == "ZZAA", "the route active")
 T.check(data("fltno") == "TEST123" and data("costindex") == "100" and data("crzalt") == "FL350",
     "FLT NO, COST INDEX, CRZ ALT entered: " .. data("fltno") .. " " .. data("costindex") .. " " .. data("crzalt"))
+-- (2026-11-24, review CDU-2 = PERF-3) the crew's ZFW 220, CRZ CG 25.5 and
+-- TAKEOFF REF's CG 22 with its trim (the green band's selection)
+local function small(n) return rt:get(string.format("%sLine%02d_S", LN, n)) end
+local function perf_page() key("func_key/index") key("ls_key/L6") key("ls_key/L3") end
+local function takeoff_page() key("func_key/index") key("ls_key/L6") key("ls_key/L5") end
+local ETRIM = "laminar/B747/fmc/elevator_trim"
+perf_page()
+enter("220", "L3")
+enter("25.5", "R4")
+T.check(line(9):find("25%.5%%") ~= nil, "CRZ CG 25.5 large: " .. line(9))
+takeoff_page()
+enter("22", "R4")
+clear()
+T.check(line(9):find("22%%") ~= nil and small(9):find("%d%.%d") ~= nil, "CG 22 large, its trim small: " .. line(9) .. "|" .. small(9))
+T.check(rt:get(ETRIM) > 0, "the FMC's trim for the green band: " .. rt:get(ETRIM))
+key("func_key/fpln")             -- RTE 1 again (the last block enters its origin)
 
 -- on the ground before a flight: the engines stopped clear nothing
 engines(true)
@@ -137,4 +153,28 @@ key("func_key/fpln")
 enter("ZZAA", "L1")
 seconds(40)
 T.equal(fms.ns.B747_fmc_route.rte.origin and fms.ns.B747_fmc_route.rte.origin.ident, "ZZAA", "a new route's origin stays (no flight since)")
+
+-- (2026-11-24, review CDU-2 = PERF-3) after the completion with the crew's
+-- CG: TAKEOFF REF shown with CG dashes and no trim (FCOM p.1320 (11.40.44):
+-- "Initially displays dashes"; ATA34_2 p.540: removed at flight
+-- completion), PERF INIT's CRZ CG the default 20.0 small (FCOM p.1311
+-- (11.40.35)), the FMC's trim 0 (the green band's selection not the flight
+-- before's). Before, TAKEOFF REF's 13 lines blank (string.format of nil)
+-- until a new CG, CRZ CG 20.0 large, the trim kept
+T.equal(rt:get(ETRIM), 0, "the FMC's trim gone")
+takeoff_page()
+T.check(line(1):find("TAKEOFF REF") ~= nil, "TAKEOFF REF shown: " .. line(1))
+T.check(small(9):find("%-%-%%") ~= nil and not line(9):find("%%") and not small(9):find("%d%.%d"),
+    "CG dashes, no trim: " .. line(9) .. "|" .. small(9))
+perf_page()
+T.check(small(9):find("20%.0%%") ~= nil and not line(9):find("20%.0"), "CRZ CG 20.0 small: " .. line(9) .. "|" .. small(9))
+-- the next flight: a ZFW keeps the dashes; a CG brings its trim
+enter("230", "L3")
+takeoff_page()
+T.check(line(1):find("TAKEOFF REF") ~= nil and small(9):find("%-%-%%") ~= nil, "the next ZFW: TAKEOFF REF with CG dashes: "
+    .. line(1) .. "|" .. small(9))
+enter("24", "R4")
+clear()
+T.check(line(9):find("24%%") ~= nil and small(9):find("%d%.%d") ~= nil and rt:get(ETRIM) > 0,
+    "a new CG 24: large, its trim: " .. line(9) .. "|" .. small(9))
 T.done()
