@@ -3403,3 +3403,10 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - CG を DELETE したときの `elevator_trim` は今までどおり残る（帯の選び方は資料に無い：ATA27 p.514 は FMC の CG・重さ・推力から選ぶとだけ。§177 の範囲の外）。
 - 試験：`flight_complete_test` 23（14 から +9）：便の前に ZFW 220・CRZ CG 25.5・CG 22 とトリム、flight complete の後に FMC のトリム 0、TAKEOFF REF の題と CG のダッシュ・トリムなし、CRZ CG 20.0 が小さい字、次の便の ZFW 230 の後も TAKEOFF REF と CG のダッシュ、CG 24 で大きい字とトリム。直す前のコードでは 5 件が落ちる（確かめた）。
 - X-Plane のシナリオ：新しい `s350_flight_complete_cg`（s163 と同じ RJAA 34L の進入路からの自動着陸、243.5 t）。空中では TAKEOFF REF に行けない（INIT/REF INDEX の <TAKEOFF は空中で消える：CDU-12、直さない）ので、止まってから PERF INIT の CRZ CG 25.5 と TAKEOFF REF の CG 22 を入れ、エンジンを止めて 30 秒。flight complete の後に FMC のトリム 0、TAKEOFF REF の題と `--%`、PERF INIT の小さい字の `20.0%`、次の便の ZFW 230 の後も TAKEOFF REF。CDU を 2 枚撮る。
+
+### 177.3 TAKEOFF REF の TRIM の重さを PERF INIT の GR WT に（PERF-2。e682bb80 の直し残し）
+
+- 見たこと（レビューの担当 3 のモック）：同じ CG・同じ GR WT でも、CG を入れた直後（CDU の GR WT で計算）と、ZFW か GR WT を入れ直した後（`calc_CGMAC` が OEW＋燃料＋FMC の PAX/CARGO の区画の和で計算）で TRIM が違った。X-Plane の荷物 60 t・区画は空・燃料 86.5 t で 6.5 → 5.3。荷物を X-Plane の Weight & Balance やシナリオの `payload_weight_in_kilograms` で積んだとき、乗員の ZFW がシムと違うときに出る。
+- 資料：FCOM p.1320 (11.40.44)：CG を入れると FMC がトリムを計算する。FMC の重さは PERF INIT の GR WT（p.1309 (11.40.33)）。
+- 直したこと：`calc_CGMAC` のトリム（乗員の CG を持つとき、405 の WBS の CG のとき）を、データの `grwt`（PERF INIT の GR WT、t）で計算する。区画の和は CG（% MAC）の計算にだけ使う（X-Plane に書く重心は PERF-1 で別の担当が直す。ここでは触らない）。
+- 試験：`wb_n19_test` 36（+3）：燃料 100 t・区画は空で ZFW 240（GR WT 340、区画の和 280）、CG 20 のトリムが 340 t の値、同じ ZFW をもう一度入れても同じ。直す前のコードでは 1 件が落ちる（5.5、340 t の値は 6.7）。

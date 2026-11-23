@@ -633,12 +633,18 @@ function calc_CGMAC()
 	-- small with a caret; the 109's and 570's dashes until the crew enters
 	-- one. Before, every airplane's TAKEOFF CG took this one, and the next
 	-- GR WT or ZFW overwrote a crew's CG and trim
+	-- (2026-11-24, review PERF-2) the trim at PERF INIT's GR WT (the FMC's
+	-- weight: FCOM p.1309 (11.40.33), p.1320 (11.40.44)), as a CG entry's;
+	-- before, at this sum of the OEW, the fuel and the PAX/CARGO zones,
+	-- short of X-Plane's payload the zones do not hold (60 t: 6.5 at the
+	-- CG entry, 5.3 at the same ZFW again)
+	local trimGW = tonumber(fmsModules["data"].grwt)
 	B747_fms_set_wbs_cg(CG_MAC)
 	if type(cg_lineLg) == "string" and string.len(cg_lineLg) > 0 then
-		calc_stab_trim(GW, fmsModules["data"].cg_mac)
+		calc_stab_trim(trimGW, fmsModules["data"].cg_mac)
 	elseif B747_fms_is_405() then
 		fmsModules["data"].cg_mac 		= string.format("%2.0f", wb.cg_mac)
-		calc_stab_trim(GW, CG_MAC)
+		calc_stab_trim(trimGW, CG_MAC)
 	end
 
 	simDR_cg_adjust = CG_shift * -1  --Value is flipped from what is in the XP slider
