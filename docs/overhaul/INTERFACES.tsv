@@ -624,6 +624,7 @@ laminar/B747/airdata/mach_fo	dataref	panel	B747.34.nav
 laminar/B747/airdata/valid_capt	dataref	panel	B747.34.nav
 laminar/B747/airdata/valid_fo	dataref	panel	B747.34.nav
 laminar/B747/airspeed/V1	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02,B744.fms.pages,B744.fms.pages.takeoff
+laminar/B747/airspeed/V2	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02,B744.fms.pages,B744.fms.pages.takeoff
 laminar/B747/airspeed/Vf0	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/Vf1	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/airspeed/Vf10	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
@@ -643,6 +644,7 @@ laminar/B747/airspeed/showVf30	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst0
 laminar/B747/airspeed/show_vf	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed/tape_capt	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed/tape_fo	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
+laminar/B747/airspeed/v2_show	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed/vr_r	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst
 laminar/B747/airspeed_window/min	dataref	panel	B747.60.fltInst,B747.60.xt.fltInst02
 laminar/B747/altimeter/baro_hectopascal	dataref	obj	B747.60.fltInst,B747.60.xt.fltInst02

@@ -830,3 +830,17 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - X-Plane の確かめ（親）：
   1. 向き：空中で翼を水平に保ったまま右の方向舵を踏む（スキッド）。`slip_deg` を読み、PFD を寄せて撮る。印は左へ（玉が左：左の方向舵で戻す向き）。逆なら key frame の符号を逆にする。
   2. 横風の滑走（s116 の形、20 kt）：印がバンクの針の下からほとんど動かない（13 px より内）。
+
+## 50. GE（570）の PFD の V2（2026-11-24：段 4 のフルレビューの DSP-4 の 1 つ目）
+
+- 前の状態：PFD の速度テープの V 速度は V1・VR（と NO V SPD）だけで、パネルに `airspeed/V2` を読む計器が無かった。GE の機体も P&W（109）と同じ出方。
+- 資料：FCOM p.970–972 (10.10.8–10)：570 は CDU で選んだ V1・VR・V2 を離陸のために出す。V1・VR は浮くと消え、V2 は上昇でフラップを上げ始めると消える。109・405 は V1・VR だけ。
+- 直したこと：
+  - 速度テープのモデル（`B747.60.speedtape_model.lua`）に `show_v2`：570（`engines/type` 1）で V2 を選んでいて（999 でない）、最小機動速度の帯がまだ出ていない（同じ「離陸の後の最初のフラップ上げ」：FCOM p.973、§13）。新しい dataref `laminar/B747/airspeed/v2_show`（init `B747.60.fltInst`、`B747.60.xt.speedtape.lua` が書く。INTERFACES.tsv に足した）。
+  - パネル：各 PFD（4 組）の `GROUP V-Speeds` の `Spd Ofst Kts` に `gen_pointer V2`（副操縦士は ` 2`）を V1 の後に足した。V1 と同じ位置・key frame、絵は前から acf の画像の中にあった `Vspeeds/V2`（V1・VR と同じ形の「−V2」）、`SHOW_EQUAL 1 airspeed/v2_show`。FCOM の図の V2 は中抜きの速度のバグの形に「V2」だが、この機体の V1・VR の形にそろえた（見た目の推定）。
+  - 変更前後は ACF_DIFF.md §5（追加）。
+- 試験：`speedtape_model_test`（+8 件：570 の地上・滑走・浮いた後で出る、フラップ上げで消え戻らない、V2 なし・109・空中開始で出ない。直す前のモデルでは 3 件が落ちる）、`speedtape_module_test`（+2 件：GE で 1、P&W で 0）、`tests/displays/pfd_v2_panel_test.lua`（46 件：4 組の V2 のバグが V1 と同じ群・位置・目盛、条件が `v2_show`。直す前の acf では 5 件が落ちる）。
+- X-Plane の確かめ（親）：新しい `s360_pfd_eicas_ge_takeoff`（Saudia、RJAA 34L の離陸）。地上で `v2_show` 1 と PFD の写真（`pfd_v2_ground`：V1・VR の上に「−V2」）、浮いた後のフラップ 20 でも 1（`pfd_v2_after_liftoff`：V1・VR は消える）、フラップ 10 で 0（`pfd_v2_removed`）。
+- しなかったこと（資料で決まらない：報告で問いにした）：
+  - 570 の着陸フラップと VREF の表示（FCOM p.973：「30/140」）：文は「VREF が目盛の外のとき速度の表示の下に」、図（p.970・972 の 570）は 80 kt のとき速度テープの下の右に「30/140」。目盛の外のときだけか、選んでいる間いつもか、色、CRT での位置が決まらない。109 の目盛の外の VREF の数字も前から無い（DIFFERENCES.md の残り）。
+  - 570 の PLI の「フラップ上げの低速」（FCOM p.975・977：405・570 は flaps not up に加えて at slow speeds with flaps up）：「低速」の境が資料に無い（`B747.60.minspeed_model.lua` の `show_pli` は 109 の形のまま）。

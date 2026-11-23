@@ -101,4 +101,36 @@ T.check(out.show_mins, "4 s below 100 kt: still shown")
 hold(1)
 T.check(not out.show_mins, "5 s below 100 kt on the ground: cleared")
 
+-- (2026-11-24, DSP-4) the 570's (GE) V2 bug: for the takeoff, removed on
+-- the climb-out as the flap retraction begins (FCOM p.972 (10.10.10)); the
+-- 109 and 405 show none; none without a V2 selected (999)
+s, inp = M.new(), M.inputs()
+inp.vref30, inp.v2, inp.v2_bug = 150, 165, true
+lever(M.F20)
+hold(M.GROUND_S)
+T.check(out.show_v2, "570: V2 selected, on the ground before takeoff: shown")
+inp.ias = 150
+run()
+T.check(out.show_v2, "570: the takeoff roll: shown")
+inp.air, inp.ias = true, 170
+run()
+T.check(out.show_v2, "570: after lift-off at flaps 20: still shown (V1 and VR go at lift-off)")
+lever(M.F10); run()
+T.check(not out.show_v2, "570: the flap retraction begins: removed")
+lever(M.F20); run()
+T.check(not out.show_v2, "570: flaps out again: stays removed")
+s, inp = M.new(), M.inputs()
+inp.v2, inp.v2_bug = 999, true
+hold(M.GROUND_S)
+T.check(not out.show_v2, "570: no V2 selected (999): none")
+s, inp = M.new(), M.inputs()
+inp.v2, inp.v2_bug = 165, false
+lever(M.F20)
+hold(M.GROUND_S)
+T.check(not out.show_v2, "109 (P&W) and 405: no V2 on the speed tape")
+s, inp = M.new(), M.inputs()
+inp.v2, inp.v2_bug, inp.air, inp.ias = 165, true, true, 250
+run()
+T.check(not out.show_v2, "570: a flight started in the air: none")
+
 T.done()

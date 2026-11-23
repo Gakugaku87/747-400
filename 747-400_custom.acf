@@ -75706,6 +75706,22 @@ GROUP Captain PFD
               IS_VERTICAL 1
               OFFSET 0.000000
 
+            gen_pointer V2
+              POS 126.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
           END_GROUP
           GROUP NOVSPD LCD
             SHOW_EQUAL 1.000000 laminar/B747/pfd/style
@@ -79980,6 +79996,22 @@ GROUP Captain PFD
               IMAGE CRT Displays/PFD/Vspeeds/V1
               DATAREF laminar/B747/airspeed/V1
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer V2
+              POS 126.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -85046,6 +85078,22 @@ GROUP First Officer PFD
               IS_VERTICAL 1
               OFFSET 0.000000
 
+            gen_pointer V2 2
+              POS 805.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
           END_GROUP
           GROUP NOVSPD LCD
             SHOW_EQUAL 1.000000 laminar/B747/pfd/style
@@ -89277,6 +89325,22 @@ GROUP First Officer PFD
               IMAGE CRT Displays/PFD/Vspeeds/V1
               DATAREF laminar/B747/airspeed/V1
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer V2 2
+              POS 805.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5

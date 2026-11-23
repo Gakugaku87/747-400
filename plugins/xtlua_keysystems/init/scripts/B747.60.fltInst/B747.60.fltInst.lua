@@ -123,6 +123,8 @@ B747DR_pfd_baro_alert_fo                        = deferred_dataref("laminar/B747
 B747DR_pfd_pli                                  = deferred_dataref("laminar/B747/pfd/pli", "number")
 B747DR_pfd_pli_show                             = deferred_dataref("laminar/B747/pfd/pli_show", "number")
 B747DR_airspeed_vr_r                            = deferred_dataref("laminar/B747/airspeed/vr_r", "number")
+-- (2026-11-24, DSP-4) the 570's (GE) V2 bug shown on the speed tape
+B747DR_airspeed_v2_show                         = deferred_dataref("laminar/B747/airspeed/v2_show", "number")
 -- the flight path vector (step 4d): shown, the FPV flag, its place on the
 -- PFD (pixels from the attitude display's centre: x right, y up); the
 -- PITCH and ROLL disagree flags (both PFDs)

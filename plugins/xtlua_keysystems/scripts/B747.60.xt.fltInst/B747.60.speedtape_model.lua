@@ -32,6 +32,8 @@ function M.inputs()
         land_flap = M.LAND_NONE,
         air = false,            -- the PSEU's air mode
         ias = 0,                -- kt
+        v2 = 999,               -- kt: the V2 selected on the CDU (999: none)
+        v2_bug = false,         -- (2026-11-24, DSP-4) the 570's (GE) speed tape shows V2
     }
 end
 -- on the ground for the minimum maneuvering band only below this airspeed
@@ -50,6 +52,7 @@ function M.new()
             vf = {[0] = 0, 0, 0, 0, 0, 0, 0},       -- each detent's maneuver speed
             show_vf = {[0] = false, false, false, false, false, false, false},
             show_mins = false,
+            show_v2 = false,
         },
     }
 end
@@ -87,6 +90,12 @@ function M.update(s, inp, dt)
         s.mins = true
     end
     out.show_mins = s.mins == true
+    -- (2026-11-24, the stage 4 review's DSP-4) the 570's (GE) V2 selected on
+    -- the CDU: shown for the takeoff, removed on the climb-out as the flap
+    -- retraction begins (FCOM p.972 (10.10.10)) - the first retraction after
+    -- takeoff, as the minimum maneuvering band's (p.973). The 109 and 405
+    -- show V1 and VR only
+    out.show_v2 = inp.v2_bug and inp.v2 > 0 and inp.v2 < 900 and not out.show_mins
     return out
 end
 
