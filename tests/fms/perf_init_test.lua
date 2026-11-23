@@ -202,4 +202,25 @@ frames(0.1)
 key("ls_key/L3")
 T.check(line(7):find("^463%.0"), "in pounds: the sim's 210.0 t, 463.0 thousand pounds: " .. line(7))
 
+-- (2026-11-24, review PERF-6) no ZFW top of its own, GR WT's 400 t bounds
+-- it (estimate); the 405's and 570's MZFW 276,691 kg (FCOM p.78 (L.10.2))
+-- and a loaded freighter's 291.2 t taken. Before, INVALID ENTRY over 270 t
+rt = new_rt("KGS")
+key("func_key/index")
+for _, v in ipairs({"276.6", "291.2", "300.0"}) do
+    clear()
+    type_in(v)
+    key("ls_key/L3")
+    T.check(pad() == "" and line(7):find("^" .. v:gsub("%.", "%%.")) ~= nil, "ZFW " .. v .. " with 100 t of fuel taken: " .. line(7) .. "|" .. pad())
+end
+clear()
+type_in("300.1")
+key("ls_key/L3")
+T.equal(pad(), "INVALID ENTRY", "ZFW 300.1 with 100 t of fuel: GR WT 400.1, INVALID ENTRY (GR WT's 400)")
+clear()
+type_in("129.9")
+key("ls_key/L3")
+T.equal(pad(), "INVALID ENTRY", "ZFW 129.9: INVALID ENTRY (130 and up, as before)")
+clear()
+
 T.done()

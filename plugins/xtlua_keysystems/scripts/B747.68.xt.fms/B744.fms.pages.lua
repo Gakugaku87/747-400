@@ -1536,7 +1536,12 @@ function fmsFunctions.setdata(fmsO,value)
 	local fuel = perf_fuel_t()
 	local zfw = value == "grwt" and t - fuel or t
 	local gw = zfw + fuel
-	if zfw < 130 or zfw > 270 or gw < 150 or gw > 400 then fmsO["notify"]="INVALID ENTRY" return end
+	-- (2026-11-24, review PERF-6) no ZFW top of its own: GR WT's 400 t
+	-- bounds it (estimate: FCOM p.1310 (11.40.34) gives the form only).
+	-- Before 270 t (no source), under the 405's and 570's maximum zero fuel
+	-- weight of 276,691 kg (FCOM p.78 (L.10.2)): a loaded freighter's ZFW,
+	-- the sim's too, was INVALID ENTRY
+	if zfw < 130 or gw < 150 or gw > 400 then fmsO["notify"]="INVALID ENTRY" return end
 	-- (2026-11-24, review CDU-7) kept to 0.1 kg: an entry in pounds shows
 	-- back as entered (FCOM p.1309-1310: XXX.X); before, to 0.1 t (480.0
 	-- thousand pounds came back 479.9)
