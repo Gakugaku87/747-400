@@ -121,6 +121,49 @@ do
     T.check(out.speedbrake_auto, "primary and alternate ground sensing disagreeing: SPEEDBRAKE AUTO")
 end
 
+-- (2026-11-23 review WARN-1) after the extension the pilot can put the
+-- lever back one notch at a time and it stays (ATA27 p.170: the no-back
+-- brake lets the pilot override the actuator's input; FCOM p.951 (9.20.11),
+-- p.149 (NP.21.55)): before, a lever still at or above ARM was driven back
+-- to UP. DN retracts the actuator without SPEEDBRAKE AUTO
+do
+    local s, inp = ground(M.ARM)
+    local out = run(s, inp, 2.5)
+    T.equal(out.lever, M.UP, "landing: extended to UP")
+    for _, notch in ipairs({M.DETENT, M.ARM}) do
+        inp.lever = notch
+        out = run(s, inp, 3)
+        T.equal(out.lever, notch, "moved back by hand to " .. notch .. " after the extension: stays (3 s)")
+        T.equal(out.driving, 0, "at " .. notch .. ": the actuator does not drive it")
+        T.check(not out.speedbrake_auto, "at " .. notch .. ": no SPEEDBRAKE AUTO")
+    end
+    inp.lever = M.DN
+    out = run(s, inp, 5)
+    T.equal(out.lever, M.DN, "then DN: stays DN")
+    T.equal(s.act, 0, "the actuator retracted")
+    T.check(not out.speedbrake_auto, "no SPEEDBRAKE AUTO")
+    -- armed again on the ground: extends again
+    inp.lever = M.ARM
+    out = run(s, inp, 2.5)
+    T.equal(out.lever, M.UP, "ARM again with the levers idle: extended again")
+    -- moved back while the actuator still runs: it carries the lever on for
+    -- the rest of its stroke only
+    s, inp = ground(M.ARM)
+    run(s, inp, 1.5)
+    inp.lever = M.DETENT
+    out = run(s, inp, 3)
+    T.near(out.lever, M.DETENT + 0.5 * (M.UP - M.DN) / M.ACTUATOR_S, 1e-9, "moved back with 0.5 s of stroke left: carried on by that much, then stays")
+    -- reverse lever 2 or 4 raised: its cam keeps the lever out of DN
+    s, inp = ground(M.DN)
+    inp.reverse[2] = true
+    out = run(s, inp, 2.5)
+    T.equal(out.lever, M.UP, "reverse lever 2: driven to UP")
+    inp.lever = M.DN
+    out = run(s, inp, 1)
+    T.check(out.lever >= M.ARM_LO and out.lever < M.ARM, "the lever pushed DN with reverse lever 2 raised: lifted just out of DN (" .. out.lever .. ")")
+    T.check(not out.speedbrake_auto, "no SPEEDBRAKE AUTO")
+end
+
 -- >SPEEDBRAKES EXT (FCOM p.958; ATA27 p.740)
 do
     local s, inp = M.new(), M.inputs()

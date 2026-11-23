@@ -519,6 +519,23 @@ frames(2.5)
 T.equal(get(SB), 1, "touchdown, thrust levers idle: driven to UP")
 T.near(get(XSB), 1, 1e-6, "X-Plane's ratio 1")
 T.equal(get(MEMO, 45), 0, "no SPEEDBRAKE ARMED at UP")
+-- (2026-11-23 review WARN-1) after the landing, speed_brakes_up_one three
+-- times brings the lever DN and it stays there (FCOM p.149 (NP.21.55), p.951
+-- (9.20.11); ATA27 p.170): before, the actuator pushed it back to UP every
+-- time (X-Plane, the review's v08)
+local UP_ONE = "sim/flight_controls/speed_brakes_up_one"
+for n, want in ipairs({0.53, 0.125, 0}) do
+    rt:command(UP_ONE, 0.2)
+    frames(0.5)
+    T.equal(get(SB), want, "speed_brakes_up_one " .. n .. ": the lever at " .. want)
+end
+frames(3)
+T.equal(get(SB), 0, "3 s later: still DN")
+T.equal(get(XSB), 0, "X-Plane's ratio 0")
+T.equal(get(ADVISORY, 272), 0, "no SPEEDBRAKE AUTO")
+rt:set(SB, 0.125)
+frames(2.5)
+T.equal(get(SB), 1, "armed again: driven to UP again")
 rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 0.5)
 frames(1)
 T.equal(get(SB), 1, "X-Plane's throttle ratio is the input, not the lever (the EEC writes the levers' average there with the A/T on): stays UP")
