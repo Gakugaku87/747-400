@@ -304,9 +304,38 @@ end
 -- flaps 10 1.0 -> 5.2, 20 3.2 -> 6.2 (280 t: the two centres of gravity's
 -- mean +0.1 units; 220 t +0.8 to +1.2, 340 t -1.7 to +0.4: notes/AERO.md
 -- §3.24), 30 4.0 -> 6.05 (7.13 units on the approach; the cruise's 4.36 ->
--- 4.00 units). The stabilizer's units (the SRM, its indicator, the EICAS,
--- the greenband) and the 3D keep the trim's own values
-M.STAB_FLAP = {{0, 0}, {10, 5.2}, {20, 6.2}, {30, 6.05}}
+-- 4.00 units).
+-- (2026-11-24, the 2026-11-23 review's FCTL-3; notes/AERO.md §3.29) Fitted
+-- again, to the takeoff and to level flight. The table above was fitted to
+-- the takeoff's climb at max thrust while the thrust's correction was four
+-- times its size now (§3.27): with the thrust low the flaps' share was too
+-- much (level at 166 kt with flaps 20 took 8.6 units, about 2 over the
+-- 747-100). With the thrust's and the downwash's corrections of §3.27 and
+-- §3.28 (estimates: the 747-100's values are a starting point):
+--   * 20 6.2 -> 4.0: the six takeoffs with flaps 20 (220, 280 and 340 t at
+--     two centres of gravity each; the balance over 600 to 1,400 ft of
+--     radio altitude with the A/P) against the FPPM (p.44): mean 0.0 (220 t
+--     +1.0 and +0.8, 280 t -0.9 and +0.3, 340 t -0.9 and -0.3: X-Plane's
+--     balance moves less with the weight and with the centre of gravity
+--     than the FPPM's table does, which a table by the flaps cannot mend);
+--     and level at 159 kt, 249.5 t, 15 % MAC, 5,000 ft 8.5 units, the
+--     747-100's 8.5 (NASA_SIM p.338 (14.1-13) case 4.0.13: a table from
+--     before section 19's revision; -100 values);
+--   * 10 5.2 -> 2.2: between what the takeoff asks (2.5: the two at 280 t
+--     as flaps 20's two at 280 t) and what level flight asks (1.9: 167 kt,
+--     the 747-100's 7.8, case 4.0.12): the takeoffs -1.3 and +0.1, level
+--     +0.3 units;
+--   * 30 6.05 -> 6.2: level with the gear down at 150 kt, 249.5 t, 15 %
+--     9.2 units, the 747-100's 9.2 (case 4.0.16; p.342 (14.1-17)'s figure
+--     at 564,000 lb reads 9.4 at 15 % and 6.6 at 25 %, so about 7.7 at 21 %
+--     in level flight: the 7.3 above was not the figure's); the approach
+--     at 245 t and 20.6 % takes 8.2 units (before 7.15);
+--   * flaps 25 (the trailing edge at 22 degrees) between 20's and 30's:
+--     level at 155 kt 8.3 units with the gear up, the 747-100's 8.6 (case
+--     4.0.14).
+-- The stabilizer's units (the SRM, its indicator, the EICAS, the greenband)
+-- and the 3D keep the trim's own values
+M.STAB_FLAP = {{0, 0}, {10, 2.2}, {20, 4.0}, {30, 6.2}}
 
 -- the degrees (leading edge up) at a trailing edge flap angle
 function M.stab_flap(te)
