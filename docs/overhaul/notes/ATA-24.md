@@ -570,3 +570,11 @@
 - LH_MAN の GCU 2 の論理図（p.111）は LH24 p.72–73 と同じ値（IDG の cooler 弁 127/104 ℃、ELEC DRIVE 185 ℃・140 psi、DRIVE OIL TEMP、underspeed）。BCU 1 の CB を APU 停止の前に抜くと APU が cool-down なしで止まる（p.96）。
 - MMEL（p.83–86）：BTB 1〜3 か DC 絶縁リレー 1〜3 が閉のままだと LAND 3 不可（ELEC-18 と合う）。PW で IDG を切り離すと燃料タンクの温度の下限が変わる（FUEL-20 の手がかり）。
 
+## 15. IDG 2 台と EXT・APU のときは負荷制限をしない（SYS-6、2026-11-23 の段 4 のレビュー）
+
+- 指摘：負荷制限（§4.12 の簡略化：電流を計算せず台数で決める）は IDG の台数だけを見て、2 台ならギャレー 1・4・2 を落としていた。地上で APU の発電機（か地上電源）で始動し、エンジン 4・3 が入った時点（右側は IDG 3・4、左側は APU 1）で、3 台目が入るまでギャレー 1・4・2 が落ちた。見えるのは ELEC synoptic の GALLEY だけ（UTIL OFF 灯と ELEC UTIL BUS は負荷制限の間は出ない）。
+- 資料：FCOM p.795 (6.20.1)：負荷が「使える電力（機体か外部）」を超えたら落とす。LH24 p.236 (24-50 p.234)：需要が容量を超えたとき。p.238 (p.236)：2 台なら utility と G ELCU 3 を戻す。p.240 (p.238)：BCU は SSB・BTB・GCB・APB・XPC から構成（台数と、並列か分かれているか）を見て、容量と比べる。EXT・APU は 1 系統 290 A で別に見る。
+- 直したこと（`B747.03.elec_model.lua`）：2 台のときの負荷制限（ギャレー 3 を残して 3 つ）を、EXT も APU もつながっていない（XPC・APB が全部開）ときだけにした。IDG 2 台と EXT・APU が分かれて持つときは、それぞれの電源が自分の母線だけを持つので、IDG 1 台あたりの負荷は 4 台のときと同じ（需要は容量の中）とみなす。電流を計算しない簡略化（§4.12）はそのまま：EXT・APU の 290 A の超過は作っていない。
+- 試験：`tests/elec/elec_model_test.lua`（APU 2 台で始動しエンジン 4・3 が入った後 5 秒、EXT 1 と IDG 3・4 で 5 秒：ギャレー 4 つと utility が通電、`load_shed` なし。空中の 2 台（EXT・APU なし）の負荷制限の試験は前のまま通る）。直す前のコードでは 2 件が落ちる。
+- X-Plane の確かめ：新しい `tests/flight/scenarios/s372_elec_galley_ext_two_idgs.json`（成田 34L・エンジン運転中、GROUND SERVICES で地上電源、EXT PWR 1 だけを入れる。`laminar/B747/electrical/bus/galley[0..3]` が 1、`load_shed` が 0）。APU で始動する形は作っていない（始動に時間がかかる。模型の試験で見た）。
+

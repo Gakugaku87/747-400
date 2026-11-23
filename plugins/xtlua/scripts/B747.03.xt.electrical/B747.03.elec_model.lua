@@ -493,7 +493,13 @@ function M.update(s, inp, dt)
     local gens = count(s.gcb, 4)
     local externals = count(s.xpc, 2) + count(s.apb, 2)
     local target = 0
-    if gens == 2 then
+    -- (2026-11-23 review SYS-6) two IDGs alone carrying the buses; with EXT
+    -- or the APU on the other side (an engine start on the ground: each IDG
+    -- has its own bus) the demand is within the capacity ("loads exceed power
+    -- available (airplane or external)", FCOM p.795 (6.20.1); the BCUs see
+    -- the configuration from the SSB, BTBs, GCBs, APBs and XPCs, LH24 p.240).
+    -- Before, galleys 1, 4 and 2 went in a start with engines 4 and 3 on line
+    if gens == 2 and externals == 0 then
         target = 3                                  -- utility and galley 3 stay
     elseif gens <= 1 and air_mode and externals == 0 then
         target = #M.SHED_ORDER
