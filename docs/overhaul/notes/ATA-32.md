@@ -450,3 +450,17 @@ X-Plane の `sim/flightmodel/failures/onground_any`（どれか 1 輪が接地�
 - 回帰（X-Plane）：`s38_rto` は 2 回目（70 kt で中止）が「30 秒で止まらない」で落ちた。シナリオが Web API の上限の 10 秒だけ `brakes_max` を押し、離した後はアイドルで転がり続けたため（止まるのに 10 秒より長くかかるようになった）。`brakes_toggle_max` で止まるまで踏み続ける形に直した。1 回目（95 kt の RTO、オートブレーキ RTO）は止まるまで 13.5 秒（前は 8.9 秒）。
 - ほかに見たこと（直していない）：`s340` のオートブレーキ 2 の着陸は 50 ft から 2,382 m（摩擦を変える前 2,367 m：オートブレーキの減速の目標 5 ft/s²（ATA29_32 p.503）で決まり、変わらない）。FCOM の AUTOBRAKE 2 を速さと重さで直すと 2,188 m で 9 % 長いが、そのうち約 55 m は空中の距離（自動着陸の 360 m と FCOM の約 305 m）の差。目標は整備資料の値なので変えない。
 - 直した後の X-Plane：`s38_rto` 12/0（2 回目は止まるまで踏む形）、`s243_failure_arm` 35/0（40 kt からの手のブレーキ 10 秒で止まる）。
+
+## 20. RTO を手で止めたとき・掛からなかったときの AUTOBRAKES（WARN-2、2026-11-23 の段 4 のレビュー）
+
+- 指摘：RTO のオートブレーキが掛かった後、ペダル・推力レバー・スピードブレーキで止める（disable）と、AUTOBRAKES が出なかった。85 kt より上でペダルを踏んだまま推力レバーを閉じたとき（掛からない）も出なかった。§12 の「作らなかったもの」に「RTO の開始で故障・手動の override」（弁と圧のモデルが無い）とあったが、要る状態（ラッチ、アイドル、掛かっているか）はモデルが既に持っていた。
+- 資料：
+  - FCOM p.1521 (14.30.1)：AUTOBRAKES は「RTO initiated above 85 knots and autobrake has not been applied」でも出る。
+  - ATA29_32 p.528 (32-42 p.32)：disable は弁の電源だけを切り、セレクターのラッチコイルの電源は残す。「RTO が始まりブレーキが掛からないとき」に故障の表示。p.530 (p.34)：AUTOBRAKES の条件に「RTO initiated but manually overridden」。
+  - ATA29_32 p.527 (p.31) の図：RTO の適用は、ラッチ（85 kt 超の車輪速）と推力レバー retard の AND に、故障なしとペダルのスイッチが踏まれていないことを AND したもの。p.529 (p.33) の図：disable の論理は「RTO の適用が起きた後」だけ。
+- 直したこと（`B747.10.autobrake_model.lua`）：「RTO の開始」を、適用の論理の前半（ラッチと推力レバー 4 本のアイドル）と読み、それでブレーキの指令が無いときに、RTO のセレクターで地上なら AUTOBRAKES を出す。disable の後（ペダル・レバー・スピードブレーキ）と、ペダルで掛からない間の両方。推力レバーを進める（地上滑走）と「開始」でなくなり消え、戻すとまた出る（ラッチはセレクターが RTO の間残る）。セレクター OFF で消える。
+- 直さなかったもの：
+  - memo の AUTOBRAKES RTO は、disable の後も残す（前のまま）。FCOM p.1522 (14.30.2) の memo の条件は「Autobrake RTO selected」、ATA29_32 p.530 もセレクタースイッチの位置で、disable はセレクターを RTO に残す（p.528）。レビューの案の「memo を消す」は資料と合わない。
+  - セレクターを触らずに 2 回目の RTO が掛からないこと（前のまま）。disable がいつ解けるかは資料に無い。図（p.524 (p.28)・p.529）では RTO の回路の電源はセレクターのラッチから来るので、セレクターが RTO の間は残ると読める（推定）。今は AUTOBRAKES が出るので、乗員には分かる。解くかどうかは利用者への問い。
+- 試験：`tests/gear/autobrake_model_test.lua`（ペダルで外した後の AUTOBRAKES と memo、ペダルを離しても残る、レバーを進めると消え戻すと出る、OFF で消え RTO を選び直すと出ない。ペダルを踏んだまま 100 kt で中止すると掛からず AUTOBRAKES、離すと掛かり消える）。直す前のコードでは 4 件が落ちる。
+- X-Plane の確かめ：新しい `tests/flight/scenarios/s370_rto_override.json`（RJAA 34L、s38 と同じ形。`laminar/B747/CAS/advisory_status[17]` と `memo_status[7]`）。

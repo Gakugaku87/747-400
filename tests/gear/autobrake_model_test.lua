@@ -165,6 +165,43 @@ do
     out = run(s, inp, 3, flight(20))
     T.equal(out.cmd, 0, "the pedals: RTO disabled")
     T.equal(out.dial, M.RTO, "the selector stays at RTO")
+    -- (2026-11-23 review WARN-2) an RTO initiated and overridden: AUTOBRAKES
+    -- (FCOM p.1521; ATA29_32 p.528, p.530); the memo stays with the selector
+    -- at RTO (FCOM p.1522: "Autobrake RTO selected"). Before, no AUTOBRAKES
+    T.check(out.autobrakes, "RTO overridden by the pedals: AUTOBRAKES")
+    T.equal(out.memo, M.RTO, "the memo AUTOBRAKES RTO stays (the selector at RTO)")
+    inp.pedal = {0, 0}
+    out = run(s, inp, 1, flight(20))
+    T.check(out.autobrakes and out.cmd == 0, "pedals released: still disabled, AUTOBRAKES")
+    inp.levers = {0.2, 0, 0, 0}
+    out = run(s, inp, 0.5)
+    T.check(not out.autobrakes, "a lever advanced (taxiing): no RTO initiated, no AUTOBRAKES")
+    inp.levers = {0, 0, 0, 0}
+    out = run(s, inp, 0.5)
+    T.check(out.autobrakes, "the levers back: AUTOBRAKES again (the RTO latch holds with the selector at RTO)")
+    inp.dial = M.OFF
+    out = run(s, inp, 0.1)
+    T.check(not out.autobrakes and out.memo == nil, "selector OFF: reset, no AUTOBRAKES, no memo")
+    inp.dial = M.RTO
+    out = run(s, inp, 0.1)
+    T.check(out.armed and not out.autobrakes and out.memo == M.RTO, "RTO again: armed, no AUTOBRAKES")
+    -- rejected above 85 kt with the pedals already down: no application
+    -- while they are (the pedal switch is an input to it, p.527), AUTOBRAKES
+    -- (FCOM p.1521: "RTO initiated above 85 knots and autobrake has not been
+    -- applied"); released, it applies
+    s, inp = M.new(), M.inputs()
+    inp.dial = M.RTO
+    inp.levers = {0.9, 0.9, 0.9, 0.9}
+    inp.gs_kt = 100
+    out = run(s, inp, 1)
+    T.check(not out.autobrakes, "the takeoff roll above 85 kt: no AUTOBRAKES")
+    inp.pedal = {0.8, 0.8}
+    inp.levers = {0, 0, 0, 0}
+    out = run(s, inp, 0.5, flight(0, 6))
+    T.check(out.cmd == 0 and out.autobrakes, "rejected at 100 kt with the pedals down: not applied, AUTOBRAKES")
+    inp.pedal = {0, 0}
+    out = run(s, inp, 0.1, flight(20))
+    T.check(out.cmd == 1 and not out.autobrakes, "the pedals released: applied, no AUTOBRAKES")
     -- (2026-11-05 review 4) without the normal brake pressure RTO does not
     -- work: not armed, AUTOBRAKES (FCOM p.1515, p.1521: inoperative); lost
     -- while applying, its pressure let go
