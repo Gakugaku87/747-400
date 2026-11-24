@@ -102,9 +102,17 @@ for _, deg in ipairs(M.DETENTS) do
 end
 
 -- one detent's B at a Mach; flaps up, from the chart's highest Mach straight
--- to the buffet onset at M 0.86, then the high speed buffet (estimate)
+-- to the buffet onset at M 0.86, then the high speed buffet (estimate).
+-- (2026-11-24, the 2026-11-23 review's PERF-7) the flaps' lines held at the
+-- chart's highest Mach above it (estimate: FCTM p.34 (1.4) has the 40
+-- degree bank to the shaker at all weights, no word on the altitude).
+-- Before, the 10,000 ft line went on out of the chart: high and heavy the
+-- amber band's top went over the flap maneuver speed bug (flaps 10 at
+-- 20,000 ft and 394.6 t: +9.8 kt; FAOR's heavy takeoff could give AIRSPEED
+-- LOW at the bug)
 local function detent_b(deg, m)
     local l = LINES[deg]
+    if deg ~= 0 and m > l[3] then m = l[3] end
     if deg == 0 and m > l[3] then
         if m <= M.BUFFET_MACH then
             local b3 = l[1] + l[2] * l[3]
