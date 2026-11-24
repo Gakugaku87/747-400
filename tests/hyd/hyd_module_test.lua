@@ -807,10 +807,23 @@ T.equal(get(ADVISORY, 203), 1, "fail overheat 2: HYD OVHT SYS 2")
 T.equal(get(HYD .. "light/sys_fault", 1), 1, "fail overheat 2: SYS FAULT 2")
 T.equal(get(ADVISORY, 202), 0, "fail overheat 2: not HYD OVHT SYS 1")
 rt:set(FAIL .. "overheat", 1, 0)
--- (2026-11-12 review HA-2) the fluid's outside temperature: the air at the
--- airplane (before, the planet's mean sea-level temperature, 15 C always)
-T.check(rt.bound["sim/weather/aircraft/temperature_ambient_deg_c"] ~= nil, "the outside air temperature at the airplane looked up")
+-- (2026-11-24, the 2026-11-23 review's PNL-8 = SYS-4) the fluid's base
+-- temperature the fuel's (laminar/B747/fuel/temperature: the heat
+-- exchangers in the main tanks, ATA29_32 p.76; estimate). From 2026-11-12
+-- (review HA-2) the static air at the airplane (about -24 C in the cruise),
+-- before that the planet's mean sea-level temperature (15 C always)
+T.check(rt.bound["laminar/B747/fuel/temperature"] ~= nil, "the fuel temperature looked up")
+T.check(rt.bound["sim/weather/aircraft/temperature_ambient_deg_c"] == nil, "not the static air's")
 T.check(rt.bound["sim/physics/earth_temp_c"] == nil, "not the planet's mean sea-level temperature")
+-- (D of the 2026-11-23 review: SYS-7) the base through the glue: the fluid
+-- of a system with a pump running goes toward the fuel's + 30 C (the
+-- review's mutant with the base fixed at 15 passed every test)
+rt:set("laminar/B747/fuel/temperature", -20)
+frames(3600)
+T.check(math.abs(get(HYD .. "temp_1") - 10) < 2, "the fuel at -20 C, an hour on: system 1's fluid about 10 C (" .. get(HYD .. "temp_1") .. ")")
+rt:set("laminar/B747/fuel/temperature", 20)
+frames(3600)
+T.check(math.abs(get(HYD .. "temp_1") - 50) < 2, "the fuel at 20 C: about 50 C, FCOM p.1485's example (" .. get(HYD .. "temp_1") .. ")")
 
 -- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow left for the gear
 -- (spare_gpm, read by the gear module) and the gear's take

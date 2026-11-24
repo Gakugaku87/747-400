@@ -67,10 +67,15 @@ B747_duct_pressure_R                = deferred_dataref("laminar/B747/air/duct_pr
 --B747DR_engine4psi    = deferred_dataref("laminar/B747/air/engine4/bleed_air_psi", "number")
 simDR_startup_running           = find_dataref("sim/operation/prefs/startup_running")
 simDRTime=find_dataref("sim/time/total_running_time_sec")
--- (2026-11-12 review HA-2) the air at the airplane; before,
--- sim/physics/earth_temp_c, the planet's mean sea-level temperature (15 C
--- always): the fluid's temperature 45.0 C in any weather
-B747DR_hyd_temp = find_dataref("sim/weather/aircraft/temperature_ambient_deg_c")
+-- (2026-11-24, the 2026-11-23 review's PNL-8 = SYS-4) the fluid's
+-- temperature on the fuel's (the fuel model's, laminar/B747/fuel/
+-- temperature: the TAT followed slowly, whole degrees): the systems are
+-- cooled by the heat exchangers in the main tanks (ATA29_32 p.76 (29 Page
+-- 74)) and the indication is the case drain's fluid (p.100 (29 Page 98));
+-- FCOM p.1485 (13.10.3) shows 50 °C, no cruise value (estimate). Before,
+-- from 2026-11-12 (review HA-2) the static air at the airplane: about
+-- -24 °C in the cruise; before that sim/physics/earth_temp_c (15 C always)
+B747DR_hyd_temp = find_dataref("laminar/B747/fuel/temperature")
 B747DR_hyd_sys_pressure_1      = deferred_dataref("laminar/B747/hydraulics/pressure_1", "number")
 B747DR_hyd_sys_pressure_2      = deferred_dataref("laminar/B747/hydraulics/pressure_2", "number")
 B747DR_hyd_sys_pressure_3      = deferred_dataref("laminar/B747/hydraulics/pressure_3", "number")

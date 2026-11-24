@@ -20,5 +20,6 @@ return {
         {"inp.flaps_fcu[4] = B747DR_hyd_fcu_fail[0] < 0.5", "inp.flaps_fcu[4] = true", file = GLUE, name = "glue: system 4's FCU never failed"},
         {"inp.flaps_down = B747DR_fcu_te_down > 0.5", "inp.flaps_down = false", file = GLUE, name = "glue: flaps down never"},
         {"inp.flaps_moving = B747DR_fcu_te_moving > 0.5", "inp.flaps_moving = false", file = GLUE, name = "glue: flaps moving never"},
+        {"inp.oat = B747DR_hyd_temp", "inp.oat = 15", file = GLUE, name = "glue: the base temperature fixed (PNL-8: the fuel's)"},
     },
 }
