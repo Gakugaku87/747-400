@@ -1,8 +1,8 @@
 -- A spec for tests/tools/mutate.lua (2026-11-24, D of the 2026-11-23 review:
 -- DSP-6 d): the engine indications' colours and the EICAS's thrust
 -- reference line broken one place at a time, the review's five mutants that
--- passed the tests before this day's (its two on the STATUS memory's glue are
--- not here yet). Every one is caught by these tests (run it after a change
+-- passed the tests before this day's (its two on the STATUS memory's glue:
+-- status_nvm_wiring.lua). Every one is caught by these tests (run it after a change
 -- to that code or its tests):
 --   luajit tests/tools/mutate.lua tests/tools/mutations/engine_display_wiring.lua
 local D = "plugins/xtlua/scripts/B747.40.xt.engines/B747.40.engine_display_model.lua"
