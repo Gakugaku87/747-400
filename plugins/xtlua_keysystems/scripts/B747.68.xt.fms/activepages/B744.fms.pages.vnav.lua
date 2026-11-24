@@ -34,6 +34,15 @@ local conv = 1.0 --converter (pounds to kilos)
 -- LRC; <ECON (5L) and LRC> (CRZ 6R) choose (FCOM p.1327-1328, p.1347-1350,
 -- p.1391-1392; FMSPG p.112-113, p.131-134, p.192-193)
 local function vnav_text(id) return (string.gsub(fmsModules["data"][id], "%s+$", "")) end
+-- (2026-11-24, the 2026-11-23 review's CDU-13) SPD RESTR's altitude as FCOM
+-- p.1269 (11.31.35) shows altitudes: FLXXX above the transition (the climb's
+-- TRANS ALT, the descent's TRANS LVL), else feet; its dashes as they are.
+-- Before, feet at every altitude
+local function rest_alt(text, trans)
+  local ft = tonumber(text)
+  if not ft then return text end
+  return B747_cdu_model.format_alt(ft, tonumber(trans) or 18000)
+end
 -- the CRZ page's STEP TO and its step point (step 8b2; FCOM p.1257,
 -- p.1348-1349, FMSPG p.133; also the sim's automatic step climb's: notes/
 -- ATA-34-61-FMC.md §126): a crew's STEP TO or the FMC's by the step size,
@@ -387,7 +396,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       lr(clb_trans_above() and "" or (fmsModules["data"]["transpd"].."/"..fmsModules["data"]["spdtransalt"]),
         fmsModules["data"]["transalt"]),
       "                        ",
-      lr(fmsModules["data"]["clbrestspd"].."/"..fmsModules["data"]["clbrestalt"], VxSpeed),
+      lr(fmsModules["data"]["clbrestspd"].."/"..rest_alt(fmsModules["data"]["clbrestalt"], fmsModules["data"]["transalt"]), VxSpeed),
       "------------------------",
       lr(mode=="S" and "<ECON" or "", "ENG OUT>"),
       "                        ",
@@ -631,7 +640,7 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       local spd2 = ".".. fmsModules["data"]["desspdmach"].."/"..fmsModules["data"]["desspd"]
       if kt then spd2 = string.format("%3d", math.floor(kt + 0.5)) end
       local tr3 = belowT and "" or (fmsModules["data"]["destranspd"].."/"..fmsModules["data"]["desspdtransalt"])
-      local rs4 = belowR and "---/-----" or (fmsModules["data"]["desrestspd"].."/"..fmsModules["data"]["desrestalt"])
+      local rs4 = belowR and "---/-----" or (fmsModules["data"]["desrestspd"].."/"..rest_alt(fmsModules["data"]["desrestalt"], fmsModules["data"]["translvl"]))
       dspd = int_title(desActive, dspd)
       if desActive and B747_fms_vnav_title() == "LIM SPD" then dspd = "LIM SPD" end
       local desTitle = (desActive and B747_fms_end_des()) and "END OF DES" or dspd .. " DES"

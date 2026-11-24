@@ -3568,3 +3568,20 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - `atc_uplink_pages_test`：LOG> の行。
   - `atc_request_pages_test`：REPORT> の行。
   - どれも期待を PRINT FAIL に改めた。ATC の試験 13 本、935 件が合格。
+
+## 185. SPD RESTR と TRANS ALT の高度の入力と表示（2026-11-24：段 4 のレビューの CDU-13。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：本家の `validAlt`（`B744.fms.pages.lua`）が、SPD RESTR（CLB と DES の 4L）と TRANS ALT の入力にまだ使われていた。次のような問題があった。
+  - 2,000 ft 未満を拒む。
+  - 上限が機体の重さからの式（58.16 − 0.0615 × t）で、395 t では 33,850 ft。
+  - 「0900」を 90,000 ft と読んで拒む。
+  - 表示は ft のままで、遷移高度より上でも FL にならない。
+- 資料：FCOM p.1269 (11.31.35) の高度の入力の形と表示（XXX は百 ft、XXXX と XXXXX は ft、FLXXX。遷移高度より上は FL で出す）。
+- 直し：
+  - `validAlt` は `B747_cdu_model.parse_alt` で読み、0 ft より上で、CRZ ALT と同じ最大認定高度 45,100 ft までを取る。値は ft の文字で返す（VNAV と予測が数として読むので、データは ft のまま）。
+  - 表示（`B744.fms.pages.vnav.lua` の `rest_alt`）は `format_alt` で出す。上昇の SPD RESTR は TRANS ALT、降下の SPD RESTR は TRANS LVL より上なら FLXXX。
+  - どこからも呼ばれていなかった本家の `updateCRZ`（CRZ ALT を X-Plane の FMS から読み戻す）と `validFL` を消した。
+- 試験：`tests/fms/fmc_fixes_test.lua` に 4 件（53 件）。
+  - 240/0900 で 900 ft、240/1500 も取る、395 t で 240/FL350 を取って FL350 と出す、45,200 ft は INVALID ENTRY。
+  - 直す前のコードでは 3 件が落ちる。
+- X-Plane：取り込みの後に、CLB の 4L に 240/0900 と 240/FL240 を入れて表示を見る（5 分）。
