@@ -201,15 +201,17 @@ dofile("B744.fms.pages.waypointwinds.lua")
 
 fmsPages["INITREF"]=createPage("INITREF")
 fmsPages["INITREF"].getPage=function(self,pgNo,fmsID)
-  local lineA="                        "
+  -- (2026-11-24, the 2026-11-23 review's CDU-12) <TAKEOFF in the air too,
+  -- MAINT> on the ground only (FMSPG p.68 (3.2-8): the in-flight figure
+  -- has <TAKEOFF and no MAINT>; ATA34_2 p.514). Before, <TAKEOFF went in the
+  -- air with MAINT>
+  fmsFunctionsDefs["INITREF"]["L5"]={"setpage","TAKEOFF"}
+  local lineA="<TAKEOFF                "
   local LineB="<APPROACH               "
   if simDR_onGround ==1 then
-    fmsFunctionsDefs["INITREF"]["L5"]={"setpage","TAKEOFF"}
     fmsFunctionsDefs["INITREF"]["R6"]={"setpage","MAINT"}
-    lineA="<TAKEOFF                "
     LineB="<APPROACH         MAINT>"
   else
-    fmsFunctionsDefs["INITREF"]["L5"]=nil
     fmsFunctionsDefs["INITREF"]["R6"]=nil
   end
   return {

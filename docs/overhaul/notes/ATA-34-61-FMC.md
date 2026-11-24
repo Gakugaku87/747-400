@@ -3535,3 +3535,20 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - 直す前のコードでは 3 件が落ちる。
   - この試験は、flight complete の 30 秒を 1 秒刻みのフレームで数えていて、FMC は時計を 1 フレーム遅れて読む。足した手順の時間に秒の端数があると、31 秒の確かめを過ぎた。そこで手順の終わりで時間を秒にそろえる。
 - X-Plane：取り込みの後に v02 の形で確かめる。着陸の前に DES 3L を消し、flight complete の後に経路と CRZ ALT 350 を入れて、DES 3L が 240/10000、CLB 3L が 250/10000 に戻るかを見る。
+
+## 183. 空中の TAKEOFF REF と INIT/REF INDEX（2026-11-24：段 4 のレビューの CDU-9 と CDU-12 の <TAKEOFF。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：
+  - CDU-9：TAKEOFF REF の乗員の CG とその TRIM が、空中でも出ていた。
+  - CDU-12：INIT/REF INDEX の <TAKEOFF が、空中では MAINT> と一緒に消えていた。
+- 資料：
+  - ATA34_2 p.540（34-61 Page 114）：TRIM は離陸の後に空白になる。どの欄も flight completion で消える。
+  - FMSPG p.107 (3.2-47)：CG は空中では空白。
+  - FMSPG p.68 (3.2-8)：空中の図に <TAKEOFF があり、MAINT> が無い。ATA34_2 p.514（34-61 Page 88）も同じ。
+- 直し：
+  - `B744.fms.pages.takeoff.lua`：空中では CG（大きい字と小さい字）と TRIM を表示しない。データ（`cg_mac`・`stab_trim`）は flight complete まで保つので、地上に戻るとまた出る。
+  - フラップと選んだ V 速度を flight complete まで保つ案（レビューの B 案）は、PFD の作りに響くので入れていない（レビューの勧め）。
+  - `B744.fms.pages.lua` の INITREF：<TAKEOFF（5L）はいつも出して押せる。MAINT>（6R）は地上だけ。
+- 試験：新しい `tests/fms/takeoff_ref_air_test.lua`（10 件。準備は flight_complete_test と同じ）。
+  - 地上の CG 22 と TRIM、空中の空白、ラベルは残る、空中の INDEX の <TAKEOFF と MAINT> なし、<TAKEOFF で TAKEOFF REF が開く、地上に戻ると CG と TRIM、<TAKEOFF と MAINT>。
+  - 直す前のコードでは 5 件が落ちる。
