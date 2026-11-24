@@ -314,6 +314,15 @@ rt:set("laminar/B747/engines/to_reduction", 0)
 -- user's cruise)
 local EICAS = "laminar/B747/fms/thrlim/eicas"
 clear()                                                -- TAKEOFF SPEEDS DELETED from before
+-- (2026-11-24, D of the 2026-11-23 review: DSP-6 d) an SEL not over the OAT
+-- makes no D- and the line shows no temperature (FCOM p.831 (7.10.3): for
+-- reduced thrust takeoff; the mutant showing the SEL without D- passed every
+-- test)
+type_in("10")
+key("ls_key/L1")
+frames(0.2)
+T.equal(rt:get(EICAS), "TO 1", "SEL 10 under the OAT 15: TO 1, no temperature on the line")
+clear()
 type_in("47")
 key("ls_key/L1")
 frames(0.2)

@@ -295,6 +295,12 @@ do
     inp.epr[2] = 1.489
     o = D.update(s, inp, DT)
     T.check(not o.epr_red[2], "1.489: white")
+    -- (2026-11-24, D of the 2026-11-23 review: DSP-6 d) from white, 0.006
+    -- below: white still (red within 0.003, white again 0.01 below: the
+    -- hysteresis swapped passed every test)
+    inp.epr[2] = 1.494
+    o = D.update(s, inp, DT)
+    T.check(not o.epr_red[2], "from white, 1.494 (0.006 below max): white (red only within 0.003)")
     inp.type = "GE"
     inp.epr = {1.6, 1.6, 1.6, 1.6}
     o = D.update(s, inp, DT)
@@ -336,6 +342,19 @@ do
     o = D.update(s, inp, DT)
     T.check(o.exceed_oil and o.oil_qty_magenta[4], "CF6 oil quantity low (magenta): oil")
     T.equal(D.VIB_HIGH, 4.0, "the vibration's high band: 4.0 units (ATA70_80 p.395)")
+    -- (2026-11-24, D of the 2026-11-23 review: DSP-6 d) the RB211's N3 at
+    -- its red line brings up the partial format as N2's (FCOM p.852-854; the
+    -- mutant without N3 passed every test)
+    inp.type = "RR"
+    inp.oil_ratio = {1, 1, 1, 1}
+    inp.oil_psi = {90, 90, 90, 90}
+    running(inp, 95)
+    inp.n3 = {100, 101.5, 100, 100}
+    o = D.update(s, inp, DT)
+    T.check(o.n3_red[2] and o.exceed_n2, "RB211 N3 2 at 101.5 % (its red line): the N2 exceedance's partial format")
+    inp.n3 = {100, 100, 100, 100}
+    o = D.update(s, inp, DT)
+    T.check(not o.exceed_n2, "N3 back: none")
 end
 
 
