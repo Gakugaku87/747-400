@@ -779,6 +779,19 @@ local AP_ROLL_RATE_K, AP_ROLL_YAW_K, AP_ROLL_HOLD, AP_ROLL_SETTLE, AP_ROLL_RATE_
 -- (ATA27 p.59). The recorded single-channel flights stayed under 23 degrees
 -- but for s115's rudder steps (28)
 local AP_ROLL_SINGLE = 25 / 90
+-- (2026-11-24, the stage 4 fixes' X-Plane check s381) a change of the roll
+-- command faster than AP_ROLL_JUMP degrees a second is the law's restart,
+-- not a rate: the laws move the command at ROLL_RATE, 3 degrees a second
+-- (B747.70.afds_roll_model.lua; read here up to about 6 as the modules'
+-- frames fall), and start it again from the bank at an A/P's engagement
+-- (the stage 4 review's AFDS-5: ATA22 p.348 (22-12 p.22)). This module
+-- reads the command a frame late: the engagement's first frame had the
+-- F/D's wound command (25 degrees left), the next the bank, and the jump
+-- read as 1,250 degrees a second rolled the airplane 3 degrees the wrong
+-- way at the single channel's limit for a second before the turn (then 4.7
+-- degrees a second to catch the command up). The threshold is an estimate
+-- between the two
+local AP_ROLL_JUMP = 30
 local ap_roll_last_cmd = nil
 local ap_roll_still = 0
 local ap_roll_cmd_rate = 0
@@ -806,6 +819,7 @@ function ap_roll_assist(doCompute)
         rollPid.input = simDR_AHARS_roll_heading_deg_pilot
         rollPid.target= flight_director_roll
         local raw = (ap_roll_last_cmd and SIM_PERIOD > 0) and (flight_director_roll - ap_roll_last_cmd) / SIM_PERIOD or 0
+        if math.abs(raw) > AP_ROLL_JUMP then raw = 0 end
         ap_roll_last_cmd = flight_director_roll
         ap_roll_cmd_rate = ap_roll_cmd_rate + (raw - ap_roll_cmd_rate) * math.min(1, SIM_PERIOD / AP_ROLL_RATE_TAU)
         local rate = ap_roll_cmd_rate
