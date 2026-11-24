@@ -1665,3 +1665,16 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
 - 試験：`tests/autopilot/at_model_test.lua` に 11 件（197 件）。離陸の抑止は前のまま。着陸の滑走で立たない。滑走路の上と 5 ft の 3 秒の間の押しは何もしない。その後の 60 ft の押しで THR。止まった後の次の離陸で、また立つ。直す前のモデルでは 2 件が落ちる。
 - まだ作っていないもの：FCOM p.671 の注「逆推力レバーを下げて 10 秒後からフラップ UP まで A/T armed」。
 - X-Plane：取り込みの後に、タッチアンドゴーのシナリオ（D）で確かめる。A/T を 100 ft で切って接地し、5 ft 通過の 4 秒後に TO/GA を押して、RA 400 ft 未満で A/T が THR になるかを見る。
+
+## 71. 結線の試験：A/T の GE の利得、RTO の後の no-TO、跳ねたときの TO/GA の抑止（2026-11-24：段 4 のレビューの D の AFDS-7。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：レビューの A/T の壊し方（`D:\b747_review\stage4\a08_afds_at\mut_at.lua`）14 個のうち、2 個が試験を通っていた。
+  - グルーの `i.engine = B747DR_ap_engine_type` を 0 にする（GE の G の直し、2026-11-22 の cd1763c9 が servo に届くかを、どの試験も見ていなかった）。
+  - 地上 30 kt での `no_to` の解除をやめる（§70 の AFDS-2 で、`from_air` と同じ行になった）。
+- 足した試験：
+  - `tests/autopilot/afds_glue_test.lua`（291 件）：
+    - フラップ UP で、A/T のモデルの `lever_accel` に渡るエンジンの型が、`laminar/B747/engines/type` の 1（GE）と 0（P&W）になる。試験の側から、モデルの関数を包んで入力を記録する。利得そのものは `at_model_test` が見る。
+    - 跳ねたとき：電波高度 3 ft を 2.5 秒、そのあと 20 ft、フラップ 20。5 ft を越えて 0.1 秒の TO/GA では A/T は入らず、3 秒の後の TO/GA で G/A の THR（FCOM p.673 (4.20.15)、ATA34_2 p.674）。AFDS の抑止（`afds.inhibit`）がグルーの `i.toga_inhibit` で A/T に届くことの試験（AFDS-2 の自分の壊し方）。
+  - `tests/autopilot/at_model_test.lua`（200 件）：A/T を押さずに 80 kt まで滑走して止まる（RTO）。止まるまで no-TO の抑止は残り（40 kt での TO/GA は何もしない）、30 kt（`STOP_KT`、推定）を切ると消え、次の離陸の 50 kt 未満の TO/GA で THR REF。
+- 壊し方の一覧は `tests/tools/mutations/at_wiring.lua`（18 個：レビューの 14 個を今のコードに合わせたものと、AFDS-2 の 4 個）。18 個とも捕まる。
+- まだ（X-Plane）：GE のフラップ下げの A/T SPD（`tests/flight/measure/at_hold_f20.json` を GE のリバリーで 1 回）と、AFDS-3 の低い G/A の後の再進入。

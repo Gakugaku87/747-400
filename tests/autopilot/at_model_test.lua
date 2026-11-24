@@ -884,4 +884,22 @@ do
     T.check(t.no_to, "the next takeoff's roll at 80 kt with the A/T off: no TO/GA again")
 end
 
+-- (2026-11-24, D of the 2026-11-23 review: AFDS-7) a rejected takeoff with
+-- the A/T not pushed: the roll past 50 kt sets the no-TO inhibit, slowing
+-- it stays, stopped (under STOP_KT, 30 kt: estimate) it goes, and the next
+-- takeoff's TO/GA under 50 kt is THR REF again. The review's mutant (the
+-- inhibit never reset on the ground) passed the tests before
+do
+    local t = A.new()
+    local TO = {ground = true, ra = 0, flaps_up = false, limit_to = true, pitch = "TO"}
+    A.update(t, inp(with(TO, {cas = 0})))
+    A.update(t, inp(with(TO, {cas = 80})))
+    T.check(t.no_to, "an RTO's roll at 80 kt with the A/T not pushed: no TO/GA (FCOM p.656)")
+    A.update(t, inp(with(TO, {cas = 40, toga = true})))
+    T.check(not t.engaged, "slowing at 40 kt, a push: nothing")
+    A.update(t, inp(with(TO, {cas = 10})))
+    A.update(t, inp(with(TO, {cas = 0, toga = true})))
+    T.check(t.engaged and A.fma(t) == A.THR_REF, "stopped, the next takeoff's TO/GA: THR REF")
+end
+
 T.done()
