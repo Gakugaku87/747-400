@@ -11,7 +11,8 @@
 --    (SENDING, then SENT and ACCEPTED, the CDU back on the uplink: FMSPG
 --    p.297), none in time: RESEND>, NO ACK in the log and ATC MSG NOT
 --    ACKNOWLEDGED (FCOM p.753, p.765, p.1431), RESEND;
---  - ATC INDEX's 6L blank as the other ATC pages' PRINT (no printer).
+--  - ATC INDEX's 6L PRINT FAIL as the other ATC pages' PRINT (no printer;
+--    2026-11-24, review CDU-12: from 11-20 blank).
 B747_NAVDB_FOLDER = "tests/fms/data/navdb/"
 local T = dofile("tests/lib/check.lua")("atc_n19")
 local U = dofile("plugins/xtlua_keysystems/scripts/B747.68.xt.fms/B747.68.atc_uplink_model.lua")
@@ -202,8 +203,10 @@ frames(46)
 T.equal(down_status("WILCO"), "SENT", "the resent one acknowledged: SENT")
 T.equal(fms.ns.B747_atc_uplink_model.status(fms.ns.B747_fms_atc_uplink(q)), "ACCEPTED", "the uplink ACCEPTED")
 
--- (N19-ATC-05) ATC INDEX: no <PRINT LOG (no printer, as the uplink's PRINT)
+-- (N19-ATC-05) ATC INDEX: no <PRINT LOG (no printer, as the uplink's PRINT);
+-- (2026-11-24, review CDU-12) its state PRINT FAIL (FMSPG p.366 (8-97): the
+-- table has no blank state; estimate)
 key("func_key/crz")
 T.check(page("ATC INDEX"), "nothing pending: the ATC key to ATC INDEX: " .. line(1))
-T.equal(line(13), string.rep(" ", 24), "6L blank (FMSPG p.366: PRINT LOG and PRINT the printer's states alike)")
+T.equal(line(13), "PRINT FAIL              ", "6L PRINT FAIL (FMSPG p.366: PRINT LOG and PRINT the printer's states alike; before blank)")
 T.done()

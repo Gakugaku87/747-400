@@ -100,7 +100,9 @@ T.equal(line(4), "CLIMB TO AND MAINTAIN   ", "the text from line 2")
 T.equal(line(5), "FL350                   ", "its second line")
 T.equal(line(9), "<STANDBY                ", "STANDBY")
 T.equal(line(11), "<REJECT          ACCEPT>", "REJECT and ACCEPT (WILCO/UNABLE)")
-T.equal(line(13), "                    LOG>", "LOG>")
+-- (2026-11-24, review CDU-12) the last page's 6L PRINT FAIL (no printer:
+-- FMSPG p.366 (8-97); estimate)
+T.equal(line(13), "PRINT FAIL          LOG>", "LOG>, PRINT FAIL in 6L")
 frames(0.3)
 T.equal(rt:get(MEMO, 46), 0, "reviewed: no ATC MESSAGE")
 -- ACCEPT: VERIFY RESPONSE WILCO, SEND

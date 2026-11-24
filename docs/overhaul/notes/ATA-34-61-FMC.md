@@ -3552,3 +3552,19 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 試験：新しい `tests/fms/takeoff_ref_air_test.lua`（10 件。準備は flight_complete_test と同じ）。
   - 地上の CG 22 と TRIM、空中の空白、ラベルは残る、空中の INDEX の <TAKEOFF と MAINT> なし、<TAKEOFF で TAKEOFF REF が開く、地上に戻ると CG と TRIM、<TAKEOFF と MAINT>。
   - 直す前のコードでは 5 件が落ちる。
+
+## 184. ATC のページの PRINT：PRINT FAIL（2026-11-24：段 4 のレビューの CDU-12 の 6L。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：ATC INDEX の 6L（PRINT LOG）を空白にしていた（2026-11-20、N19-ATC-05、§ の「N19-ATC-05 PRINT LOG と PRINT」）。FMSPG p.366 (8-97) の表 8.9-2（印字機の状態）には空白の状態が無い。
+- 資料：
+  - FMSPG p.366 (8-97)：PRINT LOG は ATC INDEX の 6L に、PRINT は XXXXZ のページの最後のページの 6L に出る。状態は PRINT BUSY・PRINT FAIL・<PRINT LOG／<PRINT・<PRINT ERROR・PRINTING。PRINT FAIL は「FMC が印字機を故障と判断した」。
+  - FCOM p.727 (5.33.3)：ATC INDEX の <PRINT LOG。
+- 直し（**推定**：シムには印字機が無い）：次の 5 か所の 6L を PRINT FAIL にした。
+  - ATC INDEX（`atcindex.lua`）。
+  - XXXXZ ATC UPLINK（`atcuplink.lua`）・XXXXZ ATC REPORT（`atcreport.lua` の ATCREPORTLOG）・XXXXZ EMERGENCY（`emergency.lua` の ATCEMERGENCYLOG）・XXXXZ ATC REQUEST（`request.lua` の ATCREQUESTLOG）の最後のページ。
+  - 押しても何もしない（前と同じ）。
+- 試験：
+  - `atc_n19_test`：ATC INDEX の 6L。
+  - `atc_uplink_pages_test`：LOG> の行。
+  - `atc_request_pages_test`：REPORT> の行。
+  - どれも期待を PRINT FAIL に改めた。ATC の試験 13 本、935 件が合格。

@@ -14,12 +14,14 @@ fmsPages["ATCINDEX"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be
 "                        ",
 "<LOGON/STATUS     VOICE>",
 "------------------------",
--- (2026-11-20, GAP N19-ATC-05) 6L blank: PRINT LOG and the ATC pages'
--- PRINT show the printer's states alike (FMSPG p.366, 8.9.2; FCOM p.727,
--- p.761), and the sim has no printer: blank as the uplink's, request's,
--- report's and emergency's PRINT (estimate). Before, <PRINT LOG with no
--- function
-"                        "
+-- (2026-11-24, the 2026-11-23 review's CDU-12) 6L PRINT FAIL: PRINT LOG
+-- and the ATC pages' PRINT show the printer's states alike (FMSPG p.366
+-- (8-97), 8.9.2; FCOM p.727, p.761), and the sim has no printer: the
+-- table's PRINT FAIL (the FMC has found the printer failed), as on the
+-- uplink's, request's, report's and emergency's last pages (estimate; the
+-- table has no blank state). From 2026-11-20 (GAP N19-ATC-05) blank, before
+-- that <PRINT LOG with no function
+"PRINT FAIL              "
     }
 end
 

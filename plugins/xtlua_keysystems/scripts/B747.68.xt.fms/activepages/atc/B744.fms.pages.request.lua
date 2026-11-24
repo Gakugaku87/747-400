@@ -17,8 +17,8 @@
 -- other blank) and REQUEST DEP/ARR (the departure or arrival selected
 -- with its caret, an entry or the pushed one large, dashes without one:
 -- FCOM p.742-743; FMSPG p.316-318). Not here yet: WHEN CAN WE (step
--- 12g3). Estimates: no
--- PRINT (no printer, as the uplink's page); the lines' columns. Before,
+-- 12g3). Estimates: PRINT FAIL for PRINT (no printer, as the uplink's
+-- page: 2026-11-24, review CDU-12); the lines' columns. Before,
 -- the pages wrote and read FMS data fields (acarsREQ*) without the
 -- entries' checks, VERIFY wrote the shared text while drawing (CDU-34).
 local Q = B747_atc_request_model
@@ -364,6 +364,9 @@ fmsPages["ATCREQUESTLOG"].getPage=function(self,pgNo,fmsID)
   end
   local list, first = Q.page_rows(rows, pgNo, FIRST)
   for k, row in ipairs(list) do out[1 + 2 * (first + k - 1)] = left(BLANK, row.data) end
+  -- (2026-11-24, review CDU-12) the last page's 6L PRINT FAIL: no printer
+  -- (FMSPG p.366 (8-97); estimate, as ATC INDEX's)
+  if pgNo == Q.pages(rows, FIRST) then out[13] = left(out[13], "PRINT FAIL") end
   return out
 end
 fmsPages["ATCREQUESTLOG"].getSmallPage=function(self,pgNo,fmsID)

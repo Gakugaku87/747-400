@@ -503,7 +503,9 @@ local up = uplink("CLIMB TO AND MAINTAIN FL350 REPORT REACHING FL350")
 local upid = nid
 key("func_key/crz")
 T.check(page("ATC UPLINK"), "the ATC key: the uplink")
-T.equal(line(13), r24("REPORT>"), "a report request: REPORT> (FCOM p.759)")
+-- (2026-11-24, review CDU-12) the last page's 6L PRINT FAIL (no printer:
+-- FMSPG p.366 (8-97); estimate)
+T.equal(line(13), "PRINT FAIL" .. string.sub(r24("REPORT>"), 11), "a report request: REPORT> (FCOM p.759), PRINT FAIL in 6L")
 T.check(not line(7):find("ARM>$"), "OPEN: no ARM> yet (FMSPG p.292)")
 key("ls_key/R5")
 key("ls_key/R5")
