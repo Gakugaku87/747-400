@@ -3,8 +3,9 @@
 -- net thrust, the ambient pressure ratio, the Mach and the static
 -- temperature ratio. The EEC and the A/T hold this N1, so it decides the
 -- thrust at every N1 setting (the max climb N1 of the FCOM's tables, the
--- climb rate). On the takeoff the display is X-Plane's N1 times a factor
--- (B747.42.xt.EEC.GE.lua's N1_display_GE), not this.
+-- climb rate). Since 2026-11-25 (the 2026-11-23 review's ENG-4) on the
+-- takeoff too: before, X-Plane's N1 times the upstream's takeoff factor
+-- (B747.42.xt.EEC.GE.lua's N1_display_GE).
 --   local G = B747_ge_n1_model
 --   local n1 = G.n1(thrust_n, delta, mach, theta)
 --

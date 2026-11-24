@@ -371,7 +371,6 @@ EEC_status = 0
 --General Engine Parameters
 engine_max_thrust_n = 0
 
-takeoff_TOGA_n1 = 0.0
 takeoff_TOGA_EPR = 0.0
 
 --[[

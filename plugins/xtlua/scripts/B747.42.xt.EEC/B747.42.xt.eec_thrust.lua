@@ -290,8 +290,9 @@ end
 -- X-Plane's throttle (B747.42.eec_model.lua, M.KP): the display formula's
 -- slope against the thrust (P&W: the EPR model, B747_epr_model.epr; GE in
 -- the air: its N1 polynomial, B747_ge_n1_of_thrust) times X-Plane's thrust
--- for each unit of throttle; nil where the GE's display is X-Plane's N1
--- (the takeoff: the model's tables). X-Plane's thrust for each unit of
+-- for each unit of throttle; nil only without air data (the model's tables
+-- then; until 2026-11-25, ENG-4, also where the GE's display was X-Plane's
+-- N1: the takeoff). X-Plane's thrust for each unit of
 -- throttle (kN, alike for both types): X-Plane's thrust goes about as the
 -- throttle to the n-th power, so n x the thrust over the throttle, n =
 -- N_A - N_B x delta (the open-loop test, 2026-11-10, tests/flight/measure/
@@ -324,7 +325,6 @@ local function plant_slope(key, engine, delta)
     local f = simDR_thrust_n[engine] / 1000
     local dydf
     if key == "GE" then
-        if B747_ge_n1_from_xp(engine) then return nil end
         -- (2026-11-11 review) the difference over 1 kN, from SLOPE_GE_FLOOR_KN
         -- at least: under it the curve's there (the N1 model's x^q is
         -- steepest at no thrust; an estimate, the review's "a floor of a few
