@@ -2726,8 +2726,15 @@ end
 -- (2026-11-05, the user) the chocks in or out: GROUND HANDLING's L2 below
 -- and the sim's ground handling window's button (b747_fms_bridge
 -- gh_window.c, through laminar/B747/gear/chocks_toggle)
+-- (2026-11-24, the 2026-11-23 review's NAV-3) in only on the ground and
+-- standing (under 1 m/s, as the GPU's: B747.03.xt.electrical.lua's
+-- ELEC_GPU_STANDING_MS), out at any time (a sim convenience: no source;
+-- estimate). Before, also in the air and rolling: the brakes' chocks on a
+-- takeoff roll
+local CHOCKS_STANDING_MS = 1
 function B747_fms_toggle_chocks()
 	local chocked = B747DR__gear_chocked == 1 and 0 or 1
+	if chocked == 1 and (simDR_onGround ~= 1 or simDR_groundspeed > CHOCKS_STANDING_MS) then return end
 	B747DR__gear_chocked = chocked
 	--Stop refueling operation if CHOCKS are removed
 	if chocked == 0 then

@@ -464,3 +464,15 @@ X-Plane の `sim/flightmodel/failures/onground_any`（どれか 1 輪が接地�
   - セレクターを触らずに 2 回目の RTO が掛からないこと（前のまま）。disable がいつ解けるかは資料に無い。図（p.524 (p.28)・p.529）では RTO の回路の電源はセレクターのラッチから来るので、セレクターが RTO の間は残ると読める（推定）。今は AUTOBRAKES が出るので、乗員には分かる。解くかどうかは利用者への問い。
 - 試験：`tests/gear/autobrake_model_test.lua`（ペダルで外した後の AUTOBRAKES と memo、ペダルを離しても残る、レバーを進めると消え戻すと出る、OFF で消え RTO を選び直すと出ない。ペダルを踏んだまま 100 kt で中止すると掛からず AUTOBRAKES、離すと掛かり消える）。直す前のコードでは 4 件が落ちる。
 - X-Plane の確かめ：新しい `tests/flight/scenarios/s370_rto_override.json`（RJAA 34L、s38 と同じ形。`laminar/B747/CAS/advisory_status[17]` と `memo_status[7]`）。
+
+## 21. 輪止め（チョーク）を入れるのは地上で止まっているときだけ（2026-11-24：段 4 のレビューの NAV-3。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：CDU の GROUND HANDLING の L2 と、シムの地上作業の窓のボタン（`laminar/B747/gear/chocks_toggle`）で、空中でも滑走中でも輪止めが入った。輪止めはブレーキのモデルで駐機ブレーキの扱いになる（`B747.10.brake_model.lua`）ので、離陸の滑走で入れると止まる。
+  - 電源車（GPU）には、地上で止まっているときだけつなぐ守りがある（`B747.03.xt.electrical.lua` の `ELEC_GPU_STANDING_MS`）。
+- 資料：無い（シムの便利機能）。
+- 直し（**推定**）：`B744.fms.pages.lua` の `B747_fms_toggle_chocks`。
+  - 入れるのは、地上（FMS の地上の判定：PSEU の `pri_gnd`）で、対地 1 m/s 未満のときだけ（GPU と同じ値）。
+  - 外すのはいつでもできる。
+- 試験：`tests/fms/wb_window_fmc_test.lua` に 4 件（41 件）。
+  - 5 m/s では入らない、空中では入らない、地上で止まっていれば入る、滑走中でも外せる。
+  - 直す前のコードでは 1 件が落ちる。
