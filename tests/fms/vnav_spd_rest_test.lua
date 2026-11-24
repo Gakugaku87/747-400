@@ -60,9 +60,13 @@ key("func_key/des")                        -- VNAV: the CLB page on the ground
 T.check(line(1):match("CLB"), "the CLB page: " .. line(1))
 enter("250/8000", "L4")
 T.equal(rest(), "250/8000", "250/8000: the restriction")
+-- (2026-11-24, the 2026-11-23 review's CDU-13) an altitude under 2,000 ft
+-- over the airplane's is taken (FMSPG p.114; FCOM p.1269's forms): from
+-- 11-13 to this day INVALID ENTRY by the upstream's validAlt's 2,000 ft floor
 enter("250/1500", "L4")
-T.equal(pad(), "INVALID ENTRY", "250/1500 (an altitude under 2,000 ft): INVALID ENTRY (before: 250/----- with no message)")
-T.equal(rest(), "250/8000", "  the restriction kept")
+T.equal(rest(), "250/1500", "250/1500 (under 2,000 ft, over the airplane's): taken (before INVALID ENTRY)")
+enter("250/8000", "L4")
+T.equal(rest(), "250/8000", "  250/8000 again")
 enter("230", "L4")
 T.equal(pad(), "INVALID ENTRY", "230 alone: INVALID ENTRY (before: taken)")
 enter("240X8000", "L4")
