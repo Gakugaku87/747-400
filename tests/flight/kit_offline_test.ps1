@@ -367,6 +367,52 @@ $r = Get-XPRemovablePath '' $dev $began
 Check ($null -eq $r.path -and $r.why -eq 'empty') "an empty dataref: nothing ($($r.why))"
 Check ((Test-Path -LiteralPath $old) -and (Test-Path -LiteralPath $new)) 'the function deletes nothing itself'
 
+# --- the CDU's typing read back (2026-11-24) ---------------------------------
+# a stand-in CDU: the Captain's scratchpad, a key lost by its number in
+# $lose, a message that keeps the keys out; CLR takes the message or the
+# last character. s198 of 2026-11-24 typed COST INDEX 100 and the FMC took 10
+$script:XPCduGapMs = 0; $script:XPCduRepeatMs = 0; $script:XPCduSlowMs = 0; $script:XPCduReadS = 0.2
+$script:pad = ''; $script:msg = $false; $script:lose = @{}; $script:nKey = 0
+$cmds = New-Object System.Collections.ArrayList
+function Invoke-XPCommand([string]$Name, [double]$Duration = 0) {
+    [void]$cmds.Add($Name)
+    if ($Name -match '/key/clear$') {
+        if ($script:msg) { $script:msg = $false; $script:pad = '' }
+        elseif ($script:pad.Length -gt 0) { $script:pad = $script:pad.Substring(0, $script:pad.Length - 1) }
+        return
+    }
+    $script:nKey++
+    if ($script:lose.ContainsKey($script:nKey) -or $script:msg) { return }
+    $c = if ($Name -match '/alphanum_key/(.)$') { $Matches[1] } elseif ($Name -match '/key/period$') { '.' } elseif ($Name -match '/key/slash$') { '/' } else { '?' }
+    $script:pad += $c
+}
+function Get-XPDataref([string]$Name, [int]$Index = -1) {
+    if ($Name -eq 'laminar/B747/fms3/Line14_L') { return $script:pad.PadRight(24) }
+    throw "dataref not found: $Name"
+}
+$n = Send-XPCduText 'fms1' '100'
+Check ($script:pad -ceq '100' -and $null -eq $n -and @($cmds | Where-Object { $_ -match 'clear' }).Count -eq 0) "typed and read back: '100', no note ($n)"
+$script:pad = ''; $script:nKey = 0; $script:lose = @{ 3 = $true }; $cmds.Clear()
+$n = Send-XPCduText 'fms1' '100'
+Check ($script:pad -ceq '100' -and @($cmds | Where-Object { $_ -match 'clear' }).Count -eq 2) "the second 0 lost (s198): cleared twice and typed again, '100' ($($script:pad))"
+Check ($n -match "came in as '10'") "and its note for the warn row ($n)"
+$script:pad = '183.5'; $script:nKey = 0; $script:lose = @{}; $cmds.Clear()
+$n = Send-XPCduText 'fms1' '/250'
+Check ($script:pad -ceq '183.5/250' -and $null -eq $n) "after text already there: read back as the whole ($($script:pad))"
+$script:pad = 'INVALID ENTRY'; $script:msg = $true; $script:nKey = 0; $cmds.Clear()
+$n = Send-XPCduText 'fms1' '250'
+Check ($script:pad -ceq 'INVALID ENTRY' -and @($cmds | Where-Object { $_ -match 'clear' }).Count -eq 0 -and $n -match 'not typed') "a message keeps the keys out: no CLR, a note ($n)"
+$script:pad = ''; $script:msg = $false; $script:nKey = 0; $script:lose = @{ 2 = $true; 5 = $true }; $cmds.Clear()
+$e = $null
+try { [void](Send-XPCduText 'fms1' '100') } catch { $e = $_.Exception.Message }
+Check ($e -match "typed twice, the scratchpad shows '10'") "lost again when typed slowly: the step fails ($e)"
+$script:pad = ''; $script:nKey = 0; $script:lose = @{ 3 = $true }; $cmds.Clear()
+$n = Send-XPCduText 'fms2' '100'
+Check ($null -eq $n -and $script:pad -ceq '10' -and @($cmds | Where-Object { $_ -match 'clear' }).Count -eq 0) "another CDU's typing: not read back, as before ($($script:pad))"
+$e = $null
+try { [void](Send-XPCduText 'fms1' 'a') } catch { $e = $_.Exception.Message }
+Check ($e -match "no key for 'a'") "a character with no key: the step fails ($e)"
+
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

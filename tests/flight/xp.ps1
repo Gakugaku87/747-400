@@ -134,6 +134,80 @@ function Invoke-XPCommand([string]$Name, [double]$Duration = 0) {
     [void](Invoke-XPApi POST "/command/$id/activate" @{ duration = $Duration })
 }
 
+# (2026-11-24) A text typed on a CDU (the scenarios' "cdu" steps), a key
+# command a character: alphanum_key/<A-Z 0-9>, key/slash, key/period,
+# key/minus, key/space. The same key again waits XPCduRepeatMs first: one
+# key twice close together is taken once (2026-11-03: EDDF typed EDF; RJAA
+# RJA in a slow frame at 70 ms, s14). On the Captain's CDU (fms1, its lines
+# in fms3) the scratchpad (Line14_L) is read back: on 2026-11-24 s198 typed
+# COST INDEX 100 with 250 ms before the second 0 and no slow X-Plane frame,
+# and the FMC took 10 (its ECON speeds those of CI 10: 297 kt, M.707,
+# 237 kt). A key lost so is cleared (CLR once a character typed) and the
+# text typed again slowly; the note for a warn row. A text a message on the
+# scratchpad kept out is left as before (a note), as one the scratchpad
+# shows otherwise (a message that came while typing).
+$script:XPCduGapMs = 70
+$script:XPCduRepeatMs = 250
+$script:XPCduSlowMs = 300
+$script:XPCduReadS = 1.5
+$script:XPCduChars = @{ '/' = 'key/slash'; '.' = 'key/period'; '-' = 'key/minus'; ' ' = 'key/space' }
+function Send-XPCduKeys([string]$Id, [string]$Text, [int]$GapMs) {
+    $prev = $null
+    foreach ($ch in $Text.ToCharArray()) {
+        $c = [string]$ch
+        $cmd = if ($script:XPCduChars.ContainsKey($c)) { $script:XPCduChars[$c] } elseif ($c -cmatch '^[A-Z0-9]$') { "alphanum_key/$c" } else { throw "cdu: no key for '$c'" }
+        if ($c -ceq $prev) { Start-Sleep -Milliseconds $script:XPCduRepeatMs }
+        Invoke-XPCommand "laminar/B747/$Id/$cmd"
+        Start-Sleep -Milliseconds $GapMs
+        $prev = $c
+    }
+}
+# the Captain's scratchpad once it reads $Want, else its last read after
+# $Seconds (XTLua writes the CDU's lines a frame or more after the keys)
+function Read-XPCduPad([string]$Want, [double]$Seconds) {
+    $t0 = [DateTime]::UtcNow
+    while ($true) {
+        $now = ([string](Get-XPDataref 'laminar/B747/fms3/Line14_L')).Trim()
+        if ($now -ceq $Want -or ([DateTime]::UtcNow - $t0).TotalSeconds -ge $Seconds) { return $now }
+        Start-Sleep -Milliseconds 100
+    }
+}
+# $Part's characters in $Whole's order (keys lost, none added)
+function Test-XPSubsequence([string]$Part, [string]$Whole) {
+    $j = 0
+    foreach ($ch in $Whole.ToCharArray()) {
+        if ($j -lt $Part.Length -and $Part[$j] -ceq $ch) { $j++ }
+    }
+    return $j -eq $Part.Length
+}
+# types $Text; $null, or a note when the scratchpad did not show it at once
+function Send-XPCduText([string]$Id, [string]$Text) {
+    if ($Id -ne 'fms1') {
+        Send-XPCduKeys $Id $Text $script:XPCduGapMs
+        return $null
+    }
+    $before = ([string](Get-XPDataref 'laminar/B747/fms3/Line14_L')).Trim()
+    $want = ($before + $Text).Trim()
+    Send-XPCduKeys $Id $Text $script:XPCduGapMs
+    if ($want.Length -gt 24) { return $null }
+    $now = Read-XPCduPad $want $script:XPCduReadS
+    if ($now -ceq $want) { return $null }
+    if ($now -ceq $before) { return "cdu: '$Text' not typed, the scratchpad kept '$now'" }
+    $typed = if ($now.StartsWith($before)) { $now.Substring($before.Length) } else { $null }
+    if ($null -eq $typed -or $typed.Length -ge $Text.Length -or -not (Test-XPSubsequence $typed $Text)) {
+        return "cdu: '$Text' typed, the scratchpad shows '$now'"
+    }
+    for ($i = 0; $i -lt $typed.Length; $i++) {
+        Invoke-XPCommand "laminar/B747/$Id/key/clear"
+        Start-Sleep -Milliseconds 150
+    }
+    [void](Read-XPCduPad $before $script:XPCduReadS)
+    Send-XPCduKeys $Id $Text $script:XPCduSlowMs
+    $again = Read-XPCduPad $want $script:XPCduReadS
+    if ($again -cne $want) { throw "cdu: '$Text' typed twice, the scratchpad shows '$again' (the first time '$now')" }
+    return "cdu: '$Text' came in as '$now'; cleared and typed again slowly"
+}
+
 # Start a flight from an init object or a JSON file path. Loading the 747 takes
 # minutes, so wait long; then wait for the sim clock to run.
 function Start-XPFlight($Init, [int]$TimeoutSec = 600) {

@@ -770,7 +770,7 @@ foreach ($step in $spec.steps) {
                     INITREF = 'func_key/index'; PROG = 'func_key/prog'; NAVRAD = 'func_key/navrad'; VNAV = 'func_key/des'
                     PREV = 'func_key/prev_pg'; NEXT = 'func_key/next_pg'; EXEC = 'key/execute'; DEL = 'key/del'; CLR = 'key/clear'
                     ATC = 'func_key/crz'; FMCCOMM = 'func_key/hold' }
-                $chars = @{ '/' = 'key/slash'; '.' = 'key/period'; '-' = 'key/minus'; ' ' = 'key/space' }
+                $padNotes = New-Object System.Collections.ArrayList
                 foreach ($k in @($step.keys)) {
                     $k = [string]$k
                     if ($k -cmatch '^[LR][1-6]$') {
@@ -789,22 +789,16 @@ foreach ($step in $spec.steps) {
                         }
                     } else {
                         $text = if ($k.StartsWith('=')) { $k.Substring(1) } else { $k }
-                        $prev = $null
-                        foreach ($ch in $text.ToCharArray()) {
-                            $c = [string]$ch
-                            $cmd = if ($chars.ContainsKey($c)) { $chars[$c] } elseif ($c -cmatch '^[A-Z0-9]$') { "alphanum_key/$c" } else { throw "cdu: no key for '$c'" }
-                            # a key twice in one frame is taken once (EDDF typed
-                            # EDF): the same key again a while later (2026-11-03:
-                            # RJAA typed RJA in a slow frame at 70 ms, s14)
-                            if ($c -ceq $prev) { Start-Sleep -Milliseconds 250 }
-                            Invoke-XPCommand "laminar/B747/$id/$cmd"
-                            Start-Sleep -Milliseconds 70
-                            $prev = $c
-                        }
+                        # the keys, the same key again a while later, and the
+                        # Captain's scratchpad read back (xp.ps1's Send-XPCduText:
+                        # s198's COST INDEX 100 came in as 10 on 2026-11-24)
+                        $n = Send-XPCduText $id $text
+                        if ($n) { [void]$padNotes.Add($n) }
                         Start-Sleep -Milliseconds 100
                     }
                 }
                 Add-Result $step 'info' ("cdu {0}: {1}" -f $id, (@($step.keys) -join ' '))
+                if ($padNotes.Count -gt 0) { Add-Result $step 'warn' (@($padNotes) -join '; ') }
             }
             'shot' {
                 $f = Save-XPScreenshot (Join-Path $out ("shot_{0:D2}_{1}.png" -f ($results.Count + 1), $step.name))

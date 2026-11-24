@@ -47,6 +47,7 @@
     { "do": "snapshot", "note": "LEGS の 1 ページ目", "drefs": [ "laminar/B747/fms3/Line01_L", "laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line07_L", "laminar/B747/fms3/Line09_L", "laminar/B747/fms3/Line11_L" ] },
     { "do": "cdu", "note": "INIT REF、<INDEX、PERF：ZFW 183.5（X-Plane の重量 270.0 t から燃料 86.5 t を引いた実際の値。5 回目までは 200 で、FMC の総重量が 16.5 t 重く、VREF 30 + 100 の上昇速度の上限が 253 kt になり 250/10000 を超えた：FCOM p.1255）、CRZ ALT FL250、COST INDEX 100", "keys": ["INITREF", "L6", "L3", "183.5", "L3", "250", "R1", "100", "L5"] },
     { "do": "check", "note": "FMC の巡航高度 25,000 ft", "dref": "laminar/B747/autopilot/dist/cruise_alt", "op": "==", "value": 25000 },
+    { "do": "check", "note": "COST INDEX 100（PERF INIT の 5L。2026-11-24 の回は「0」が 1 つ取りこぼされて 10 で入り、ECON の速さが CI 10 のもの（上昇 297 kt、巡航 M.707、降下 237 kt）になって、T/D の 1 分後の降下率の確かめに落ちた）", "dref": "laminar/B747/fms3/Line11_L", "op": "matches", "value": "^100 " },
     { "do": "cdu", "note": "<INDEX、<TAKEOFF、フラップ 20（1L）、V1・VR・V2 を選ぶ（1R〜3R）", "keys": ["L6", "L5", "20", "L1", "R1", "R2", "R3"] },
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "V2 を選んだ（999 でない）", "dref": "laminar/B747/airspeed/V2", "op": "<", "value": 900 },
