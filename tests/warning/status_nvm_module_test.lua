@@ -166,6 +166,30 @@ rt:set(STATUS, BODY_GR, 0)
 frames(0.5)
 T.check(status_lines():find("BODY GR STRG SYS", 1, true) ~= nil, "BODY GR STRG SYS stays (NVM)")
 
+-- (2026-11-24, D of the 2026-11-23 review: DSP-6 d) the EIUs' power loss
+-- forgets what the NVM does not keep (N.power_off): a not latchable message
+-- still there when the power comes back is seen anew, on top of a latched
+-- one that came after it (newest first, LH_MAN p.52). The review's mutant
+-- (the glue's power_off left out: HYDIM 1 kept its old place) passed the
+-- tests before
+local DRIVE_DISC_1 = 25
+rt:set(STATUS, HYDIM_1, 1)
+frames(0.5)
+rt:set(STATUS, DRIVE_DISC_1, 1)
+frames(0.5)
+rt:set(STATUS, DRIVE_DISC_1, 0)
+frames(0.5)
+T.equal(status_lines():sub(1, 21), "DRIVE DISC 1,HYDIM 1,", "DRIVE DISC 1 latched after HYDIM 1: on top")
+eius(false)
+frames(1)
+eius(true)
+frames(5)
+T.equal(status_lines():sub(1, 21), "HYDIM 1,DRIVE DISC 1,",
+    "EIUs back: HYDIM 1 (not latched, still there) seen anew, on top of DRIVE DISC 1 (power_off)")
+rt:set(STATUS, HYDIM_1, 0)
+frames(0.5)
+T.check(not status_lines():find("HYDIM 1", 1, true), "HYDIM 1 gone with its condition")
+
 -- a new X-Plane flight: the memory empty (estimate)
 rt:set(STATUS, DRIVE_DISC_2, 0)
 rt:callout("flight_start")

@@ -567,3 +567,16 @@ GAP ID 接頭辞：`WARN`。2026-10-23 調査。コード・acf・snd は変更�
     - 浮揚の後 800 ft より下でも、140 秒で抑止が終わる（FCOM p.1594-1595）。
   - `alerts_module_test`（56 件）：レバーだけの原因のときは master リセットで siren が止まる。数が増えると siren がまた鳴り、master WARNING も点く。原因が 0 になると、siren は戻ってリセットできない。
 - 壊し方の一覧は `tests/tools/mutations/config_gear_wiring.lua`（13 個：レビューの 9 個と WARN-3 の 4 個）。13 個とも捕まる。
+
+## 19. 結線の試験：STATUS の記憶（2026-11-24：段 4 のレビューの D の DSP-6 d の残り。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：レビューの壊し方（`D:\b747_review\stage4\a09_displays\mut_status_nvm.lua`）15 個のうち、グルー（`B747.87.xt.alerts.lua`）の 2 個が試験を通っていた。
+  - EIU の電源断で `N.power_off` を呼ばない。
+  - ERASE の数を初めて読むときに、前の値が無ければ 0 とみなす（`count_erases` の `last ~= nil` を `(last or 0)` に）。
+- 電源断：試験を足した（`tests/warning/status_nvm_module_test.lua`、34 件）。
+  - 先に出たラッチしないメッセージ（HYDIM 1）と、その後でラッチしたもの（DRIVE DISC 1）。電源を戻すと、条件の残る HYDIM 1 が新しく出たものとして上に来る（新しい順、LH_MAN p.52。§13 の「NVM に無いものは忘れる」）。
+  - 壊すと、HYDIM 1 は前の位置（DRIVE DISC 1 の下）のまま。
+- 初めての読み：壊しても動きは変わらない（同値の壊し方）。試験では捕まえられないので、一覧から外した。
+  - ERASE の数を最初に読むのは、いつも `B747_alerts_off` の側。EIU は電源が来てから 4 秒後に動き出し（`B747.87.xt.warning.lua` の `powered` は false から始まる）、その間に読んで覚える。
+  - そのため、EIU が動いているときの読みには、いつも前の値がある。
+- 壊し方の一覧は `tests/tools/mutations/status_nvm_wiring.lua`（14 個：レビューの 15 個から同値の 1 個を除いたもの）。14 個とも捕まる。
