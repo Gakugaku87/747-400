@@ -170,4 +170,34 @@ rt:set("sim/flightmodel/engine/ENGN_N2_", 1, 65)
 frames(0.5)
 T.check(slot_of("caution", "HYD PRESS SYS 3") ~= nil, "engine start over at idle: the caution shows")
 
+-- (2026-11-24, D of the 2026-11-23 review: WARN-4) the flight controls'
+-- CONFIG GEAR cause through the glue (laminar/B747/flt_ctrls/
+-- config_gear_lever): by the thrust levers alone the master reset silences
+-- the siren (FCOM p.1556); a further lever closed (the count up: WARN-3) is
+-- a new alert (ATA31 p.209, p.214). The review's mutants A2 and N1 passed
+-- the tests before
+rt:set(WARNING, 1, 0)
+for i = 61, 64 do rt:set(CAUTION, i, 0) end
+frames(0.5)
+rt:command("laminar/B747/button_switch/warn_caut_capt", 0.1)
+frames(1)
+rt:set("laminar/B747/flt_ctrls/config_gear_lever", 1)
+rt:set(WARNING, 3, 1)               -- CONFIG GEAR
+frames(0.5)
+T.equal(get("laminar/B747/warning/warning_siren"), 1, "CONFIG GEAR by the thrust levers: the siren")
+rt:command("laminar/B747/button_switch/warn_caut_capt", 0.1)
+frames(1)
+T.equal(get("laminar/B747/warning/warning_siren"), 0, "the master reset: silenced (the lever's cause through the glue)")
+rt:set("laminar/B747/flt_ctrls/config_gear_lever", 2)
+frames(0.5)
+T.equal(get("laminar/B747/warning/warning_siren"), 1, "a further lever closed (2): the siren again (the count through the glue)")
+T.equal(get("laminar/B747/warning/master_warning"), 1, "and master WARNING")
+rt:command("laminar/B747/button_switch/warn_caut_capt", 0.1)
+frames(1)
+rt:set("laminar/B747/flt_ctrls/config_gear_lever", 0)
+frames(0.5)
+T.equal(get("laminar/B747/warning/warning_siren"), 1, "the flaps a cause too (0): the siren back, not resettable")
+rt:set(WARNING, 3, 0)
+frames(0.5)
+
 T.done()
