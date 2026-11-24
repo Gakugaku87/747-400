@@ -1337,6 +1337,16 @@ function fmsFunctions.setdata(fmsO,value)
 	monitorCRZALT()
 	B747_fms_econ_now()
 	setFMSData("stepalt", "")
+	-- (2026-11-24, review FMC-3) the DES page's SPD TRANS deleted comes back
+	-- with a new cruise altitude above the nav data base's altitude (FMSPG
+	-- p.192 (3.5-8)), 240/10000 (X-Plane's nav data have no airport speed
+	-- limit: FCOM p.1392). An MCP altitude's change of CRZ ALT is no entry
+	-- (estimate). Before, a deletion stayed until the airplane was loaded
+	-- again, through the flight complete too
+	if str_trim(fmsModules["data"].destranspd) == "---" and ft > 10000 then
+		setFMSData("destranspd", "240")
+		setFMSData("desspdtransalt", "10000")
+	end
 	-- above the maximum altitude the entry stands with MAX ALT FLXXX (6-1/6-2
 	-- step 8b2; FMSPG p.131, FCOM p.1435)
 	local maxft = B747_perf_db.max_alt(B747_fms_perf(), B747_fms_gw_kg(), B747_fms_isa_dev())

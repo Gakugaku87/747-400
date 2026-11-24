@@ -86,6 +86,46 @@ np.gps_inhibit, np.rnp_man = true, 0.3
 T.check(fms.ns.B747_fmc_route.active and fms.ns.B747_fmc_route.rte.dest.ident == "ZZAA", "the route active")
 T.check(data("fltno") == "TEST123" and data("costindex") == "100" and data("crzalt") == "FL350",
     "FLT NO, COST INDEX, CRZ ALT entered: " .. data("fltno") .. " " .. data("costindex") .. " " .. data("crzalt"))
+-- (2026-11-24, review FMC-3) SPD TRANS deleted on the CLB and the DES pages
+-- (FCOM p.1328, p.1392): the climb's back at the flight complete (estimate),
+-- the descent's with a new CRZ ALT above the nav data base's 10,000 ft
+-- (FMSPG p.192 (3.5-8)). Before, both stayed deleted through the completion.
+-- The block's time is made whole seconds at its end: the completion's 30 s
+-- below are counted on whole-second frames and the FMC reads the clock a
+-- frame late, so a fraction moved it past the 31 s check
+local fmc3Start = rt.time
+key("func_key/des")                                  -- CLB on the ground
+T.check(line(1):find("CLB") ~= nil, "VNAV: the CLB page: " .. line(1))
+key("key/del")
+key("ls_key/L3")
+T.equal(data("transpd"), "---", "CLB's SPD TRANS deleted")
+key("func_key/next_pg")
+key("func_key/next_pg")
+T.check(line(1):find("DES") ~= nil, "the DES page: " .. line(1))
+key("key/del")
+key("ls_key/L3")
+T.check(data("destranspd") == "---" and data("desspdtransalt") == "-----", "DES's SPD TRANS deleted")
+key("func_key/index")
+key("ls_key/L6")
+key("ls_key/L3")                                     -- PERF INIT
+enter("9000", "R1")
+T.check(data("crzalt") == "9000" or data("crzalt") == "FL090", "CRZ ALT 9,000 ft: " .. data("crzalt"))
+T.equal(data("destranspd"), "---", "a CRZ ALT under 10,000 ft: the DES SPD TRANS stays deleted")
+enter("350", "R1")
+T.equal(data("crzalt"), "FL350", "CRZ ALT FL350 again")
+T.check(data("destranspd") == "240" and data("desspdtransalt") == "10000", "a new CRZ ALT above 10,000 ft: DES SPD TRANS 240/10000 again (FMSPG p.192)")
+key("func_key/des")
+key("key/del")
+key("ls_key/L3")
+key("func_key/next_pg")
+key("func_key/next_pg")
+key("key/del")
+key("ls_key/L3")
+T.check(data("transpd") == "---" and data("destranspd") == "---", "both deleted again before the flight")
+do
+    local rem = (rt.time - fmc3Start) % 1
+    if rem > 1e-6 then rt:frame(1 - rem) end
+end
 -- (2026-11-24, review CDU-2 = PERF-3) the crew's ZFW 220, CRZ CG 25.5 and
 -- TAKEOFF REF's CG 22 with its trim (the green band's selection)
 local function small(n) return rt:get(string.format("%sLine%02d_S", LN, n)) end
@@ -141,12 +181,17 @@ T.check(not np.gps_inhibit and np.rnp_man == nil, "GPS NAV enabled again (FCOM p
 -- pressurization's laminar/B747/autopilot/dist/cruise_alt): the next
 -- flight's same CRZ ALT shows (before: boxes, its value unchanged)
 T.equal(rt:get("laminar/B747/autopilot/dist/cruise_alt"), 0, "CRZ ALT's value cleared (before: 35000)")
+-- (review FMC-3) the CLB page's SPD TRANS back at the completion
+-- (estimate), the DES page's not yet (FMSPG p.192: a new CRZ ALT)
+T.check(data("transpd") == "250" and data("spdtransalt") == "10000", "CLB's SPD TRANS back: " .. data("transpd") .. "/" .. data("spdtransalt"))
+T.equal(data("destranspd"), "---", "DES's SPD TRANS still deleted before a CRZ ALT")
 key("func_key/index")
 T.check(line(1):find("PERF INIT"), "PERF INIT: " .. line(1))
 enter("350", "R1")
 frames(0.2)
 T.equal(data("crzalt"), "FL350", "the same CRZ ALT entered again: FL350 (before: boxes)")
 T.equal(rt:get("laminar/B747/autopilot/dist/cruise_alt"), 35000, "its value 35000")
+T.check(data("destranspd") == "240" and data("desspdtransalt") == "10000", "the next flight's CRZ ALT: DES SPD TRANS 240/10000 (FMSPG p.192)")
 key("func_key/fpln")
 
 -- once: the next shutdown without a flight clears nothing again

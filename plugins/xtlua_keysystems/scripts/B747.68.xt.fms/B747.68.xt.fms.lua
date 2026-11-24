@@ -5969,13 +5969,16 @@ end
 -- p.1356-1357), GPS NAV (FCOM p.1369). Estimates: APPROACH REF's flaps and
 -- VREF, THRUST LIM's and the VNAV pages' selections, RTA, ENG OUT, the
 -- RNP entry; X-Plane's flight plan stays (it takes none without a
--- destination). Before, nothing cleared after a flight.
+-- destination). Before, nothing cleared after a flight. (2026-11-24, review
+-- FMC-3) the CLB page's SPD TRANS deleted comes back too (estimate: no
+-- source says when; the DES page's comes back with a new CRZ ALT, FMSPG
+-- p.192 (3.5-8): B744.fms.pages.lua's crzalt)
 local FC_DELAY_S=30
 local fcFlown,fcStop=false,nil
 local FC_KEYS={"fltno","grwt","fuel","zfw","reserves","costindex","crzalt","crzcg","stepsize","fuelman","gwsrc",
   "toflap","v1","vr","v2","v1sel","vrsel","v2sel","accelht","accelset","eoaccelht","eoaccelset","thrred","thrredset",
   "towind","toslope","posshift","selunit","thrustsel","thrustself","cg_mac","stab_trim","flapspeed","vref1","vref2",
-  "clbspd","clbspdmach","clbspdmode","clbrestspd","clbrestalt","crzspd","crzcas","crzspdmode","stepalt",
+  "clbspd","clbspdmach","clbspdmode","clbrestspd","clbrestalt","transpd","spdtransalt","crzspd","crzcas","crzspdmode","stepalt",
   "desspd","desspdmach","desspdmode","desrestspd","desrestalt"}
 local function renew(t,fresh)
   for k in pairs(t) do t[k]=nil end
