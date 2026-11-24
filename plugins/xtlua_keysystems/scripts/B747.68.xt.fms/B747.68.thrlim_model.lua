@@ -16,7 +16,12 @@
 --   as set by maintenance (step 12c1: PERF FACTORS' THR/CRZ, ATA34_2
 --   p.536, FCOM p.1273); FLCH to a higher altitude from CRZ CLB (FCOM p.646);
 --   GA in the air with the flaps extended out of UP, at the landing flaps or
---   with G/S captured, held at the landing flaps or with G/S (FCOM p.672);
+--   with G/S captured, held at the landing flaps or with G/S (FCOM p.672),
+--   from TO too (2026-11-24, review FMC-7 (c)); after a flight GA kept on
+--   the ground at GA_GROUND_KT and more (the go-around's through a
+--   touchdown, a touch and go: FMC-7 (a)), then TO without the takeoff's
+--   derate and assumed temperature until the flight complete's new state
+--   or a new TO selection (FMC-7 (b); both estimates);
 --   from GA the THR switch CLB (CON if CON was selected: FCOM p.642), VNAV
 --   the FMC's phase's;
 --   the THRUST LIM page's selections in the air (GA, CON, CRZ, CLB, CLB 1,
@@ -47,6 +52,15 @@ M.FLAPS5, M.FLAPS_LAND = 2 / 6, 5 / 6
 M.THR_RA = 400
 -- (step 9h3) the engine-out takeoff's CON at VREF + EO_CON_ADD (FCOM p.1266)
 M.EO_CON_ADD = 98
+-- (2026-11-24, review FMC-7 (a)) GA kept on the ground after a flight while
+-- the airplane rolls at GA_GROUND_KT (IAS) or more: FCOM p.672 (4.20.14)
+-- has the go-around mode go on after a touchdown and p.673 (4.20.15) the
+-- TO/GA switches for a touch and go, none of them a speed; the A/T's own
+-- 30 kt (B747.70.at_model.lua's STOP_KT: estimate)
+M.GA_GROUND_KT = 30
+-- a flight for FMC-7: above FLOWN_RA ft of radio altitude (not a frame off
+-- the ground as the airplane is loaded: estimate)
+M.FLOWN_RA = 50
 local TO_LABEL, CLB_LABEL = {"TO", "TO 1", "TO 2"}, {"CLB", "CLB 1", "CLB 2"}
 
 function M.new()
@@ -58,6 +72,8 @@ function M.new()
         no_sel = false,                 -- the assumed temperature removed (a TO/GA push)
         locked = false,                 -- GA held (the landing flaps, G/S)
         eo_to = false,                  -- (step 9h3) an engine failed in TO
+        flown = false,                  -- (review FMC-7) in the air since the ground
+        after = false,                  -- (FMC-7 (b)) on the ground after a flight
         flaps_prev = nil, phase_prev = nil, vnav_prev = false, flch_prev = false}
 end
 
@@ -87,7 +103,7 @@ end
 -- temperature not counted)
 function M.select_to(s, n, pct, ground)
     if not ground then return false end
-    s.to = n
+    s.to, s.after = n, false            -- (FMC-7 (b)) a new takeoff's
     if not s.clb_manual then s.clb = M.auto_clb(pct) end
     return true
 end
@@ -138,15 +154,31 @@ function M.update(s, inp)
     local flchPush = inp.flch_up and not s.flch_prev
     s.flch_prev = inp.flch_up and true or false
     if inp.ground then
+        -- (2026-11-24, review FMC-7 (a)) GA kept through a touchdown while
+        -- the airplane rolls (a go-around with the wheels on the runway, a
+        -- touch and go: FCOM p.672, p.673; GA_GROUND_KT). Before, TO at
+        -- once, with the takeoff's derate and assumed temperature: the
+        -- go-around's thrust the derated takeoff's ("D-TO 2 +47C")
+        if s.flown and s.mode == "GA" and (inp.ias or 0) >= M.GA_GROUND_KT then
+            s.flaps_prev, s.phase_prev, s.vnav_prev = flaps, inp.phase, inp.vnav
+            return M.label(s)
+        end
+        -- (FMC-7 (b)) after a flight TO without the takeoff's derate and
+        -- assumed temperature, until the flight complete (a new state) or a
+        -- new TO selection (estimate: no source says when they go; ATA34_2
+        -- p.535 TO on the ground). Before, "D-TO 1 +47C" came back after
+        -- every landing
+        if s.flown then s.flown, s.after, s.to = false, true, 0 end
         -- on the ground TO, the selections kept (ATA34_2 p.535); the climb's
         -- by the takeoff's whole reduction unless chosen (FCOM p.1273, every
         -- airplane: review FMC-1)
-        s.mode, s.locked, s.con, s.no_sel, s.eo_to = "TO", false, false, false, false
+        s.mode, s.locked, s.con, s.no_sel, s.eo_to = "TO", false, false, s.after, false
         s.flaps_prev, s.phase_prev, s.vnav_prev = flaps, inp.phase, inp.vnav
         if not s.clb_manual and inp.to_red then s.clb = M.auto_clb(inp.to_red) end
-        s.d = inp.sel_up == true
+        s.d = inp.sel_up == true and not s.no_sel
         return M.label(s)
     end
+    if (inp.ra or 0) > M.FLOWN_RA then s.flown = true end
     s.d = inp.sel_up == true and not s.no_sel
     -- an air start (no takeoff before): the climb's (estimate)
     if s.flaps_prev == nil then s.mode = "CLB" end
@@ -170,7 +202,11 @@ function M.update(s, inp)
     end
     s.phase_prev, s.vnav_prev = inp.phase, inp.vnav
     local thr = inp.thr and (inp.ra or 0) > M.THR_RA
-    if s.mode == "TO" then
+    -- (2026-11-24, review FMC-7 (c)) GA's conditions from TO too: a flight
+    -- without VNAV and the THR switch kept TO into the approach (before,
+    -- TO returned ahead of them)
+    local toGA = extended or landing or inp.gs == true
+    if s.mode == "TO" and not toGA then
         -- a TO/GA push before the climb's: the takeoff's derate and assumed
         -- temperature gone (FCOM p.667)
         if inp.toga then s.to, s.no_sel, s.d = 0, true, false end
