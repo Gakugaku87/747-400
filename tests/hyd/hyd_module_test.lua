@@ -119,6 +119,48 @@ for n = 1, 4 do
     T.equal(get(SYN .. "dem", n - 1), 3, "engines: synoptic DEM " .. n .. " AUTO (cyan)")
 end
 
+-- (2026-11-24, D of the 2026-11-23 review: SYS-7) the flaps' signal to the
+-- demand pumps 1 and 4 through the glue (B747.19.xt.hyd_power.lua): on the
+-- ground the flaps in transit run both (AUTO), the right FCU's for pump 1
+-- and the left's for pump 4 only (N19-HYD-01; ATA29_32 p.61-62 (29 Page
+-- 59-60), MMEL p.139 (27-3)); in the air the flaps down run them, ten
+-- seconds on after they are up. The review's mutants on this wiring
+-- (which FCU, failed never, the flaps never) passed every test
+local TE_MOVING, TE_DOWN, FCU_FAIL = "laminar/B747/flt_ctrls/fcu/te_moving", "laminar/B747/flt_ctrls/fcu/te_down", "laminar/B747/flt_ctrls/fail/fcu"
+rt:set(TE_MOVING, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") > 2900, "on the ground, the flaps in transit: demand pumps 1 and 4 run")
+rt:set(FCU_FAIL, 2, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") == 0 and get(HYD .. "dem_pressure_4") > 2900, "the right FCU failed: pump 1 not by the flaps, pump 4 still")
+rt:set(FCU_FAIL, 2, 0)
+rt:set(FCU_FAIL, 0, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") == 0, "the left FCU failed: pump 4 not by the flaps, pump 1 still")
+rt:set(FCU_FAIL, 0, 0)
+rt:set(FCU_FAIL, 1, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") > 2900, "the centre FCU failed: both still (neither takes it)")
+rt:set(FCU_FAIL, 1, 0)
+rt:set(TE_MOVING, 0)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") == 0 and get(HYD .. "dem_pressure_4") == 0, "the flaps stopped: both stop")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("laminar/B747/gear/air_ground/alt_air", 1)        -- the hydraulics' air/ground (ATA29_32 p.63)
+rt:set(TE_DOWN, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") > 2900, "in the air, the flaps down: both run")
+rt:set(TE_DOWN, 0)
+frames(5)
+T.check(get(HYD .. "dem_pressure_1") > 2900, "the flaps up: on for ten seconds")
+frames(8)
+T.check(get(HYD .. "dem_pressure_1") == 0 and get(HYD .. "dem_pressure_4") == 0, "13 s after: both stopped")
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set("laminar/B747/gear/air_ground/alt_air", 0)
+frames(3)
+
 -- ENGINE pump 1 OFF: ADP 1 keeps system 1, ENGINE PRESS and HYD PRESS ENG
 rt:set(SW, 30, 0)
 frames(3)
