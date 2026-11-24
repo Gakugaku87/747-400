@@ -21,7 +21,18 @@ simDR_tcas_rel_alt              = find_dataref("sim/cockpit2/tcas/indicators/rel
 simDR_tcas_advisory             = find_dataref("sim/cockpit2/tcas/indicators/tcas_active_advisory")
 simDR_tcas_message              = find_dataref("sim/cockpit2/tcas/indicators/tcas_message")
 simDR_tcas_bands                = find_dataref("sim/cockpit2/tcas/indicators/tcas_vs_bands")
-simDR_tcas_vs                   = find_dataref("sim/flightmodel/position/vh_ind_fpm")
+-- (2026-11-24, the 2026-11-23 review's NAV-5) the own vertical speed the
+-- IRUs' inertial V/S, as the AFDS's (B747.70.xt.autopilot.lua's
+-- B747_afds_ivs, 65b5caf7): X-Plane's local y velocity with the horizontal
+-- velocity along the earth's curve (the up vector (x/R, 1, z/R) to first
+-- order). ATA34_2 p.17 (34-45 Page 15) names no source of it (estimate).
+-- Before, sim/flightmodel/position/vh_ind_fpm, which follows the Captain's
+-- static system (0 with that port blocked)
+simDR_tcas_vy                   = find_dataref("sim/flightmodel/position/local_vy")
+simDR_tcas_vx                   = find_dataref("sim/flightmodel/position/local_vx")
+simDR_tcas_vz                   = find_dataref("sim/flightmodel/position/local_vz")
+simDR_tcas_px                   = find_dataref("sim/flightmodel/position/local_x")
+simDR_tcas_pz                   = find_dataref("sim/flightmodel/position/local_z")
 simDR_tcas_tas                  = find_dataref("sim/flightmodel/position/true_airspeed")
 B747DR_tcas_mode_sel            = find_dataref("laminar/B747/flt_mgmt/txpdr/mode_sel_pos")
 B747DR_tcas_xpdr_sel            = find_dataref("laminar/B747/flt_mgmt/transponder/sel_dial_pos")
@@ -127,7 +138,8 @@ function B747_tcas()
     inp.nd_range_nm[2] = range_nm(B747DR_tcas_nd_range_fo)
     inp.tfc_pushes[1] = B747DR_tcas_tfc_pushes_capt
     inp.tfc_pushes[2] = B747DR_tcas_tfc_pushes_fo
-    inp.own_vs = simDR_tcas_vs
+    -- (NAV-5) the inertial V/S (fpm): m/s x 196.85, the earth's radius 6,371 km
+    inp.own_vs = (simDR_tcas_vy + (simDR_tcas_vx * simDR_tcas_px + simDR_tcas_vz * simDR_tcas_pz) / 6371000) * 196.850394
     inp.tas_kt = simDR_tcas_tas * MS_TO_KT
     for j = 1, TARGETS do
         inp.threat[j] = simDR_tcas_threat[j]
