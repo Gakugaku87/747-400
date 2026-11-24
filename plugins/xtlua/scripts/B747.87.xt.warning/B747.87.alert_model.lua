@@ -322,6 +322,18 @@ function M.update(s, inp, dt)
     -- for the advisories of M.ADVISORY_BEEPER, which wait out the same
     -- inhibits (estimate: FCOM gives no inhibits for them).
     local beep = false
+    -- (2026-11-24, the 2026-11-23 review's WARN-3) CONFIG GEAR by the
+    -- thrust levers: a further lever closed while it stands is a new alert,
+    -- the master WARNING and the siren again after a reset (ATA31 p.209,
+    -- p.214; FCOM has no word on it). The flight controls give 1 + the
+    -- further levers closed (inp.config_gear_lever_n)
+    local leverN = inp.config_gear_lever_n or 0
+    if leverN > (s.cfg_lever_n or 0) and (s.cfg_lever_n or 0) > 0 then
+        for name, rec in pairs(s.seen) do
+            if not rec.hidden and M.classify(name) == "CONFIG GEAR" then rec.new, rec.silenced = true, false end
+        end
+    end
+    s.cfg_lever_n = leverN
     local function announce(name, rec)
         rec.announced, rec.pending = true, false
         if rec.level == "warning" then

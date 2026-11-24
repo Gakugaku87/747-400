@@ -810,6 +810,10 @@ local TOCW_DETENT_POS = {[0] = 0, 1, 5, 10, 20, 25, 30}     -- the flap lever's 
 -- >CONFIG GEAR's two latches, and the time since the liftoff while its
 -- takeoff inhibit lasts (nil: none) (below)
 local config_gear_thrust, config_gear_flaps = false, false
+-- (2026-11-24, the 2026-11-23 review's WARN-3) each thrust lever closed at
+-- the frame before, and the further levers closed while the lever's cause
+-- stands (a new alert each: ATA31 p.209, p.214)
+local config_gear_closed, config_gear_more = {[0] = false, false, false, false}, 0
 B747DR_cfg_gear_lever           = find_dataref("laminar/B747/flt_ctrls/config_gear_lever")
 B747DR_to_thrust_range          = find_dataref("laminar/B747/flt_ctrls/takeoff_thrust_range")
 local config_gear_after_lo = nil
@@ -916,28 +920,45 @@ function B747_fltCtrols_EICAS_msg()
         config_gear_after_lo = config_gear_after_lo + SIM_PERIOD
         if config_gear_after_lo >= 140 or simDR_radio_alt_height_capt > 800.0 then config_gear_after_lo = nil end
     end
+    local thrust_before = config_gear_thrust
     if cfg_on_ground or B747DR_cfg_all_gear_down == 1 or config_gear_after_lo ~= nil then
         config_gear_thrust, config_gear_flaps = false, false
     else
-        if any_thrust_lever_closed == 1 and simDR_radio_alt_height_capt < 800.0 then
-            config_gear_thrust = true
-        elseif any_thrust_lever_closed == 0 then
-            config_gear_thrust = false
-        end
+        -- (2026-11-24, the 2026-11-23 review's WARN-3) the thrust lever's
+        -- cause under 800 ft radio altitude only (ATA31 p.209, p.214: RA
+        -- under 800 ft in its logic, as the flaps' since 2026-11-12), the
+        -- threshold the closed lever's (FCOM p.1556, p.1603; AOM_JP p.10:
+        -- closed, idle; ATA31's 55 degrees TLRA, about 0.40 of the lever,
+        -- not taken: it would sound with the approach's thrust gear up).
+        -- Before, set under 800 ft and kept above it until no lever was
+        -- closed
+        config_gear_thrust = any_thrust_lever_closed == 1 and simDR_radio_alt_height_capt < 800.0
         if B747DR_button_switch_position[5] > 0.5 then
             config_gear_flaps = false
         else
             config_gear_flaps = landing_flaps
         end
     end
+    -- (WARN-3) a further lever closed while the lever's cause stands: a new
+    -- alert, the siren again after a reset (ATA31 p.209, p.214; FCOM has no
+    -- word on it). Before, none
+    for i = 0, 3 do
+        local closed = B747DR_sb_thrust_lever[i] < 0.05
+        if thrust_before and config_gear_thrust and closed and not config_gear_closed[i] then
+            config_gear_more = config_gear_more + 1
+        end
+        config_gear_closed[i] = closed
+    end
+    if not config_gear_thrust then config_gear_more = 0 end
     if card_ok and (config_gear_thrust or config_gear_flaps) then
         B747DR_CAS_warning_status[3] = 1
     else
         B747DR_CAS_warning_status[3] = 0
     end
     -- (2026-11-20, N19-WARN-02) caused by the thrust lever alone: resettable
-    -- (FCOM p.1556)
-    local lever_only = (config_gear_thrust and not config_gear_flaps) and 1 or 0
+    -- (FCOM p.1556); (2026-11-24, WARN-3) 1 + the further levers closed
+    -- since, so the warning knows a new alert (B747.87.alert_model.lua)
+    local lever_only = (config_gear_thrust and not config_gear_flaps) and (1 + config_gear_more) or 0
     if B747DR_cfg_gear_lever ~= lever_only then B747DR_cfg_gear_lever = lever_only end
 
 
