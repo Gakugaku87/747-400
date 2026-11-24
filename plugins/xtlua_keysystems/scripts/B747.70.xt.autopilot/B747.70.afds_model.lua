@@ -106,8 +106,9 @@
 --    T/O's pitch still active (after the takeoff) the push selects only
 --    G/A's roll, from 50 ft (FCOM p.656). The switches are inhibited 2 s
 --    after the radio altitude goes below 5 ft and enabled 3 s after it goes
---    above (FCOM p.672). G/A ends LOC, G/S, VNAV active and the approach
---    arms, not the LNAV and VNAV arms; it stays through a touchdown. From
+--    above (FCOM p.673 (4.20.15)). G/A ends LOC, G/S, VNAV active and the
+--    approach arms, not the LNAV and VNAV arms; it stays through a
+--    touchdown. From
 --    G/A the roll modes and V/S, ALT HOLD and FLCH only at 400 ft RA, the
 --    MCP altitude's capture from T/O or G/A only above 800 ft (table
 --    p.335); below 400 ft G/A ends only with the A/P disengaged and both
@@ -203,7 +204,7 @@ M.GA_RA = 400
 M.CAPT_RA = 800
 M.TO_ROLL_RA = 50
 -- the TO/GA switches inhibited INHIBIT_S s after the radio altitude goes
--- below SWITCH_RA ft, enabled ENABLE_S s after it goes above (FCOM p.672)
+-- below SWITCH_RA ft, enabled ENABLE_S s after it goes above (FCOM p.673 (4.20.15))
 M.SWITCH_RA = 5
 M.INHIBIT_S = 2
 M.ENABLE_S = 3
@@ -912,7 +913,7 @@ function M.update(s, inp)
     -- autoland status of the frame before)
     autoland_alert(s, inp)
     -- the TO/GA switches: inhibited 2 s after the radio altitude goes below
-    -- 5 ft, enabled 3 s after it goes above (FCOM p.672)
+    -- 5 ft, enabled 3 s after it goes above (FCOM p.673 (4.20.15))
     local low = (inp.ra or 0) < M.SWITCH_RA
     if low ~= s.ra_low then s.ra_low, s.ra_t = low, 0 end
     s.ra_t = s.ra_t + (inp.dt or 0)

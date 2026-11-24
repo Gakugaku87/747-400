@@ -848,4 +848,40 @@ do
     T.check(pw / ge > 3 and pw / ge < 3.3, string.format("P&W: about 3.1 times (as before): %.2f", pw / ge))
 end
 
+-- (2026-11-24, review AFDS-2) a touch and go with the A/T off: the no-TO
+-- inhibit is the takeoff's roll's only (FCOM p.656, p.667 "prior to
+-- lift-off"; p.673 (4.20.15) gives the TO/GA switches to a rejected landing
+-- and a touch and go), and the AFDS's inhibit after a touchdown holds the
+-- push until 3 s after 5 ft (p.673). Before, the landing's roll set the
+-- no-TO inhibit and TO/GA left the A/T off to 400 ft
+do
+    local t = A.new()
+    local TO = {ground = true, ra = 0, flaps_up = false, limit_to = true, pitch = "TO"}
+    A.update(t, inp(with(TO, {cas = 0})))
+    A.update(t, inp(with(TO, {cas = 80})))
+    T.check(t.no_to, "the takeoff's roll at 80 kt with the A/T off: no TO/GA (FCOM p.656)")
+    A.update(t, inp{ra = 300, cas = 170, flaps_up = false, limit_to = true, pitch = "TO", toga = true})
+    T.check(not t.engaged, "after that takeoff a push at 300 ft: none, as before (until 400 ft)")
+    A.update(t, inp{ra = 3000, cas = 200, flaps_up = false, limit_ga = true, pitch = "GS"})
+    T.check(not t.no_to, "above 400 ft: the inhibit gone")
+    local L = {ground = true, ra = 0, cas = 130, flaps_up = false, limit_ga = true, pitch = "GS", toga_inhibit = true}
+    A.update(t, inp(L))
+    A.update(t, inp(with(L, {cas = 120})))
+    T.check(not t.no_to, "a landing's roll at 120 kt with the A/T off: no no-TO inhibit (it was set)")
+    A.update(t, inp(with(L, {cas = 110, toga = true})))
+    T.check(not t.engaged, "a push on the runway: nothing (the AFDS inhibits it after the touchdown)")
+    A.update(t, inp{ra = 20, cas = 150, flaps_up = false, limit_ga = true, pitch = "GA", toga = true, toga_inhibit = true})
+    T.check(not t.engaged, "lifted off, a push in the AFDS's 3 s after 5 ft: nothing (FCOM p.673)")
+    A.update(t, inp{ra = 60, cas = 155, flaps_up = false, limit_ga = true, pitch = "GA", toga = true})
+    T.check(t.engaged and A.fma(t) == A.THR, "the touch and go's push after them at 60 ft: THR (FCOM p.673; before, nothing to 400 ft)")
+    -- a full stop (the A/T disconnected): the next takeoff's roll sets it again
+    A.update(t, inp(with(L, {cas = 100, toga = false, disc = true})))
+    T.check(not t.engaged, "landed, the disconnect switch: off")
+    A.update(t, inp(with(L, {cas = 20, toga = false, toga_inhibit = false})))
+    T.check(not t.no_to, "stopped: none")
+    A.update(t, inp(with(TO, {cas = 0})))
+    A.update(t, inp(with(TO, {cas = 80})))
+    T.check(t.no_to, "the next takeoff's roll at 80 kt with the A/T off: no TO/GA again")
+end
+
 T.done()
