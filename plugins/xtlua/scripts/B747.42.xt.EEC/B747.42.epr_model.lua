@@ -26,9 +26,42 @@
 local M = setmetatable({}, {})
 B747_epr_model = M
 
--- Mach, k (kN), q, and the two points (corrected thrust kN, EPR)
+-- Mach, k (kN), q, c (0 if none), and the points (corrected thrust kN, EPR).
+-- (2026-11-25, the 2026-11-23 review's ENG-1) The form k x^q exp(-c x), x =
+-- NPR - 1 (before: k x^q). c bends the curve down at high power: the FPPM's
+-- takeoff tables (p.44 TO, p.57 TO 1 at 92 %, p.69 TO 2 at 80 % and p.22's
+-- 25 % reductions: 293 ratios between EPR 1.21 and 1.75) have the corrected
+-- thrust grow ever slower with the EPR (the local exponent from about 0.74
+-- at 1.25 to 0.54 at 1.6). A power law misses them by 4.4 % (rms; 1.8 % at
+-- its best), this form by 0.7 %.
+-- - M 0: through the ground idle's estimate and the rating, as before; in
+--   between no source, and 7 to 12 % more thrust than before at EPR
+--   1.03-1.20 standing (estimate).
+-- - M 0.29 (new): the FPPM's one engine inoperative go-around gradient (p.75
+--   (1.4.5): flaps 20, 250 t) with the custom acf's drag as X-Plane gave it
+--   (measures eng1_eo_ga_gradient_sl and _6000 of 2026-11-25: no sideslip,
+--   165 KIAS, 16.8 % at 1,527 ft and 15.3 at 6,387 against the chart's 13.2
+--   and 10.6, lift / drag 8.9): an engine needs 213.6 kN corrected at EPR
+--   1.532 and M 0.258, 228.1 at 1.614 and 0.282 (before 244.8 and 277.7);
+--   and the FCOM's 3 degree approach and terminal area EPRs (p.265-266:
+--   flaps 20 gear down, 25, 30) at the thrust the model gave before (which
+--   agrees with the FCOM in X-Plane: s425 of 2026-11-24, 1.091 at 61.2 kN,
+--   270 t, flaps 30, 151 KIAS; FCOM about 1.095). All within 0.6 %.
+-- - M 0.35 (new): the values the straight line from M 0 to 0.438 had there,
+--   so that nothing changes from 0.35 up (the climb's, the terminal area's
+--   and the holding's points). Between 0.29 and 0.35 high power's thrust
+--   comes back up to them (at EPR 1.51 from 0.81 of the static to 0.97): no
+--   source (estimate).
+-- Before, at the go-around EPR an engine gave 9 to 25 % more than p.75's
+-- gradient needs (s326, 2026-11-22: 7.97 % against the chart's 5.7-6.1), and
+-- the takeoff run's thrust hardly fell with the speed (0.93 of the static at
+-- M 0.2; now 0.85; the 747-100's, NASA_SIM p.303: about 0.83). k, q and c are
+-- interpolated between the stations
 M.STATIONS = {
-    {0.000, 436.5, 0.8136},   -- ground idle 10.3 / 1.01; takeoff 252.4 / 1.51
+    {0.000, 605.37, 0.8834, 0.5490},   -- ground idle 10.3 / 1.01; takeoff 252.4 / 1.51; FPPM p.44, 57, 69, 22's shares
+    {0.290, 516.40, 1.044, 0.648},     -- go-around 213.6 / 1.532 (M .258), 228.1 / 1.614 (M .282); approach 62.9 / 1.09 (M .233)
+    -- the line from M 0 (436.5, 0.8136) to 0.438 of before, at 0.35: nothing changes from here up
+    {0.350, 436.5 + (353.7 - 436.5) * 0.35 / 0.438, 0.8136 + (0.9844 - 0.8136) * 0.35 / 0.438},
     {0.438, 353.7, 0.9844},   -- sea level, 290 KIAS: level 44.8 / 0.984; climb 152.7 / 1.25
     {0.523, 282.4, 0.8924},   -- 10,000 ft: level 64.3 / 0.988; climb 186.1 / 1.35
     {0.631, 246.7, 0.8344},   -- 20,000 ft: level 94.2 / 1.006; climb 219.6 / 1.43
@@ -54,18 +87,45 @@ function M.zero(mach)
     return 1 / ram(mach)
 end
 
--- k and q at a Mach (held beyond the first and last)
+-- k, q and c at a Mach (held beyond the first and last)
 local function kq(mach)
     local s = M.STATIONS
-    if mach <= s[1][1] then return s[1][2], s[1][3] end
+    if mach <= s[1][1] then return s[1][2], s[1][3], s[1][4] or 0 end
     for i = 2, #s do
         if mach <= s[i][1] then
             local a, b = s[i - 1], s[i]
             local w = (mach - a[1]) / (b[1] - a[1])
-            return a[2] + (b[2] - a[2]) * w, a[3] + (b[3] - a[3]) * w
+            local ca, cb = a[4] or 0, b[4] or 0
+            return a[2] + (b[2] - a[2]) * w, a[3] + (b[3] - a[3]) * w, ca + (cb - ca) * w
         end
     end
-    return s[#s][2], s[#s][3]
+    return s[#s][2], s[#s][3], s[#s][4] or 0
+end
+M.kq = kq
+
+-- (2026-11-25, ENG-1) x = NPR - 1 for a corrected thrust f > 0: k x^q exp(-c x)
+-- = f, by Newton on ln x from the power law's (c 0) root, below which it
+-- lies: the curve is concave in ln x, so the steps come up to the root from
+-- below. The law rises up to x = q / c; a thrust above its top takes the top
+-- (an estimate: no EPR gives it)
+local function x_of(f, k, q, c)
+    if f <= 0 then return 0 end
+    local x = (f / k) ^ (1 / q)
+    if c <= 0 then return x end
+    local top = q / c
+    local lnf = math.log(f / k)
+    if lnf >= q * math.log(top) - c * top then return top end
+    local u = math.log(math.min(x, top))
+    for _ = 1, 30 do
+        local e = math.exp(u)
+        local g = q * u - c * e - lnf
+        local d = q - c * e
+        if d <= 1e-9 then break end
+        local du = g / d
+        u = u - du
+        if math.abs(du) < 1e-12 then break end
+    end
+    return math.min(math.exp(u), top)
 end
 
 -- (2026-11-05) below no net thrust the same law mirrored, NPR 1 - (-f/k)^(1/q),
@@ -83,18 +143,19 @@ M.NEG_NPR = 0.2
 function M.epr(thrust_kn, delta, mach)
     if mach < 0 then mach = 0 end
     local f = thrust_kn / math.max(delta, 0.05)
-    local k, q = kq(mach)
+    local k, q, c = kq(mach)
     if f < 0 then return (1 - math.min((-f / k) ^ (1 / q), M.NEG_NPR)) / ram(mach) end
-    return (1 + (f / k) ^ (1 / q)) / ram(mach)
+    return (1 + x_of(f, k, q, c)) / ram(mach)
 end
 
 -- the other way: the net thrust (kN) an EPR gives (for the tests and tools)
 function M.thrust(epr, delta, mach)
     if mach < 0 then mach = 0 end
-    local k, q = kq(mach)
+    local k, q, c = kq(mach)
     local y = epr * ram(mach) - 1
     if y < 0 then return -k * math.min(-y, M.NEG_NPR) ^ q * delta end
-    return k * y ^ q * delta
+    if c > 0 then y = math.min(y, q / c) end
+    return k * y ^ q * math.exp(-c * y) * delta
 end
 
 -- (2026-11-05) the EPR the EEC commands at the lever's idle end: that of

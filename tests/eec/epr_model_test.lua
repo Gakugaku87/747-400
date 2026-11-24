@@ -82,9 +82,93 @@ T.check(P.epr(2, dl300, 0.78) < 0.70 and P.epr(26, dl300, 0.78) > 0.85 and P.epr
     string.format("FL300, M.78: X-Plane's idle 2 kN %.3f, 26 kN %.3f, 34 kN %.3f (before 0.97 for all)",
         P.epr(2, dl300, 0.78), P.epr(26, dl300, 0.78), P.epr(34, dl300, 0.78)))
 T.near(P.epr(10.3, 1, 0), 1.01, 0.001, "ground idle 10.3 kN: 1.01 still")
--- the takeoff run at EPR 1.51 (no figures: the interpolation, estimate)
-local lapse = P.thrust(1.51, 1, 0.2) / P.thrust(1.51, 1, 0)
-T.check(lapse > 0.90 and lapse < 0.97, string.format("takeoff: thrust at EPR 1.51 and M.2 is %.1f %% of standing", lapse * 100))
+
+-- (2026-11-25, the 2026-11-23 review's ENG-1) the law k x^q exp(-c x)
+-- the static shares of the FPPM's takeoff tables: TO 1 92 % (p.57) and TO 2
+-- 80 % (p.69) of TO (p.44) in every cell (the hot corner's TO 2 at TO 1.25
+-- left out: not 80 %), and p.22's 25 % reductions; before (k x^0.8136) TO 2
+-- came out 75.3 % at sea level, 15 C
+do
+    local E = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua")
+    local TB = E.TABLE.PW
+    local n, worst, at = 0, 0, ""
+    local function share(lo, hi, want, what)
+        local r = P.thrust(lo, 1, 0) / P.thrust(hi, 1, 0)
+        n = n + 1
+        if math.abs(r - want) > worst then worst, at = math.abs(r - want), string.format("%s %.2f -> %.2f: %.4f", what, hi, lo, r) end
+    end
+    for i = 1, #TB.to.v do
+        for j = 1, #TB.to.v[i] do
+            local e0, e1, e2 = TB.to.v[i][j], TB.to1.v[i][j], TB.to2.v[i][j]
+            if type(e0) == "number" and e0 > 1.26 then
+                if type(e1) == "number" then share(e1, e0, 0.92, "TO 1") end
+                if type(e2) == "number" then share(e2, e0, 0.80, "TO 2") end
+            end
+        end
+    end
+    for i = 1, #E.PW_TO_MIN.max do share(E.PW_TO_MIN.min[i], E.PW_TO_MIN.max[i], 0.75, "p.22") end
+    T.check(n > 280 and worst < 0.02, string.format("the FPPM's takeoff shares: %d cells within 2 points (worst %s)", n, at))
+    T.near(P.thrust(1.36, 1, 0) / P.thrust(1.51, 1, 0), 0.80, 0.005, "TO 2 at sea level, 15 C: 80 % (FPPM p.69; before 75.3 %)")
+    T.near(P.thrust(1.45, 1, 0) / P.thrust(1.51, 1, 0), 0.92, 0.01, "TO 1 at sea level, 15 C: 92 % (FPPM p.57; before 90.3 %)")
+end
+-- the go-around: the thrust an engine needs for FPPM p.75's one engine
+-- inoperative gradient with the custom acf's drag (X-Plane, 2026-11-25:
+-- eng1_eo_ga_gradient_sl and _6000, no sideslip, 165 KIAS); before 244.8 and
+-- 277.7 kN corrected
+T.near(P.thrust(1.532, 1, 0.258), 213.6, 2.1, "go-around at 1,527 ft, EPR 1.532, M.258: 213.6 kN corrected (FPPM p.75)")
+T.near(P.thrust(1.614, 1, 0.282), 228.1, 2.3, "go-around at 6,387 ft, EPR 1.614, M.282: 228.1 kN corrected (FPPM p.75)")
+-- the approaches as before (the model agreed there with the FCOM in X-Plane)
+for _, p in ipairs({{1.06, 0.240, 49.9, "3 degree approach flaps 25 (FCOM p.266)"},
+        {1.09, 0.233, 62.9, "3 degree approach flaps 30 (FCOM p.266)"},
+        {1.13, 0.252, 81.8, "terminal area flaps 20 gear down (FCOM p.265)"}}) do
+    T.near(P.thrust(p[1], 1, p[2]), p[3], p[3] * 0.01, string.format("%s: EPR %.2f at M%.3f, %.1f kN as before", p[4], p[1], p[2], p[3]))
+end
+-- from M 0.35 up the straight line from M 0 to 0.438 of before
+do
+    local k0, q0, k1, q1 = 436.5, 0.8136, 353.7, 0.9844
+    for _, m in ipairs({0.35, 0.38, 0.40, 0.42}) do
+        local w = m / 0.438
+        local k, q = k0 + (k1 - k0) * w, q0 + (q1 - q0) * w
+        for _, e in ipairs({1.02, 1.10, 1.25, 1.40}) do
+            local y = e * (1 + 0.2 * m * m) ^ 3.5 - 1
+            T.near(P.thrust(e, 1, m), k * y ^ q, 1e-6, string.format("M%.2f, EPR %.2f: as before", m, e))
+        end
+    end
+end
+-- the takeoff run at EPR 1.51: falls with the speed to the go-around's (the
+-- 747-100's at the same EPR, NASA_SIM p.303: about 0.83 at M 0.2); before
+-- 0.93 (the interpolation from M 0 to 0.438)
+do
+    local lapse = P.thrust(1.51, 1, 0.2) / P.thrust(1.51, 1, 0)
+    T.check(lapse > 0.82 and lapse < 0.88, string.format("takeoff: thrust at EPR 1.51 and M.2 is %.1f %% of standing", lapse * 100))
+    local prev, falls = 1e9, true
+    for m = 0, 0.29, 0.01 do
+        local f = P.thrust(1.51, 1, m)
+        falls = falls and f < prev
+        prev = f
+    end
+    T.check(falls, "takeoff: the thrust at EPR 1.51 falls all the way from M 0 to 0.29")
+end
+-- the inverse with c: the way back at the new stations' Machs, a thrust of 0
+-- (no NaN: the solver's start), and the top of the curve
+for _, m in ipairs({0, 0.1, 0.258, 0.29, 0.32}) do
+    local ok, mono, prev = true, true, -1
+    for f = 1, 280, 3 do
+        local e = P.epr(f, 1, m)
+        ok = ok and math.abs(P.thrust(e, 1, m) - f) < 1e-6
+        mono = mono and e > prev
+        prev = e
+    end
+    T.check(ok and mono, string.format("M%.3f: thrust from EPR undoes EPR from thrust, 1-280 kN, rising (the curve tops out near 300 at M.29: EPR 2.4)", m))
+end
+T.near(P.epr(0, 1, 0), 1.0, 1e-12, "no thrust standing: EPR 1.00 (the solver starts from x 0)")
+T.near(P.epr(0, 1, 0.25), P.zero(0.25), 1e-12, "no thrust at M.25: zero(M)")
+do
+    local k, q, c = P.kq(0)
+    local top = k * (q / c) ^ q * math.exp(-q)
+    local e = P.epr(top * 1.5, 1, 0)
+    T.check(e == e and math.abs(e - (1 + q / c)) < 1e-9, string.format("a thrust over the curve's top: the top's EPR (%.4f)", e))
+end
 
 -- (2026-11-03) the N1 from the EPR against the FCOM's Alt Mode %N1 (PW4056,
 -- Flight With Unreliable Airspeed, PI.10.38-10.40 p.264-266), ISA: pressure
