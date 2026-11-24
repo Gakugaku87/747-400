@@ -304,9 +304,38 @@ end
 -- flaps 10 1.0 -> 5.2, 20 3.2 -> 6.2 (280 t: the two centres of gravity's
 -- mean +0.1 units; 220 t +0.8 to +1.2, 340 t -1.7 to +0.4: notes/AERO.md
 -- §3.24), 30 4.0 -> 6.05 (7.13 units on the approach; the cruise's 4.36 ->
--- 4.00 units). The stabilizer's units (the SRM, its indicator, the EICAS,
--- the greenband) and the 3D keep the trim's own values
-M.STAB_FLAP = {{0, 0}, {10, 5.2}, {20, 6.2}, {30, 6.05}}
+-- 4.00 units).
+-- (2026-11-24, the 2026-11-23 review's FCTL-3; notes/AERO.md §3.29) Fitted
+-- again, to the takeoff and to level flight. The table above was fitted to
+-- the takeoff's climb at max thrust while the thrust's correction was four
+-- times its size now (§3.27): with the thrust low the flaps' share was too
+-- much (level at 166 kt with flaps 20 took 8.6 units, about 2 over the
+-- 747-100). With the thrust's and the downwash's corrections of §3.27 and
+-- §3.28 (estimates: the 747-100's values are a starting point):
+--   * 20 6.2 -> 4.0: the six takeoffs with flaps 20 (220, 280 and 340 t at
+--     two centres of gravity each; the balance over 600 to 1,400 ft of
+--     radio altitude with the A/P) against the FPPM (p.44): mean 0.0 (220 t
+--     +1.0 and +0.8, 280 t -0.9 and +0.3, 340 t -0.9 and -0.3: X-Plane's
+--     balance moves less with the weight and with the centre of gravity
+--     than the FPPM's table does, which a table by the flaps cannot mend);
+--     and level at 159 kt, 249.5 t, 15 % MAC, 5,000 ft 8.5 units, the
+--     747-100's 8.5 (NASA_SIM p.338 (14.1-13) case 4.0.13: a table from
+--     before section 19's revision; -100 values);
+--   * 10 5.2 -> 2.2: between what the takeoff asks (2.5: the two at 280 t
+--     as flaps 20's two at 280 t) and what level flight asks (1.9: 167 kt,
+--     the 747-100's 7.8, case 4.0.12): the takeoffs -1.3 and +0.1, level
+--     +0.3 units;
+--   * 30 6.05 -> 6.2: level with the gear down at 150 kt, 249.5 t, 15 %
+--     9.2 units, the 747-100's 9.2 (case 4.0.16; p.342 (14.1-17)'s figure
+--     at 564,000 lb reads 9.4 at 15 % and 6.6 at 25 %, so about 7.7 at 21 %
+--     in level flight: the 7.3 above was not the figure's); the approach
+--     at 245 t and 20.6 % takes 8.2 units (before 7.15);
+--   * flaps 25 (the trailing edge at 22 degrees) between 20's and 30's:
+--     level at 155 kt 8.3 units with the gear up, the 747-100's 8.6 (case
+--     4.0.14).
+-- The stabilizer's units (the SRM, its indicator, the EICAS, the greenband)
+-- and the 3D keep the trim's own values
+M.STAB_FLAP = {{0, 0}, {10, 2.2}, {20, 4.0}, {30, 6.2}}
 
 -- the degrees (leading edge up) at a trailing edge flap angle
 function M.stab_flap(te)
@@ -337,8 +366,30 @@ end
 -- alpha over DW_ALPHA0 (the cruise's, so the cruise's trim stays), DW_K the
 -- missing stability over the stabilizer's moment per degree (Cm_delta_s
 -- about 2.6 /rad: 2.5 degrees of elevator a unit, §3.23). Under DW_V0 kt
--- none (alpha means nothing at rest), full from DW_V1; within DW_MAX
-M.DW_K = 0.50
+-- none (alpha means nothing at rest), full from DW_V1; within DW_MAX.
+-- (2026-11-24, the 2026-11-23 review's FCTL-1; notes/AERO.md §3.28) DW_K by
+-- the Mach, measured anew from X-Plane's own aerodynamic moment
+-- (tests/flight/tools/moment_fit.lua on the A/P-off stabilizer steps,
+-- column steps and doublets: Cm fitted to the alpha, the pitch rate, the
+-- elevator and X-Plane's stabilizer; no inertia in it): X-Plane's
+-- Cm_alpha without the correction is -2.57 /rad at 150 kt with flaps 30,
+-- -2.49 at 165 kt with flaps 20, -2.16 at 220 kt with the flaps up, -2.04
+-- at 22,400 ft M.58 and -3.35 at FL350 M.83 (it grows with the Mach as the
+-- lift slope does); the stabilizer's Cm_delta_s -2.8 to -3.2 /rad up to
+-- M.6 and -3.55 at M.83. The 747-100's Cm_alpha: -1.45 (landing), -1.26
+-- (power approach), -1.14 (FC5, 20,000 ft M.5 alpha 6.8), -1.03 (20,000 ft
+-- M.6), about -1.14 (35,000 ft M.84, between the figure's 20,000 and
+-- 40,000 ft lines) (NASA_HQ p.222-223 tables IX-1 and IX-2, p.227 the
+-- Cm_alpha figure, p.236 table IX-4; -100 values). DW_K = (X-Plane's less
+-- the 747-100's) / Cm_delta_s: 0.36, 0.39, 0.36, 0.35 and 0.62: DW_K[1] up
+-- to its Mach, DW_K[2] from its Mach, straight between
+-- (estimates: the values between and beyond, and the 747-100's at M.84 read
+-- from a steep part of the figure: 0.58 to 0.66). Until then one value,
+-- 0.50, from the angular acceleration's fits with an assumed pitch inertia
+-- and the stabilizer at 2.5 times the elevator (it measures 2.1 to 2.3
+-- times): at 220 kt with the flaps up that left Cm_alpha -0.76 /rad, a
+-- third less stable than the 747-100
+M.DW_K = {{0.58, 0.36}, {0.83, 0.60}}
 M.DW_ALPHA0 = 2.0
 M.DW_V0, M.DW_V1 = 40, 60
 M.DW_MAX = 5
@@ -352,51 +403,73 @@ M.DW_MAX = 5
 -- day took it to +2.30 and grew with the alpha far faster than the revised
 -- chart: the rotation's column 0.69 -> 0.96 at liftoff
 
+-- the degrees of stabilizer a degree of alpha at a Mach (nil: the low
+-- Mach's)
+function M.dw_k(mach)
+    local a, b = M.DW_K[1], M.DW_K[2]
+    if not mach or mach <= a[1] then return a[2] end
+    if mach >= b[1] then return b[2] end
+    return a[2] + (b[2] - a[2]) * (mach - a[1]) / (b[1] - a[1])
+end
+
 -- the degrees (leading edge up, as stab_flap) for the body's alpha
--- (degrees) at an indicated airspeed (kt)
-function M.stab_downwash(alpha, kt)
+-- (degrees) at an indicated airspeed (kt) and a Mach
+function M.stab_downwash(alpha, kt, mach)
     if not alpha or not kt or kt <= M.DW_V0 then return 0 end
     local fade = math.min(1, (kt - M.DW_V0) / (M.DW_V1 - M.DW_V0))
-    local d = -M.DW_K * (alpha - M.DW_ALPHA0)
+    local d = -M.dw_k(mach) * (alpha - M.DW_ALPHA0)
     return math.max(-M.DW_MAX, math.min(M.DW_MAX, d)) * fade
 end
 
 -- (2026-11-20, GAP N19-AERO-01; notes/AERO.md §3.25, 補正) The thrust's
 -- pitching moment X-Plane leaves out. The 747-100's effective engine moment
--- arms (NASA_SIM p.22 (1.1-3), p.38 (1.3-3): M_T = (T1 + T4) Z_EO + (T2 +
--- T3) Z_EI, nose up; the thrust line 2.5 degrees up; -100 values) are, in
--- the air, 14.6 ft inboard and 5.4 ft outboard, on the ground 9.2 and 7.3
--- ft; the custom acf's engines sit 5.2 and 1.0 ft under its centre of
--- gravity (_engn/n/_part_y -11.2 and -7.0 ft, acf/_cgY -6.0). The rest of
--- each arm (metres, engines 1 to 4) times each engine's forward thrust is
--- a nose-up moment, made through X-Plane's stabilizer as the flaps' and
--- the downwash's: degrees of stabilizer (leading edge down) = the moment
--- over the stabilizer's moment a degree, TM_CMDS / 57.3 per degree times
--- the dynamic pressure, TM_S and TM_C (Cm_delta_s about 2.6 /rad on the
--- -100's 511 m2 and 8.32 m: 2.5 degrees of elevator a unit, §3.23, and the
--- elevator's Cm from the fits of §3.24). The acf cannot carry it: the
--- inboard engines lowered 9.4 ft sit at the ground. Between the air's and
--- the ground's arms by eta (0 in the air, 1 on the ground; the -100 goes by
--- the main gear's compression); faded in from TM_V0 to TM_V1 kt (the
--- stabilizer cannot make a moment at rest), within TM_MAX
-M.TM_ARM_AIR = {(5.4 - 1.0) * 0.3048, (14.6 - 5.2) * 0.3048, (14.6 - 5.2) * 0.3048, (5.4 - 1.0) * 0.3048}
-M.TM_ARM_GND = {(7.3 - 1.0) * 0.3048, (9.2 - 5.2) * 0.3048, (9.2 - 5.2) * 0.3048, (7.3 - 1.0) * 0.3048}
-M.TM_CMDS = 2.6
+-- arms (NASA_SIM p.38 (1.3-3): M_T = (T1 + T4) Z_EO + (T2 + T3) Z_EI, nose
+-- up; the thrust line 2.5 degrees up; -100 values) are, in the air, 8.3 ft
+-- inboard and 3.1 ft outboard, on the ground 8.5 and 4.8 ft (NASA_SIM p.613
+-- (19.0-2), the revision of September 1970 "Boeing recommends
+-- incorporating", p.612 (19.0-1)). (2026-11-24, the 2026-11-23 review's
+-- FCTL-2; notes/AERO.md §3.27) Until then the arms of p.22 (1.1-3), which
+-- that page marks "see section 19 for revised data" (14.6 and 5.4 ft, 9.2
+-- and 7.3 ft), less arms taken from the acf's file (5.2 and 1.0 ft: the
+-- engines' height under acf/_cgY). X-Plane's own moment is now read from
+-- its flight model (sim/flightmodel/forces/M_prop, N m about the centre of
+-- gravity it flies with, the fuel and the payload in it): measured, the four
+-- engines' mean arm is 1.33 m (4.37 ft) at 270 t, not the 3.1 ft of the
+-- acf's file. What is added is the 747-100's moment less X-Plane's own,
+-- made through X-Plane's stabilizer as the flaps' and the downwash's:
+-- degrees of stabilizer (leading edge down) = the moment over the
+-- stabilizer's moment a degree, TM_CMDS / 57.3 per degree times the dynamic
+-- pressure, TM_S and TM_C (X-Plane's stabilizer, measured from stabilizer
+-- steps with the A/P off: notes/AERO.md §3.27). The acf cannot carry it:
+-- its centre of gravity's height is one figure for every loading, and
+-- raising it would move the drag's and the gear's moments with it. Between
+-- the air's and the ground's arms by eta (0 in the air, 1 on the ground;
+-- the -100 goes by the main gear's compression: the wings' droop); none
+-- with an engine in reverse (under TM_REV N: X-Plane's own moment cannot be
+-- told apart by engine); faded in from TM_V0 to TM_V1 kt (the stabilizer
+-- cannot make a moment at rest), within TM_MAX
+M.TM_ARM_AIR = {3.1 * 0.3048, 8.3 * 0.3048, 8.3 * 0.3048, 3.1 * 0.3048}
+M.TM_ARM_GND = {4.8 * 0.3048, 8.5 * 0.3048, 8.5 * 0.3048, 4.8 * 0.3048}
+M.TM_REV = -20000
+M.TM_CMDS = 3.1
 M.TM_S, M.TM_C = 511, 8.32
 M.TM_V0, M.TM_V1 = 40, 60
 M.TM_MAX = 5
 
 -- the missing nose-up moment (N m) for the four engines' thrust (N, X-Plane's
--- POINT_thrust: forward plus; reverse counts none) at eta (0 air .. 1 ground)
-function M.thrust_moment(thrust, eta)
-    if not thrust then return 0 end
+-- POINT_thrust: forward plus) at eta (0 air .. 1 ground): the 747-100's
+-- moment less X-Plane's own (`own`, N m nose up: its M_prop); none without
+-- X-Plane's own or with an engine in reverse
+function M.thrust_moment(thrust, eta, own)
+    if not thrust or not own then return 0 end
     eta = math.max(0, math.min(1, eta or 0))
     local m = 0
     for i = 1, 4 do
         local t = thrust[i] or 0
+        if t < M.TM_REV then return 0 end
         if t > 0 then m = m + t * (M.TM_ARM_AIR[i] * (1 - eta) + M.TM_ARM_GND[i] * eta) end
     end
-    return m
+    return m - own
 end
 
 -- the degrees (leading edge up, as stab_flap) giving a nose-up moment (N m)

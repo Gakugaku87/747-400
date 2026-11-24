@@ -109,6 +109,33 @@ do
     T.equal(th, 0, "at the A/T's idle the thrust control gives idle at once (from 0.89)")
 end
 
+-- (2026-11-24, ENG-2 of the 2026-11-23 review) the P&W's maximum while the
+-- thrust limit is a takeoff's (inp.takeoff): the FPPM's Takeoff EPR (p.44
+-- (1.2.20), 747-400F/PW4056) at the OAT, not the go-around table at the TAT;
+-- in the other limits the go-around table's as before; the RB211 (rr) as
+-- before
+do
+    local s3, i3 = E.new(), E.inputs()
+    i3.type, i3.alt, i3.tat, i3.oat, i3.kias = "PW", 5000, 28, 25, 120
+    i3.idle = {1.0, 1.0, 1.0, 1.0}
+    i3.lever = {1, 1, 1, 1}
+    i3.takeoff = true
+    local o3 = E.update(s3, i3, DT)
+    local ga5 = E.lookup(PW.ga, 28, 5000)
+    T.near(o3.max[1], 1.56, 1e-9, string.format("P&W takeoff at 5,000 ft, OAT 25 (TAT 28): the maximum p.44's 1.56 (before, the go-around table's %.3f at the TAT)", ga5))
+    T.near(o3.command[1], 1.56, 1e-9, "full forward: p.44's 1.56")
+    i3.packs_on = 0
+    T.near(E.update(s3, i3, DT).max[1], 1.58, 1e-9, "3 packs off: +0.02 (p.44)")
+    i3.packs_on, i3.takeoff = 3, false
+    T.near(E.update(s3, i3, DT).max[1], ga5, 1e-9, "not a takeoff's limit (GA, CLB...): the go-around table at the TAT, as before")
+    i3.takeoff, i3.rr = true, true
+    T.near(E.update(s3, i3, DT).max[1], ga5, 1e-9, "the RB211 (its own branches): the go-around table's, as before")
+    i3.rr, i3.oat = false, nil
+    T.near(E.update(s3, i3, DT).max[1], E.lookup(PW.to, 28, 5000), 1e-9, "no OAT: p.44 at the TAT")
+    i3.type, i3.idle = "GE", {25, 25, 25, 25}
+    T.near(E.update(s3, i3, DT).max[1], E.lookup(GE.ga, 28, 5000), 1e-9, "the GE in a takeoff: its go-around table at the TAT, as before")
+end
+
 -- bleed: three packs off adds 0.02 to the go-around EPR; engine anti-ice on one
 -- engine changes only that engine's climb EPR
 inp.packs_on = 0

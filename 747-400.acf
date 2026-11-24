@@ -74613,14 +74613,15 @@ GROUP Captain PFD
           gen_pointer Symbol
             POS 315.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
             BUS_SRC 2
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -75049,9 +75050,8 @@ GROUP Captain PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot
             POS 315.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch
@@ -75063,9 +75063,8 @@ GROUP Captain PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -75696,6 +75695,22 @@ GROUP Captain PFD
               IMAGE CRT Displays/PFD/Vspeeds/V1
               DATAREF laminar/B747/airspeed/V1
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer V2
+              POS 126.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -78899,14 +78914,15 @@ GROUP Captain PFD
           gen_pointer Symbol
             POS 315.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 2
             BUS_SRC 2
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -79335,9 +79351,8 @@ GROUP Captain PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot
             POS 315.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch
@@ -79349,9 +79364,8 @@ GROUP Captain PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
               BUS_SRC 2
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -79982,6 +79996,22 @@ GROUP Captain PFD
               IMAGE CRT Displays/PFD/Vspeeds/V1
               DATAREF laminar/B747/airspeed/V1
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 2
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer V2
+              POS 126.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 2
@@ -83174,14 +83204,15 @@ GROUP First Officer PFD
           gen_pointer Symbol 2
             POS 994.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg_copilot
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
             BUS_SRC 4
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -83610,9 +83641,8 @@ GROUP First Officer PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_copilot
             POS 994.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch 2
@@ -83624,9 +83654,8 @@ GROUP First Officer PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -85038,6 +85067,22 @@ GROUP First Officer PFD
               IMAGE CRT Displays/PFD/Vspeeds/V1
               DATAREF laminar/B747/airspeed/V1
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer V2 2
+              POS 805.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -87417,14 +87462,15 @@ GROUP First Officer PFD
           gen_pointer Symbol 2
             POS 994.500000 907.500000
             IMAGE CRT Displays/PFD/Artificial Horizon/HrznSlipSkid
-            DATAREF sim/cockpit2/gauges/indicators/sideslip_degrees
+            DATAREF sim/cockpit2/gauges/indicators/slip_deg_copilot
             HIDE
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 5
             BUS_SRC 4
-            KEY_FRAME -10.000000 -20.000000 1.000000
-            KEY_FRAME 0.000000 0.000000 1.000000
-            KEY_FRAME 10.000000 20.000000
+            KEY_FRAME -99.000000 13.000000 1.000000
+            KEY_FRAME -6.500000 13.000000 1.000000
+            KEY_FRAME 6.500000 -13.000000 1.000000
+            KEY_FRAME 99.000000 -13.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -87853,9 +87899,8 @@ GROUP First Officer PFD
             GROUP_HEIGHT 200
             DATAREF sim/cockpit2/gauges/indicators/pitch_AHARS_deg_copilot
             POS 994.500000 767.500000
-            KEY_FRAME 10.000000 -68.500000 1.000000
-            KEY_FRAME 1.000000 0.000000 1.000000
-            KEY_FRAME -10.000000 68.500000
+            KEY_FRAME -30.000000 204.333333 1.000000
+            KEY_FRAME 30.000000 -204.333333
             IS_VERTICAL 1
             OFFSET 0.000000
             gen_pointer FD Bar - Pitch 2
@@ -87867,9 +87912,8 @@ GROUP First Officer PFD
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
               BUS_SRC 4
-              KEY_FRAME -10.000000 -68.500000 1.000000
-              KEY_FRAME 0.000000 0.000000 1.000000
-              KEY_FRAME 10.000000 68.500000
+              KEY_FRAME -30.000000 -198.333333 1.000000
+              KEY_FRAME 30.000000 210.333333
               IS_DRAGGABLE 0
               IS_VERTICAL 1
               OFFSET 0.000000
@@ -89281,6 +89325,22 @@ GROUP First Officer PFD
               IMAGE CRT Displays/PFD/Vspeeds/V1
               DATAREF laminar/B747/airspeed/V1
               SHOW_LESS 10.000000 sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_copilot
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 5
+              BUS_SRC 4
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 30.000000 0.000000 1.000000
+              KEY_FRAME 60.000000 120.000000
+              IS_DRAGGABLE 0
+              IS_VERTICAL 1
+              OFFSET 0.000000
+
+            gen_pointer V2 2
+              POS 805.000000 767.500000
+              IMAGE CRT Displays/PFD/Vspeeds/V2
+              DATAREF laminar/B747/airspeed/V2
+              SHOW_EQUAL 1.000000 laminar/B747/airspeed/v2_show
               HIDE
               LIGHT_MODE GLASS_AUTO
               LIGHT_RHEOSTAT 5
@@ -143909,7 +143969,7 @@ GROUP Upper EICAS
             GROUP EPR Target Markers
               SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
               GROUP Engine 4 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 gen_pointer Engine 4 REF
                   POS 1748.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143928,7 +143988,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 gen_pointer Engine 3 REF
                   POS 1642.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143947,7 +144007,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 gen_pointer Engine 2 REF
                   POS 1536.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143966,7 +144026,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 gen_pointer Engine 1 REF 
                   POS 1430.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -143985,7 +144045,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 4 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 GROUP Engine 4 REF MAGENT and 2
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 942.000000
@@ -144006,7 +144066,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 GROUP Engine 3 REF MAGENT and 2
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 942.000000
@@ -144027,7 +144087,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 GROUP Engine 2 REF MAGENT and 2
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 942.000000
@@ -144048,7 +144108,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 GROUP Engine 1 REF MAGENT and 2
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 942.000000
@@ -144247,7 +144307,7 @@ GROUP Upper EICAS
             GROUP EPR Target Markers
               SHOW_EQUAL 0.000000 laminar/B747/engines/thrust_ref
               GROUP Engine 4 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 gen_pointer Engine 4 REF
                   POS 1748.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144266,7 +144326,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 gen_pointer Engine 3 REF
                   POS 1642.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144285,7 +144345,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 gen_pointer Engine 2 REF
                   POS 1536.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144304,7 +144364,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 gen_pointer Engine 1 REF 
                   POS 1430.500000 942.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-epr
@@ -144323,7 +144383,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 4 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 GROUP Engine 4 REF MAGENT and 2
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 942.000000
@@ -144344,7 +144404,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 GROUP Engine 3 REF MAGENT and 2
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 942.000000
@@ -144365,7 +144425,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 GROUP Engine 2 REF MAGENT and 2
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 942.000000
@@ -144386,7 +144446,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 GROUP Engine 1 REF MAGENT and 2
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 942.000000
@@ -144469,13 +144529,13 @@ GROUP Upper EICAS
             END_GROUP
           END_GROUP
           GROUP Thrust Command EPR and 1
-            SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
             GROUP Thrust Command EPR 
               SHOW_EQUAL 2.000000 laminar/B747/engines/type
               gen_pointer Engine 4
                 POS 1748.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[3]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144491,6 +144551,7 @@ GROUP Upper EICAS
                 POS 1642.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[2]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144506,6 +144567,7 @@ GROUP Upper EICAS
                 POS 1536.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[1]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144521,6 +144583,7 @@ GROUP Upper EICAS
                 POS 1430.500000 942.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[0]
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
@@ -144535,7 +144598,6 @@ GROUP Upper EICAS
             END_GROUP
           END_GROUP
           GROUP Thrust Command EPR and 1
-            SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
             GROUP Thrust Command EPR 
               SHOW_EQUAL 0.000000 laminar/B747/engines/type
               gen_pointer Engine 4
@@ -144806,7 +144868,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 3 Red
               POS 1642.500000 890.000000
@@ -144818,7 +144880,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 2 Red
               POS 1536.500000 890.000000
@@ -144830,7 +144892,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 1 Red
               POS 1430.500000 890.000000
@@ -144842,7 +144904,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 4 White
               POS 1748.500000 890.000000
@@ -144854,7 +144916,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 3 White
               POS 1642.500000 890.000000
@@ -144866,7 +144928,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 2 White
               POS 1536.500000 890.000000
@@ -144878,7 +144940,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             gen_tape Engine 1 White
               POS 1430.500000 890.000000
@@ -144890,7 +144952,7 @@ GROUP Upper EICAS
               LIGHT_RHEOSTAT 9
               BUS_SRC 2
               KEY_FRAME 0.000000 -130.000000 1.000000
-              KEY_FRAME 117.500000 100.000000
+              KEY_FRAME 117.500000 97.000000
 
             GROUP Redline Markers
               gen_rotary Engine 4
@@ -144977,7 +145039,7 @@ GROUP Upper EICAS
             GROUP N1 Target Markers
               SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
               GROUP Engine 4 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 gen_pointer Engine 4 REF
                   POS 1748.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -144987,14 +145049,14 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
               END_GROUP
 
               GROUP Engine 3 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 gen_pointer Engine 3 REF
                   POS 1642.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -145004,14 +145066,14 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
               END_GROUP
 
               GROUP Engine 2 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 gen_pointer Engine 2 REF
                   POS 1536.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -145021,14 +145083,14 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
               END_GROUP
 
               GROUP Engine 1 REF and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 gen_pointer Engine 1 REF 
                   POS 1430.500000 890.000000
                   IMAGE CRT Displays/EICAS Upper/ref-line-n1
@@ -145038,14 +145100,14 @@ GROUP Upper EICAS
                   LIGHT_RHEOSTAT 9
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -130.000000 1.000000
-                  KEY_FRAME 117.500000 100.000000
+                  KEY_FRAME 117.500000 97.000000
                   IS_DRAGGABLE 0
                   IS_VERTICAL 1
                   OFFSET 0.000000
               END_GROUP
 
               GROUP Engine 4 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 GROUP Engine 4 REF MAGENT and 2
                   gen_pointer Engine 4 REF MAGENT
                     POS 1748.500000 890.000000
@@ -145056,7 +145118,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145064,7 +145126,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 3 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 GROUP Engine 3 REF MAGENT and 2
                   gen_pointer Engine 3 REF MAGENT
                     POS 1642.500000 890.000000
@@ -145075,7 +145137,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145083,7 +145145,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 2 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 GROUP Engine 2 REF MAGENT and 2
                   gen_pointer Engine 2 REF MAGENT
                     POS 1536.500000 890.000000
@@ -145094,7 +145156,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145102,7 +145164,7 @@ GROUP Upper EICAS
               END_GROUP
 
               GROUP Engine 1 REF MAGENT and 1
-                SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 GROUP Engine 1 REF MAGENT and 2
                   gen_pointer Engine 1 REF MAGENT
                     POS 1430.500000 890.000000
@@ -145113,7 +145175,7 @@ GROUP Upper EICAS
                     LIGHT_RHEOSTAT 9
                     BUS_SRC 2
                     KEY_FRAME 0.000000 -130.000000 1.000000
-                    KEY_FRAME 117.500000 100.000000
+                    KEY_FRAME 117.500000 97.000000
                     IS_DRAGGABLE 0
                     IS_VERTICAL 1
                     OFFSET 0.000000
@@ -145128,7 +145190,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145141,7 +145203,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145154,7 +145216,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145167,7 +145229,7 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -130.000000 1.000000
-                KEY_FRAME 117.500000 100.000000
+                KEY_FRAME 117.500000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145773,69 +145835,68 @@ GROUP Upper EICAS
 
           END_GROUP
           GROUP Thrust Command N1 G and 1
-            SHOW_LESS 0.900000 sim/cockpit2/annunciators/reverser_deployed
             GROUP Thrust Command N1 G
               SHOW_EQUAL 1.000000 laminar/B747/engines/type
               gen_pointer Engine 4
-                POS 1748.500000 883.500000
+                POS 1748.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[3]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[3]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
               gen_pointer Engine 3
-                POS 1642.500000 883.500000
+                POS 1642.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[2]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[2]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
               gen_pointer Engine 2
-                POS 1536.500000 883.500000
+                POS 1536.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[1]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[1]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
 
               gen_pointer Engine 1
-                POS 1430.500000 883.500000
+                POS 1430.500000 890.000000
                 IMAGE CRT Displays/EICAS Upper/N1_thrust
                 DATAREF laminar/B747/engines/TRA[0]
-                SHOW_EQUAL 1.000000 laminar/B747/engines/thrust_ref
+                SHOW_LESS 0.010000 sim/flightmodel2/engines/thrust_reverser_deploy_ratio[0]
                 LIGHT_MODE GLASS_AUTO
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
-                KEY_FRAME -100.000000 -67.000000 1.000000
-                KEY_FRAME 31.000000 -67.000000 1.000000
-                KEY_FRAME 116.000000 102.000000 0.000000
-                KEY_FRAME 200.000000 102.000000
+                KEY_FRAME -100.000000 -95.500000 1.000000
+                KEY_FRAME 17.857930 -95.500000 1.000000
+                KEY_FRAME 117.500000 97.000000 0.000000
+                KEY_FRAME 200.000000 97.000000
                 IS_DRAGGABLE 0
                 IS_VERTICAL 1
                 OFFSET 0.000000
@@ -145858,7 +145919,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 3 Red
                 POS 1642.500000 596.500000
@@ -145870,7 +145934,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 2 Red
                 POS 1536.500000 596.500000
@@ -145882,7 +145949,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 1 Red
                 POS 1430.500000 596.500000
@@ -145894,7 +145964,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 4 Amber
                 POS 1748.500000 596.500000
@@ -145906,7 +145979,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 3 Amber
                 POS 1642.500000 596.500000
@@ -145918,7 +145994,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 2 Amber
                 POS 1536.500000 596.500000
@@ -145930,7 +146009,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 1 Amber
                 POS 1430.500000 596.500000
@@ -145942,7 +146024,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 4 White
                 POS 1748.500000 596.500000
@@ -145954,7 +146039,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 3 White
                 POS 1642.500000 596.500000
@@ -145966,7 +146054,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 2 White
                 POS 1536.500000 596.500000
@@ -145978,7 +146069,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               gen_tape Engine 1 White
                 POS 1430.500000 596.500000
@@ -145990,7 +146084,10 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 690.000000 55.500000
+                KEY_FRAME 535.000000 29.500000 1.000000
+                KEY_FRAME 629.000000 41.500000 1.000000
+                KEY_FRAME 654.000000 45.500000 1.000000
+                KEY_FRAME 700.000000 52.900000
 
               GROUP Continuous  Limit
                 gen_rotary Engine 4
@@ -146259,8 +146356,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 3 Red
                 POS 1642.500000 670.500000
@@ -146272,8 +146372,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 2 Red
                 POS 1536.500000 670.500000
@@ -146285,8 +146388,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 1 Red
                 POS 1430.500000 670.500000
@@ -146298,8 +146404,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 4 Amber
                 POS 1748.500000 670.500000
@@ -146311,8 +146420,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 3 Amber
                 POS 1642.500000 670.500000
@@ -146324,8 +146436,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 2 Amber
                 POS 1536.500000 670.500000
@@ -146337,8 +146452,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 1 Amber
                 POS 1430.500000 670.500000
@@ -146350,8 +146468,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 4 White
                 POS 1748.500000 670.500000
@@ -146363,8 +146484,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 3 White
                 POS 1642.500000 670.500000
@@ -146376,8 +146500,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 2 White
                 POS 1536.500000 670.500000
@@ -146389,8 +146516,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               gen_tape Engine 1 White
                 POS 1430.500000 670.500000
@@ -146402,8 +146532,11 @@ GROUP Upper EICAS
                 LIGHT_RHEOSTAT 9
                 BUS_SRC 2
                 KEY_FRAME 0.000000 -55.500000 1.000000
-                KEY_FRAME 960.000000 47.500000 0.000000
-                KEY_FRAME 961.000000 47.500000
+                KEY_FRAME 750.000000 21.500000 1.000000
+                KEY_FRAME 925.000000 39.500000 1.000000
+                KEY_FRAME 960.000000 45.500000 1.000000
+                KEY_FRAME 980.000000 47.500000 0.000000
+                KEY_FRAME 981.000000 47.500000
 
               GROUP Continuous  Limit
                 gen_rotary Engine 4
@@ -146493,7 +146626,7 @@ GROUP Upper EICAS
               END_GROUP
               GROUP Start Limit Markers
                 gen_rotary Engine 4
-                  POS 1748.500000 781.000000
+                  POS 1748.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[3]
@@ -146514,7 +146647,7 @@ GROUP Upper EICAS
                   CLICK_DY 0
 
                 gen_rotary Engine 3
-                  POS 1642.500000 781.000000
+                  POS 1642.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[2]
@@ -146535,7 +146668,7 @@ GROUP Upper EICAS
                   CLICK_DY 0
 
                 gen_rotary Engine 2
-                  POS 1536.500000 781.000000
+                  POS 1536.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[1]
@@ -146556,7 +146689,7 @@ GROUP Upper EICAS
                   CLICK_DY 0
 
                 gen_rotary Engine 1
-                  POS 1430.500000 781.000000
+                  POS 1430.500000 692.000000
                   IMAGE CRT Displays/EICAS Upper/EGT_startLimit
                   DATAREF 
                   SHOW_EQUAL 1.000000 laminar/B747/engines/EGT/start_limit_on[0]
@@ -151976,7 +152109,7 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.red
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_GREATER 9.100000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_GREATER 9.050000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -151992,8 +152125,8 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.amber
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_LESS 9.000000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_GREATER 8.900000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_LESS 9.050000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_GREATER 8.850000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -152009,8 +152142,8 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_LESS 8.800000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_GREATER -0.490000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_LESS 8.850000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_GREATER -0.450000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -152026,7 +152159,7 @@ GROUP Upper EICAS
             POS 1705.000000 467.000000
             IMAGE CRT Displays/LED/LED_3.26B.xxx#00.amber
             DATAREF sim/cockpit2/pressurization/indicators/pressure_diffential_psi
-            SHOW_LESS -0.500000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
+            SHOW_LESS -0.450000 sim/cockpit2/pressurization/indicators/pressure_diffential_psi
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 9
             BUS_SRC 2
@@ -153046,8 +153179,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 3
                   POS 1642.500000 305.000000
@@ -153059,8 +153193,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 2
                   POS 1537.500000 305.000000
@@ -153072,8 +153207,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 1
                   POS 1432.500000 305.000000
@@ -153085,8 +153221,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
               END_GROUP
               GROUP White
@@ -153101,8 +153238,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 3
                   POS 1642.500000 305.000000
@@ -153114,8 +153252,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 2
                   POS 1537.500000 305.000000
@@ -153127,8 +153266,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
                 gen_tape Ind 1
                   POS 1432.500000 305.000000
@@ -153140,8 +153280,9 @@ GROUP LOWER EICAS POWER
                   LIGHT_RHEOSTAT 10
                   BUS_SRC 2
                   KEY_FRAME 0.000000 -52.000000 1.000000
-                  KEY_FRAME 113.000000 52.000000 0.000000
-                  KEY_FRAME 113.000000 52.000000
+                  KEY_FRAME 112.500000 45.000000 1.000000
+                  KEY_FRAME 120.620000 52.000000 0.000000
+                  KEY_FRAME 121.000000 52.000000
 
               END_GROUP
               GROUP Fuel-On Ind
@@ -157776,8 +157917,10 @@ GROUP LOWER EICAS POWER
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
             BUS_SRC 2
-            KEY_FRAME -25.000000 -82.000000 1.000000
-            KEY_FRAME 25.000000 82.000000
+            KEY_FRAME -99.000000 -82.000000 1.000000
+            KEY_FRAME -32.000000 -82.000000 1.000000
+            KEY_FRAME 32.000000 82.000000 1.000000
+            KEY_FRAME 99.000000 82.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000
@@ -157790,8 +157933,10 @@ GROUP LOWER EICAS POWER
             LIGHT_MODE GLASS_AUTO
             LIGHT_RHEOSTAT 10
             BUS_SRC 2
-            KEY_FRAME -25.000000 -82.000000 1.000000
-            KEY_FRAME 25.000000 82.000000
+            KEY_FRAME -99.000000 -82.000000 1.000000
+            KEY_FRAME -32.000000 -82.000000 1.000000
+            KEY_FRAME 32.000000 82.000000 1.000000
+            KEY_FRAME 99.000000 82.000000
             IS_DRAGGABLE 0
             IS_VERTICAL 0
             OFFSET 0.000000

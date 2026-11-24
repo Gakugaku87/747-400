@@ -806,3 +806,41 @@ CHR（3 回で開始・停止・リセット、グレアシールドの CLOCK �
 - 作ったこと：その 3 行を消した。
 - 試験：`speedtape_module_test`（2 件）。直す前のコードでは 2 件が落ちる。
 - X-Plane（カスタム acf、2026-11-09）：`s275` の (4)：地上（電波高度 5 ft 未満）で、CDU で選んだ着陸のフラップ（`VrefFlap` 2）が残る。PFD の写真は地上の 30 kt の所で、REF のバグ（VREF）はテープの外だった（目視は利用者に）。
+
+## 48. F/D のピッチのバーの位置（2026-11-24：段 4 のフルレビューの PNL-1）
+
+- 前の状態（本家から）：カスタム acf の PFD（各席の 2 つの形式、計 4 組）の `GROUP Flt Dir Offset`（自席のピッチで上下）の key frame が `10 → -68.5 / 1 → 0 / -10 → 68.5`。降順で、真ん中が 0° でなく 1°。中のバー（`gen_pointer FD Bar - Pitch`、F/D のピッチの指令 `autopilot/flight_director_pitch_deg`：姿勢の角度）は `-10 → -68.5 / 0 → 0 / 10 → 68.5`。バーの絵（`FDbarVertical-1.png`）は線が絵の中心より 6 px 下。
+  - ピッチが指令どおりでも、バーは 7.5° で翼の記号の 4 px 下、10° をまたぐと 12.5 px 跳び、離陸の後（12〜17°）は 1.2〜1.6° 上にずれた（レビューの担当 4 が過去の写真 5 枚の測りで確かめた）。
+- 資料：FCOM p.980 (10.10.18)：バーは F/D のピッチとロールの指令（steering commands）。指令が姿勢の角度なので、ピッチが指令どおりならバーは飛行機の記号の上、指令とピッチの差はピッチの目盛（地平線の `DEFLECT_PIX` 613 ÷ 90＝6.811 px/度）で出す。
+- 直したこと：4 組とも、グループを昇順の 1 本の線 `-30 → 204.333333 / 30 → -204.333333`（ピッチの目盛と同じ傾き）、バーを `-30 → -198.333333 / 30 → 210.333333`（同じ傾きに、絵の 6 px を足す）。変更前後の値は ACF_DIFF.md §5。外へは線のまま延びる（前のバーも同じ）。
+- 試験：`tests/displays/pfd_fd_bar_panel_test.lua`（131 件。acf のパネルを読む道具 `tests/lib/panel.lua` を足した）：ピッチ −15〜25° のどこでも、指令どおりならバーが翼の中心から 0.5 px 以内、1° の差でピッチの目盛 1° 動く、跳びが無い。直す前の acf では 56 件が落ちる。
+- X-Plane の確かめ（親）：A/P CMD の上昇（FLCH）と離陸の後で、`pitch_AHARS_deg_pilot` と `flight_director_pitch_deg` の差が 0.1° 以内のときに PFD を寄せて撮る。バーが翼の記号の真ん中（±1.5 px）、10° をまたいで跳ばないこと。
+
+## 49. PFD の横滑りの印（2026-11-24：段 4 のフルレビューの PNL-6）
+
+- 前の状態（本家から）：カスタム acf の PFD（4 組）の横滑りの印（`gen_pointer Symbol`、絵 `HrznSlipSkid` 幅 26 px、バンクの針の下）が、X-Plane の空力の横滑り角 `sim/cockpit2/gauges/indicators/sideslip_degrees` で `-10 → -20 / 0 → 0 / 10 → 20`、端なし。20 kt の横風の滑走（s116、133 kt）で、印がバンクの針の真下から 43 px（幅の 1.6 倍）離れた。そのとき機体の横の加速度（`g_side`）は 0.00〜0.03。
+- 資料：FCOM p.975 (10.10.13)（LCD）・p.977 (10.10.15)（CRT）：バンクの針の下で slip or skid を示す。p.975：「fully displaced」で塗りつぶす（動きに端がある）。FCOM p.1044 (10.10.82)：slip/skid の源は IRS。IRS が測るのは慣性の横の加速度（玉と同じもの）で、空力の横滑り角ではない。FCTM p.251 (7.3)：片発で方向舵を合わせると、印は動いているエンジンの側へ少し（玉の動き）。
+- 直したこと：
+  - 入力を X-Plane の玉（`sim/cockpit2/gauges/indicators/slip_deg`、副操縦士の 2 組は `slip_deg_copilot`）にした。地上の横風の滑走（横の加速度ほぼ 0）では真ん中に残る。
+  - 向き：X-Plane の `slip_deg` は正で玉が左（Laminar の PA-18 の旋回計の玉（`turn_slip_ga.obj`）と 737 の PFD の向きから）。印は玉と同じ向きに動かす：正で左。X-Plane では未確認（親が確かめる）。
+  - 倍率は前と同じ 1° で 2 px（Laminar の 737 とほぼ同じ）。端は ±13 px（印の幅の半分。**推定**：端の幅は資料に無い。レビューの案）。
+  - LCD の「端で塗りつぶす」（p.975）は作らない（この機体の PFD は CRT の形：p.977 に塗りの記述は無い）。
+  - 変更前後の値は ACF_DIFF.md §5。
+- 試験：`tests/displays/pfd_slip_panel_test.lua`（53 件）：4 組が自席の玉を読み、0 で真ん中、玉 1° 左で 2 px 左、6.5° を越えて 13 px で止まる。直す前の acf では 44 件が落ちる。
+- X-Plane の確かめ（親）：
+  1. 向き：空中で翼を水平に保ったまま右の方向舵を踏む（スキッド）。`slip_deg` を読み、PFD を寄せて撮る。印は左へ（玉が左：左の方向舵で戻す向き）。逆なら key frame の符号を逆にする。
+  2. 横風の滑走（s116 の形、20 kt）：印がバンクの針の下からほとんど動かない（13 px より内）。
+
+## 50. GE（570）の PFD の V2（2026-11-24：段 4 のフルレビューの DSP-4 の 1 つ目）
+
+- 前の状態：PFD の速度テープの V 速度は V1・VR（と NO V SPD）だけで、パネルに `airspeed/V2` を読む計器が無かった。GE の機体も P&W（109）と同じ出方。
+- 資料：FCOM p.970–972 (10.10.8–10)：570 は CDU で選んだ V1・VR・V2 を離陸のために出す。V1・VR は浮くと消え、V2 は上昇でフラップを上げ始めると消える。109・405 は V1・VR だけ。
+- 直したこと：
+  - 速度テープのモデル（`B747.60.speedtape_model.lua`）に `show_v2`：570（`engines/type` 1）で V2 を選んでいて（999 でない）、最小機動速度の帯がまだ出ていない（同じ「離陸の後の最初のフラップ上げ」：FCOM p.973、§13）。新しい dataref `laminar/B747/airspeed/v2_show`（init `B747.60.fltInst`、`B747.60.xt.speedtape.lua` が書く。INTERFACES.tsv に足した）。
+  - パネル：各 PFD（4 組）の `GROUP V-Speeds` の `Spd Ofst Kts` に `gen_pointer V2`（副操縦士は ` 2`）を V1 の後に足した。V1 と同じ位置・key frame、絵は前から acf の画像の中にあった `Vspeeds/V2`（V1・VR と同じ形の「−V2」）、`SHOW_EQUAL 1 airspeed/v2_show`。FCOM の図の V2 は中抜きの速度のバグの形に「V2」だが、この機体の V1・VR の形にそろえた（見た目の推定）。
+  - 変更前後は ACF_DIFF.md §5（追加）。
+- 試験：`speedtape_model_test`（+8 件：570 の地上・滑走・浮いた後で出る、フラップ上げで消え戻らない、V2 なし・109・空中開始で出ない。直す前のモデルでは 3 件が落ちる）、`speedtape_module_test`（+2 件：GE で 1、P&W で 0）、`tests/displays/pfd_v2_panel_test.lua`（46 件：4 組の V2 のバグが V1 と同じ群・位置・目盛、条件が `v2_show`。直す前の acf では 5 件が落ちる）。
+- X-Plane の確かめ（親）：新しい `s360_pfd_eicas_ge_takeoff`（Saudia、RJAA 34L の離陸）。地上で `v2_show` 1 と PFD の写真（`pfd_v2_ground`：V1・VR の上に「−V2」）、浮いた後のフラップ 20 でも 1（`pfd_v2_after_liftoff`：V1・VR は消える）、フラップ 10 で 0（`pfd_v2_removed`）。
+- しなかったこと（資料で決まらない：報告で問いにした）：
+  - 570 の着陸フラップと VREF の表示（FCOM p.973：「30/140」）：文は「VREF が目盛の外のとき速度の表示の下に」、図（p.970・972 の 570）は 80 kt のとき速度テープの下の右に「30/140」。目盛の外のときだけか、選んでいる間いつもか、色、CRT での位置が決まらない。109 の目盛の外の VREF の数字も前から無い（DIFFERENCES.md の残り）。
+  - 570 の PLI の「フラップ上げの低速」（FCOM p.975・977：405・570 は flaps not up に加えて at slow speeds with flaps up）：「低速」の境が資料に無い（`B747.60.minspeed_model.lua` の `show_pli` は 109 の形のまま）。

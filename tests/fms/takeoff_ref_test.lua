@@ -61,7 +61,7 @@ T.check(line(1):find("TAKEOFF"), "INIT/REF INDEX's TAKEOFF before any weight: " 
 type_in("24")
 key("ls_key/R4")
 T.check(line(9):find("24%%$"), "CG 24 % taken before any weight: " .. line(9))
-T.check(not small(9):find("%d%.%d"), "no trim without a weight: " .. small(9))
+T.check(not small(9):sub(17, 20):find("%d"), "no trim without a weight (TRIM's columns 17-20): " .. small(9))
 rt:set("laminar/B747/options/cdu_sim_values", 1)
 rt:set("sim/aircraft/weight/acf_cgZ_original", 103.608925)    -- the acf's reference CG (ft aft of the nose)
 rt:set("sim/flightmodel2/misc/cg_offset_z", 0.2686)           -- 26.2 % MAC (the airplane's: TCDS A20WE p.14)
@@ -114,8 +114,12 @@ T.check(line(1):find("TAKEOFF REF"), "TAKEOFF REF: " .. line(1))
 T.check(small(3):find("^  /1000FT"), "ACCEL HT 1000 FT, small (FCOM's figure): " .. small(3))
 T.check(small(5):find("^1000FT"), "E/O ACCEL HT 1000 FT, small: " .. small(5))
 T.check(small(7):find("^FLAPS 5"), "THR REDUCTION FLAPS 5, small: " .. small(7))
-T.check(line(9):find("^%-%-%-/%-%-%-%-"), "WIND/SLOPE dashes: " .. line(9))
-T.check(line(11):find("RW%*%*%* %-%-00M"), "POS SHIFT dashes: " .. line(11))
+-- (2026-11-24, review CDU-8) WIND/SLOPE's defaults H00/U0.0 small (FCOM
+-- p.1317-1318 (11.40.41-42)'s figures; FMSPG p.106 (3.2-46)); POS SHIFT
+-- blank without a runway (FMSPG p.108 (3.2-48)). Before, "---/----" large
+-- and "RW*** --00M"
+T.check(line(9):find("^        ") ~= nil and small(9):find("^H00/U0%.0") ~= nil, "WIND/SLOPE H00/U0.0 small: " .. line(9) .. "|" .. small(9))
+T.equal(line(11), "", "POS SHIFT blank without a runway: " .. line(11))
 T.check(small(12):find("PRE%-FLT$") and line(13):find("ROUTE>$"), "PRE-FLT: ROUTE (no route): " .. line(13))
 -- the entries
 type_in("10/1500")
@@ -151,6 +155,19 @@ T.check(line(9):find("^T05/D0%.5"), "the slope alone with its slash: D0.5: " .. 
 type_in("/3.0")
 key("ls_key/L4")
 invalid("SLOPE 3.0: INVALID ENTRY (0.0 to 2.0)")
+-- (review CDU-8) DELETE: the defaults small again; one part entered large,
+-- the other's default small
+key("key/del")
+key("ls_key/L4")
+T.check(not line(9):find("[HTUD]") and small(9):find("^H00/U0%.0") ~= nil, "deleted: H00/U0.0 small: " .. line(9) .. "|" .. small(9))
+type_in("/U1.5")
+key("ls_key/L4")
+T.check(line(9):find("^   /U1%.5") ~= nil and small(9):find("^H00     ") ~= nil, "the slope alone: /U1.5 large, H00 small: " .. line(9) .. "|" .. small(9))
+type_in("T05")
+key("ls_key/L4")
+T.check(line(9):find("^T05/U1%.5") ~= nil and small(9):find("^        ") ~= nil, "both entered: T05/U1.5 large: " .. line(9) .. "|" .. small(9))
+type_in("/D0.5")
+key("ls_key/L4")
 -- the wind deletes the selected speeds
 key("ls_key/R1")
 key("ls_key/R2")
@@ -187,12 +204,18 @@ invalid("the sim's 45 %: INVALID ENTRY (0 to 40)")
 key("key/del")
 key("ls_key/R4")
 rt:set("laminar/B747/options/cdu_sim_values", 0)
+-- POS SHIFT kept without a runway, the line blank (review CDU-8: RTE 1's
+-- runway in rte_pages_test)
+local function posshift() return (rt:get("laminar/B747/fms/data"):match('"posshift":"([^"]*)"')) end
 type_in("3")
 key("ls_key/R5")
-T.check(line(11):find("%+0300M"), "POS SHIFT 3: +0300M: " .. line(11))
+T.check(posshift() == "+03" and line(11) == "", "POS SHIFT 3: +03 kept, no runway shown: " .. tostring(posshift()) .. "|" .. line(11))
 type_in("-03")
 key("ls_key/R5")
-T.check(line(11):find("%-0300M"), "POS SHIFT -03: -0300M: " .. line(11))
+T.equal(posshift(), "-03", "POS SHIFT -03")
+type_in("31")
+key("ls_key/R5")
+invalid("POS SHIFT 31 hundred meters: INVALID ENTRY (+/-30: FMSPG p.108)")
 -- PRE-FLT to the page not complete
 key("ls_key/R6")
 T.check(line(1):find("RTE"), "PRE-FLT ROUTE>: the RTE page: " .. line(1))
@@ -255,21 +278,22 @@ rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
 T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
 
--- (2026-11-19, notes/ATA-34-61-FMC.md §172) the armed climb by the FCOM's
--- effectivity: the 109 (a P&W passenger) by the takeoff's whole reduction
--- (the EEC's, with an assumed temperature: 27 % CLB 2, FCOM p.1273); the
--- 405 (a P&W freighter: laminar/B747/freighter) and 570 (GE: engines/type 1)
--- by the takeoff's rating, TO 1's CLB 1 (FCOM p.1315)
+-- (2026-11-24, review FMC-1, notes/ATA-34-61-FMC.md §179) the armed climb
+-- by the takeoff's whole reduction on every airplane (the EEC's, with an
+-- assumed temperature: 27 % CLB 2, FCOM p.1273 (11.32.3); its paragraph has
+-- no effectivity: rule 2, p.11 (0.2.5)). From 2026-11-19 (§172) the 405 (a
+-- P&W freighter: laminar/B747/freighter) and 570 (GE: engines/type 1) armed
+-- TO 1's CLB 1
 rt:set("laminar/B747/engines/to_reduction", 27)
 frames(0.2)
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "the 109's TO 1 of 27 % in all: CLB 2 armed")
 rt:set("laminar/B747/freighter", 1)
 frames(0.2)
-T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "a P&W freighter (the 405): TO 1's CLB 1")
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "a P&W freighter (the 405): TO 1 of 27 % in all CLB 2")
 rt:set("laminar/B747/freighter", 0)
 rt:set("laminar/B747/engines/type", 1)
 frames(0.2)
-T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "GE (the 570): TO 1's CLB 1")
+T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "GE (the 570): TO 1 of 27 % in all CLB 2")
 rt:set("laminar/B747/engines/type", 0)
 frames(0.2)
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 2, "a P&W passenger again: CLB 2")

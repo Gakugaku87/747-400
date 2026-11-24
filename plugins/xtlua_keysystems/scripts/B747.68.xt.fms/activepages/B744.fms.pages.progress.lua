@@ -343,6 +343,23 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
   if simDR_onGround == 1 then
     B747DR_last_waypoint_fuel=simDR_fueL_tank_weight_total_kg
   end
+  -- (step 9h5a) RTA PROGRESS's keys on page 3 only. (2026-11-24, stage 4
+  -- review CDU-1) pages 1 and 2's keys before the lines kept for a second:
+  -- each CDU's keys are a copy of the page's after its drawing
+  -- (B744.createfms.lua), and with them set only when the lines were made
+  -- PROGRESS 1/3 had RTA PROGRESS's (3/3 on the other CDU)
+  if pgNo~=3 then
+    fmsFunctionsDefs["PROGRESS"]["L1"]=nil
+    fmsFunctionsDefs["PROGRESS"]["R1"]=nil
+    fmsFunctionsDefs["PROGRESS"]["L3"]=nil
+  end
+  if pgNo==1 then
+    fmsFunctionsDefs["PROGRESS"]["L6"]={"setpage","POSREPORT"}
+    fmsFunctionsDefs["PROGRESS"]["R6"]={"setpage","POSINIT_2"}
+  elseif pgNo==2 then
+    fmsFunctionsDefs["PROGRESS"]["L6"]=nil
+    fmsFunctionsDefs["PROGRESS"]["R6"]=nil
+  end
   if lastPageNum[fmsID]~=nil and lastPageNum[fmsID]==pgNo then
     if is_timer_scheduled(refreshPages)==false then
       run_after_time(refreshPages,1.0)
@@ -353,15 +370,7 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
     if simConfigData["data"].SIM.weight_display_units == "LBS" then
       mult=simConfigData["data"].SIM.kgs_to_lbs
     end
-  -- (step 9h5a) RTA PROGRESS's keys on page 3 only
-  if pgNo~=3 then
-    fmsFunctionsDefs["PROGRESS"]["L1"]=nil
-    fmsFunctionsDefs["PROGRESS"]["R1"]=nil
-    fmsFunctionsDefs["PROGRESS"]["L3"]=nil
-  end
   if pgNo==1 then
-    fmsFunctionsDefs["PROGRESS"]["L6"]={"setpage","POSREPORT"}
-    fmsFunctionsDefs["PROGRESS"]["R6"]={"setpage","POSINIT_2"}
     local pred = B747_fms_preds()
     if pred then
       lastPage[fmsID] = progress_pred(pred, mult)
@@ -451,8 +460,6 @@ fmsPages["PROGRESS"].getPage=function(self,pgNo,fmsID)
 
   elseif pgNo==2 then
     -- (step 11a) PROGRESS 2: prog2's
-    fmsFunctionsDefs["PROGRESS"]["L6"]=nil
-    fmsFunctionsDefs["PROGRESS"]["R6"]=nil
     lastPage[fmsID]=prog2(mult)
     lastPageNum[fmsID]=2
     return lastPage[fmsID]

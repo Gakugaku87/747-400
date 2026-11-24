@@ -1,6 +1,6 @@
 {
   "name": "s104_afds_ga",
-  "description": "AFDS の作り直し 6-3 段 1e（TO/GA）の着陸復行の確認、空中。銚子沖の海上 2,500 ft・160 kt で開始（機体を読み直す）、FMS の空中の初期化で A/P CMD L・ALT HOLD、フラップ 20。V/S で降りて MCP 高度 300 ft で捕まえ（空中開始の浮き沈みに頼らない）、MCP 高度を 1,500 ft にして、TO/GA で G/A（ロール・ピッチとも TO/GA、TO/GA の旗、前の autoland の着陸復行 -2：ATA22 p.337、FCOM p.657）、400 ft 未満では HDG SEL と V/S が効かない（表 p.351、p.335）、400 ft を超えると HDG SEL が効く、MCP 高度は 800 ft より上で捕まえる（ALT：表 p.335）。A/P と F/D を切って全部切、F/D のスイッチ OFF のまま TO/GA で G/A と両席の F/D の表示・両 PFD の FD（FCOM p.657、p.661）、機長の PFD を撮る。F/D L を ON・OFF すると全部切。",
+  "description": "AFDS の作り直し 6-3 段 1e（TO/GA）の着陸復行の確認、空中。銚子沖の海上 2,500 ft・160 kt で開始（機体を読み直す）、FMS の空中の初期化で A/P CMD L・ALT HOLD、フラップ 20。V/S で降りて MCP 高度 300 ft で捕まえ（空中開始の浮き沈みに頼らない）、MCP 高度を 1,500 ft にして、TO/GA で G/A（ロール・ピッチとも TO/GA、TO/GA の旗、autoland の印は 0（2026-11-24 から。前は前の autoland の着陸復行 -2）：ATA22 p.337、FCOM p.657）、400 ft 未満では HDG SEL と V/S が効かない（表 p.351、p.335）、400 ft を超えると HDG SEL が効く、MCP 高度は 800 ft より上で捕まえる（ALT：表 p.335）。A/P と F/D を切って全部切、F/D のスイッチ OFF のまま TO/GA で G/A と両席の F/D の表示・両 PFD の FD（FCOM p.657、p.661）、機長の PFD を撮る。F/D L を ON・OFF すると全部切。",
   "reload": true,
   "flight": {
     "lle_air_start": { "latitude": 35.40, "longitude": 141.30, "elevation_in_meters": 762.0, "heading_true": 0, "speed_in_meters_per_second": 82.3 },
@@ -47,7 +47,7 @@
     { "do": "check", "note": "G/A：FMA のロールは TO/GA", "dref": "laminar/B747/autopilot/FMA/active_roll_mode", "op": "==", "value": 1 },
     { "do": "check", "note": "ピッチも TO/GA", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 1 },
     { "do": "check", "note": "前のコードの TO/GA の旗", "dref": "laminar/B747/autopilot/TOGA_status", "op": "==", "value": 1 },
-    { "do": "check", "note": "前の autoland の着陸復行（1,500 ft 未満）", "dref": "laminar/B747/autopilot/autoland", "op": "==", "value": -2 },
+    { "do": "check", "note": "G/A の autoland の印は 0（2026-11-24、段 4 の AFDS-3：前の autoland の着陸復行の -2 はやめた。前は 1,500 ft まで -2 が残り、次の進入の LAND 3 で 1 にならなかった）", "dref": "laminar/B747/autopilot/autoland", "op": "==", "value": 0 },
     { "do": "check", "note": "G/A のロールは新しいロールの則（6-3 段 2a）", "dref": "laminar/B747/autopilot/roll_law", "op": "==", "value": 1 },
     { "do": "remember", "dref": "sim/cockpit2/gauges/indicators/ground_track_mag_pilot", "as": "trk_ga" },
     { "do": "cmd", "note": "400 ft 未満の HDG SEL", "name": "laminar/B747/autopilot/button_switch/heading_select" },

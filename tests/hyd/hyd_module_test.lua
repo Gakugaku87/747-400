@@ -282,9 +282,12 @@ end
 rt:set("laminar/B747/autopilot/pitch_cmd", 2.5)
 step(3)
 T.check(on_at ~= nil and on_at > 0.4, "the autotrim from 0.4 degrees up (" .. tostring(on_at) .. ")")
--- then 0.5 degree down: the elevator back through the band
-rt:set("laminar/B747/autopilot/pitch_cmd", 1.5)
-step(6)
+-- then 0.1 degree down: the elevator back through the band as the integral
+-- runs down (since 2026-11-24 the integral is a third of the proportional
+-- a second: with 0.5 degree down the command went from above the band
+-- to under it in a frame)
+rt:set("laminar/B747/autopilot/pitch_cmd", 1.9)
+step(14)
 T.check(held_at ~= nil, "trimming on between 0.4 and 0.25 degrees (the band: " .. tostring(held_at) .. ")")
 T.check(off_at ~= nil and off_at < 0.25, "off within 0.25 degrees (" .. tostring(off_at) .. ")")
 T.check(bad == nil, "the autotrim command by the band all along (" .. tostring(bad) .. ")")
@@ -317,10 +320,14 @@ T.near(before - get(ELEV), 0.95 * 0.05, 0.005, "the stabilizer 0.05 nose up: the
 -- elevator command 0.06 less at 288 kt (since 2026-11-22 at least 0.06
 -- from about 200 kt up: the cruise's 3.4 s swing with the downwash's
 -- correction; before 0.03)
+-- (2026-11-24, the 2026-11-23 review's FCTL-1) The command is in the up
+-- travel's units and nose down it is written times up over down (22 / 17):
+-- the same degrees of elevator both ways, 0.06 of 22 degrees (before, the
+-- ratio moved 0.06 on either side: nose down 17 / 22 of the degrees)
 local e0 = get(ELEV)
 rt:set("sim/flightmodel/position/Q", 1)
 frames(1)
-T.near(e0 - get(ELEV), 0.06, 0.005, "pitching up 1 degree a second: the elevator 0.06 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+T.near(deg_of(e0) - deg_of(get(ELEV)), 0.06 * 22, 0.1, "pitching up 1 degree a second: the elevator 1.32 degrees less, 0.06 of the up travel (" .. e0 .. " to " .. get(ELEV) .. ")")
 -- at 210 kt still 0.06 (the speed's schedule 0.03 x 1.42 ^ 1.5 = 0.051 is
 -- under it)
 rt:set("sim/flightmodel/position/Q", 0)
@@ -330,7 +337,7 @@ frames(1)
 e0 = get(ELEV)
 rt:set("sim/flightmodel/position/Q", 1)
 frames(1)
-T.near(e0 - get(ELEV), 0.06, 0.005, "at 210 kt the pitch rate's floor: the elevator 0.06 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+T.near(deg_of(e0) - deg_of(get(ELEV)), 0.06 * 22, 0.1, "at 210 kt the pitch rate's floor: the elevator 1.32 degrees less (" .. e0 .. " to " .. get(ELEV) .. ")")
 -- the gains by airspeed: at 150 kt the attitude error's (250 / 150) squared,
 -- 2.78 times (under 145 kt 3 times), the attitude rate's that to the 1.5,
 -- 4.6 times
@@ -341,7 +348,17 @@ frames(1)
 e0 = get(ELEV)
 rt:set("sim/flightmodel/position/Q", 1)
 frames(1)
-T.near(e0 - get(ELEV), 0.03 * ((250 / 150) ^ 2) ^ 1.5, 0.01, "at 150 kt the pitch rate's 4.6 times: the elevator 0.139 less (" .. e0 .. " to " .. get(ELEV) .. ")")
+T.near(deg_of(e0) - deg_of(get(ELEV)), 0.03 * ((250 / 150) ^ 2) ^ 1.5 * 22, 0.2, "at 150 kt the pitch rate's 4.6 times: the elevator 3.06 degrees less, 0.139 of the up travel (" .. e0 .. " to " .. get(ELEV) .. ")")
+-- nose down the ratio is the up travel's units times 22 / 17: from a
+-- nose-down elevator the same pitch rate moves the ratio 22 / 17 as far
+rt:set("sim/flightmodel/position/Q", 2)
+frames(1)
+local e1 = get(ELEV)
+T.check(e1 < e0 and e1 < 0, "pitching up 2 degrees a second: the elevator nose down (" .. e1 .. ")")
+rt:set("sim/flightmodel/position/Q", 3)
+frames(1)
+T.near(e1 - get(ELEV), 0.03 * ((250 / 150) ^ 2) ^ 1.5 * 22 / 17, 0.01, "nose down, another degree a second: the ratio 22 / 17 of 0.139 (" .. e1 .. " to " .. get(ELEV) .. ")")
+T.near(deg_of(e1) - deg_of(get(ELEV)), 0.03 * ((250 / 150) ^ 2) ^ 1.5 * 22, 0.2, "the same 3.06 degrees of elevator")
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 288)
 rt:set("sim/flightmodel/position/Q", 0)
 rt:set("sim/flightmodel2/controls/elevator_trim", 0)
@@ -552,6 +569,32 @@ co_frames(1)
 T.near(get("sim/flightmodel/controls/wing3l_spo2def"), 45 * 0.36 * 240 / 340, 0.1, "340 kt: 0.36 x 240 / 340 of it (FCTM's 340 kt)")
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 200)
 co_frames(1)
+-- (2026-11-23 review FCTL-5) the lever moved in the air: X-Plane's spoiler
+-- follows the 3D's at 0.36 of it frame by frame. Before, the frame the lever
+-- went DN it jumped from 16.2 to 40.5 degrees (the whole lag of the 3D's
+-- spoiler, with nothing taken off), and going out it stayed at 0 for 9 frames
+do
+    local XSP3, SPL, SBL = "sim/flightmodel/controls/wing3l_spo2def", FC .. "spoilers", "laminar/B747/flt_ctrls/speedbrake_lever"
+    local function watch(lever, seconds)
+        rt:set(SBL, lever)
+        local peak, off, first = 0, 0, nil
+        for f = 1, math.floor(seconds * 30 + 0.5) do
+            rt:apply_control_objects()
+            rt:frame(1 / 30)
+            local x, a = get(XSP3), get(SPL, 3)
+            peak, off = math.max(peak, x), math.max(off, math.abs(x - 0.36 * a))
+            first = first or x
+        end
+        return peak, off, first
+    end
+    local peak, off = watch(0, 2)
+    T.check(peak <= 45 * 0.36 + 0.01, "in the air, lever DN: X-Plane's spoiler 3 never above its 16.2 degrees (" .. peak .. ")")
+    T.check(off < 0.01, "... and at 0.36 of the 3D's spoiler 3 every frame (" .. off .. " off)")
+    local _, off2, first = watch(0.53, 4)
+    T.check(first > 0, "lever back to the flight detent: X-Plane's spoiler 3 moves the first frame (" .. first .. ")")
+    T.check(off2 < 0.01, "... at 0.36 of the 3D's every frame (" .. off2 .. " off)")
+    T.near(get(XSP3), 45 * 0.36, 0.01, "... and at 16.2 again")
+end
 rt:set("sim/cockpit2/controls/yoke_roll_ratio", 0.5)
 co_frames(2)
 T.near(get("sim/flightmodel/controls/wing3l_spo2def"), 0, 0.1, "roll right: X-Plane's left spoiler 3 down to 0 (the 3D's 45 less the roll's 19.4)")

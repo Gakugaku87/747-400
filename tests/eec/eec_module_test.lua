@@ -64,6 +64,44 @@ frames(0.2)
 T.near(get(ENG .. "display_EPR_max", 0), 1.53, 0.005, "P&W: 3 packs off raise the max EPR by 0.02")
 rt:set("laminar/B747/air/packs_operating", 3)    -- the pack model (B747.55.xt.packs.lua)
 
+-- (2026-11-24, ENG-2 of the 2026-11-23 review) in a takeoff's thrust limit
+-- the P&W's reference and maximum the FPPM's Takeoff EPR (747-400F/PW4056)
+-- at the OAT: 5,000 ft, OAT 25, TAT 28. Before, the go-around table at the
+-- TAT (1.572) for both
+rt:set("sim/flightmodel2/position/pressure_altitude", 5000)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 25)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 28)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_max", 0), 1.56, 0.0005, "P&W TO at 5,000 ft, OAT 25 (TAT 28): the max EPR p.44's 1.56 (before 1.572)")
+T.near(get(ENG .. "display_EPR_ref", 0), 1.56, 0.0005, "TO's reference p.44's 1.56")
+-- TO 2 (the FMS's number 12, its 20 %): p.69, the maximum the full rating's
+rt:set("laminar/B747/fms/thrlim/code", 12)
+rt:set("laminar/B747/fms/thrlim/to_pct", 20)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 0), 1.39, 0.0005, "TO 2's reference p.69's 1.39 (before 1.435: 20 % less thrust by the EPR model)")
+T.near(get(ENG .. "to_reduction"), 20, 1e-6, "TO 2: 20 % less thrust for the FMC's climb derate")
+T.near(get(ENG .. "display_EPR_max", 0), 1.56, 0.0005, "TO 2: the max EPR the full rating's")
+-- D-TO (110), SEL 60: p.44's 1.32 at 60 °C under p.22's minimum for 1.56
+-- (1.354): the minimum, 25 % less thrust
+rt:set("laminar/B747/fms/thrlim/code", 110)
+rt:set("laminar/B747/fms/thrlim/to_pct", 0)
+rt:set("laminar/B747/fms/thrlim/sel", 60)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 0), 1.354, 0.0005, "D-TO, SEL 60: p.22's minimum 1.354 for p.44's 1.56 (before 1.402: 25 % less thrust by the EPR model)")
+T.near(get(ENG .. "to_reduction"), 25, 1e-6, "D-TO, SEL 60: 25 % less, the most (FCOM p.1273)")
+-- GA (50) on the ground: the go-around table at the TAT, its maximum too
+rt:set("laminar/B747/fms/thrlim/code", 50)
+rt:set("laminar/B747/fms/thrlim/sel", -99)
+frames(0.2)
+T.near(get(ENG .. "display_EPR_ref", 0), 1.572, 0.0005, "GA: the go-around table at the TAT 28, 1.572 (PI.10.37)")
+T.near(get(ENG .. "display_EPR_max", 0), 1.572, 0.0005, "GA: the max EPR the go-around table's")
+rt:set("laminar/B747/fms/thrlim/code", 0)
+rt:set(ENG .. "ref_thr_limit_mode", "")
+rt:set("sim/flightmodel2/position/pressure_altitude", 0)
+rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
+frames(0.2)
+
 -- in the climb above 25,000 ft the lever reaches the climb rating at 35°
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
@@ -124,6 +162,29 @@ end
 T.equal(ns.find_closest_weight(ns.P85M_epr_PW4062, 270), 260, "the cruise table (a namespace): the nearest weight, the lower on a tie: 260 t for 270")
 T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 35), 35, "its nearest altitude: 35 kft")
 T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 36), 35, "on a tie the lower one")
+-- (2026-11-24, ENG-7 of the 2026-11-23 review) the upstream's takeoff,
+-- climb, cruise and go-around branches of PW() and GE() are gone: the FMC's
+-- reference and the EEC's maximum overwrote what they set. The P&W in CRZ
+-- looks up no cruise table (before, two lookups a frame, each building and
+-- sorting a table), the RB211 still does (its own branches); the functions
+-- only they called are gone
+do
+    local calls = 0
+    local fw, fa = ns.find_closest_weight, ns.find_closest_altitude
+    ns.find_closest_weight = function(...) calls = calls + 1; return fw(...) end
+    ns.find_closest_altitude = function(...) calls = calls + 1; return fa(...) end
+    rt:set("laminar/B747/engines/type", 0)
+    rt:set("laminar/B747/fms/thrlim/code", 30)
+    frames(1)
+    T.equal(calls, 0, "P&W in CRZ: no cruise table lookups (ENG-7; before, two a frame)")
+    rt:set("laminar/B747/engines/type", 2)
+    frames(0.2)
+    T.check(calls > 0, "the RB211 in CRZ: its own cruise table lookups still run (" .. calls .. ")")
+    ns.find_closest_weight, ns.find_closest_altitude = fw, fa
+    T.check(ns.take_off_EPR_PW == nil and ns.in_flight_EPR_PW == nil and ns.in_flight_N1_GE == nil
+        and ns.find_closest_temperature == nil, "take_off_EPR_PW, in_flight_EPR_PW, in_flight_N1_GE and find_closest_temperature are gone")
+    T.check(type(ns.take_off_N1_GE) == "function", "take_off_N1_GE stays (the GE's takeoff N1 factor: ENG-4, not changed)")
+end
 rt:set("laminar/B747/engines/type", 0)
 rt:set("laminar/B747/fms/thrlim/code", 0)
 rt:set(ENG .. "ref_thr_limit_mode", "")
@@ -258,6 +319,32 @@ T.equal(get(ADV, 314), 0, "ALTN: back in the normal mode")
 T.equal(get(CAUTION, 76), 0, "no LIM PROT in the normal mode")
 T.equal(get("laminar/B747/engines/autothrottle_fail"), 0, "the A/T can be armed again with all EECs normal")
 T.near(get(ENG .. "TRA", 1), 1.51, 0.005, "NORM: the EPR command again")
+-- (2026-11-24, DSP-5 of the 2026-11-23 review) the N1 mode at idle in the
+-- air: the EICAS's command EPR (TRA) not under the EPR mode's idle command
+-- (the lever's idle end, B747_epr_model.idle_command). At 3,000 ft, M.34
+-- the N1 command at idle (about 20 %) is under the EPR model's N1, flat
+-- under EPR 0.9 there: the EPR of that N1 stuck at the halving's low end
+-- 0.5, the marker at the scale's foot under the bar (c30c5ef5)
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("sim/flightmodel2/position/pressure_altitude", 3000)
+rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * (1 - 6.87559e-6 * 3000) ^ 5.25588)
+rt:set("sim/flightmodel/misc/machno", 0.337)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 18)
+for i = 0, 3 do rt:set(USER, i, 0) end
+frames(3)
+rt:set("laminar/B747/button_switch/position", 8, 0)
+frames(1)
+local idle34 = EP.idle_command(0.337)
+T.check(get(ENG .. "TRA", 1) > 0.85, string.format("ALTN 2 at idle, 3,000 ft, M.34: the command EPR %.3f, not the halving's low end 0.5 (DSP-5)", get(ENG .. "TRA", 1)))
+T.near(get(ENG .. "TRA", 1), idle34, 0.002, string.format("ALTN 2 at idle: the EPR mode's idle command %.3f (estimate: the FCOM gives no ALTN marker)", idle34))
+T.near(get(ENG .. "TRA", 0), idle34, 0.002, "engine 1 (EPR mode) at idle: the same idle command")
+rt:set("laminar/B747/button_switch/position", 8, 1)
+rt:set("sim/flightmodel/misc/machno", 0)
+rt:set("sim/flightmodel2/position/pressure_altitude", 0)
+rt:set("sim/cockpit2/temperature/outside_air_LE_temp_degc", 15)
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 1, 0)
 rt:set("sim/flightmodel/engine/ENGN_N2_", 1, 0)
 rt:set("sim/flightmodel/engine/ENGN_running", 1, was_running)
@@ -506,6 +593,30 @@ T.check(ns.B747_eec_target(2) < get(ENG .. "TRA", 2) - 0.2, "overspeed: GE N2 at
 T.equal(get(ADV, RPM_LIM + 2), 1, ">ENG 3 RPM LIM: GE from the EEC")
 rt:frame(1 / 30)
 T.equal(get(ADV, RPM_LIM + 2), 0, "GE: RPM LIM goes with N2 back below its limit")
+-- (2026-11-24, PNL-5) the EICAS's command N1 (TRA) of a running engine at
+-- the idle lever: the idle N1 the display is pinned to (FCOM p.873: the
+-- command equals the actual N1 once stable), not the EEC's own idle end
+-- (25 %, under any idle); the display's pin still works off the EEC's own
+-- command; a stopped engine's: the EEC's
+local running_was = get("sim/flightmodel/engine/ENGN_running", 1)
+rt:set(USER, 1, 0)
+rt:set("sim/flightmodel/engine/ENGN_running", 1, 0)
+frames(3)
+T.near(ns.B747_eec_command(1), 25, 1e-6, "GE: the idle lever's own command 25 % (under any idle)")
+T.near(get(ENG .. "TRA", 1), 25, 1e-6, "GE: engine 2 stopped: the EICAS's command the EEC's")
+local n1_was = get(ENG .. "display_N1", 1)
+rt:set("sim/flightmodel/engine/ENGN_running", 1, 1)
+frames(10)
+local pin = ns.B747_ge_idle_pin(1, 0)
+T.near(pin, 25.9, 1e-6, "GE: the ground's idle pin 25.9 %")
+T.near(get(ENG .. "TRA", 1), pin, 1e-6, "GE: engine 2 running at idle: the EICAS's command the idle pin")
+T.check(get(ENG .. "display_N1", 1) > n1_was + 5 and get(ENG .. "display_N1", 1) < pin,
+    string.format("GE: the display goes to the idle pin as before (%.1f from %.1f)", get(ENG .. "display_N1", 1), n1_was))
+rt:set(USER, 1, 1.0)
+frames(3)
+T.near(get(ENG .. "TRA", 1), ns.B747_eec_command(1), 1e-6, "GE: the lever forward: the EICAS's command the EEC's")
+rt:set("sim/flightmodel/engine/ENGN_running", 1, running_was)
+frames(1)
 
 -- (ENG-31) GE in reverse: X-Plane's maximum reverse throttle 1, the
 -- reverse throttle the ECU's share of the maximum rated thrust (0.9 at full
@@ -552,19 +663,36 @@ frames(0.1)
 T.check(th1 > 0 and th1 < 1 and get(THRO, 1) > th1,
     string.format("P&W full reverse from idle, the shown N1 %.1f: the throttle opens gradually (%.3f, then %.3f)",
         get(ENG .. "display_N1", 1), th1, get(THRO, 1)))
+-- (2026-11-24, PNL-4) the EICAS's command EPR (TRA) with the reverser out:
+-- the EPR of the reverse N1 command (an estimate; the mark now stays in
+-- reverse: FCOM p.832-833); the other engines keep their forward command.
+-- Before, the forward lever's idle command (1.00 standing)
+local tat = get("sim/cockpit2/temperature/outside_air_LE_temp_degc")
+local rev_full = ns.B747_eec_epr_of_n1(ns.B747_eec_model.pw_reverse_n1(1, tat))
+local rev_idle = ns.B747_eec_epr_of_n1(ns.B747_eec_model.pw_reverse_n1(0, tat))
+T.near(get(ENG .. "TRA", 1), rev_full, 1e-6, "P&W full reverse: the command EPR is the reverse N1 command's (87 % N1)")
+T.check(rev_full > 1.25 and rev_full < 1.35, string.format("P&W full reverse standing: command EPR %.3f (the shown EPR in s341: 1.28)", rev_full))
+T.near(get(ENG .. "TRA", 0), ns.B747_eec_command(0), 1e-6, "P&W: engine 1 not in reverse keeps its forward command")
 rt:set(REVL, 1, -0.01)
 frames(2)
 T.equal(get(THRO, 1), 0, "P&W: back to reverse idle: throttle 0")
+T.near(get(ENG .. "TRA", 1), rev_idle, 1e-6, "P&W reverse idle: the reverse idle N1's EPR")
+T.check(rev_idle > 0.97 and rev_idle < 1.1, string.format("P&W reverse idle standing: command EPR %.3f", rev_idle))
 rt:set(REVL, 1, -1)
 rt:set(DEPLOY, 1, 0.5)                                          -- the sleeves moving
 frames(0.2)
 T.equal(get(THRO, 1), 0, "P&W: the sleeves in transit: idle (PW_PPM p.250)")
+T.near(get(ENG .. "TRA", 1), rev_idle, 1e-6, "P&W: the sleeves in transit: the command EPR reverse idle's")
 -- stowing (forward again) with the thrust lever advanced: idle until stowed
 rt:set(REVL, 1, 0)
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 1)
 rt:set(USER, 1, 0.8)
 frames(1)
 T.equal(get(THRO, 1), 0, "P&W: the sleeves still stowing, the lever advanced: idle (PW_PPM p.552)")
+T.near(get(ENG .. "TRA", 1), rev_idle, 1e-6, "P&W: still stowing: the command EPR reverse idle's")
+rt:set(DEPLOY, 1, 0)                                            -- stowed
+frames(0.2)
+T.near(get(ENG .. "TRA", 1), ns.B747_eec_command(1), 1e-6, "P&W stowed: the forward lever's command again")
 rt:set(USER, 1, user_was)
 rt:set(DEPLOY, 1, 1)
 rt:set("sim/cockpit2/engine/actuators/prop_mode", 1, 3)

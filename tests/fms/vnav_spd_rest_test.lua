@@ -75,4 +75,23 @@ T.equal(rest(), "250/8000", "the restriction still 250/8000")
 clear()
 enter("DELETE", "L4")
 T.equal(rest(), "---/-----", "DELETE: none")
+
+-- (2026-11-24, stage 4 review FMC-5) passed in the climb: dashes (ATA34_2
+-- p.553, 34-61 p.127: "replaced by dashes"), none for a later climb.
+-- Before, 240/8000 stayed until a flight complete or a DELETE
+enter("240/8000", "L4")
+T.equal(rest(), "240/8000", "240/8000 on the ground")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 7900)
+frames(0.5)
+T.equal(rest(), "240/8000", "in the climb under 8,000 ft: kept")
+T.check(line(9):find("^240/8000"), "4L: 240/8000: " .. line(9))
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 8100)
+frames(0.5)
+T.equal(rest(), "---/-----", "above 8,000 ft: passed, dashes (before: 240/8000)")
+T.check(line(9):find("^%-%-%-/%-%-%-%-%-"), "4L: dashes: " .. line(9))
+rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 3000)
+frames(0.5)
+T.equal(rest(), "---/-----", "a later climb under 8,000 ft (a missed approach's): none")
 T.done()

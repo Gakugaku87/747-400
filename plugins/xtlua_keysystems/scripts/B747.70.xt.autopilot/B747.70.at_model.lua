@@ -694,6 +694,20 @@ function M.servo(s, inp)
         end
         rate = (vnav and M.K_VS_VNAV or s.ga and M.K_VS_GA or M.K_VS) * (want - ev)
         if want > 0 and rate < 0 and not s.ga then rate = 0 end
+        -- (2026-11-23 review AFDS-1) G/A's THR within the limit speed, as
+        -- THR REF's (the maximum operating, gear extended or flap placard
+        -- speed less LIMIT_MARGIN): after G/A's level-off (ALT) the A/T
+        -- stays in THR until SPD is selected and its speed protection keeps
+        -- the speed under them (FCOM p.673 (4.20.15); p.675 (4.20.17): the
+        -- A/T's own protection in every pitch mode but V/S, p.663 (4.20.5)
+        -- none in V/S). Before, the 2,000 fpm's energy rate went on level:
+        -- 163 to 238 kt at flaps 20 in 69 s (v07, 2026-11-23). ATA34_2
+        -- p.648 (34-61 p.222) gives G/A's protection with full GA thrust
+        -- only: FCOM's, the crew's, kept. FLCH's and VNAV's THR not: their
+        -- pitch holds the speed
+        if s.ga and s.pitch ~= "VS" then
+            rate = math.min(rate, speed_rate(inp.ias, inp.accel, vmax, k, inp.flaps_up))
+        end
         rate = math.min(rate, cap)
         -- VNAV's descent at its V/S and the energy's at the target speed
         -- for REACH_S (FMSPG p.3.5-5)

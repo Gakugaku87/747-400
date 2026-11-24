@@ -40,7 +40,7 @@
     { "do": "wait", "note": "VNAV PTH（巡航。空中開始の揺れで 36,400 ft ほどに落ちてから FL370 へ上り直す：2026-11-13 の 1 回目は 60 秒で足りなかった）", "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 6, "timeout": 300 },
     { "do": "wait", "note": "FMC の段階が巡航（2）。2026-11-13 の 3 回目は FL370 の捕捉の VNAV PTH の直後にエンジンを止め、まだ CLB の段階で ENG OUT が MOD E/O CLB になった", "dref": "laminar/B747/fms/vnav/phase", "op": "==", "value": 2, "timeout": 120 },
     { "do": "cdu", "note": "VNAV（CRZ のページ）、巡航の速さ .850（2L：SEL SPD）。2026-11-13 の 4 回目は段階の待ちの間に ECON の M.818 へ下がり、E/O LRC .827 より遅い側から入った", "keys": ["VNAV", ".850", "L2"] },
-    { "do": "wait", "note": "M.845 まで", "dref": "sim/flightmodel/misc/machno", "op": ">=", "value": 0.845, "timeout": 180 },
+    { "do": "wait", "note": "M.849 まで（2026-11-24 の段 4 の直しの一覧 B は、空中開始の後 M.822 から加速中に M.845 に届いた 10 秒後に止め、driftdown の始めが M.8334 で E/O LRC .827 + 0.01 より遅く、速い側からの入りにならなかった。11-22 は空中開始の行き過ぎで M.857 から止めていた）", "dref": "sim/flightmodel/misc/machno", "op": ">=", "value": 0.849, "timeout": 240 },
     { "do": "sleep", "seconds": 10 },
 
     { "do": "mark", "note": "エンジン 2 を止める" },

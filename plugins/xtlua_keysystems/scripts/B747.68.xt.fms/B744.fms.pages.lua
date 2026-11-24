@@ -767,8 +767,10 @@ function calc_pax_cargo()
 	--print("Freight Tot = "..freight_weight_tot)
 	-- (2026-11-05) X-Plane's CG for the new load now (inflight_update_CG:
 	-- the zones', the cargo's and the tanks' arms, as every 60 s), so that
-	-- the sim's weight and balance window shows it at once
-	inflight_update_CG()
+	-- the sim's weight and balance window shows it at once. (2026-11-24,
+	-- the 2026-11-23 review's PERF-1) As the load's owner: this page has just
+	-- written the payload's total, and the zones go to X-Plane's stations
+	inflight_update_CG(true)
 end
 --Marauder28
 
@@ -1510,7 +1512,10 @@ function fmsFunctions.setdata(fmsO,value)
 	if not spd then flap, spd = "", string.match(fmsO["scratchpad"], "^(%d+)$") end
 	local vref=tonumber(spd or "")
 	if flap == "" then flap = string.match(cur, "^(%d%d)/") or "30" end
-	if vref==nil or vref<110 or vref>180 or (flap ~= "25" and flap ~= "30") then
+	-- (2026-11-24, review CDU-5 = PERF-5) 100 to 250 kt (estimate: FCOM
+	-- p.1412 (11.43.24) gives no range); before 110 to 180, which refused
+	-- the FMC's own VREF 25 from 357 t and VREF 30 from 385 t (1R/2R)
+	if vref==nil or vref<100 or vref>250 or (flap ~= "25" and flap ~= "30") then
 		fmsO["notify"]="INVALID ENTRY"
 		return
 	end
@@ -1533,8 +1538,16 @@ function fmsFunctions.setdata(fmsO,value)
 	local fuel = perf_fuel_t()
 	local zfw = value == "grwt" and t - fuel or t
 	local gw = zfw + fuel
-	if zfw < 130 or zfw > 270 or gw < 150 or gw > 400 then fmsO["notify"]="INVALID ENTRY" return end
-	setFMSData("zfw", string.format("%5.1f", zfw))
+	-- (2026-11-24, review PERF-6) no ZFW top of its own: GR WT's 400 t
+	-- bounds it (estimate: FCOM p.1310 (11.40.34) gives the form only).
+	-- Before 270 t (no source), under the 405's and 570's maximum zero fuel
+	-- weight of 276,691 kg (FCOM p.78 (L.10.2)): a loaded freighter's ZFW,
+	-- the sim's too, was INVALID ENTRY
+	if zfw < 130 or gw < 150 or gw > 400 then fmsO["notify"]="INVALID ENTRY" return end
+	-- (2026-11-24, review CDU-7) kept to 0.1 kg: an entry in pounds shows
+	-- back as entered (FCOM p.1309-1310: XXX.X); before, to 0.1 t (480.0
+	-- thousand pounds came back 479.9)
+	setFMSData("zfw", string.format("%.4f", zfw))
 	setFMSData("gwsrc", value == "grwt" and "GW" or "ZFW")
 	update_perf()
 	calc_CGMAC()  --Recalc CG %MAC and TRIM units
@@ -1556,14 +1569,18 @@ function fmsFunctions.setdata(fmsO,value)
 	if del then fmsO["notify"]="INVALID DELETE" return end
 	local v = B747_cdu_model.parse_weight(fmsO["scratchpad"])
 	if v == nil or perf_in(v) > 180 then fmsO["notify"]="INVALID ENTRY" return end
-	setFMSData(value, string.format("%5.1f", perf_in(v)))
+	setFMSData(value, string.format("%.4f", perf_in(v)))   -- (review CDU-7) to 0.1 kg, as ZFW
   elseif value == "costindex" then
 	-- COST INDEX: 0 to 9999 (FCOM p.1311); not within 10 NM of the T/D
-	-- (FMSPG p.97)
+	-- (FMSPG p.97). (2026-11-24, stage 4 review FMC-9) The T/D VNAV's
+	-- (B747_fms_vnav_td: NM to go, negative past it), within 10 NM of the
+	-- point either side (FMSPG's words; the code before meant 10 NM short
+	-- of it and on, but read the old AP's distances, never set: entries
+	-- were taken everywhere)
 	if del then fmsO["notify"]="INVALID DELETE" return end
 	local ci = B747_cdu_model.parse_int(fmsO["scratchpad"], 0, 9999)
-	local nearTD = simDR_onGround ~= 1 and B747BR_tod > 0 and B747BR_totalDistance > 0
-		and (B747BR_totalDistance - B747BR_tod) < 10
+	local td = simDR_onGround ~= 1 and B747_fms_vnav_td() or nil
+	local nearTD = td ~= nil and math.abs(td) < 10
 	if ci == nil or nearTD then fmsO["notify"]="INVALID ENTRY" return end
 	setFMSData(value, string.format("%d", ci))
 	B747_fms_econ_now()
@@ -1652,7 +1669,8 @@ function fmsFunctions.setdata(fmsO,value)
 	-- WIND/SLOPE (FCOM p.1319): HXX, XX (headwind) or TXX; UX.X, X.X
 	-- (upslope) or DX.X, 0.0 to 2.0 (FMSPG p.106); the wind goes into the
 	-- V1 (the flight instruments' takeoff speeds); a change deletes the
-	-- selected speeds. DELETE: dashes
+	-- selected speeds. DELETE: none (the page's defaults H00/U0.0 small:
+	-- review CDU-8)
 	if del then setFMSData("towind", "---") setFMSData("toslope", "----") takeoff_speeds_deleted() return end
 	local w, s = B747_cdu_model.pair(fmsO["scratchpad"], "L")
 	if w == nil then fmsO["notify"] = "INVALID ENTRY" return end
@@ -1666,11 +1684,12 @@ function fmsFunctions.setdata(fmsO,value)
 	if sv then setFMSData("toslope", (sd == "D" and "D" or "U") .. sv) end
 	takeoff_speeds_deleted()
   elseif value == "posshift" then
-	-- POS SHIFT (FCOM p.1321, 109): +/- X or XX hundreds of meters past the
-	-- threshold; DELETE: none
+	-- POS SHIFT (FCOM p.1321): +/- X or XX hundreds of meters past the
+	-- threshold, of feet on the 570 (GE); DELETE: none. (2026-11-24, review
+	-- CDU-8) meters within +/-30, feet +/-99 (FMSPG p.108 (3.2-48))
 	if del then setFMSData("posshift", "---") return end
 	local sg, n = string.match(fmsO["scratchpad"], "^([+-]?)(%d%d?)$")
-	if not n then fmsO["notify"] = "INVALID ENTRY" return end
+	if not n or tonumber(n) > (B747_fms_shift_ft() and 99 or 30) then fmsO["notify"] = "INVALID ENTRY" return end
 	setFMSData("posshift", string.format("%s%02d", sg == "-" and "-" or "+", tonumber(n)))
   elseif value == "topreflt" then
 	-- PRE-FLT: the first page not complete, else THRUST LIM (FCOM p.1321)

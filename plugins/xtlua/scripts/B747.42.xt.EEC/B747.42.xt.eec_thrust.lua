@@ -99,6 +99,10 @@ function B747_eec_update()
     if B747DR_engineType == 1 then inp.type = "GE" else inp.type = "PW" end
     inp.alt = simDR_eec_pressure_alt
     inp.tat = simDR_TAT
+    -- (2026-11-24, ENG-2) the P&W's maximum in a takeoff: the FPPM's
+    -- Takeoff EPR at the OAT (B747.42.eec_model.lua's TABLE.PW.to)
+    inp.oat = simDR_temperature
+    inp.takeoff = B747_ref_thrust_model.is_takeoff(B747_eec_thrlim_mode())
     inp.kias = simDR_ias_pilot
     inp.packs_on = B747DR_packs_operating     -- the packs with their valves open (the pack model)
     inp.wai = B747DR_eec_wing_ai_valve[0] > 0.5 or B747DR_eec_wing_ai_valve[1] > 0.5
@@ -128,9 +132,16 @@ function B747_eec_update()
     -- (N19-ENG-05) a P&W engine in its N1 mode: the EICAS's command EPR
     -- (laminar/B747/engines/TRA, FCOM p.834) the EPR of its N1 command at
     -- the present Mach and TAT (estimate: the FCOM does not say what the
-    -- indicator shows in the alternate mode)
+    -- indicator shows in the alternate mode). (2026-11-24, DSP-5 of the
+    -- 2026-11-23 review) Not under the EPR mode's idle command (the lever's
+    -- idle end, B747_epr_model.idle_command): at idle in the air the N1
+    -- command (about 20 %) is under the EPR model's N1, flat under EPR 0.9
+    -- there, and the halving stuck at its low end 0.5 (3,000 ft, M.34: 0.500
+    -- for the EPR mode's 0.919, the marker at the scale's foot under the
+    -- bar). Estimate as the rest: the marker at idle as in the EPR mode
+    local idle_cmd = idle_command(inp.type)
     for n = 1, 4 do
-        if eec_out.n1_mode[n] then command_epr[n] = epr_of_n1(eec_out.command[n]) end
+        if eec_out.n1_mode[n] then command_epr[n] = math.max(epr_of_n1(eec_out.command[n]), idle_cmd) end
     end
 
     local approach = false
@@ -214,6 +225,7 @@ local refIn = {}
 function B747_eec_reference(engine)
     local inp = eec_inputs
     refIn.type, refIn.alt, refIn.tat = inp.type, inp.alt, inp.tat
+    refIn.oat = inp.oat     -- (2026-11-24, ENG-2) the P&W's takeoff's
     refIn.packs_on, refIn.wai, refIn.nai = inp.packs_on, inp.wai, inp.nai[engine + 1]
     refIn.mach = simDR_epr_mach
     refIn.kias = inp.kias
@@ -400,6 +412,22 @@ function B747_eec_reverse_pw_throttle(engine)
 end
 function B747_eec_reset_reverse(engine)
     E.reset_thrust_control(rev_state, engine + 1)
+end
+-- (2026-11-24, the stage 4 review's PNL-4) the EICAS's command EPR
+-- (laminar/B747/engines/TRA) of a P&W with its reverser out: the EPR of
+-- the reverse N1 command (the lever's with the sleeves deployed, reverse
+-- idle while they move) at the present Mach and TAT, as the N1 mode's
+-- (N19-ENG-05). FCOM p.832 (7.10.4): the 109's command EPR stays in reverse
+-- (the reference EPR goes); p.833 (7.10.5): the reversing engine's mark at
+-- its bar's end; p.873: the command is the actual EPR once stable. What it
+-- shows in reverse is in neither the FCOM nor PW_PPM (estimate). Before,
+-- the forward lever's idle command (the mark was hidden in reverse)
+function B747_eec_reverse_command(engine)
+    local lever = 0
+    if simDR_reverser_deploy_ratio[engine] > 0.98 then
+        lever = (-B747DR_throttle_reversor[engine] - REV_IDLE_LEVER) / (1 - REV_IDLE_LEVER)
+    end
+    return epr_of_n1(E.pw_reverse_n1(lever, simDR_TAT))
 end
 -- X-Plane's maximum reverse throttle (sim/aircraft/engine/acf_throtmax_REV):
 -- GE 1, the ECU's share above giving the thrust; P&W the custom acf's 0.8

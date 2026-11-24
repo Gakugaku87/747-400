@@ -446,8 +446,15 @@ function flight_start()
       --(2026-11-20) the flaps' pitch down X-Plane leaves out (補正: the
       --fltCtrls module's aero_corr, B747.45.aero_corr_model.lua's stab_flap;
       --notes/AERO.md §3.23), degrees leading edge up added to the trim's
-      --angle. The stabilizer's units, its indicator and the 3D are the trim's
-      B747DR_controlOverrides = '{"minin":-10,"maxin":10,"minout":-10,"maxout":10,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/stab_corr_deg","dstDref":"sim/flightmodel2/controls/stabilizer_deflection_degrees"}'; --the flaps' correction
+      --angle. The stabilizer's units, its indicator and the 3D are the trim's.
+      --(2026-11-24, the 2026-11-23 review's FCTL-6) Its range +-22: XTLua holds
+      --the sum of the two rows to this row's output range (widened to the
+      --trim's angle), so with +-10 a trim over 8 units lost the correction
+      --past -10 degrees in all (9 units and -5 degrees: -10 for -11; from 13
+      --units every leading edge down correction). The trim's +3 to -12 (ATA22
+      --p.132) and the correction's parts (the flaps' 6.2, the downwash's and
+      --the thrust's 5 each way: B747.45.aero_corr_model.lua) stay within 22
+      B747DR_controlOverrides = '{"minin":-22,"maxin":22,"minout":-22,"maxout":22,"scale":1.0,"srcDref":"laminar/B747/flt_ctrls/stab_corr_deg","dstDref":"sim/flightmodel2/controls/stabilizer_deflection_degrees"}'; --the flaps' correction
       
       
       --ailerons: the control wheel's angle (the pilots', the A/P's and the

@@ -7,7 +7,8 @@
 --   rating); TO 1 and TO 2 its thrust less the derate (the operator's %:
 --   FCOM p.1272); D- the rating at the assumed temperature (SEL) when above
 --   the TAT (ATA34_2 p.651), at most 25 % less thrust than the (derated)
---   rating (FCOM p.1273, p.1314);
+--   rating (FCOM p.1273, p.1314); (2026-11-24, ENG-2) P&W: the FPPM's
+--   Takeoff EPR tables at the OAT (below: pw_takeoff);
 --   CLB the maximum climb table; CLB 1 and CLB 2 10 and 20 % less thrust to
 --   10,000 ft, then linearly back to CLB's at 30,000 and 35,000 ft (the
 --   109: P&W and RR passengers; the 405 and 570, a freighter or GE: both at
@@ -64,12 +65,69 @@ function M.washout(alt, top)
     return clamp((top - alt) / (top - M.CLB_FULL), 0, 1)
 end
 
+-- (2026-11-24, ENG-2) a takeoff's thrust limit (TO, TO 1, TO 2, D-TO...,
+-- or none yet)
+function M.is_takeoff(mode)
+    mode = mode or ""
+    local base = mode:sub(1, 2) == "D-" and mode:sub(3) or mode
+    return mode == "" or base:sub(1, 2) == "TO"
+end
+
+-- (2026-11-24, ENG-2 of the 2026-11-23 review) the P&W's takeoff limit and
+-- its thrust reduction (%), from the FPPM (747-400F/PW4056): the Takeoff
+-- EPR tables at the OAT and pressure altitude (p.44 (1.2.20), TO1 8 % p.57
+-- (1.3.11), TO2 20 % p.69 (1.3.23): B747_eec_model.TABLE.PW.to, to1, to2)
+-- with their packs' adjustment, no anti-ice's (p.22 (1.1.4)). The derate
+-- the operator's % (FCOM p.1272): 8 and 20 the tables themselves, other
+-- percentages on the thrust's points between and beyond them (B747_eec_
+-- model.pw_to_points: estimate). D-: the (derated) table at the assumed
+-- temperature over the OAT ("read from the Max Takeoff EPR table at the
+-- assumed temperature", p.22), at most 25 % less thrust (FCOM p.1273):
+-- p.22's minimum allowable EPR for the actual OAT's (for TO1 and TO2 the
+-- same table on their EPRs: estimate). The reduction the thrust's at the
+-- OAT on those points (estimate between them). Before: the go-around
+-- table at the TAT, the derates and the 25 % by the EPR model's static
+-- thrust (0.026 to 0.042 EPR over the FPPM on average), the assumed
+-- temperature held from the table's 54 °C up (21.3 % at most at sea
+-- level). The last result kept for the same inputs: the glue asks for
+-- each engine every frame
+local ES, SS = {}, {}
+local last = {}
+local function pw_takeoff(inp, d, alt)
+    local E = B747_eec_model
+    local oat = inp.oat or inp.tat
+    local pct = inp.to_pct or 0
+    local sel = (d and inp.sel and inp.sel > oat) and inp.sel or nil
+    local packs = inp.packs_on
+    if last.oat == oat and last.alt == alt and last.pct == pct and last.sel == sel and last.packs == packs
+        and last.most == M.SEL_MAX then
+        return last.v, last.red
+    end
+    local share = 1 - clamp(pct / 100, 0, 0.99)
+    E.pw_to_points(oat, alt, ES, SS)
+    local v = E.pw_to_epr(ES, SS, share)
+    if sel then
+        local floor = E.pw_to_epr(ES, SS, share * (1 - M.SEL_MAX))
+        E.pw_to_points(sel, alt, ES, SS)
+        local hot = E.pw_to_epr(ES, SS, share)
+        v = math.min(v, math.max(hot, floor))
+        E.pw_to_points(oat, alt, ES, SS)
+        share = math.min(share, E.pw_to_share(ES, SS, v))
+    end
+    v = v + E.adjustment(E.TABLE.PW.to, inp, alt, false)
+    local red = 100 * (1 - share)
+    last.oat, last.alt, last.pct, last.sel, last.packs, last.most = oat, alt, pct, sel, packs, M.SEL_MAX
+    last.v, last.red = v, red
+    return v, red
+end
+
 -- inp: type ("PW" or "GE"), mode (the FMC's: "TO", "D-TO 1", "CLB 2", ...),
 -- to_pct (the takeoff derate, %), sel (the assumed temperature, °C, or
 -- nil), alt (pressure altitude, ft), tat (°C), mach, kias, packs_on, wai,
 -- nai (this engine's), freighter (laminar/B747/freighter: the 405's climb
--- derate washout). Returns the limit and the takeoff's thrust reduction
--- (%: 0 in other modes)
+-- derate washout), (2026-11-24, ENG-2) oat (°C, the P&W's takeoff's; nil:
+-- the TAT's). Returns the limit and the takeoff's thrust reduction (%: 0
+-- in other modes)
 function M.reference(inp)
     local E = B747_eec_model
     local ge = inp.type == "GE"
@@ -79,7 +137,10 @@ function M.reference(inp)
     local base = d and mode:sub(3) or mode
     local mach = inp.mach or 0
     local gaAlt = math.min(inp.alt, tables.ga.alt[#tables.ga.alt])
-    if base:sub(1, 2) == "TO" or mode == "" then
+    if M.is_takeoff(mode) then
+        -- (ENG-2) the P&W's (and the RB211's tables', which its glue does
+        -- not read) from the FPPM
+        if not ge and tables.to then return pw_takeoff(inp, d, gaAlt) end
         local full = E.rating(tables.ga, inp, inp.tat, gaAlt, inp.nai)
         local x = (inp.to_pct or 0) / 100
         local derated = less(ge, full, x, mach)

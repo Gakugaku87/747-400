@@ -105,11 +105,16 @@ fmsPages["PERFINIT"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be
 	local zfwL = (src == "ZFW" or zfw == nil) and weight_text(zfw) or "     "
 	local rsv = tonumber(fmsModules["data"].reserves)
 	local rsvL = rsv and string.format("%5.1f", perf_out(rsv)) or "***.*"
+	-- (2026-11-24, review CDU-11) "%4.1f%%": the % in the 24th column, under
+	-- CRZ CG's G (FCOM p.1308 (11.40.32)'s figure: "20.0%"); before
+	-- "%5.1f%%", its % in a 25th column. The default 20.0 small (FCOM
+	-- p.1311 (11.40.35); the flight complete clears an entry's large text:
+	-- review CDU-2)
 	local crzcgV = tonumber(fmsModules["data"].crzcg) or 20.0
 	if string.len(crzcg_lineLg) < 1 then
-		crzcg_lineSm = string.format("%5.1f%%", crzcgV)
+		crzcg_lineSm = string.format("%4.1f%%", crzcgV)
 	else
-		crzcg_lineLg = string.format("%5.1f%%", crzcgV)
+		crzcg_lineLg = string.format("%4.1f%%", crzcgV)
 		crzcg_lineSm = ""
 	end
 	local jet_weightV=simDR_m_jettison/1000

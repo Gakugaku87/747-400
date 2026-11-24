@@ -50,7 +50,7 @@
     { "do": "check", "note": "CG にシムの値（整数の %、大きい字）", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "[0-9]{1,2}%$" },
     { "do": "snapshot", "note": "CG の行とシムの % MAC", "drefs": ["laminar/B747/fms3/Line09_L", "laminar/B747/fms3/Line09_S", "sim/flightmodel2/misc/cg_offset_z_mac", "sim/flightmodel2/misc/cg_offset_z"] },
     { "do": "check", "note": "CG は実機の % MAC（2026-11-20、N19-WB-02：TCDS A20WE p.14 の MAC 327.8 in・LEMAC は機首から 1168 in。既定の 270 t の積み方で cg_offset_z −0.199 m は 20.6 %。前は X-Plane の cg_offset_z_mac の 30 %）", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "2[01]%$" },
-    { "do": "check", "note": "TRIM はその CG から（270 t・21 %：FPPM p.44 は約 5 1/4。前は 30 % から 2.9 前後）", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^ +[45][.][0-9]" },
+    { "do": "check", "note": "TRIM はその CG から（270 t・21 %：FPPM p.44 は約 5 1/4。前は 30 % から 2.9 前後）", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^.{16}[45][.][0-9]" },
     { "do": "shot", "note": "TAKEOFF REF", "name": "takeoff_sim_cg" },
 
     { "do": "mark", "note": "便利機能を切ると前どおり" },

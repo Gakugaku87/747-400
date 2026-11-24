@@ -86,6 +86,7 @@ function M.update(s, inp, dt)
     local pedal = math.max(inp.pedal[1], inp.pedal[2])
     local fault = inp.fail or inp.antiskid_fault or not inp.irs
     local target = 0                    -- the pressure asked for, as X-Plane's ratio
+    local rto_unapplied = false         -- an RTO initiated, its brakes not applied
 
     if dial >= 3 then
         -- the latch holds the selector only with its conditions; else the
@@ -150,6 +151,15 @@ function M.update(s, inp, dt)
             end
             if s.armed and s.rto_latched and idle and pedal < M.RTO_PEDAL and not s.rto_off then s.applying = true end
             if s.applying and not s.rto_off then target = 1 end
+            -- (2026-11-23 review WARN-2) an RTO initiated (the application
+            -- logic's latch with the levers retarded, p.527) whose brakes
+            -- are not applied: disabled after the application by the pedals,
+            -- a lever or the speedbrakes, or held off by the pedals (FCOM
+            -- p.1521: "RTO initiated above 85 knots and autobrake has not
+            -- been applied"; ATA29_32 p.528: "Fault annunciation will occur
+            -- when an RTO is initiated and brakes are not applied", p.530:
+            -- "RTO initiated but manually overridden")
+            rto_unapplied = s.rto_latched and idle and target == 0
         end
     else
         reset(s)
@@ -162,9 +172,14 @@ function M.update(s, inp, dt)
     -- RTO on the ground inoperative: a fault, the normal brake pressure
     -- lost (FCOM p.1521: "disarmed or inoperative"; before, armed but
     -- disabled, p.511, p.530: with the landing's disarm at the pressure's
-    -- loss no longer so)
+    -- loss no longer so), or an RTO initiated and not applied (above). The
+    -- memo AUTOBRAKES RTO stays with the selector at RTO after a disable
+    -- (FCOM p.1522: "Autobrake RTO selected"; ATA29_32 p.530: the selector
+    -- switch's position; p.528: the disable leaves the selector latched).
+    -- Before, AUTOBRAKES never showed for an RTO overridden or not applied
     out.memo = (s.armed and (dial >= 3 or dial == M.RTO)) and dial or nil
-    out.autobrakes = dial == M.DISARM or (dial == M.RTO and not inp.air and (fault or not inp.normal))
+    out.autobrakes = dial == M.DISARM
+        or (dial == M.RTO and not inp.air and (fault or not inp.normal or rto_unapplied))
     return out
 end
 

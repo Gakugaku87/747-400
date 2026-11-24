@@ -121,8 +121,8 @@ end
 fmsPages["TAKEOFF"]=createPage("TAKEOFF")
 -- the TAKEOFF REF lines (6-1/6-2 step 3b; FCOM p.1318-1321): FLAP/ACCEL
 -- HT, E/O ACCEL HT and THR REDUCTION (defaults 1000 FT, 1000 FT and FLAPS
--- 5 as FCOM's figure, small; entries large), WIND/SLOPE (dashes until
--- entered), TRIM/CG, POS SHIFT (RTE 1's runway: step 5b),
+-- 5 as FCOM's figure, small; entries large), WIND/SLOPE (H00/U0.0 small
+-- until entered: review CDU-8), TRIM/CG, POS SHIFT (RTE 1's runway: step 5b),
 -- PRE-FLT (the first page not complete) or THRUST LIM
 -- the performance data PERF INIT requires (the RTE page's 6R too: FCOM
 -- p.1290)
@@ -148,15 +148,31 @@ local function thrred_text()
   if v == "5" then return "FLAPS 5" end
   return v .. "FT"
 end
--- POS SHIFT's runway: RTE 1's departure runway (FCOM p.1321; step 5b)
-local function shift_rwy()
+-- POS SHIFT's runway: RTE 1's departure runway (FCOM p.1321; step 5b),
+-- and the shift in hundreds of meters, of feet on the 570 (GE: FCOM p.1321
+-- (11.40.45), the 570's figure p.1318 "--00FT"). (2026-11-24, review
+-- CDU-8) without a runway the line blank (FMSPG p.108 (3.2-48): the 00FT
+-- or 00M follows a runway number); before, "RW***" and M on every airplane
+function B747_fms_shift_ft() return B747DR_fms_engine_type == 1 end
+local function shift_line()
   local r = B747_fmc_route.rte.runway
-  return string.format("%-5s", r and r.ident or "RW***")
-end
-local function shift_text()
+  if not (r and r.ident) then return "" end
   local s = str_trim(fmsModules["data"].posshift)
-  if s == "---" then return "--00M" end
-  return s .. "00M"
+  if s == "---" then s = "--" end
+  return string.format("%24s", string.format("%-5s", r.ident) .. " " .. s .. "00" .. (B747_fms_shift_ft() and "FT" or "M"))
+end
+-- (2026-11-24, review CDU-8) WIND/SLOPE: the defaults H00/U0.0 small
+-- until entered (FCOM p.1317-1318 (11.40.41-42)'s figures; FMSPG p.106
+-- (3.2-46)), each part large once entered (before, dashes large). The
+-- data keep "---" and "----" for none (the V1's wind: fltInst02)
+local function wind_texts()
+  local w = str_trim(fmsModules["data"].towind)
+  local s = str_trim(fmsModules["data"].toslope)
+  local wOn, sOn = string.match(w, "^[HT]%d%d$") ~= nil, string.match(s, "^[UD]%d%.%d$") ~= nil
+  local slash = (wOn or sOn)
+  local large = (wOn and w or "   ") .. (slash and "/" or " ") .. (sOn and s or "    ")
+  local small = (wOn and "   " or "H00") .. (slash and " " or "/") .. (sOn and "    " or "U0.0")
+  return large, small
 end
 fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be this way
   local flaps = string.format("%02d",roundToIncrement(B747DR_airspeed_flapsRef, 5))
@@ -169,14 +185,21 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
 	-- (2026-11-20, GAP N19-WB-03) the CG (FCOM p.1320): the crew's large;
 	-- else the 405's the FMC's from the WBS inputs, small with a caret
 	-- (dashes before them), the 109's and 570's dashes
+	-- (2026-11-24, review CDU-2 = PERF-3) a CG's data not a number (the
+	-- dashes after flight completion with a crew's CG kept): dashes. Before,
+	-- string.format took nil and the whole page went blank
+	local cgV = tonumber(fmsModules["data"].cg_mac)
 	if string.len(cg_lineLg) == 0 then
-		if str_trim(fmsModules["data"].cg_mac) == "--" or not B747_fms_is_405() then
+		if cgV == nil or not B747_fms_is_405() then
 			cg_lineSm = "--%"
 		else
-			cg_lineSm = string.format("%2.0f%%>", tonumber(fmsModules["data"].cg_mac))
+			cg_lineSm = string.format("%2.0f%%>", cgV)
 		end
+	elseif cgV == nil then
+		cg_lineLg = ""
+		cg_lineSm = "--%"
 	else
-		cg_lineLg = string.format("%2.0f%%", tonumber(fmsModules["data"].cg_mac))
+		cg_lineLg = string.format("%2.0f%%", cgV)
 		cg_lineSm = ""
 	end
 	--Marauder28
@@ -186,7 +209,7 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
   local accel = set_text("accelset") and ("/" .. height_text("accelht")) or ""
   local eo = set_text("eoaccelset") and height_text("eoaccelht") or ""
   local thr = set_text("thrredset") and thrred_text() or ""
-  local wind = str_trim(fmsModules["data"].towind) .. "/" .. str_trim(fmsModules["data"].toslope)
+  local wind = wind_texts()
   local _, pre = preflight_page()
   return{
   "      TAKEOFF REF       ",
@@ -199,7 +222,7 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
   "                        ",
   string.format("%-21s%-3s", wind, cg_lineLg),
   "                        ",
-  "            " .. shift_rwy() .. " " .. string.format("%-6s", shift_text()),
+  shift_line(),
   "                        ",
   string.format("<INDEX%18s", pre)
   }
@@ -214,10 +237,10 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   -- too (FCOM p.1320: small)
   if string.len(cg_lineLg) > 0
     or (B747_fms_is_405() and str_trim(fmsModules["data"].cg_mac) ~= "--") then
-	  if fmsModules["data"].stab_trim ~= "    " then
-			stab_trim = string.format("%3.1f", tonumber(fmsModules["data"].stab_trim))
-	  else
-			stab_trim = fmsModules["data"].stab_trim
+	  -- (review CDU-2) blank unless a number
+	  local trimV = tonumber(fmsModules["data"].stab_trim)
+	  if trimV then
+			stab_trim = string.format("%3.1f", trimV)
 	  end
   end
   --Marauder28
@@ -229,6 +252,7 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
   local eo = set_text("eoaccelset") and "" or height_text("eoaccelht")
   local thr = set_text("thrredset") and "" or thrred_text()
   local page = preflight_page()
+  local _, windS = wind_texts()
     return{
 
 "                        ",
@@ -239,7 +263,7 @@ string.format("%-20s%s", eo, vrS),
 string.format(" THR REDUCTION%10s", v2T),
 string.format("%-20s%s", thr, v2S),
 " WIND/SLOPE    TRIM   CG",
-"                "..string.format("%-4s", stab_trim).." "..string.format("%-3s", cg_lineSm),
+string.format("%-16s", windS)..string.format("%-4s", stab_trim).." "..string.format("%-3s", cg_lineSm),
 "               POS SHIFT",
 "                        ",
 page and "-----------------PRE-FLT" or "------------------------",

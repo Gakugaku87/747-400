@@ -131,12 +131,21 @@ rt:set("sim/flightmodel/position/alpha", ACM.DW_ALPHA0)
 rt:set("sim/weather/rho", 1.225)
 rt:set("sim/flightmodel/position/true_airspeed", 200 * 0.51444)
 for i = 0, 3 do rt:set("sim/flightmodel/engine/POINT_thrust", i, 150e3) end
+-- (2026-11-24) X-Plane's own engines' moment (M_prop) taken off the 747-100's
+local own200 = 4 * 150e3 * 1.333
+rt:set("sim/flightmodel/forces/M_prop", own200)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 frames(3)
 local q200 = 0.5 * 1.225 * (200 * 0.51444) ^ 2
-local tm = ACM.stab_thrust(ACM.thrust_moment({150e3, 150e3, 150e3, 150e3}, 0), q200, 200)
+local tm = ACM.stab_thrust(ACM.thrust_moment({150e3, 150e3, 150e3, 150e3}, 0, own200), q200, 200)
+T.check(tm < -0.05, "the 747-100's moment over X-Plane's own: some, leading edge down")
 T.near(get(STAB_CORR), ACM.stab_flap(10) + tm, 0.02,
     string.format("150 kN each at 200 kt in the air: the thrust's %.2f degrees", tm))
+rt:set("laminar/B747/debug/aero_tm_off", 1)
+frames(0.1)
+T.near(get(STAB_CORR), ACM.stab_flap(10), 1e-6, "aero_tm_off 1: the thrust's left out")
+rt:set("laminar/B747/debug/aero_tm_off", 0)
+rt:set("sim/flightmodel/forces/M_prop", 0)
 for i = 0, 3 do rt:set("sim/flightmodel/engine/POINT_thrust", i, 0) end
 rt:set("sim/flightmodel/position/indicated_airspeed", 0)
 rt:set("sim/flightmodel/position/true_airspeed", 0)
@@ -519,6 +528,23 @@ frames(2.5)
 T.equal(get(SB), 1, "touchdown, thrust levers idle: driven to UP")
 T.near(get(XSB), 1, 1e-6, "X-Plane's ratio 1")
 T.equal(get(MEMO, 45), 0, "no SPEEDBRAKE ARMED at UP")
+-- (2026-11-23 review WARN-1) after the landing, speed_brakes_up_one three
+-- times brings the lever DN and it stays there (FCOM p.149 (NP.21.55), p.951
+-- (9.20.11); ATA27 p.170): before, the actuator pushed it back to UP every
+-- time (X-Plane, the review's v08)
+local UP_ONE = "sim/flight_controls/speed_brakes_up_one"
+for n, want in ipairs({0.53, 0.125, 0}) do
+    rt:command(UP_ONE, 0.2)
+    frames(0.5)
+    T.equal(get(SB), want, "speed_brakes_up_one " .. n .. ": the lever at " .. want)
+end
+frames(3)
+T.equal(get(SB), 0, "3 s later: still DN")
+T.equal(get(XSB), 0, "X-Plane's ratio 0")
+T.equal(get(ADVISORY, 272), 0, "no SPEEDBRAKE AUTO")
+rt:set(SB, 0.125)
+frames(2.5)
+T.equal(get(SB), 1, "armed again: driven to UP again")
 rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 0.5)
 frames(1)
 T.equal(get(SB), 1, "X-Plane's throttle ratio is the input, not the lever (the EEC writes the levers' average there with the A/T on): stays UP")
@@ -591,6 +617,28 @@ T.equal(get(WARNING, 4), 0, "locked: none")
 rt:set("laminar/B747/engines/display_N1", 2, 0)
 for i = 1, 2 do rt:set("laminar/B747/engine/throttle", i, 0) end
 rt:set("laminar/B747/airspeed/V1", 0)
+-- (2026-11-23 review NAV-1) each engine in the takeoff thrust range, as the
+-- warning's (its N1 indication above the value, its lever not closed, its
+-- reverser stowed), for the DOORS AUTO memo and the CALL chime: any engine
+-- (FCOM p.1593), X-Plane's throttle ratio not read
+local RANGE = "laminar/B747/flt_ctrls/takeoff_thrust_range"
+rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 1)
+frames(0.2)
+for i = 0, 3 do T.equal(get(RANGE, i), 0, "idle (X-Plane's throttle 1): engine " .. (i + 1) .. " not in the takeoff thrust range") end
+rt:set("laminar/B747/engines/display_N1", 0, 90)
+rt:set("laminar/B747/engine/throttle", 0, 0.9)
+frames(0.2)
+T.equal(get(RANGE, 0), 1, "engine 1 at N1 90, its lever 0.9: in the takeoff thrust range")
+T.equal(get(RANGE, 1), 0, "engine 2 not")
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 0, 3)
+frames(0.2)
+T.equal(get(RANGE, 0), 0, "engine 1 in reverse: not")
+rt:set("sim/cockpit2/engine/actuators/prop_mode", 0, 1)
+rt:set("laminar/B747/engine/throttle", 0, 0)
+frames(0.2)
+T.equal(get(RANGE, 0), 0, "its lever closed: not")
+rt:set("laminar/B747/engines/display_N1", 0, 0)
+rt:set("sim/cockpit2/engine/actuators/throttle_ratio", 0, 0)
 
 -- CONFIG GEAR (GEAR-17; FCOM p.1557-1558): in flight with a gear not down
 -- and locked (the PSEU's ALL GR DN). For a thrust lever closed below 800 ft
@@ -771,8 +819,9 @@ rt:set("laminar/B747/fmc/elevator_trim", 0)
 frames(0.2)
 
 -- an air start: the stabilizer for level flight at the speed (estimate:
--- since 2026-11-22 2.18 + 3.476 x CL units plus up to 0.6 from M.75 to
--- M.82, 1.7 to 7.7, fitted with the pitch corrections in; 2026-11-20 0.26
+-- since 2026-11-24 1.41 + 5.80 x CL units plus up to 0.5 from M.79 to
+-- M.85, 1.7 to 7.7, fitted with that day's pitch corrections; 2026-11-22
+-- 2.18 + 3.476 x CL plus up to 0.6 from M.75 to M.82; 2026-11-20 0.26
 -- + 308,800 / IAS^2 at 1 degree a unit; before 3.78 + 154,400 / IAS^2,
 -- 4.5 to 7.5, the same angles), not a fixed 7.5 units (a 334 kt start
 -- pitched up to 13 degrees before the A/P came on). The lift coefficient
@@ -783,8 +832,8 @@ frames(0.2)
 -- airspeed and the air's temperature
 local function q_of(kt) return 0.5 * 1.225 * (kt * 0.514444) ^ 2 end
 local function as_units(q, kg, mach)
-    local m = math.max(0, math.min(1, (mach - 0.75) / 0.07)) * 0.6
-    return math.max(1.7, math.min(7.7, 2.18 + 3.476 * kg * 9.80665 / (q * 511) + m))
+    local m = math.max(0, math.min(1, (mach - 0.79) / 0.06)) * 0.5
+    return math.max(1.7, math.min(7.7, 1.41 + 5.80 * kg * 9.80665 / (q * 511) + m))
 end
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
@@ -793,8 +842,10 @@ rt:set("sim/flightmodel/weight/m_total", 270000)
 -- (2026-11-22: 10,000 ft at 250 kt EAS 3.96 units where the A/P trimmed to
 -- 3.90, not the old fit's 5.21; a 172 kt start 5.94, not the 7.7 that
 -- stalled s58; FL350 at M.85 4.28 where the A/P trimmed to 4.27, not the
--- 10,000 ft fit's 3.68 that sank s261 550 ft. The true airspeed and the
--- temperature as at 10,000 ft ISA or FL350 ISA)
+-- 10,000 ft fit's 3.68 that sank s261 550 ft. 2026-11-24, with that day's
+-- pitch corrections: 250 kt 4.38 where the A/P balanced at 4.37, M.85 at
+-- FL350 4.42 for 4.44. The true airspeed and the temperature as at
+-- 10,000 ft ISA or FL350 ISA)
 for _, c in ipairs({
     {q = q_of(334), tas = 334 * 1.16 * 0.514444, oat = -5, mach = 334 * 1.16 * 0.514444 / math.sqrt(1.4 * 287.05 * 268.15), name = "334 kt at 10,000 ft"},
     {q = q_of(250), tas = 250 * 1.16 * 0.514444, oat = -5, mach = 250 * 1.16 * 0.514444 / math.sqrt(1.4 * 287.05 * 268.15), name = "250 kt at 10,000 ft"},
@@ -812,8 +863,9 @@ for _, c in ipairs({
     T.near(units(), want, 0.01, "air start " .. c.name .. " (indicated 0): " .. string.format("%.2f", want) .. " units")
     T.near(get(TRIM), units() / 7.5 - 1, 1e-6, "X-Plane's trim written (" .. c.name .. ")")
 end
-T.near(as_units(11991, 270000, 251 / math.sqrt(1.4 * 287.05 * 218.85)), 4.28, 0.02, "FL350 M.85 at 270 t: 4.28 units (the A/P trimmed to 4.27)")
-T.near(as_units(q_of(250), 270000, 0.44), 3.96, 0.02, "10,000 ft 250 kt at 270 t: 3.96 units (the A/P trimmed to 3.90)")
+T.near(as_units(11991, 269700, 0.851), 4.42, 0.02, "FL350 M.851 at 269.7 t: 4.42 units (the A/P balanced at 4.44)")
+T.near(as_units(q_of(250), 270000, 0.44), 4.38, 0.03, "10,000 ft 250 kt at 270 t: 4.38 units (the A/P balanced at 4.37)")
+T.near(as_units(8200, 269200, 0.41), 5.06, 0.02, "10,000 ft 223.5 kt (8,200 Pa) at 269.2 t: 5.06 units (the A/P balanced at 5.06; the fit before 4.37)")
 rt:set("sim/flightmodel/misc/Qstatic", q_of(334))
 rt:callout("flight_start")
 frames(4)

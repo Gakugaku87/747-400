@@ -79,10 +79,11 @@ end
 T.check(mono, "the corrected EGT never falls with the power")
 T.check(G.steady("PW", 1.3, 30) > G.steady("PW", 1.3, 0), "the same EPR on a warmer day: a higher EGT (theta)")
 
--- ======== the takeoff (the go-around table's rating, the EEC's takeoff
--- rating): P&W at OAT 33 °C at sea level under its takeoff limit with a
--- margin; on the run (M.25) the TAT and the EGT are higher, the EEC's rating
--- from the TAT a little lower
+-- ======== the takeoff (the EEC's takeoff rating; the P&W's since
+-- 2026-11-24 the FPPM's Takeoff EPR at the OAT, ENG-2; the GE's the
+-- go-around table's at the TAT): P&W at OAT 33 °C at sea level under its
+-- takeoff limit with a margin; on the run (M.25) the TAT and the EGT are
+-- higher
 local function ref(t)
     local i = {type = "PW", mode = "TO", to_pct = 0, alt = 0, tat = 15, mach = 0, packs_on = 3, wai = false, nai = false, kias = 0}
     for k, v in pairs(t) do i[k] = v end
@@ -90,16 +91,16 @@ local function ref(t)
 end
 local function takeoff(kind, oat, mach, packs)
     local tat = tat_of(oat, mach)
-    local x = ref({type = kind, tat = tat, mach = mach, packs_on = packs or 3})
+    local x = ref({type = kind, tat = tat, oat = oat, mach = mach, packs_on = packs or 3})
     return G.steady(kind, x, tat), x, tat
 end
 local egt0, epr0 = takeoff("PW", 33, 0)
 local egt1, epr1, tat1 = takeoff("PW", 33, 0.25)
-T.near(epr0, 1.51, 1e-9, "P&W takeoff EPR at 33 °C standing: 1.51 (PI.10.37)")
+T.near(epr0, 1.504, 1e-9, "P&W takeoff EPR at 33 °C standing: 1.504 (FPPM p.44: 1.50 at 35 °C, 1.51 at 30; before, PI.10.37's 1.51)")
 T.check(TO_LIMIT.PW - egt1 >= 25 and TO_LIMIT.PW - egt1 <= 45,
     string.format("P&W takeoff at 33 °C on the run (M.25, TAT %.1f, EPR %.3f): %.1f °C, %.1f under 654", tat1, epr1, egt1, TO_LIMIT.PW - egt1))
 T.check(TO_LIMIT.PW - egt0 >= 25 and egt0 < egt1,
-    string.format("P&W takeoff at 33 °C standing (EPR 1.51): %.1f °C, %.1f under 654, below the run's", egt0, TO_LIMIT.PW - egt0))
+    string.format("P&W takeoff at 33 °C standing (EPR 1.504): %.1f °C, %.1f under 654, below the run's", egt0, TO_LIMIT.PW - egt0))
 local egtp = takeoff("PW", 33, 0.25, 0)
 T.check(TO_LIMIT.PW - egtp >= 25, string.format("P&W takeoff at 33 °C, packs off (+0.02 EPR): %.1f °C", egtp))
 T.check(takeoff("PW", 15, 0.25) < egt1 - 30, string.format("P&W takeoff at 15 °C: %.1f °C, cooler", takeoff("PW", 15, 0.25)))

@@ -261,3 +261,12 @@ GAP ID の接頭辞：`DOOR`。2026-10-23 作成。コードは `overhaul` ブ�
   - DRS synoptic の A・M（ATA38_51_52_56 p.306）はパネル計器の追加が要るので作らない。
 - DOORS ページの plug door（L1、上階 L）を地上でだけ開けられるようにした（DOOR-08。与圧と flight lock：FCOM p.529・534、ATA38_51_52_56 p.342）。閉めるのと flight deck door はいつでも。前は飛行中でも開いた。
 - 試験：`tests/safety/safety_module_test.lua`（memo の 3 つと抑止）、`tests/fms/doors_page_test.lua`（地上だけ開く、L4 の ARM・DISARM）。X-Plane：`s210_doors_mode`（エンジン運転中の開始で DOORS AUTO、CDU の L4 で DISARM → DOORS MANUAL、ARM → DOORS AUTO、1 枚だけ MANUAL → DOORS AUTO/MAN）。
+
+## 12. DOORS AUTO と CALL のチャイムの「離陸推力」を 747 のレバーと N1 から（NAV-1、2026-11-23 の段 4 のレビュー）
+
+- 指摘：DOORS AUTO の memo の抑止（安全のモジュール `B747.85.xt.safety.lua`）と、CALL のチャイムの抑止（`B747.15.xt.acp.lua`）は、離陸推力を X-Plane のスロットルの比（`sim/cockpit2/engine/actuators/throttle_ratio` が 0.6 以上：推定）で見ていた。これは手元のスロットルで、A/T は動かさない（A/T が動かすのは 747 のレバー `laminar/B747/engine/throttle`）。A/T の離陸で手元のスロットルが低いと、滑走中も DOORS AUTO が出たまま（消えるのは離陸の 10 秒後）、チャイムも 75 kt まで鳴った。着陸の後に手元のスロットルを前に残すと、DOORS AUTO が戻らなかった。
+- 資料：ATA38_51_52_56 p.304 (52-00 p.96)：DOORS AUTO は「takeoff power」から着陸の 1 分後まで抑止。FCOM p.1593 (15.20.47)：チャイムは「Any engine in takeoff thrust range」から 400 ft RA まで。「離陸推力（の範囲）」の中身はどちらにも無い。ATA27 p.730：離陸形態警報の離陸推力は内側のエンジンの N1 の表示が型式の値（P&W 66.5、GE 75.0、RR 66.7）より上。
+- 直したこと：離陸推力の範囲を、離陸形態警報（段 3 の 4d92ef7a・b2fd7116）と同じエンジンごとの判定で 1 か所に作る：N1 の表示が型式の値より上、747 のレバーが閉（0.05）でない、逆推力が格納（`B747.45.tocw_model.lua` の `takeoff_range`）。飛行制御のモジュールが 4 発ぶんを新しい dataref `laminar/B747/flt_ctrls/takeoff_thrust_range`（[4]、1 が範囲内）に書き、ドアの memo とチャイムは「どれかのエンジン」で読む（FCOM p.1593 の any engine。ドアの memo も同じにした）。**推定**：どのエンジンか、レバーと逆推力の条件、ドアの memo にも同じ判定を使うこと。
+  - 逆推力は離陸推力に数えない（前は X-Plane の比が逆推力でも上がるので数えていた：推定）。着陸の 1 分は、接地で N1 がアイドルに下がった時（逆推力の間も）から数える。
+- 試験：`tests/safety/safety_module_test.lua`（エンジン 2 が範囲内で手元 0.45：DOORS AUTO なし、着陸の後に手元 0.7 のままでも 61 秒で DOORS AUTO、範囲外で手元 0.9 でも DOORS AUTO）、`tests/com/acp_module_test.lua`（40 kt でエンジン 2 が範囲内：チャイムなし、範囲外で手元 0.7：チャイム）、`tests/fltctrls/fltctrls_module_test.lua`（エンジン 1 が N1 90・レバー 0.9 で 1、逆推力・レバー閉で 0、手元の比は見ない）。直す前のコードでは安全の 4 件、ACP の 2 件が落ちる。
+- X-Plane の確かめ：新しい `tests/flight/scenarios/s373_doors_auto_at_takeoff.json`（s142 と同じ A/T の離陸、手元のスロットルは 0。離陸推力で `laminar/B747/CAS/memo_status[9]` が 0、客室の CALL で `laminar/B747/comm/call_chime` が 0）。

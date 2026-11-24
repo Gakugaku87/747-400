@@ -45,6 +45,9 @@ simDR_spd_alpha                 = find_dataref("sim/flightmodel/position/alpha")
 B747DR_spd_pli                  = find_dataref("laminar/B747/pfd/pli")
 B747DR_spd_pli_show             = find_dataref("laminar/B747/pfd/pli_show")
 B747DR_spd_vr_r                 = find_dataref("laminar/B747/airspeed/vr_r")
+-- (2026-11-24, DSP-4) the 570's (GE) V2 bug shown (FCOM p.972); the engine
+-- type is B747.60.xt.displays.lua's B747DR_dsp_engine_type
+B747DR_spd_v2_show              = find_dataref("laminar/B747/airspeed/v2_show")
 -- (6-1/6-2 step 12c1) the FMC's MNVR MARGIN (PERF FACTORS): the buffet's
 -- maneuver capability (FCOM p.969, p.973); 1.3 g before the FMC writes it
 B747DR_spd_mnvr_margin          = find_dataref("laminar/B747/fms/mnvr_margin")
@@ -88,8 +91,11 @@ function B747_speedtape()
     inp.alt_ft = B747DR_fi_adc_alt_capt
     inp.flap_ratio = simDR_flap_ratio_control
     inp.land_flap = math.floor(B747DR_airspeed_VrefFlap + 0.5)
+    inp.vref_sel = B747DR_airspeed_Vref       -- (review PERF-5) FLAP/SPEED's
     inp.air = simDR_spd_air > 0.5
     inp.ias = simDR_airspeed
+    inp.v2 = B747DR_airspeed_V2
+    inp.v2_bug = B747DR_dsp_engine_type == 1
     local out = SP.update(spd_state, inp, SIM_PERIOD)
 
     local vf = out.vf
@@ -107,6 +113,8 @@ function B747_speedtape()
     if B747DR_airspeed_showVf30 ~= v then B747DR_airspeed_showVf30 = v end
     v = flag(out.show_mins)
     if B747DR_pfd_mode_show_mins ~= v then B747DR_pfd_mode_show_mins = v end
+    v = flag(out.show_v2)
+    if B747DR_spd_v2_show ~= v then B747DR_spd_v2_show = v end
 
     -- the minimum speeds, the stick shaker and AIRSPEED LOW (step 3b)
     local mi = ms_inputs

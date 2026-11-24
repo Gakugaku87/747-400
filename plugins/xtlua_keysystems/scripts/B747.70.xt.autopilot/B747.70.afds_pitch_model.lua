@@ -512,7 +512,11 @@ local function law_of(s, inp, dt)
     local mode = inp.mode
     if mode ~= s.mode then
         s.mode, s.above = mode, 0
-        if mode ~= "TO" then s.vrot, s.v2, s.to_target, s.to_eo = nil, nil, nil, nil end
+        -- (2026-11-23 review AFDS-4) T/O's speeds anew at T/O's start too:
+        -- a T/O ended with everything off (the A/P and both F/Ds) left
+        -- them, and the next takeoff flew the last one's rotation speed,
+        -- target and engine-out speed (FCOM p.664 (4.20.6), p.667 (4.20.9))
+        s.vrot, s.v2, s.to_target, s.to_eo = nil, nil, nil, nil
         s.ga_eo = nil
         if mode == "GA" then
             s.ga_target = math.max(inp.mcp_ias, inp.ias)

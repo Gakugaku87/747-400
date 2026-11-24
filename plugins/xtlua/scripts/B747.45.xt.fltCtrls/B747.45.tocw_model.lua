@@ -66,13 +66,21 @@ function M.new()
     return s
 end
 
+-- engine e (1-4) in the takeoff thrust range: its N1 indication above the
+-- type's value, its thrust lever not closed, its reverser stowed. (2026-11-23
+-- review NAV-1) the glue writes it for all four engines
+-- (laminar/B747/flt_ctrls/takeoff_thrust_range) for the EIU's other inhibits
+-- on "takeoff thrust": the DOORS AUTO memo (ATA38_51_52_56 p.304) and the
+-- CALL chime ("any engine in takeoff thrust range", FCOM p.1593)
+function M.takeoff_range(inp, e)
+    local thr = M.N1_TO[inp.engine_type] or M.N1_TO[0]
+    return inp.n1[e] > thr and inp.lever[e] >= M.LEVER_CLOSED and not inp.reverser[e]
+end
+
 function M.update(s, inp, dt)
     local out = s.out
     local thr = M.N1_TO[inp.engine_type] or M.N1_TO[0]
-    local function at_takeoff(e)
-        return inp.n1[e] > thr and inp.lever[e] >= M.LEVER_CLOSED and not inp.reverser[e]
-    end
-    local takeoff_thrust = at_takeoff(2) or at_takeoff(3)
+    local takeoff_thrust = M.takeoff_range(inp, 2) or M.takeoff_range(inp, 3)
     -- the takeoff thrust not yet removed for a message shown (ATA27 p.730):
     -- the N1 of engine 2 or 3 still above the value, its reverser stowed
     local function n1_high(e) return inp.n1[e] > thr and not inp.reverser[e] end

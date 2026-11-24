@@ -66,7 +66,12 @@ T.check(ns == 0 and ps == 0 and sb == 0, "passenger oxygen: no sign memo")
 -- MANUAL, on the ground)
 local MODE = "laminar/B747/door/mode"
 local GND = "laminar/B747/gear/air_ground/pri_gnd"
-local THR = "sim/cockpit2/engine/actuators/throttle_ratio"
+-- (2026-11-23 review NAV-1) takeoff power: an engine in the takeoff thrust
+-- range, as the takeoff configuration warning's (the flight controls module
+-- writes it). Before, X-Plane's throttle ratio at 0.6: the hardware
+-- throttle, which the A/T does not move
+local RANGE = "laminar/B747/flt_ctrls/takeoff_thrust_range"
+local XTHR = "sim/cockpit2/engine/actuators/throttle_ratio"
 local function door_memos() return get(MEMO, 9), get(MEMO, 10), get(MEMO, 11) end
 rt:set(GND, 1)
 frames(0.2)
@@ -82,19 +87,24 @@ frames(0.2)
 auto, mixed, manual = door_memos()
 T.check(auto == 0 and mixed == 1 and manual == 0, "door L5 MANUAL, the rest AUTOMATIC: DOORS AUTO/MAN")
 rt:set(MODE, 4, 1)
-rt:set(THR, 0, 0.9)
+rt:set(XTHR, 0, 0.45)
+rt:set(RANGE, 1, 1)
 frames(0.2)
-T.equal(get(MEMO, 9), 0, "takeoff power: DOORS AUTO inhibited")
+T.equal(get(MEMO, 9), 0, "engine 2 in the takeoff thrust range, X-Plane's throttle 0.45 (an A/T takeoff): DOORS AUTO inhibited")
 rt:set(GND, 0)
-rt:set(THR, 0, 0.5)
+rt:set(RANGE, 1, 0)
 frames(0.2)
 T.equal(get(MEMO, 9), 0, "in the air: DOORS AUTO inhibited")
 rt:set(GND, 1)
-rt:set(THR, 0, 0)
+rt:set(XTHR, 0, 0.7)
 frames(59)
 T.equal(get(MEMO, 9), 0, "59 s after landing: DOORS AUTO inhibited")
 frames(2)
-T.equal(get(MEMO, 9), 1, "61 s after landing: DOORS AUTO")
+T.equal(get(MEMO, 9), 1, "61 s after landing (X-Plane's throttle left at 0.7): DOORS AUTO")
+rt:set(XTHR, 0, 0.9)
+frames(0.2)
+T.equal(get(MEMO, 9), 1, "X-Plane's throttle at 0.9, no engine in the takeoff thrust range: DOORS AUTO")
+rt:set(XTHR, 0, 0)
 rt:command("laminar/B747/door/mode_manual_all")
 rt:set(GND, 0)
 frames(0.2)

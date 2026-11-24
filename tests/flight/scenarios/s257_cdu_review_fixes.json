@@ -40,7 +40,7 @@
     { "do": "check", "note": "GR WT にシムの値", "dref": "laminar/B747/fms3/Line03_L", "op": "matches", "value": "^ ?[0-9]{3}[.][0-9] " },
     { "do": "cdu", "keys": ["L6", "L5", "R4"], "note": "TAKEOFF REF で CG をもう一度" },
     { "do": "sleep", "seconds": 0.5 },
-    { "do": "check", "note": "重量があれば TRIM が出る", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "[0-9][.][0-9]" },
+    { "do": "check", "note": "重量があれば TRIM が出る（17〜20 桁：前の WIND/SLOPE は小さい字の既定 H00/U0.0、2026-11-24 のレビュー CDU-8）", "dref": "laminar/B747/fms3/Line09_S", "op": "matches", "value": "^.{16}[0-9]{1,2}[.][0-9]" },
     { "do": "snapshot", "note": "CG と TRIM", "drefs": ["laminar/B747/fms3/Line08_S", "laminar/B747/fms3/Line09_L", "laminar/B747/fms3/Line09_S"] },
     { "do": "shot", "note": "TAKEOFF REF：CG と TRIM", "name": "takeoff_cg_trim" },
 

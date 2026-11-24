@@ -79,7 +79,8 @@ local function delete_cg()
     frames(0.1)
     key("ls_key/R4")
 end
-local function trim_text() return small(9):match("(%d+%.%d)") end
+-- the TRIM's columns 17-20 (WIND/SLOPE's small defaults before them: review CDU-8)
+local function trim_text() return small(9):sub(17, 20):match("(%d+%.%d)") end
 
 -- (N19-WB-03) the 109 (P&W, a passenger airplane): dashes after ZFW
 zfw("220")
@@ -133,6 +134,40 @@ T.check(small(9):find(string.format("%d%%%%>", w)) ~= nil and not line(9):find("
 rt:set("laminar/B747/freighter", 0)
 frames(0.2)
 T.check(small(9):find("%-%-%%") ~= nil, "the 109 again: dashes: " .. small(9))
+delete_cg()
+
+-- (2026-11-24, review PERF-2) the trim at PERF INIT's GR WT however it
+-- comes (FCOM p.1309 (11.40.33), p.1320 (11.40.44)): ZFW 240 with the 100 t
+-- of fuel, GR WT 340, while the FMC's PAX/CARGO zones are empty (as with
+-- X-Plane's own payload: its OEW + fuel + zones 280 t). Before, a CG entry
+-- took 340 t and the same ZFW again 280 t
+zfw("240")
+takeoff()
+type_in("20")
+key("ls_key/R4")
+local trimCG = trim_text()
+ns.calc_stab_trim(340, 20)
+local want340 = string.format("%3.1f", ns.wb.stab_trim)
+ns.calc_stab_trim(280, 20)
+local want280 = string.format("%3.1f", ns.wb.stab_trim)
+T.check(want340 ~= want280, "the two weights' trims differ: " .. want340 .. " " .. want280)
+T.equal(trimCG, want340, "CG 20 at GR WT 340: its trim")
+zfw("240")
+takeoff()
+T.equal(trim_text(), want340, "the same ZFW again: the same trim, GR WT 340's (before, the zones' 280 t)")
+-- (2026-11-24, review FCTL-4 = PERF-4) the FPPM's table for the takeoff's
+-- rating (B747.68.to_trim_model.lua: TO p.44, TO1 p.57, TO2 p.69); a new
+-- rating on THRUST LIM recomputes it, the green band's trim with it
+local TM = ns.B747_to_trim_model
+local function fmt(v) return string.format("%3.1f", tonumber(string.format("%4.1f", v))) end
+T.equal(trimCG, fmt(TM.trim(0, 340, 20)), "TO: the TO table's 340 t 20 %: " .. tostring(trimCG))
+ns.B747_fms_thrlim_to(2)
+frames(0.2)
+T.equal(trim_text(), fmt(TM.trim(2, 340, 20)), "TO 2 selected: the TO2 table's (p.69)")
+T.near(rt:get("laminar/B747/fmc/elevator_trim"), TM.trim(2, 340, 20), 0.051, "the green band's trim with it")
+ns.B747_fms_thrlim_to(0)
+frames(0.2)
+T.equal(trim_text(), fmt(TM.trim(0, 340, 20)), "TO again: the TO table's")
 delete_cg()
 
 -- (N19-WB-04) the lower holds' arms (B.A. less the nose's 90 in)

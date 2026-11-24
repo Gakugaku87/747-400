@@ -87,12 +87,23 @@ function M.update(s, inp, dt)
     -- (p.170). It drives the lever down when it is out, or on the ground with
     -- the spoilers up (FCOM p.951: ground spoilers extended by hand too); a
     -- speedbrake set by hand in flight, or the lever at ARM, has the actuator
-    -- retracted and stays
+    -- retracted and stays.
+    -- (2026-11-23 review WARN-1) It extends once and stops there: it moves
+    -- the lever only while it runs, and a lever the pilot moves back after
+    -- that stays where it is put (the no-back brake slips: "complete manual
+    -- override of any input, previously or concurrently", p.170; FCOM p.951
+    -- (9.20.11): the lever can be returned to DN by hand). Before, a lever
+    -- still above ARM (the flight detent, ARM itself) was driven back to UP,
+    -- so one notch at a time (speed_brakes_up_one) never reached DN. Reverse
+    -- lever 2 or 4 raised still lifts it out of DN (the clutch pack's cam,
+    -- p.174)
     local step = (M.UP - M.DN) / M.ACTUATOR_S * dt
     local driving = 0
     if not inp.actuator_stuck then
         if extend and not retract then
-            if lever < M.UP then lever = math.min(M.UP, lever + step); driving = 1 end
+            if lever < M.UP and (s.act < 1 or (rev24 and lever < M.ARM_LO)) then
+                lever = math.min(M.UP, lever + step); driving = 1
+            end
             s.act = math.min(1, s.act + dt / M.ACTUATOR_S)
         elseif retract then
             if lever > M.DN and (s.act > 0 or s.driving == -1 or (r837 and r838 and lever > M.ABOVE_ARM)) then

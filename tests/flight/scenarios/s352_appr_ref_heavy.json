@@ -1,0 +1,52 @@
+{
+  "name": "s352_appr_ref_heavy",
+  "description": "段 4 のレビュー CDU-5 = PERF-5（2026-11-24、notes/ATA-34-61-FMC.md §179.6）の X-Plane での確認、地上。APPROACH REF の 4R（FLAP/SPEED）が、重いときの FMC 自身の VREF を受け付ける（入力の範囲は 100〜250 kt：推定。前は 110〜180 で、357 t より重い VREF25 を INVALID ENTRY）。FMC の VREF より大きい速さを入れると、フラップの機動速度のバグ（UP〜20）がその差だけ上がる（FCOM p.1412 (11.43.24)）。RJAA 34L でエンジン運転中に始め（機体を読み直す）、APPROACH REF の GROSS WT に 390.0 を入れ、1R の 25/VREF25 を 4R に、次に VREF25 + 5 を 4R に。Lua の誤りも確かめる",
+  "reload": true,
+  "flight": {
+    "runway_start": { "airport_id": "RJAA", "runway": "34L" },
+    "engine_status": { "all_engines": { "running": true } },
+    "local_time": { "day_of_year": 295, "time_in_24_hours": 10.0 },
+    "weight": {
+      "payload_weight_in_kilograms": [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "fueltank_weight_in_kilograms": [0, 13499.4, 29767.9, 29767.9, 13499.4, 0, 0, 0, 0]
+    },
+    "weather": {
+      "definition": "vfr_few_clouds",
+      "vertical_speed_in_thermal_in_feet_per_minute": 0,
+      "wave_height_in_meters": 0.5,
+      "wave_direction_in_degrees": 0,
+      "terrain_state": "dry",
+      "variation_across_region_percentage": 0,
+      "evolution_over_time_enum": "static"
+    }
+  },
+  "steps": [
+    { "do": "sleep", "seconds": 10 },
+    { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
+    { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
+    { "do": "cdu", "note": "INIT REF、<INDEX、APPROACH（L6）", "keys": ["INITREF", "L6", "L6"] },
+    { "do": "check", "note": "APPROACH REF", "dref": "laminar/B747/fms3/Line01_L", "op": "contains", "value": "APPROACH REF" },
+    { "do": "cdu", "note": "GROSS WT 390.0（L1）", "keys": ["390.0", "L1"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "snapshot", "note": "APPROACH REF の行", "drefs": ["laminar/B747/fms3/Line03_L", "laminar/B747/fms3/Line03_S", "laminar/B747/fms3/Line05_L", "laminar/B747/fms3/Line05_S", "laminar/B747/fms3/Line09_L"] },
+    { "do": "cdu", "note": "1R（25/VREF25 を scratchpad へ）、4R", "keys": ["R1", "R4"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "INVALID ENTRY が出ない（前は 180 kt を超える VREF25 を拒んだ）", "dref": "laminar/B747/fms3/Line14_L", "op": "matches", "value": "^ *$" },
+    { "do": "check", "note": "着陸フラップ 25", "dref": "laminar/B747/airspeed/VrefFlap", "op": "==", "value": 1 },
+    { "do": "check", "note": "390 t の VREF25 は 180 kt より上（FMC の値）", "dref": "laminar/B747/airspeed/Vref", "op": ">", "value": 180 },
+    { "do": "check", "note": "4R に 25/VREF25", "dref": "laminar/B747/fms3/Line09_L", "op": "matches", "value": "25/1[89][0-9]$" },
+    { "do": "remember", "dref": "laminar/B747/airspeed/Vf0", "as": "vf0" },
+    { "do": "remember", "dref": "laminar/B747/airspeed/Vf30", "as": "vf30" },
+    { "do": "snapshot", "note": "4R と PFD の速さ（FMC の VREF25 を選んだ）", "drefs": ["laminar/B747/fms3/Line09_L", "laminar/B747/airspeed/Vref", "laminar/B747/airspeed/Vref30", "laminar/B747/airspeed/Vf0", "laminar/B747/airspeed/Vf10", "laminar/B747/airspeed/Vf25", "laminar/B747/airspeed/Vf30"] },
+    { "do": "check", "note": "FMC の VREF のままなら UP のバグは VREF30 + 80（足さない）", "dref": "laminar/B747/airspeed/Vf0", "op": "between", "value": [-0.5, 0.5], "rel": "vf0" },
+    { "do": "cdu", "note": "25/210（FMC の VREF25 より大きい）を 4R", "keys": ["25/210", "R4"] },
+    { "do": "sleep", "seconds": 1 },
+    { "do": "check", "note": "VREF 210", "dref": "laminar/B747/airspeed/Vref", "op": "==", "value": 210 },
+    { "do": "check", "note": "UP のバグがその差だけ上がる（FCOM p.1412）", "dref": "laminar/B747/airspeed/Vf0", "op": ">=", "value": 15, "rel": "vf0", "cite": "FCOM p.1412" },
+    { "do": "check", "note": "Vf30（FMC の VREF30 として読まれる）は変わらない", "dref": "laminar/B747/airspeed/Vf30", "op": "between", "value": [-0.5, 0.5], "rel": "vf30" },
+    { "do": "snapshot", "note": "VREF 210 の後の PFD の速さ", "drefs": ["laminar/B747/fms3/Line09_L", "laminar/B747/airspeed/Vref", "laminar/B747/airspeed/Vf0", "laminar/B747/airspeed/Vf10", "laminar/B747/airspeed/Vf20", "laminar/B747/airspeed/Vf25", "laminar/B747/airspeed/Vf30"] },
+    { "do": "view", "note": "左の CDU", "the": -34, "psi": 24, "fov": 18 },
+    { "do": "shot", "name": "cdu_appr_ref_390t" },
+    { "do": "view", "name": "forward" }
+  ]
+}

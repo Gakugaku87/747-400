@@ -125,6 +125,26 @@ rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 100)
 cmd(C .. "call/cab")
 T.check(ap("L", "cab", "call_status") == 1 and get(C .. "call_chime") == 0, "a cabin call at 100 kt on the ground: the light, no chime")
 rt:set("sim/cockpit2/gauges/indicators/airspeed_kts_pilot", 0)
+-- (2026-11-23 review NAV-1) below 75 kt: any engine in the takeoff thrust
+-- range (FCOM p.1593; the takeoff configuration warning's, which the flight
+-- controls module writes) inhibits it, X-Plane's throttle ratio (the
+-- hardware throttle the A/T does not move) not. Before, the throttle ratio
+-- at 0.6
+local RANGE, XTHR = "laminar/B747/flt_ctrls/takeoff_thrust_range", "sim/cockpit2/engine/actuators/throttle_ratio"
+cmd("laminar/B747/ap_L/cab/xmt_sel_switch")
+rt:frame(1.1)
+rt:set(XTHR, 0, 0.45)
+rt:set(RANGE, 1, 1)
+cmd(C .. "call/cab")
+T.equal(get(C .. "call_chime"), 0, "engine 2 in the takeoff thrust range at 40 kt, X-Plane's throttle 0.45 (an A/T takeoff): no chime")
+cmd("laminar/B747/ap_L/ptt/sel_switch_up")      -- R/T on CAB: the call reset
+rt:frame(1.1)
+rt:set(RANGE, 1, 0)
+rt:set(XTHR, 0, 0.7)
+cmd(C .. "call/cab")
+T.equal(get(C .. "call_chime"), 1, "no engine in the range, X-Plane's throttle left at 0.7: the chime")
+rt:set(XTHR, 0, 0)
+rt:frame(1.1)
 
 -- (7-1c) the panels' power: the Captain's audio on the main battery bus
 rt:set("laminar/B747/electrical/bus/bat_main", 0)

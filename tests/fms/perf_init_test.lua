@@ -145,6 +145,27 @@ key("ls_key/L3")
 T.check(line(7):find("^500%.0"), "ZFW 500.0 (thousands of pounds): " .. line(7))
 T.check(math.abs((tonumber(rt:get("laminar/B747/fms/data"):match('"zfw":"%s*([%d.]+)')) or 0) - 226.8) < 0.1,
     "kept as 226.8 thousands of kilograms")
+-- (2026-11-24, review CDU-7) the entries shown as entered (FCOM p.1309-1311:
+-- XXX.X): kept to 0.1 kg, not 0.1 t (before, 9 of the review's 14 came
+-- back another number: RESERVES 10 as 9.9, ZFW 480 as 479.9)
+local bad = {}
+for _, v in ipairs({"480", "485.3", "500.5", "512.7", "530.1", "545.9"}) do
+    clear()
+    type_in(v)
+    key("ls_key/L3")
+    if tonumber(line(7):sub(1, 5)) ~= tonumber(v) then bad[#bad + 1] = "ZFW " .. v .. " as " .. line(7):sub(1, 5) end
+end
+for _, v in ipairs({"10", "25", "30", "33.3", "40.1", "55.5", "20.2", "12.3"}) do
+    clear()
+    type_in(v)
+    key("ls_key/L4")
+    if tonumber(line(9):sub(1, 5)) ~= tonumber(v) then bad[#bad + 1] = "RESERVES " .. v .. " as " .. line(9):sub(1, 5) end
+end
+T.check(#bad == 0, "LBS: the 14 entries shown as entered: " .. table.concat(bad, ", "))
+clear()
+type_in("700.3")
+key("ls_key/L1")
+T.check(line(3):find("^700%.3") ~= nil, "LBS: GR WT 700.3 shown as entered: " .. line(3))
 
 -- (2026-11-05 the user; not the airplane's) an empty scratchpad's GR WT or
 -- ZFW: the sim's when Plugins > 747-400's "CDU: GR WT, ZFW and CG from the
@@ -180,5 +201,26 @@ rt:set("sim/flightmodel/weight/m_total", 310000)
 frames(0.1)
 key("ls_key/L3")
 T.check(line(7):find("^463%.0"), "in pounds: the sim's 210.0 t, 463.0 thousand pounds: " .. line(7))
+
+-- (2026-11-24, review PERF-6) no ZFW top of its own, GR WT's 400 t bounds
+-- it (estimate); the 405's and 570's MZFW 276,691 kg (FCOM p.78 (L.10.2))
+-- and a loaded freighter's 291.2 t taken. Before, INVALID ENTRY over 270 t
+rt = new_rt("KGS")
+key("func_key/index")
+for _, v in ipairs({"276.6", "291.2", "300.0"}) do
+    clear()
+    type_in(v)
+    key("ls_key/L3")
+    T.check(pad() == "" and line(7):find("^" .. v:gsub("%.", "%%.")) ~= nil, "ZFW " .. v .. " with 100 t of fuel taken: " .. line(7) .. "|" .. pad())
+end
+clear()
+type_in("300.1")
+key("ls_key/L3")
+T.equal(pad(), "INVALID ENTRY", "ZFW 300.1 with 100 t of fuel: GR WT 400.1, INVALID ENTRY (GR WT's 400)")
+clear()
+type_in("129.9")
+key("ls_key/L3")
+T.equal(pad(), "INVALID ENTRY", "ZFW 129.9: INVALID ENTRY (130 and up, as before)")
+clear()
 
 T.done()

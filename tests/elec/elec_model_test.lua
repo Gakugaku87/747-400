@@ -163,6 +163,13 @@ do
     inp.n2[3] = 60
     out = run(s, inp, 1)
     T.check(out.gcb[3] and not out.ssb, "start 3: IDG 3 on")
+    -- (2026-11-23 review SYS-6) IDGs 3 and 4 on the right side, APU 1 on
+    -- the left: each source has its own buses, no load shedding (FCOM p.795
+    -- (6.20.1): loads beyond the power available, airplane or external; LH24
+    -- p.240). Before, galleys 1, 4 and 2 went one a second
+    out = run(s, inp, 5)
+    T.check(all(out.galley, 4, true) and all(out.util, 4, true) and not out.load_shed,
+        "IDGs 3 and 4 with APU 1: all galleys and utility buses on, no load shed")
     inp.n2[2] = 60
     out = run(s, inp, 1)
     T.check(out.gcb[2] and not out.apb[1] and out.ssb, "start 2: APU 1 drops, IDGs on both sides, SSB closes (FCOM p.797)")
@@ -203,6 +210,9 @@ do
     T.check(out.gcb[3] and out.gcb[4] and not out.ssb, "EXT 1 (EXT 2 available): SSB opens, IDG 3 and 4 stay")
     T.check(all(out.ac, 4, true), "EXT 1: AC 1-4 on")
     T.check(out.cas.gen_off[1] and out.cas.gen_off[2] and not out.cas.gen_off[3], "EXT 1: ELEC GEN OFF 1 and 2 (FCOM p.822)")
+    -- (2026-11-23 review SYS-6) two IDGs with EXT 1 on the other side: no load shedding
+    out = run(s, inp, 5)
+    T.check(all(out.galley, 4, true) and not out.load_shed, "EXT 1 with IDGs 3 and 4: all galleys on, no load shed")
     inp.ext_request[2] = true
     out = run(s, inp, 1)
     T.check(out.xpc[2] and all(out.gcb, 4, false) and not out.ssb, "EXT 2: the other IDGs off, SSB open (FCOM p.797)")

@@ -933,6 +933,33 @@ P.update(s, i, DT)
 i.ground, i.ias, i.pitch = false, 163, 9
 P.update(s, i, DT)
 T.equal(s.target, 163, "failed on the ground: the lift-off's 163 kt (FCOM p.666)")
+-- (2026-11-23 review AFDS-4) T/O ended with everything off (the A/P
+-- disengaged and both F/Ds OFF: no law, no mode), then the next takeoff:
+-- its own rotation speed, V2 + 10 and no engine out (FCOM p.664 (4.20.6),
+-- p.667 (4.20.9)). Before, T/O's start kept the last takeoff's: 188 kt (its
+-- engine-out speed) for V2 140, the rotation's 170 for 132
+s = P.new()
+i = inp({mode = "TO", ground = true, mcp_ias = 181, ias = 100, pitch = 0, vs = 0, alt = 0, tas = 100})
+P.update(s, i, DT)
+i.ias, i.pitch = 170, 3
+P.update(s, i, DT)
+i.ground, i.ias, i.pitch, i.vs, i.tas = false, 188, 12, 1500, 190
+for _ = 1, 5 do P.update(s, i, DT) end
+i.eo = true
+for _ = 1, 5 do P.update(s, i, DT) end
+T.equal(s.target, 188, "takeoff 1 (V2 181, rotated at 170): an engine out at 188 kt, its speed")
+i.active, i.mode, i.eo = false, nil, false
+T.check(P.update(s, i, DT) == nil, "everything off in T/O: no law")
+i.active, i.mode, i.ground = true, "TO", true
+i.mcp_ias, i.ias, i.pitch, i.vs, i.tas, i.alt = 140, 80, 0, 0, 80, 0
+P.update(s, i, DT)
+i.ias, i.pitch = 132, 3
+P.update(s, i, DT)
+T.equal(s.vrot, 132, "takeoff 2: its own rotation speed (before the last one's 170)")
+i.ground, i.ias, i.pitch, i.vs, i.tas = false, 148, 12, 2500, 150
+for _ = 1, 5 do P.update(s, i, DT) end
+T.equal(s.target, 150, "takeoff 2, all engines: V2 + 10 (before 188, the last one's engine-out speed)")
+T.check(s.to_eo == nil, "takeoff 2: no engine-out speed")
 -- the blend with an engine out: at 700 fpm the speed only
 s = P.new()
 i = inp({mode = "GA", mcp_ias = 150, ias = 150, pitch = 12, vs = 700, alt = 600, tas = 150})

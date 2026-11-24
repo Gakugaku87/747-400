@@ -32,6 +32,12 @@ aero_corr_off     = deferred_dataref("laminar/B747/debug/aero_corr_off", "number
 -- finding the cruise's pitch swing in X-Plane
 aero_dw_off     = deferred_dataref("laminar/B747/debug/aero_dw_off", "number")
 aero_tm_off     = deferred_dataref("laminar/B747/debug/aero_tm_off", "number")
+-- (2026-11-24) the downwash's correction in percent of its own (0: its own),
+-- for finding the low speed's pitch swing in X-Plane (the 2026-11-23
+-- review's FCTL-1)
+aero_dw_pct     = deferred_dataref("laminar/B747/debug/aero_dw_pct", "number")
+-- the same for the thrust's moment's correction
+aero_tm_pct     = deferred_dataref("laminar/B747/debug/aero_tm_pct", "number")
 -- 1: the acf's own SFC figures above FL370 too (B747.42.xt.sfc_corr.lua),
 -- for comparing in X-Plane and for SFC sweeps
 sfc_corr_off     = deferred_dataref("laminar/B747/debug/sfc_corr_off", "number")

@@ -348,4 +348,20 @@ R.update(s, inp({mode = "ATT", active = false}), DT)
 c = R.update(s, inp({mode = "HDG_HOLD", bank = -8}), DT)
 T.near(c, -7.7, 1e-9, "from the bank when the law starts")
 
+-- (2026-11-24, the stage 4 review's AFDS-5) the A/P's engagement (sync):
+-- the roll attitude integrator synchronizes to the bank while the A/P is
+-- not engaged (ATA22 p.348 (22-12 p.22)). F/D only, HDG SEL 60 degrees
+-- off, nobody following the bars (the wings level): the command winds up
+-- to the bank limit (the F/D's bar); the engagement starts from the bank
+-- and rolls at ROLL_RATE. Before, the command stayed at the limit
+s = R.new()
+local hs = inp({mode = "HDG_SEL", bank = 0, hdg = 0, sel = 60, tas = 300, ias = 250})
+c = run(s, hs, 20)
+T.equal(c, 25, "F/D only, 20 s of HDG SEL 60 degrees off, the wings level: the command at the bank limit")
+R.sync(s)
+c = R.update(s, hs, DT)
+T.near(c, R.ROLL_RATE * DT, 1e-9, "the A/P engaged (sync): from the bank, at ROLL_RATE (before 25)")
+c = run(s, hs, 1)
+T.near(c, R.ROLL_RATE * (1 + DT), 1e-9, "a second later: 3 degrees a second on")
+
 T.done()

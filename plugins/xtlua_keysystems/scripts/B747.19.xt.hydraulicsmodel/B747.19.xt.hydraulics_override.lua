@@ -52,6 +52,15 @@ local spoiler_command={}
 -- blowdown would)
 local SB_XP, SB_XP_KT = 0.36, 240
 local spoiler_xp={}
+-- (2026-11-23 review FCTL-5) the speedbrake program's share of each
+-- spoiler's actual angle: the program followed the way the 3D's spoiler
+-- follows its command (B747_animate_value, a tenth of the way a frame).
+-- Taking (1 - k) of the lever's program at once took the share off before
+-- the spoiler had moved: X-Plane's spoiler 3 jumped from 16.2 to 40.5
+-- degrees the frame the lever went DN in the air, and stayed at 0 for 9
+-- frames going out
+local spoiler_sb={}
+for n=1,12,1 do spoiler_sb[n]=0 end
 controlRatios[0]=0
 B747_pressureDRs[0]=0
 local computeRate=0.0333 -- handle low FPS
@@ -240,7 +249,8 @@ function pressure_output()
     local xp = spoiler_xp
     for n=1,12,1 do
         local sb = B747_lateral_model.program(B747_lateral_model.GROUP[n], sbdeg)
-        xp[n] = math.max(0, B747DR_spoilers[n] - (1 - k) * sb)
+        spoiler_sb[n] = B747_animate_value(spoiler_sb[n], sb, -100, 100, 10)
+        xp[n] = math.max(0, B747DR_spoilers[n] - (1 - k) * spoiler_sb[n])
     end
     simDR_spoiler12=(xp[1]+xp[2])/2
     simDR_spoiler3=xp[3]

@@ -5,8 +5,9 @@
 -- it (tests/lib/xtlua.lua): B747_fms_mac_pct's ends, the empty airplane at
 -- the acf's reference CG (1243.32 in) 23.0 % (before, the acf's trapezoid
 -- MAC and LEMAC: 25.0 %), and the takeoff trim of calc_stab_trim at 270 t
--- with the default loading's CG (about 22 %: about 4.8 units, where before
--- the CG of about 31.6 % gave 2.5).
+-- with the default loading's CG (about 22 %: 5.0 units in the FPPM's table
+-- since 2026-11-24, before 4.8, where before the CG of about 31.6 % gave
+-- 2.5).
 local T = dofile("tests/lib/check.lua")("cg_mac")
 local xtlua = dofile("tests/lib/xtlua.lua")
 
@@ -35,8 +36,10 @@ T.equal(ns.B747_fms_wbs_cg(), 23, "the empty airplane at 1243.32 in: 23 % MAC (b
 T.near(ns.wb.cg_mac, (1243.32 - 1168.0) / 3.278, 1e-6, "its CG to the decimal: " .. string.format("%.2f", ns.wb.cg_mac))
 
 -- calc_stab_trim at 270 t and the default loading's CG of about 22 %
+-- (2026-11-24, review FCTL-4 = PERF-4: the FPPM's table itself, 5.0 between
+-- its 260 and 280 t rows; the curve before gave 4.8)
 ns.calc_stab_trim(270000, 22)
-T.near(ns.wb.stab_trim, 4.8, 0.1, string.format("270 t, CG 22 %%: %.2f units (the FPPM p.44: about 5 at 21 %%)", ns.wb.stab_trim))
+T.near(ns.wb.stab_trim, 5.0, 1e-9, string.format("270 t, CG 22 %%: %.2f units (the FPPM p.44's table)", ns.wb.stab_trim))
 ns.calc_stab_trim(270000, 31.6)
 T.near(ns.wb.stab_trim, 2.6, 0.15, string.format("the same weight with X-Plane's 31.6 %% (before): %.2f units", ns.wb.stab_trim))
 T.done()

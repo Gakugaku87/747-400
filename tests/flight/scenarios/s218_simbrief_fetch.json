@@ -37,7 +37,7 @@
     { "do": "check", "note": "SENDING", "dref": "laminar/B747/fms3/Line03_L", "op": "contains", "value": "SENDING" },
     { "do": "check", "note": "取る要求の番号が 1 つ増える", "dref": "laminar/B747/fms/company/simbrief_fetch", "op": "==", "value": 1, "rel": "req" },
     { "do": "wait", "note": "ブリッジが取り終える（SimBrief の OFP と飛行計画）", "dref": "laminar/B747/fms/company/simbrief_done", "op": "==", "value": 1, "rel": "req", "timeout": 60 },
-    { "do": "check", "note": "取れた（2）", "dref": "laminar/B747/fms/company/simbrief_status", "op": "==", "value": 2 },
+    { "do": "check", "note": "取れた（2）。取れなければここで終える（後の remove が前からある利用者の OFP を消さないように：段 4 のレビューの NAV-2）", "dref": "laminar/B747/fms/company/simbrief_status", "op": "==", "value": 2, "stop": true },
     { "do": "check", "note": "最新の .fms は取ったもの（<出発地><目的地>.fms。どの OFP が最新かは利用者の SimBrief しだい：2026-11-02 は RJFF→PANC、11-19 から RJCH→RKSI）", "dref": "laminar/B747/fms/company/fms_file", "op": "matches", "value": "simbrief.[A-Z0-9]{8}[.]fms$" },
     { "do": "check", "note": "最新の .xml も", "dref": "laminar/B747/fms/company/ofp_file", "op": "matches", "value": "simbrief.[A-Z0-9]{8}[.]xml$" },
     { "do": "wait", "note": "約 20 秒後にアップリンク：RTE REQUEST は空白に（FMSPG p.382）", "dref": "laminar/B747/fms3/Line02_S", "op": "matches", "value": "^ +CO ROUTE$", "timeout": 45 },
@@ -54,7 +54,7 @@
     { "do": "cdu", "keys": ["L4"] },
     { "do": "sleep", "seconds": 2 },
     { "do": "check", "note": "AUTO に戻る", "dref": "laminar/B747/fms3/Line09_L", "op": "contains", "value": "FMC DATALINK       AUTO" },
-    { "do": "remove", "note": "取ったファイルを消す（Pilot ID は残す。名前は FMC の dataref から：機体の simbrief の中だけ）", "path_dref": "laminar/B747/fms/company/fms_file" },
+    { "do": "remove", "note": "取ったファイルを消す（Pilot ID は残す。名前は FMC の dataref から：機体の simbrief の中の、この回が始まった後に書かれたものだけ）", "path_dref": "laminar/B747/fms/company/fms_file" },
     { "do": "remove", "path_dref": "laminar/B747/fms/company/ofp_file" },
     { "do": "set", "note": "操縦輪を戻す", "dref": "sim/graphics/view/hide_yoke", "value": 1 },
     { "do": "view", "name": "forward" }

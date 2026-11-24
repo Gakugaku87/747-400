@@ -61,6 +61,7 @@ M.CTR_PRESS_DELAY_S, M.CTR_JETT_INHIBIT = 60, 900
 M.STB_PMP_CRUISE = 500
 M.QTY_LOW = 900
 M.TANK_ENG_GROUND = 500          -- on the ground, FQIS BLK B (FCOM p.1478)
+M.LOAD_CHANGE_KG = 0.01          -- a tank changed between updates by more than this: a new load (float noise is far less)
 M.CLIMB_PITCH = 5                -- climb or cruise by pitch (FCOM NP p.133-134)
 M.TEMP_LOW = -37
 -- the synoptic (FCOM p.1447-1449; ATA26_28 p.421-422): the pump symbols'
@@ -78,7 +79,14 @@ M.RES_XFER_KGH = 3000            -- each reserve tank, by gravity
 M.MAIN14_XFER_KGH = 4000         -- each outboard main tank, by gravity
 M.STAB_PUMP_KGH = 4500           -- each stabilizer pump
 M.JETT_PUMP_KGH = 22000          -- each pump through the jettison nozzles
-M.APU_KGH = 150                  -- the APU's burn
+-- (2026-11-23 review SYS-3) the APU's burn: the FPPM's average fuel flow
+-- under normal operation, 300 kg/h on the ground and 270 kg/h at normal
+-- operating altitudes (FPPM p.83 (2.1.1); p.107 (3.1.1) adds 270 kg/h for
+-- the APU in flight). The FPPM is the 747-400F's with PW4056; the APU is the
+-- PW901A on all of them (AC_SPECS p.1), so the same for the passenger
+-- airplanes, GE and RR (estimate). Before, 150 kg/h (estimate: no source
+-- had been found), half of it
+M.APU_KGH_GND, M.APU_KGH_AIR = 300, 270
 M.STAB_LOW_OFF_S = 30            -- the stabilizer pump stops after low pressure (FCOM p.1455: "brief delay")
 M.JETT_EST_KGH = 120000          -- preprogrammed jettison rate (FCOM p.1468)
 M.JETT_UPDATE_S = 90             -- (FCOM p.1468)
@@ -208,6 +216,18 @@ function M.update(s, inp, dt)
     local out, q, cap, sw = s.out, s.qty, inp.cap, inp.sw
     local flaps_to = inp.flap_lever >= M.FLAP_TO_MIN and inp.flap_lever <= M.FLAP_TO_MAX
     local total = total_of(q)
+    -- (2026-11-23 review SYS-2) a new fuel load on the ground starts the
+    -- tank-to-engine configuration again (the latch below): the tanks
+    -- changed between two updates, which this model never does (the
+    -- refuelling, a defuelling, the W&B window, X-Plane's weight dialog).
+    -- Estimate: when it resets is in no source; a new flight (M.new) resets
+    -- it too. Before, it reset at touchdown
+    local last = s.last_qty
+    if last and inp.on_ground and not s.first then
+        for _, t in ipairs(M.TANKS) do
+            if math.abs(q[t] - last[t]) > M.LOAD_CHANGE_KG then s.tank_eng_reached = false break end
+        end
+    end
 
     -- (2026-11-04) failures (notes/ATA-28.md §11): the valves stuck where
     -- they are (move), the pumps (below), the FJCCs, the temperature sensor
@@ -401,7 +421,9 @@ function M.update(s, inp, dt)
             local kg = math.max(0, inp.ff[n]) * dt          -- X-Plane's flow goes negative in a start
             for t, share in pairs(out.feed[n]) do q[t] = math.max(0, q[t] - kg * share) end
         end
-        if inp.apu_fuel and s.valve.apu > 0.5 then move_fuel("m2", nil, M.APU_KGH) end   -- main 2 (FCOM p.1464-1465)
+        if inp.apu_fuel and s.valve.apu > 0.5 then                                   -- main 2 (FCOM p.1464-1465)
+            move_fuel("m2", nil, inp.on_ground and M.APU_KGH_GND or M.APU_KGH_AIR)
+        end
         -- by gravity (FCOM p.1464)
         if s.valve.res2a > 0.5 or s.valve.res2b > 0.5 then move_fuel("r2", "m2", M.RES_XFER_KGH) end
         if s.valve.res3a > 0.5 or s.valve.res3b > 0.5 then move_fuel("r3", "m3", M.RES_XFER_KGH) end
@@ -451,12 +473,14 @@ function M.update(s, inp, dt)
     local any_running = inp.running[1] or inp.running[2] or inp.running[3] or inp.running[4]
     local tank_eng_q = q.m2 <= q.m1 or q.m3 <= q.m4
     -- (2026-11-12 review FA-1) the tank-to-engine condition latched once
-    -- reached (as FUEL IMBALANCE's below), reset on the ground (estimate):
-    -- after the procedure mains 2 and 3 can again hold a few kg more than 1
-    -- and 4 (the CWT's scavenge, an inboard engine shut down), and FUEL
-    -- OVRD x4 and >X FEED CONFIG came back for the rest of the flight
-    -- (FCOM p.1474, p.1479: shown before the tank-to-engine configuration)
-    if tank_eng_q then s.tank_eng_reached = true elseif inp.on_ground then s.tank_eng_reached = false end
+    -- reached (as FUEL IMBALANCE's below): after the procedure mains 2 and
+    -- 3 can again hold a few kg more than 1 and 4 (the CWT's scavenge, an
+    -- inboard engine shut down), and FUEL OVRD x4 and >X FEED CONFIG came
+    -- back for the rest of the flight (FCOM p.1474, p.1479: shown before the
+    -- tank-to-engine configuration). (2026-11-23 review SYS-2) Reset by a
+    -- new fuel load (above), no longer at touchdown: they came back 1 s
+    -- after it with mains 2 and 3 a few kg over 1 and 4
+    if tank_eng_q then s.tank_eng_reached = true end
     local tank_eng_done = tank_eng_q or s.tank_eng_reached
     for n = 1, 4 do c["press_eng" .. n] = out.suction[n] and inp.running[n] end
     for _, p in ipairs(M.PUMPS) do
@@ -512,7 +536,6 @@ function M.update(s, inp, dt)
     end
     tank_eng = tank_eng and (open[1] or open[4])
     c.tank_eng = tank_eng and not armed
-    if tank_eng_q then s.tank_eng_reached = true elseif inp.on_ground then s.tank_eng_reached = false end
     c.imbalance = s.tank_eng_reached and imbal("inout", math.abs((q.m2 + q.m3) - (q.m1 + q.m4)), M.IMBAL23)
     -- valves not where they were sent
     for n = 1, 4 do c["xfeed" .. n] = s.disagree_t["x" .. n] >= M.DISAGREE_S end
@@ -660,6 +683,10 @@ function M.update(s, inp, dt)
     local rate = M.JETT_EST_KGH
     if s.jett_t >= M.JETT_UPDATE_S and s.jett_rate and s.jett_rate > 0 then rate = s.jett_rate end
     out.jett_min = (armed and total > inp.ftr) and (total - inp.ftr) / rate * 60 or 0
+    -- the quantities this update left, for a change from outside (above)
+    last = s.last_qty or {}
+    for _, t in ipairs(M.TANKS) do last[t] = q[t] end
+    s.last_qty = last
     return out
 end
 

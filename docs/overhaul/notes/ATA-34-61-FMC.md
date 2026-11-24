@@ -3287,3 +3287,210 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
 - 推定：GE_K の表の間と外（3 点の測りから）。資料は A/T の利得を書かない（§167 と同じ）。
 - X-Plane（カスタム acf、直した後）：GE の `s280` 8/0（レバー 0.584〜0.585 のまま、N1 80.7〜80.8 %、IAS 278.2〜278.3 kt、表示の N1 90.0 %。直す前は 0.48〜0.66 で揺れていた）、`s284` 14/0、`s324` 24/0、`s282` 14/0、`s325` 34/0、`s253` 34/0（2026-11-22）。P&W の `s279` 13/0（レバー 0.419〜0.420、前と同じ）、`s277` 16/0（2026-11-23）。
 - 試験：`at_model_test` 183（+9：測った 3 点の G、P&W と RR は前のまま、servo の GE の SPD の変化率が倍率 1）、全 300 本。
+
+## 177. 段 4 のレビューの直し：CDU のキー・DES・RTE HOLD・CRZ ALT・SPD RESTR・ND の ETA・旧式の T/D（2026-11-24、担当 fmcb。REVIEW_2026-11-23.md の CDU-1・CDU-3・CDU-4・FMC-2・FMC-5・FMC-6＝DSP-2・FMC-9）
+
+### 177.1 2 台の CDU の行選択キー（CDU-1）
+
+- 見たこと：ページの行選択キーの働きは、ページの名前ごとに 1 つの表（`fmsFunctionsDefs[page]`）で、各 CDU の描画（`getPage`）が書く。描く順は L→C→R なので、2 台が同じ名前の別のページ（VNAV の CLB と DES、RTE の 1/2 と 2/2、PROGRESS の 1/3 と 3/3）を出していると、左のキーが右のページの働きになった（DES の FORECAST> で ENG OUT の MOD、CLB の 2L の SEL SPD が降下の速さに、POS REF> が KEY/FUNCTION INOP）。X-Plane でも再現（`v01_two_cdus`）。
+- 資料：FMSPG p.49 (2.8.6.1)：両方の操縦士が同じページでも別のページでも同時に操作できる。
+- 直したこと（`B744.createfms.lua`）：各 CDU の描画の後に、そのページの表を CDU ごとに写す（`keepDrawnKeys`）。キーは、その CDU が描いたページとページ番号のままなら自分の写しから引く（違えば前と同じ共有の表）。写すのは毎フレーム 3 台 × 十数個。
+  - PROGRESS は描いた行を 1 秒とっておき、その間はキーを書かなかった（1/3 が 3/3 の RTA PROGRESS のキーのまま）。1/3・2/3 のキーを、とっておいた行を返す前に書くようにした（`B744.fms.pages.progress.lua`）。
+- 試験：`tests/fms/cdu_two_pages_test.lua`（21 件。直す前は 9 件が落ちる）。
+
+### 177.2 flight complete で CRZ ALT の値も消す（FMC-2）
+
+- 見たこと：flight complete（§89）は PERF INIT の CRZ ALT の文字（`crzalt`）だけを □ に戻し、値の dataref `laminar/B747/autopilot/dist/cruise_alt` は前の飛行の最後の値のままだった。次の飛行で同じ高度を入れると、値が変わらないので文字を書き直さず □ のまま（`monitorCRZALT`）。VNAV と与圧も古い値を読んでいた。X-Plane でも再現（`v02_turnaround`：35000 のまま、350 を入れても □）。
+- 資料：FCOM p.1307 (11.40.31)：入力した値はエンジン停止（飛行の後）で消える。FMSPG p.97 (3.2-37)：CRZ ALT の表示は flight completion で消える。
+- 直したこと（`B747.68.xt.fms.lua` の `B747_fms_flight_complete`）：値も 0 にする（`monitorCRZALT` が □ を書く。与圧は 0 を「無し」として読む）。
+- 試験：`flight_complete_test` 18（+4：値が 0、同じ 350 を入れ直して FL350 と 35000。直す前は 2 件が落ちる）。
+
+### 177.3 DES の FPA V/B V/S と WPT/ALT を有効番号で（CDU-3）
+
+- 見たこと：DES の 4R は、どの型式でもいつも □.□ □.□ □□□□ だった。値を出す条件（旧 AP の `vnav_state==2` かつ `vvi_status==2`）は、VNAV の engage で `vvi_status` が 0 になるので成り立たない。
+- 資料：FCOM p.1390 (11.43.2) の 109・405 の図にこの行は無い。570 の図（p.1391）は 3R に WPT/ALT、4R に FPA V/B V/S。p.1393 (11.43.5) の 10：WPT/ALT は（DES のページが空でも）見出しが出て、AT の行（1R）と同じ点・高度の制限を出す。乗員の入力で書き換えられる。p.1394 (11.43.6) の 11：FPA V/B V/S ははじめダッシュ、WPT/ALT を入れた後に現在の経路角・その点と高度への V/B・それを保つ V/S。
+- 直したこと（`activepages/B744.fms.pages.vnav.lua`）：P&W・RR（109）は 3R・4R の見出しも値も出さない。GE（570、`laminar/B747/engines/type` 1）は WPT/ALT の見出しと AT の行の点・高度（`ALPHA/11000A15000B` の形：AT の行の高度の書き方のまま）、FPA V/B V/S の見出しとダッシュ（`-.- -.- ----`）。使っていなかった旧 AP の値（`navadata/fpa`・`vb`）は読まなくなった（`fms/data` の `fpa`・`vb`・`vs` の既定値は残る）。
+- 作っていないもの（問い）：WPT/ALT の乗員の入力（3R は今も KEY/FUNCTION INOP）と、入力の後の FPA・V/B・V/S。V/B の距離を経路に沿って測るか直線か、入力の点が経路に無いとき、p.1394 の「climbs or descends below the entered altitude」で消える条件は、資料で決まらない。
+- 試験：`vnav_wpts_test` 30（+7：P&W は見出しと値が無い、GE は見出し・ダッシュ・WPT/ALT。直す前は 6 件が落ちる：GE の FPA V/B V/S の見出しは前から出ていた）。
+
+### 177.4 上昇の SPD RESTR を過ぎたらダッシュに（FMC-5）
+
+- 見たこと：CLB の 4L の SPD RESTR（例 240/8000）は、その高度を過ぎても flight complete か DELETE まで残った。後の上昇（進入復行）で 8,000 ft より下に再び効き、目標が 240 kt 以下になる。DES の 4L だけ「その高度より下でダッシュ」を作ってあった（2026-11-09）。
+- 資料：ATA34_2 p.553（34-61 p.127）：SPD RESTR の区間を過ぎるとダッシュに置き換わる。FCOM p.1328 (11.41.4) は「入力の前はダッシュ」だけ。
+- 直したこと（`B747.68.xt.fms.lua` の `update_spd_trans`、毎フレーム）：空中で気圧高度が制限の高度を越えたら、`clbrestspd`・`clbrestalt` を `---`・`-----`（入力の前と同じ）に戻す。予測と VNAV も制限なしになる。入力は今の高度以上に限る（FMSPG p.114）ので、入れた直後に消えることは無い。
+- 試験：`vnav_spd_rest_test` 16（+6：地上で入れる、7,900 ft で残る、8,100 ft でダッシュと 4L、後の上昇の 3,000 ft でも無い。直す前は 3 件が落ちる）。
+
+### 177.5 ND の現用点と DATA の ETA を FMC の予測から（FMC-6＝DSP-2）
+
+- 見たこと：ND の右上の現用点の ETA（`laminar/B747/nd/waypoint_eta`）と DATA の各点の ETA（`laminar/B747/fms/route_eta`）は、本家の式「直線距離 ÷ max(275 kt, GS)」のままだった。CDU の PROGRESS・LEGS・RTE DATA は段 8d から予測の時刻なので、275 kt より遅い所（進入・低い上昇と降下）で ND が早く、同じ点で CDU と食い違った（180 kt・20 NM で約 2 分）。地上では、経路が有効でも ND の右上は伏せ字、DATA の ETA も無かった。
+- 資料：FCOM p.1147 (10.40.39)：MAP・MAP CTR・PLAN の現用点、その距離、「FMS-calculated ETA」（地上を除く条件は無い）。p.1148 (10.40.40)：DATA の ETA も同じ。notes/ATA-31.md：ND の右上を FMC の予測と一致させる。
+- 直したこと（`B747.68.xt.fms.lua`）：
+  - `B747_fms_row_pred_t(k)`：xtlua/fms の行 k の点の予測の時刻（PROGRESS・RTE DATA と同じ `B747_fms_preds()` の点。行と脚の対応は X-Plane に渡した計画の `routeMap`、目的地の行は予測の目的地）。脚の無い行（ホールドや弧の点）、X-Plane の計画がまだ前のもの（行の名前が違う）間は無し。DATA は RTE DATA と同じく E/D の後（進入復行）は無し。
+  - 右上の現用点・次の点の ETA と DATA の ETA を、その時刻から PROGRESS と同じ式（今の時刻に足す）で出す。予測が無いときは、空中なら前の式、地上なら無し（`------Z`、`-1`）。
+  - 右上の現用点と距離を地上でも出す（ETA は予測があれば）。
+- 残したもの：距離は前と同じ飛行機から点までの大円距離（FCOM は「Distance to active waypoint」だけ）。予測は 10 秒ごとなので、ETA の 0.1 分の桁は PROGRESS と同じく最大 10 秒ずれる。
+- 試験：`tests/fms/nd_eta_pred_test.lua`（23 件：地上で予測なしは点と距離だけ、予測ありで ND と PROGRESS の TO の ETA が同じ、DATA は予測の時刻と目的地、空中 160 kt で予測の ETA・前の式とは別、予測が無い空中は前の式。直す前は 7 件が落ちる）。`nd_data_test`（予測の無い所の前の式）はそのまま通る。
+
+### 177.6 旧式の T/D を消し、COST INDEX の窓と SIM CONFIG の PAUSE を VNAV の T/D に（FMC-9）
+
+- 見たこと：旧 AP の `setDistances`（`B747.70.xt.autopilot.lua`：T/D を (CRZ ALT − E/D) ÷ 290 NM、残りの距離、T/D の位置）はどこからも呼ばれず、`autopilot/dist/top_of_descent`・`remaining_distance`・`distance_to_toc` は 0 のままだった。これを読む 2 つは、ずれた所で働くのではなく働いていなかった：
+  - PERF INIT の COST INDEX の「T/D の 10 NM 以内は INVALID ENTRY」（FMSPG p.97）：いつも入力できた。
+  - SIM CONFIG の 3/5 CONFIG PAUSE（`laminar/B747/autopilot/vnav_pause`：1 で T/D、それより大きい値でその NM を目的地の手前に、止める。旧フォークの便利機能）：一度も止まらず、ページの「PAUSE AT ***NM TO DEST」も *** のまま。Plugins → 747-400 の「Pause before T/D」（§126）は別で、前から VNAV の T/D を使う。
+- 直したこと：
+  - `setDistances` を消した（autopilot の `vnav_pause` と `pause_toggle` の結び付けと、止める判定も）。
+  - COST INDEX：VNAV の T/D（`B747_fms_vnav_td`：残りの NM、過ぎると負）で、前のコードと同じく「T/D の 10 NM 手前から先」を INVALID ENTRY（`B744.fms.pages.lua`）。
+  - CONFIG PAUSE の判定を FMS へ（`B747_fms_simopts_update`、0.5 秒ごと、空中だけ）：1 は VNAV の T/D の 1 NM 手前から、それより大きい値は予測の目的地までの距離（`B747_fms_dest_dtg`：PROGRESS の DEST と同じ）がその値以下で、`sim/operation/pause_on` を 1 回、オプションを 0 に戻す（前と同じ）。ページの 2 行目は T/D から目的地までの距離（予測の目的地までの距離 − T/D までの距離）。
+- 推定：目的地までの距離は 10 秒ごとの予測の値なので、止まるのが最大 10 秒（巡航で約 1.3 NM）遅れる。
+- 問い：FMSPG p.97 の「within 10 miles of the Top-of-Descent point」は、T/D の前後 10 NM（過ぎた後は入力できる）とも読める。前のコードの「10 NM 手前から先（降下中ずっと）」のままにした（→ §177.8 で資料の言葉どおり前後 10 NM に変えた）。
+- 残したもの（いつも 0 を読む旧式の所。ほかの担当の範囲か、直さない）：PROGRESS の予測が無いときの古いページ（`B744.fms.pages.progress.lua` の T/D・DEST の行）、autopilot の旧 VNAV（`B747.70.xt.autopilot.monitor.lua`・`.vnav.lua`、`B747.70.xt.autopilot.lua` の `after_physics` の `tDist`・`tod`）、FDR の記録（`B747.01.xt.fdr.lua`）。
+- 試験：`simopts_glue_test` 38（+13：T/D の 120 NM 手前は止まらず、ページは 180NM、T/D で 1 回止まりオプションが 0、150 NM の設定で 160 NM は止まらず 149.5 NM で止まる、COST INDEX は T/D の 50 NM 手前で入り 8 NM 手前で INVALID ENTRY、T/D が無いと入る。直す前は 8 件が落ちる）。
+
+### 177.7 RTE HOLD の FIX ETA・HOLD AVAIL・BEST SPEED（CDU-4）
+
+- 見たこと：RTE HOLD の 2R FIX ETA・4R HOLD AVAIL・5R BEST SPEED は、§33 の「予測（段 8）までダッシュ（推定）」のまま、段 8 の後も固定のダッシュだった。
+- 資料：FCOM p.1415 (11.43.27)・p.1417 (11.43.29) の図（1439.5z、2+45、270KT・220KT）、p.1419 (11.43.31) の 8・10・11。FMSPG p.161（FIX ETA は次に点を通る時刻、HOLD AVAIL は RESERVES を残して目的地に着くために出るまでの時間、RESERVES が無ければ 4,000 lb）、p.162（BEST SPEED は最大の滞空の速さ、フラップによる、速度の制限で抑える）、p.223（HOLD AVAIL は手で終えるホールドだけ）。ATA34_2 p.574（34-61 p.148：BEST SPEED は今の高度の、FIX ETA は次に点を通る時刻）。
+- 直したこと（`activepages/B744.fms.pages.hold.lua`、描くときに計算）：
+  - BEST SPEED：性能 DB の待機の表（PI 11.6、フラップ UP）を FMC の総重量（PERF INIT）と今の気圧高度で。ホールドの速度の制限と、その段階（上昇は CLB、ほかは DES）の SPD TRANS・SPD RESTR をその高度より下で上限にする。FMC の総重量が無いとダッシュ。
+  - FIX ETA：LNAV が飛んでいるホールドでは、レーストラックの残り（段階ごと：インバウンドは点までの距離、アウトバウンドは脚の残り＋旋回 2 つ分の半円の 1 つ＋脚、旋回は残りの角度の弧＋…）を今の GS で割る。先のホールドは予測のその点の時刻（LEGS と同じ）。EFC TIME があれば、それ以後の最初の通過（1 周の時間を足す）。
+  - HOLD AVAIL：手で終えるホールド（HM）だけ。予測の目的地の燃料（すぐ出る前提）−RESERVES（無ければ 4,000 lb）を、待機の表の燃料流量（4 発）で割る。重さと高度はその点の予測（LNAV が飛んでいる間は今の値）。E/D の後（進入復行）のホールド、CRZ ALT が MAX 以上（燃料の予測を出さない）ときはダッシュ。表示は「H+MM」。
+- 推定：フラップを出しているときも UP の表（PI にフラップを出した待機の表が無い）。エントリー（ティアドロップ・パラレル・インターセプト）の残りの距離（LNAV の 2.95 r・2.41 r と、戻りの旋回 220°・225°、戻りの直線を行きと同じ長さ）。先のホールドの 1 周の時間（その点の予測の重さ・高度での待機の表の速さを真対気速度にし、`B747_path_model.hold_size` の大きさ）。燃料流量を 4 発分（ENG OUT でも）。
+- 作っていないもの：EFC TIME を入れたときに、その後の予測（下流の ETA と燃料）をホールドを EFC まで回った前提にすること（FCOM p.1419 の 8・9、FMSPG p.161）。予測のモデルはホールドの時間を入れない（すぐ出る前提）。
+- 試験：`tests/fms/hold_preds_test.lua`（19 件：先の BRAVO のホールドで FIX ETA が予測の時刻、HOLD AVAIL、BEST SPEED が SPD TRANS の 240、EFC で次の通過が EFC 以後、HA ではダッシュ、PPOS のホールドのダイレクトのエントリーで約 1 周後、インバウンド 3 NM で約 0.8 分、FL150 で表の速さ。直す前は 8 件が落ちる）。`hold_pages_test`（予測も PERF INIT も無い所のダッシュ）はそのまま通る。
+
+### 177.8 COST INDEX の窓を T/D の前後 10 NM に（FMC-9 の続き）
+
+- §177.6 では、前のコード（働いていなかった）の意図のまま「T/D の 10 NM 手前から先（降下中ずっと）」を INVALID ENTRY にした。資料の言葉は FMSPG p.97 (3.2-37) の「within 10 miles of the Top-of-Descent point」（点から 10 NM の内）なので、前後 10 NM（`math.abs(td) < 10`）にした。降下に入って 10 NM を過ぎれば入力できる（前は、旧 AP の距離が 0 で、どこでも入力できた）。
+- 試験：`simopts_glue_test` 40（+2：T/D を 5 NM 過ぎて INVALID ENTRY、20 NM 過ぎて入る。§177.6 の形では後者が落ちる）。
+
+## 178. G/A の後の水平飛行の A/T の速度の保護（2026-11-23 夜：段 4 のフルレビューの AFDS-1。利用者の決定「A と B を直す」。worktree `D:/b747_fix_afds`）
+
+- 見たこと：TO/GA 1 回の G/A（A/T は THR、2,000 fpm）で MCP 高度を捕捉すると、ピッチは ALT、A/T は THR のまま（ここまでは FCOM どおり）。THR の則は 2,000 fpm のエネルギーの率を保ち続けるので、水平では加速し続けた。親の確かめ `v07_ga_leveloff`（X-Plane、2026-11-23、P&W・270 t、フラップ 20・Vmax 230）で、捕捉の後 69 秒で 163 → 238 kt。2 回目の押し（THR REF）には前から限界速度の則がある（§60）。
+- 資料：
+  - FCOM p.673 (4.20.15) の TO/GA level-off：A/T は SPD を選ぶまで THR か THR REF のまま。速度の保護が、最大運用・脚下げ・フラップ placard の速度を越えさせない。
+  - FCOM p.675 (4.20.17)：A/T と AFDS は、V/S と最大 E/O 高度より上のエンジン故障を除き、それぞれ速度の保護をする。FMC は 5 kt の余裕で行き過ぎを抑える。FCOM p.663 (4.20.5)：ピッチが V/S のときは保護なし。
+  - ATA34_2 p.648 (34-61 p.222) は「GA モードでは full GA thrust が指令されたときに保護」と書く。乗員に見える挙動なので FCOM をとった。
+- 直したこと（`B747.70.at_model.lua` の servo の THR の枝）：G/A の THR（`s.ga`）のレバーの率を、THR REF と同じ速度の則（`speed_rate`、目標は Vmax − 5）との小さい方にする。ピッチが V/S のときは掛けない。FLCH・VNAV の THR は変えない（ピッチが速度を持つ）。SPD の則・利得・`lever_accel` は変えない。
+- 模型（`tests/autopilot/ga_leveloff_test.lua`。`tests/lib/energy_sim.lua` で 160 kt・フラップ 20、1,000 ft から G/A、3,000 ft を捕捉。レビューの `ga_leveloff.lua` と同じ条件）：
+  - THR、余り 3,500 fpm：捕捉の後の最大 227.8 kt（74 秒後）、その後 225.0 kt で保つ。直す前は 60 秒で 230 kt を越え、240 秒で 384 kt。
+  - THR、余り 2,600 fpm：最大 229.7 kt、その後 225.0 kt。
+  - THR REF（変えていない）：最大 232.4・231.4 kt。
+  - 制限速度（placard − 5）を越える分は、エンジンの遅れ（模型は 3 秒）と速度の則の減衰による。模型の推力の余りは速度で変わらないので、X-Plane の行き過ぎの大きさは確かめが要る。
+  - エンジンの遅れを 5・7 秒にすると（X-Plane の 747 はアイドルの近くで約 7 秒：§60）、THR の最大は 228.5・230.5 kt（5 秒）、229.5・231.5 kt（7 秒）、THR REF は 233.8・235.5 kt（3,500 fpm）。`s380` の合格の線（placard + 3 = 233 kt）の内。
+- 推定：新しい値は無い（保護の目標と則は THR REF のもの。則の利得は §60 の推定のまま）。
+- 試験：`at_model_test` 187（+4：ALT の G/A の THR で 226 kt・加速中はレバーを下げる、180 kt では 2,000 fpm の率のまま、V/S では保護なし、ALT で THR のまま）、新しい `ga_leveloff_test` 13。全 301 本・checks 19670（この worktree の基準 d88c12c6 は 300 本・19651）。
+- X-Plane（親が回す）：新しい `s380_ga_leveloff_spd`（`v07_ga_leveloff` と同じ流れ。捕捉の後 150 秒、速さ ≤ 233 kt、A/T は THR のまま、速さは 215〜233 kt、SPD を押すと 30 秒で 215 kt 未満）。
+
+## 179. 段 4 のレビューの直し：推力制限・TAKEOFF REF・PERF INIT・APPROACH REF（2026-11-24、担当 perf。[REVIEW_2026-11-23.md](../REVIEW_2026-11-23.md) の利用者の決定「A と B を直す」）
+
+### 179.1 上昇の減格の待機は全機体で離陸の減らし方から（FMC-1。§172 の読み違いの直し）
+
+- 資料（開発 PC の `_ref` で開いた）：
+  - FCOM p.11 (0.2.5) の決まり 2：有効番号は、その直後の段落（と下位の項目）だけに掛かる。次の同じ段の段落には掛からない。
+  - FCOM p.1273 (11.32.3)：「405, 570」「109」の番号は、それぞれ「Two fixed climb thrust derates…」の段落（消え方の高度）だけ。その次の「assumed temperature か減格の離陸が上昇の減格の自動の選択に効く」（5 % 未満 CLB、15 % 未満 CLB 1、15 % 以上 CLB 2）は番号の無い段落で、全機体。
+  - FCOM p.1315 (11.40.39)（絵で確かめた）：「405, 570」は「Takeoff thrust derate can be entered by uplink.」だけに掛かる（変更の印もその行だけ）。次の「Selecting TO 1 arms CLB 1.」は全機体。既定の減格（GE 5・15 %、P&W 8・20 %）なら、減らし方の規則でも TO 1 → CLB 1、TO 2 → CLB 2 になり、2 つの文は同時に成り立つ。
+- 前（§172、a465b930。クラウドのセッションが `_ref` なしに notes の要約から作った）：405・570（貨物機か GE）は離陸の rating だけで待機させ、assumed temperature を数えなかった。TO と SEL で 20 % 減でも CLB、D-TO 1 で全部 22〜27 % でも CLB 1 だった。
+- 直したこと：`B747.68.thrlim_model.lua` の `armed_clb` と入力 `by_rating`（状態 `s.by_rating`）を消し、地上の待機と THRUST LIM の TO・TO 1・TO 2 の選択を、全機体で `auto_clb`（離陸の減らし方の %：減格の % と EEC の assumed temperature を含む減らし方の大きい方）に戻した。FMS のつなぎの `inp.by_rating` も消した。`laminar/B747/freighter` は `B747_fms_is_405` のために毎フレーム読む（ほかのプラグインの dataref の読みは 1 回分遅れる）。消え方の高度の有効番号分け（`B747.42.ref_thrust_model.lua` の `CLB_GONE`、109 は 30,000・35,000 ft、405・570 は 15,000 ft）は p.1273 の番号の段落どおりなので、そのまま。§172 の推定のうち「405・570 の TO が CLB」「assumed temperature で変えない」は無くなった（減らし方の規則で決まる）。
+- 試験：`thrlim_model_test` 83（81 から。405・570 の組を書き直し：GE の TO 1 の 5 % で CLB 1、TO 2 の 15 % で CLB 2、TO 1 の 20 % で CLB 2、D-TO の 20 % で CLB 2・10 % で CLB 1、D-TO 1 の 22 % で CLB 2 とフラップ 5 で CLB 2、乗員の CLB 1 が TO 2 の後も残る。古い入力 `by_rating` を渡しても変わらない）、`takeoff_ref_test` 78（FMS のつなぎ：減らし方 27 % の TO 1 で、旅客機・P&W の貨物機・GE とも CLB 2）。直す前のコードでは 5 件と 2 件が落ちる（確かめた）。
+- X-Plane のシナリオ `s336_clb_arm_405`（ICL 4X-ICB、地上）の期待を直した：TO 1 で CLB 1、TO 2 で CLB 2、TO と SEL 50（11-21 の回で EEC の減らし方 16.6 %）で CLB 2 と 9 行目の `<ARM> CLB 2>`、TO 1 と SEL 50（23.3 %）で CLB 2、SEL を消すと TO 1 の 8 % で CLB 1。減らし方 15 % 以上の確かめは warn から fail にした（CLB 2 の前提）。
+
+### 179.2 flight complete の後の TAKEOFF REF の空白（CDU-2 = PERF-3。e682bb80 の後戻り）
+
+- 見たこと（レビューの担当 1・3 のモック）：乗員が TAKEOFF REF の 4R に CG を入れた便の flight complete の後、TAKEOFF REF の 13 行が題も含めて全部空白。flight complete はデータの `cg_mac` を既定の「--」に戻すが、ページの大きい字の文字 `cg_lineLg` は残るので、`takeoff.lua` の `string.format("%2.0f%%", tonumber("--"))` が nil で落ちる（ページは pcall の中で、誤りはどこにも出ない）。次の便の ZFW でも戻らない：e682bb80（§175 の N19-WB-03）の前は ZFW の入力で `calc_CGMAC` が `cg_mac` を数に書き直していたが、109・570 ではそれをやめたため。PERF INIT の CRZ CG も、大きい字の文字 `crzcg_lineLg` が残って既定の 20.0 が大きい字。FMC のトリム（`laminar/B747/fmc/elevator_trim`、緑の帯の選択：ATA27 p.514）は前の便のまま。
+- 資料：FCOM p.1320 (11.40.44)：TRIM/CG は「Initially displays dashes」。ATA34_2 p.540：TAKEOFF REF の欄は空中では持ち、flight completion で消える。FCOM p.1311 (11.40.35)：CRZ CG の既定 20.0 は小さい字。
+- 直したこと：
+  - `B747_fms_flight_complete`：`cg_lineLg`・`crzcg_lineLg` を空に、`B747DR_elevator_trim` を 0 に（帯の選択は「トリムなし」の MID：`B747.45.greenband_model.lua` の `select`）。
+  - `B744.fms.pages.takeoff.lua`：CG のデータが数でなければダッシュ（大きい字の文字も消す）。TRIM は数のときだけ書く。どちらも、データと文字が食い違っても、ページ全体が空白にならないための守り。
+  - CG を DELETE したときの `elevator_trim` は今までどおり残る（帯の選び方は資料に無い：ATA27 p.514 は FMC の CG・重さ・推力から選ぶとだけ。§179 の範囲の外）。
+- 試験：`flight_complete_test` 23（14 から +9）：便の前に ZFW 220・CRZ CG 25.5・CG 22 とトリム、flight complete の後に FMC のトリム 0、TAKEOFF REF の題と CG のダッシュ・トリムなし、CRZ CG 20.0 が小さい字、次の便の ZFW 230 の後も TAKEOFF REF と CG のダッシュ、CG 24 で大きい字とトリム。直す前のコードでは 5 件が落ちる（確かめた）。
+- X-Plane のシナリオ：新しい `s350_flight_complete_cg`（s163 と同じ RJAA 34L の進入路からの自動着陸、243.5 t）。空中では TAKEOFF REF に行けない（INIT/REF INDEX の <TAKEOFF は空中で消える：CDU-12、直さない）ので、止まってから PERF INIT の CRZ CG 25.5 と TAKEOFF REF の CG 22 を入れ、エンジンを止めて 30 秒。flight complete の後に FMC のトリム 0、TAKEOFF REF の題と `--%`、PERF INIT の小さい字の `20.0%`、次の便の ZFW 230 の後も TAKEOFF REF。CDU を 2 枚撮る。
+
+### 179.3 TAKEOFF REF の TRIM の重さを PERF INIT の GR WT に（PERF-2。e682bb80 の直し残し）
+
+- 見たこと（レビューの担当 3 のモック）：同じ CG・同じ GR WT でも、CG を入れた直後（CDU の GR WT で計算）と、ZFW か GR WT を入れ直した後（`calc_CGMAC` が OEW＋燃料＋FMC の PAX/CARGO の区画の和で計算）で TRIM が違った。X-Plane の荷物 60 t・区画は空・燃料 86.5 t で 6.5 → 5.3。荷物を X-Plane の Weight & Balance やシナリオの `payload_weight_in_kilograms` で積んだとき、乗員の ZFW がシムと違うときに出る。
+- 資料：FCOM p.1320 (11.40.44)：CG を入れると FMC がトリムを計算する。FMC の重さは PERF INIT の GR WT（p.1309 (11.40.33)）。
+- 直したこと：`calc_CGMAC` のトリム（乗員の CG を持つとき、405 の WBS の CG のとき）を、データの `grwt`（PERF INIT の GR WT、t）で計算する。区画の和は CG（% MAC）の計算にだけ使う（X-Plane に書く重心は PERF-1 で別の担当が直す。ここでは触らない）。
+- 試験：`wb_n19_test` 36（+3）：燃料 100 t・区画は空で ZFW 240（GR WT 340、区画の和 280）、CG 20 のトリムが 340 t の値、同じ ZFW をもう一度入れても同じ。直す前のコードでは 1 件が落ちる（5.5、340 t の値は 6.7）。
+
+### 179.4 TAKEOFF REF の TRIM を FPPM の定格ごとの表に（FCTL-4 = PERF-4）
+
+- 見たこと（レビューの担当 3・6）：`calc_stab_trim` は重さ（ポンド）と CG の 2 次式 1 本で、推力の定格を見ない。FPPM の TO の表の全 74 ますと比べて rms 0.31、隅で外れる（200 t・33 % で 1.07、表は 2.0）。TO2 の表（20 %）とは平均 −0.68・最大 −1.78 units（軽いと機首下げ側）。表の外（2〜9½ の外）でも止まらない。
+- 資料：FPPM p.44 (1.2.20) TO、p.57 (1.3.11) TO1（8 %）、p.69 (1.3.23) TO2（20 %）の Stab Trim Setting（747-400F/PW4056。重さ 200〜400 t の 20 t 刻み、CG 9〜33 % MAC の 4 % 刻み。9 % の 200〜240 t は空欄）。図から読んだ（`_ref/text/img/FPPM/p0044.png` ほか）。TO1 は TO と 1 ますだけ違う（380 t・13 %：TO 8、TO1 9。TO の 8 は 360 t の 8½ と 400 t の 9 の間で山になり、誤植らしいが、表のとおりにした）。ATA27 p.514：MAWEA は CG・重さ・推力の定格で帯を選ぶ。FCOM p.1320 (11.40.44)：トリムは 0.1 unit 刻み、緑の帯の範囲の外なら空白（表の値は 2〜9½ で、帯の全体 1.35〜10.15 の内）。
+- 作ったもの：
+  - 新しい `B747.68.to_trim_model.lua`：3 つの表と `M.trim(rating, t, cg)`。ますの間は重さと CG の両方に直線。**推定**：表の外の重さ（200 t 未満・400 t 超）と CG（9 % 未満・33 % 超）は端の値、空欄（9 % の 200〜240 t）は、その行の最初の値（13 %）を CG の小さい側に延ばす。GE・RR と旅客機も P&W の貨物機の表を使い、GE の TO 1（5 %）・TO 2（15 %）は TO1・TO2 の表（**推定**）。assumed temperature（D-TO）は定格の表のまま（FPPM に D-TO のトリムの表は無い：**推定**）。
+  - `calc_stab_trim`：重さを 1000 kg に（kg で来たら 1/1000）、定格は FMC の推力制限の状態（`B747_fms_thrlim().to`）。THRUST LIM で定格が変わったら、出ているトリムを同じ CG・GR WT で計算し直す（`B747_fms_trim_again`、`update_thrlim` の `toderate` の変わり目）。緑の帯の選択（`laminar/B747/fmc/elevator_trim`）も同じ値。
+- 試験：新しい `to_trim_model_test` 21：3 つの表の 74 ますが印刷どおり、380 t・13 % の TO 8 と TO1 9、ますの間の直線、レビューの例（220 t・17 %・TO 2 で 6、前の式は 4.4）、空欄と表の外の端の値、0〜40 %・150〜450 t で 2〜9½ に収まる。`wb_n19_test` 40（+4）：TO の表の値、THRUST LIM で TO 2 にすると TO2 の表の値と緑の帯のトリム、TO に戻すと TO の値。`cg_mac_test` の 270 t・22 % は表の 5.0 に（前の式の 4.8）。
+- X-Plane のシナリオ：新しい `s351_takeoff_trim_rating`（RJAA 34L の地上、220 t）：ZFW 183.5・CG 17 で TO 4.0、TO 2 で 6.0（前の式はどちらも 4.4）、TO 1 で 4.0、緑の帯のトリムも同じ。CDU を撮る。
+
+### 179.5 TAKEOFF REF の WIND/SLOPE の既定と POS SHIFT の単位（CDU-8）
+
+- 見たこと：WIND/SLOPE は入れるまで大きい字の「---/----」（§15 の「入れるまでダッシュ」は FCOM p.1319 の「Displays wind and runway slope after crew entry」の 1 文から）。POS SHIFT は GE でも「--00M」、滑走路が無いと「RW*** --00M」。
+- 資料：
+  - FCOM p.1317 (11.40.41)（109・405 の図、絵で確かめた）と p.1318 (11.40.42)（570 の図）：何も入れていない TAKEOFF REF の 4L は小さい字の「H00/U0.0」。FMSPG p.106 (3.2-46)：既定の H00/U0.0 を小さい字で、乗員の入力で上書き。
+  - FCOM p.1321 (11.40.45)：POS SHIFT は 109・405 が 100 m 単位、570 が 100 ft 単位（形は X、XX と ±）。p.1318 の 570 の図は「RW31L --00FT」。FMSPG p.108 (3.2-48)：滑走路の番号が出たときにその後に 00FT か 00M が付く。範囲は ±99（100 ft）か ±30（100 m）。
+- 直したこと（`B744.fms.pages.takeoff.lua`、`B744.fms.pages.lua`）：
+  - WIND/SLOPE：入れていない部分は小さい字の H00・U0.0、入れた部分は大きい字（風だけ・勾配だけの入力もそれぞれ）。DELETE で両方とも小さい字の既定に戻る。データの「---」「----」（入力なし）はそのまま（V1 の風を読む `fltInst02` は前と同じ）。
+  - POS SHIFT：GE（`laminar/B747/engines/type` 1、プロジェクトでは 570）は FT、ほかは M。行は右に寄せ、FT の 25 桁目をはみ出さない。RTE 1 の滑走路が無ければ行を空白。入力は M で ±30、FT で ±99（それを超えると INVALID ENTRY）。
+- 試験：`takeoff_ref_test` 82（+4 と書き直し）：既定の H00/U0.0 が小さい字、滑走路なしで POS SHIFT の行が空白、DELETE で既定に戻る、勾配だけの入力（/U1.5 が大きい字、H00 が小さい字）、両方の入力、POS SHIFT は値を持つ（+03・−03）、31 は INVALID ENTRY。`rte_pages_test` 68（+5）：RTE 1 の滑走路 RW16R で +0300M、31 は INVALID ENTRY、GE で +0300FT、−45 で −4500FT、DELETE で --00FT。直す前のコードでは 6 件と 4 件が落ちる。TRIM を小さい字の行から読む試験（`takeoff_ref_test`・`wb_n19_test`・`flight_complete_test`）は、TRIM の 17〜20 桁だけを見るようにした（同じ行の頭に H00/U0.0 が出るため）。
+- X-Plane のシナリオ：`s83_takeoff_ref` に既定の H00/U0.0（小さい字）と POS SHIFT の行の空白（経路が無い）、POS SHIFT の値は `fms/data` の `+03` で見るように直した（前は「+0300M」の行）。`s256`・`s257` の TRIM の正規表現を 17〜20 桁に。
+
+### 179.6 APPROACH REF の FLAP/SPEED：重い VREF を受ける、VREF より大きい速さでフラップの速さを上げる（CDU-5 = PERF-5）
+
+- 見たこと（レビューの担当 1・3）：(a) 4R は 110〜180 kt の外を INVALID ENTRY（本家からの値、出典なし）。357 t より重いと VREF25、385 t より重いと VREF30 が 180 kt を超え、1R・2R で scratchpad に出した FMC 自身の値を 4R が拒み、PFD に REF が出ない（離陸直後の引き返し、重量超過の着陸）。(b) VREF より大きい速さを入れても、フラップの機動速度のバグが動かない。
+- 資料：FCOM p.1412 (11.43.24)：有効な入力は XX/YYY、/YYY、YYY で、範囲は書いていない（FMSPG p.205、ATA34_2 p.544 にも無い）。VREF より大きい速さの入力は、フラップの速さの予定の全体をその分だけ上げる。
+- 直したこと：
+  - (a) `B744.fms.pages.lua`：入力の範囲を 100〜250 kt に（**推定**：資料に範囲が無い。FMC の VREF は 150 t で約 112 kt、397 t で VREF25 約 191 kt、それに風の加算を入れて収まる幅）。
+  - (b) `B747.60.speedtape_model.lua`（入力 `vref_sel`、つなぎ `B747.60.xt.speedtape.lua` が `laminar/B747/airspeed/Vref` を渡す）：着陸フラップが選ばれていて、選んだ速さがそのフラップの FMC の VREF より大きいとき、その差を UP〜20 のバグ（`Vf0`〜`Vf20`）に足す。25・30 のバグ（`Vf25`・`Vf30`）は FMC の VREF のまま：FMC が `Vf30` を VREF 30 として読む（VNAV の VREF+100、片発の VREF+98 など）ため、また選んだフラップのものは REF のバグが代わる（レビューの直す案の vf[0..4]）。
+- 試験：`fmc_fixes_test` 47（+5）：25/190 と 30/182 を受ける、105 を受ける、251 と 99 は INVALID ENTRY。`speedtape_model_test` 33（+5）：30/158（VREF30 150）で UP〜20 が 8 kt 上がり 25・30 は FMC の値、25/170（VREF25 164）で 6 kt、VREF25 より小さい 160 では足さない、着陸フラップなし（DELETE）では足さない。`speedtape_module_test` 54（+3）：つなぎ（30/VREF30 + 5 で UP のバグ VREF30 + 85、Vf30 はそのまま、戻すと + 80）。直す前のコードでは 3 件・2 件・1 件が落ちる。
+- X-Plane のシナリオ：新しい `s352_appr_ref_heavy`（RJAA 34L の地上）：APPROACH REF の GROSS WT 390.0、1R → 4R で INVALID ENTRY が出ず VREF が 180 kt を超える、25/210 で UP のバグが 15 kt 以上上がり `Vf30` は変わらない。CDU を撮る。
+
+### 179.7 重量の単位が LBS のとき PERF INIT の入力が違う数で出る（CDU-7）
+
+- 見たこと（レビューの担当 1）：ZFW と RESERVES はデータに 0.1 t（`%5.1f`）で持つので、ポンドで入れた値が kg に直して丸めた後に戻ると違う数になる。レビューの 14 件中 9 件（RESERVES 10 → 9.9、ZFW 480 → 479.9 など）。GR WT の入力も（700.3 → 700.4）。
+- 資料：FCOM p.1309-1311 (11.40.33-35)：入力は XXX か XXX.X で、入れた値が出る。
+- 直したこと（`B744.fms.pages.lua`）：ZFW（GR WT の入力からの ZFW も）と RESERVES のデータを 0.1 kg（`%.4f` t）で持つ。表示は前と同じ `%5.1f` の千 kg か千ポンド。データを読む所はどれも `tonumber`（PERF INIT、TAKEOFF REF の PRE-FLT、燃料のモデルの RESERVES）で、桁が増えても変わらない。KGS では表示も同じ（GR WT の入力の後の GR WT は、前は ZFW の 0.1 t の丸めの分だけ入力からずれ得た）。
+- 試験：`perf_init_test` 40（+2）：LBS でレビューの 14 件（ZFW 6・RESERVES 8）が入れたとおりに出る、GR WT 700.3 も。直す前のコードでは 2 件が落ちる（9 件と 700.4）。
+
+### 179.8 PERF INIT の CRZ CG の桁（CDU-11）
+
+- 見たこと（レビューの担当 1、X-Plane の写真 `shot_137`）：flight complete の後、CRZ CG の既定 20.0 が大きい字（§179.2 で直した）。行は 25 文字で、% が 25 桁目（ICAO の右端より 1 桁右）に出る：書式が `%5.1f%%`（6 文字）。
+- 資料：FCOM p.1308 (11.40.32) の図：CRZ CG の「20.0%」は題の右端の 24 桁目まで。p.1311 (11.40.35)：既定の 20.0 は小さい字。
+- 直したこと（`B744.fms.pages.perfinit.lua`）：大きい字・小さい字とも `%4.1f%%`（5 文字）。8.5 % も「 8.5%」で 24 桁に収まる。
+- 試験：`fmc_fixes_test` 49（+2）：25.5 % が 20〜24 桁、DELETE の後の小さい字の 20.0 % も。直す前のコードでは 2 件が落ちる。
+- 直し：§179.6 の試験の数を `fmc_fixes_test` 47 に（前は 52 と書いていた）。
+
+### 179.9 PERF INIT の ZFW の上限 270 t（PERF-6）
+
+- 見たこと（レビューの担当 3）：ZFW の入力は 130〜270 t、GR WT は 150〜400 t（本家からの値、出典なし）。405・570 の最大零燃料重量は 276,691 kg なのに 270.1 t から INVALID ENTRY。貨物機で FREIGHT の「F」（満載 107,717 kg）を積むと、acf の OEW 183.5 t で ZFW 291.2 t になり、シムの値の入力も拒まれて PERF INIT が埋まらない（V 速度・VNAV が出ない）。
+- 資料：FCOM p.78 (L.10.2)：最大零燃料重量は 109 が 244,939 kg、405 が 276,691 kg、570 が 610,000 lb（276,691 kg）。FCOM p.1310 (11.40.34)：入力の形は XXX か XXX.X で、範囲は書いていない（FMSPG p.96 にも無い）。
+- 直したこと（`B744.fms.pages.lua`）：ZFW だけの上限を外し、GR WT の 400 t（前のまま。最大地上走行重量 395,986 kg の少し上）で抑える（**推定**：入力の範囲は資料に無い。有効番号ごとの最大零燃料重量で拒むと、109 の旅客機を acf の OEW で満載したときにまた行き止まりになり、限界を超えることは FMC の入力の可否と別の話なので、使わない）。下限 130 t はそのまま。
+- 試験：`perf_init_test` 45（+5）：燃料 100 t で ZFW 276.6・291.2・300.0 を受ける、300.1（GR WT 400.1）と 129.9 は INVALID ENTRY。直す前のコードでは 3 件が落ちる。
+- 満載で最大零燃料重量を超えること自体は acf の OEW（旅客機の値）の問題で、ここでは扱わない（レビューのとおり別件）。
+
+### 179.10 加速高度・減推力高度の基準を、100 kt で記録した気圧高度に（FMC-8）
+
+- 見たこと（レビューの担当 2、読んだだけ）：ACCEL HT・E/O ACCEL HT（VNAV の `vnavTakeoff.accel_alt`・`eo_accel_alt`）と THR REDUCTION の高さ（推力制限の `alt_agl`）の基準が、航法データの出発空港の標高。高度計の指示と比べるので、規正の誤り（約 27 ft/hPa）と、空港の標高と滑走路の差（KDEN RW26 −140 ft、KLAS RW26R −139 ft など）だけずれる。
+- 資料：FCOM p.667 (4.20.9)：離陸で 100 kt を通るとき、FMC が気圧高度を記録し、LNAV・VNAV の作動、A/T の作動、フラップ上げの加速、上昇推力に使う。FCOM p.1318-1319 (11.40.42-43)：入れた ACCEL HT・THR REDUCTION の高さに滑走路の標高を足して MSL の高度にする。
+- 直したこと（`B747.68.xt.fms.lua`）：`B747_fms_to_baro_update`（毎フレーム、`update_vnav` の前）が、地上で IAS（機長の）が 100 kt を下から越えたときの気圧高度（機長の高度計：`altitude_ft_pilot`）を記録する。地上で 100 kt を下回ると消す（RTO、着陸の後）。`B747_fms_to_ref_alt` はその記録、無ければ前と同じ出発空港の標高（空中開始など）。VNAV の加速高度 2 つと、推力制限の高さに使う。main chunk の local は増やしていない（`do ... end` の中）。
+- 範囲の外：LNAV・VNAV の作動の高さ（50 ft・400 ft）は AFDS 側で電波高度から（ここでは触らない）。予測（`orig_elev`）は航法データの標高のまま。
+- 試験：新しい `to_ref_alt_test` 8：地上の 100 kt の前は出発空港の標高（経路なしで 0）、99 kt はまだ、101 kt で高度計の 500 ft を記録、高度が動いても記録のまま、THR REDUCTION 1000 ft・VNAV で 1,400 ft（記録の上 900 ft）は TO のまま（前は標高 0 の上 1,400 ft で CLB）、1,510 ft で CLB、着陸の滑走で 100 kt の上は記録のまま、下回ると標高に戻る。直す前のコードでは関数が無く落ちる。
+- X-Plane で見るもの：離陸のシナリオ（`s141_vnav_takeoff`・`s142_at_takeoff`・`s109_afds_takeoff`）が前と同じに通ること（RJAA は空港の標高と滑走路がほぼ同じ）。レビューの案の KDEN RW26 の離陸（VNAV の速さが上がり始める電波高度が約 1,000 ft、前は約 1,140 ft）は、シナリオを作っていない。
+
+## 180. X-Plane に書く重心：FMC の区画を X-Plane の積み荷の置き場所へ（2026-11-24：2026-11-23 のレビューの PERF-1）
+
+- 指摘：FMC（`inflight_update_CG`・`calc_CGMAC`、本家から）は、OEW＋荷物＋燃料の全体の重心のずれを `sim/flightmodel/misc/cgz_ref_to_default` に書いていた。X-Plane は燃料を自分でタンクの位置に足すので、燃料を二重に数え、X-Plane の重心が FMC の値より前に出た（340 t・燃料 74 t で FMC 27.4 %、X-Plane 23.0 %。満載で最大 約 7 % MAC：REVIEW_2026-11-23_findings.md の PERF-1）。
+- X-Plane で確かめたこと（2026-11-24、地上、カスタム acf、Web API）：
+  - X-Plane 12 は荷物を acf の積み荷の置き場所（`sim/flightmodel/weight/m_stations`、kg。腕は `sim/aircraft/weight/acf_stations_ref_z`、基準の重心から後ろへ m。カスタム acf は 7 つ：機首〜ドア 2、ドア 2〜3、3〜4、4〜5、アッパーデッキ、前方貨物、後方貨物＋バルク）に持つ。ZFW の重心のずれ（`zfw_cg_offset_z`）は「置き場所のモーメント ÷ (OEW＋荷物)」で、`cgz_ref_to_default` はそれを読み返すだけ（置き場所 0 に 30,000 kg、ほかに 14,867 kg で −2.5737 m：計算と桁まで同じ）。全体の重心（`cg_offset_z`）には、X-Plane がタンクごとの燃料を acf のタンクの位置で足す。
+  - `cgz_ref_to_default` に書くと、X-Plane は最初の置き場所の荷物を最後の置き場所へ移せる分だけ応じる（荷物 20 t で 0.5 m を書いて 0.337 m）。荷物が無ければ何も起きない（0 のまま）。
+  - レビューの「荷物なしでも開始の約 60 秒後に重心が跳ぶ」が X-Plane で出なかった（v03）のはこのため：60 秒ごとの書き込み（`run_at_interval`）は動いているが、荷物が無いと X-Plane が受け付けない。11-20 の「X-Plane の置き場所に積んだ 13 % と 29 % の 2 本がどちらも 21.5 % になった」（notes/AERO.md §3.23）は、開始時の `cgz_ref_to_default = 0` の書き込み（`do_flight_start`・`aircraft_load`）に X-Plane が応じて、最初と最後の置き場所の間で荷物を移したもの。
+- 直したこと（`B747.68.xt.fms.lua` の `B747_fms_xp_payload`、`inflight_update_CG` と `calc_CGMAC` から）：
+  - FMC の区画（旅客 A〜E、貨物 FWD・AFT・BULK、貨物機の A〜E）の重さを、区画の腕をはさむ 2 つの置き場所に、てこの比で分けて `m_stations` に書く。重さとモーメントが区画と同じになるので、X-Plane の ZFW の重心は「荷物のモーメント ÷ (OEW＋荷物)」、全体の重心は FMC の重心（`calc_CGMAC`。タンクの腕は acf と同じ）になる。置き場所の腕と数は dataref から読む（最大が 0 より大きいもの）。
+  - 最初の置き場所より前・最後より後ろの区画（区画 A、貨物機の A・E、区画 E はわずかに後ろ）は端の置き場所に置き、足りないモーメントは、ほかの置き場所の荷物を端へ移して作る（移せる荷物が無ければ残る：区画 A だけ 23 人のとき 0.5 % MAC ほど後ろ）。
+  - 書くのは、PAX/CARGO のページ（重量の窓の入力もここを通る）が積んだとき（`inflight_update_CG(true)`）。60 秒ごとと ZFW・GR WT の入力（`calc_CGMAC`）では、X-Plane の荷物の合計が区画の合計と同じ間だけ書き直す（X-Plane は `m_fixed` や `cgz_ref_to_default` が書かれると置き場所を配り直す）。区画が空のとき、X-Plane の荷物が別の合計のとき（X-Plane の Weight & Balance の画面や、試験のフライトの `payload_weight_in_kilograms` で積んだ荷物）は書かない。
+  - 置き場所の無い acf では、荷物のずれ（モーメント ÷ (OEW＋荷物)）を `cgz_ref_to_default` に書く。
+- 直していないこと（気づいたこと）：開始時の `cgz_ref_to_default = 0`（`do_flight_start`・`aircraft_load`、本家から）は残した。X-Plane の置き場所に前後に偏らせて積んだフライト（X-Plane の画面、試験のフライトの荷物）は、開始のたびに ZFW の重心が基準の重心へ寄せられる（最初と最後の置き場所の間で移せる分だけ）。キットの荷物（置き場所の最大に比例：ずれ −0.03 m）ではほとんど動かない。重心を決めて測るシナリオは、重量の窓の入力で FMC の区画に積む（`aero_takeoff_trim_*`、`aero_trim_flaps`、`s410`）。
+- 試験：新しい `tests/fms/cg_xplane_payload_test.lua`（24 件：荷物なしは何も書かない、満席＋貨物 15 t で置き場所の合計と X-Plane の重心＝FMC の重心（±0.05 % MAC）、燃料 74 → 163 → 173 t で置き場所は動かず重心が合う、後ろに偏った積み方、区画 A だけ、同じ合計で置き場所が動いたら戻す、別の合計なら触らない、置き場所の無い acf）。前の作りでは落ちる。
+- X-Plane（カスタム acf、2026-11-24。新しい `s410_cg_xplane_fmc`：地上、満席 416 人 × 100 kg と貨物 15 t を重量の窓の入力で積む）：
+  - 荷物なし：開始の 20 秒後と 90 秒後のどちらも ZFW の重心のずれ 0.0、全体の重心は ±0.001 m（前の作りの v03 と同じ）。
+  - 積んだ後（01:21 の回）：置き場所は 3,340・9,185・12,830・14,536・7,200・6,313・3,196 kg（合計 56,600）、ZFW の重心のずれ +0.2659 m（計算 +0.2659）。60 秒ごとの書き込みの後と、PERF INIT の ZFW の入力の後も同じ。
+  - 1 回だけ書く作り（01:06 の回）では、ページが積んだ時は X-Plane の配り方のまま（4,489・5,811・6,973・10,039・1,743・14,557・12,988 kg、ZFW のずれ +0.124 m）、60 秒後の書き込みでは 9 つのうち 3 番目の置き場所だけが届いた（合計が 62,457 kg になった）。XTLua から配列の要素を一度に書くと全部は届かないので、毎フレーム、合っていない置き場所を書き直す形にした（燃料のモジュールがタンクを書くのと同じ形）。
+  - この回は燃料に中央タンク 20 t を入れたが、X-Plane の燃料は合計 112.0 t になり（頼んだのは 130.6 t）、全体の重心の期待値が合わなかった（PASS 9 / FAIL 1）。シナリオの燃料を主タンクと予備タンクだけ（110.6 t）にして回し直した（01:53 の回、PASS 12 / FAIL 0）：置き場所と ZFW の重心のずれは同じ（+0.2659 m）、全体の重心のずれ +0.070 m（実機の MAC の 23.8 %。燃料の系統が始めに配り直すので、頼んだ配分で計算した +0.085 m から少し動く：期待値は +0.05〜+0.11 m に）、60 秒後と ZFW の入力の後も ±0.001 m。

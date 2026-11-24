@@ -530,32 +530,32 @@ wb = {
 }
 
 --Calculate CG %MAC & Trim
+-- (2026-11-24, review FCTL-4 = PERF-4) the FPPM's Stab Trim Setting table
+-- for the takeoff's rating (TO, TO 1, TO 2: B747.68.to_trim_model.lua,
+-- FPPM p.44, p.57, p.69; ATA27 p.514: the rating counts) at the weight
+-- (1000 kg, or kg) and the CG (% MAC). Before, one curve in pounds for
+-- every rating (0.8 to 1.8 units nose down from TO 2's table when light)
+dofile("B747.68.to_trim_model.lua")
 function calc_stab_trim(GW, CG_MAC)
-	local stab_trim = 0
 	-- (2026-11-05 review) numbers only: a weight not entered yet ("***.*")
 	-- leaves the trim as it is (arithmetic on text stopped the whole plugin)
 	GW, CG_MAC = tonumber(GW), tonumber(CG_MAC)
 	if GW == nil or CG_MAC == nil then return end
+	if GW > 1000 then GW = GW / 1000 end
+	local thr = B747_fms_thrlim and B747_fms_thrlim()
+	local stab_trim = B747_to_trim_model.trim(thr and thr.to or 0, GW, CG_MAC)
 
-	GW = GW * simConfigData["data"].SIM.kgs_to_lbs  --Formula uses LBS to calculate Stab TRIM.  GW passed in should always be in KGS.
-	--print("GWin = "..GW.." MACin = "..CG_MAC)
-
-	if GW > 1000 then
-		GW = GW / 1000  --GW must be in 1000s of LBS
-	end
-
-	stab_trim = (0.000000717 * GW^2 - 0.001217 * GW + 0.24) * CG_MAC + (-0.0000309 * GW^2 + 0.05558 * GW - 12.24)  --GW must be in 1000s of LBS
-	
-	--Stab Trim can never be less than zero
-	if stab_trim < 0 then
-		stab_trim = 0
-	end
-	
 	wb.stab_trim	= stab_trim
 	fmsModules["data"].stab_trim 	= string.format("%4.1f", wb.stab_trim)
 	B747DR_elevator_trim = fmsModules["data"].stab_trim  --Set STAB TRIM for green band calculation
 	--print("Setting trim_mid = "..B747DR_elevator_trim)
 	--print("Trim = "..fmsModules["data"].stab_trim)
+end
+-- (review FCTL-4) a new takeoff rating (THRUST LIM's TO, TO 1, TO 2):
+-- TAKEOFF REF's trim, when there is one, again for it at the CG and GR WT
+function B747_fms_trim_again()
+	if tonumber(fmsModules["data"].stab_trim) == nil then return end
+	calc_stab_trim(fmsModules["data"].grwt, fmsModules["data"].cg_mac)
 end
 
 -- (2026-11-20, GAP_ANALYSIS.md N19-WB-01, N19-WB-02) a CG in % MAC from its
@@ -633,16 +633,25 @@ function calc_CGMAC()
 	-- small with a caret; the 109's and 570's dashes until the crew enters
 	-- one. Before, every airplane's TAKEOFF CG took this one, and the next
 	-- GR WT or ZFW overwrote a crew's CG and trim
+	-- (2026-11-24, review PERF-2) the trim at PERF INIT's GR WT (the FMC's
+	-- weight: FCOM p.1309 (11.40.33), p.1320 (11.40.44)), as a CG entry's;
+	-- before, at this sum of the OEW, the fuel and the PAX/CARGO zones,
+	-- short of X-Plane's payload the zones do not hold (60 t: 6.5 at the
+	-- CG entry, 5.3 at the same ZFW again)
+	local trimGW = tonumber(fmsModules["data"].grwt)
 	B747_fms_set_wbs_cg(CG_MAC)
 	if type(cg_lineLg) == "string" and string.len(cg_lineLg) > 0 then
-		calc_stab_trim(GW, fmsModules["data"].cg_mac)
+		calc_stab_trim(trimGW, fmsModules["data"].cg_mac)
 	elseif B747_fms_is_405() then
 		fmsModules["data"].cg_mac 		= string.format("%2.0f", wb.cg_mac)
-		calc_stab_trim(GW, CG_MAC)
+		calc_stab_trim(trimGW, CG_MAC)
 	end
 
-	simDR_cg_adjust = CG_shift * -1  --Value is flipped from what is in the XP slider
-	
+	-- (2026-11-24, the 2026-11-23 review's PERF-1) X-Plane's CG: the payload's
+	-- shift alone (inflight_update_CG). Before, this whole CG's shift, the
+	-- fuel in it
+	inflight_update_CG()
+
 	--print("Dist = "..dist_default_CG.." - "..CG)
 	--print("CG Shift = "..CG_shift)
 	--print("OEW weight = "..wb.OEW_weight)
@@ -654,7 +663,7 @@ function calc_CGMAC()
 	--print("GW = "..GW)
 end
 
-function inflight_update_CG()
+function inflight_update_CG(loaded)
 
 	local inch_to_meters	= 39.3700787
 	
@@ -690,12 +699,140 @@ function inflight_update_CG()
 
 	local CG				= total_moment / GW
 	local dist_default_CG	= 1243.32  --103.61 feet (from the aircraft .acf file)
-	local cg_shift			= (dist_default_CG - CG) / inch_to_meters  --determine how far ahead or behind the OEW CG we are
 
-	simDR_cg_adjust = cg_shift * -1  --Value is flipped from what is in the XP slider
+	-- (2026-11-24, the 2026-11-23 review's PERF-1) X-Plane's CG for this
+	-- load: the payload's zones onto X-Plane's payload stations
+	-- (B747_fms_xp_payload below). Before (upstream's), the whole airplane's
+	-- shift (CG - 1243.32, the fuel in it) to cgz_ref_to_default
+	B747_fms_xp_payload({
+		{wb.passenger_zoneA_weight, wb.passenger_zoneA_distance}, {wb.passenger_zoneB_weight, wb.passenger_zoneB_distance},
+		{wb.passenger_zoneC_weight, wb.passenger_zoneC_distance}, {wb.passenger_zoneD_weight, wb.passenger_zoneD_distance},
+		{wb.passenger_zoneE_weight, wb.passenger_zoneE_distance}, {wb.fwd_lower_cargo_weight, wb.fwd_lower_cargo_distance},
+		{wb.aft_lower_cargo_weight, wb.aft_lower_cargo_distance}, {wb.bulk_lower_cargo_weight, wb.bulk_lower_cargo_distance},
+		{wb.freight_zoneA_weight, wb.freight_zoneA_distance}, {wb.freight_zoneB_weight, wb.freight_zoneB_distance},
+		{wb.freight_zoneC_weight, wb.freight_zoneC_distance}, {wb.freight_zoneD_weight, wb.freight_zoneD_distance},
+		{wb.freight_zoneE_weight, wb.freight_zoneE_distance}}, dist_default_CG, wb.OEW_weight, loaded)
 
 	--print("Dist = "..dist_default_CG.." - "..CG)
-	--print("CG Shift = "..cg_shift)
+end
+
+-- (2026-11-24, the 2026-11-23 review's PERF-1) The FMC's payload into
+-- X-Plane. X-Plane 12 keeps the payload at the acf's payload stations
+-- (sim/flightmodel/weight/m_stations, kg; their arms acf_stations_ref_z, m
+-- aft of the reference CG; the custom acf has seven) and the fuel at the
+-- acf's tanks: its ZFW CG is the stations' moment over (acf_m_empty +
+-- m_fixed), which cgz_ref_to_default only reads back (measured on the
+-- ground, 2026-11-24: 30,000 kg written to station 0 and the others'
+-- 14,867 kg gave -2.5737 m, the sum to the digit). A value written to
+-- cgz_ref_to_default is met only by moving what the first station holds
+-- to the last (0.5 m asked with 20 t aboard: 0.337 m), with no payload not
+-- at all, and upstream wrote there the whole airplane's shift with the
+-- fuel in it: X-Plane, adding the fuel itself, counted it twice and its
+-- CG came ahead of the FMC's (340 t with 74 t of fuel: 23.0 % MAC for the
+-- FMC's 27.4; a full load up to 7 %).
+-- So each zone's weight (kg, at its arm in inches aft of the nose) goes to
+-- the two stations its arm lies between, in the lever's proportion: the
+-- weight and the moment are the zone's, and X-Plane's CG is the FMC's
+-- (calc_CGMAC's: the tanks' arms there are the acf's). A zone ahead of
+-- the first station or behind the last (zone A, the freighter's zones A
+-- and E) goes to that station, and its moment's rest is made by moving
+-- load from the other stations to that one as far as they hold any.
+-- The stations are the FMC's from when the PAX/CARGO page (or the sim's
+-- weight window through it) loads the airplane (`loaded`) until its zones
+-- are empty again or a new flight starts (B747_fms_xp_payload_release):
+-- X-Plane's own payload, loaded on its Weight & Balance screen or by a
+-- test's flight, stays while the FMC has loaded none. While they are the
+-- FMC's, the 60 s timer and a ZFW or GR WT entry (calc_CGMAC) set them
+-- anew, and every frame each station that is not at its weight is written
+-- again (B747_fms_xp_payload_keep): X-Plane spreads the stations its own
+-- way when m_fixed is written (the page writes the total) or
+-- cgz_ref_to_default (this module's start), and of nine elements written
+-- in one go from XTLua one reached X-Plane (X-Plane, 2026-11-24: the
+-- third station alone; the fuel module writes its tanks every frame the
+-- same way). Nothing is written before the stations' arms are read. An
+-- acf without stations: the payload's shift, its moment over (OEW +
+-- payload), to cgz_ref_to_default
+simDR_fms_station_kg		= find_dataref("sim/flightmodel/weight/m_stations")
+simDR_fms_station_z			= find_dataref("sim/aircraft/weight/acf_stations_ref_z")
+simDR_fms_station_max		= find_dataref("sim/aircraft/weight/acf_m_station_max")
+-- (their state local in a block: the main chunk is at Lua's 200 locals, and
+-- a table in a global would be an XTLua namespace)
+do
+local stations_own, stations_kg = false, nil  --the FMC's load on X-Plane's stations: kg by station
+function B747_fms_xp_payload_release()
+	stations_own, stations_kg = false, nil
+end
+function B747_fms_xp_payload_keep()
+	local kg = stations_kg
+	if kg == nil then return end
+	for i = 0, 8 do
+		if math.abs(simDR_fms_station_kg[i] - kg[i]) > 0.5 then simDR_fms_station_kg[i] = kg[i] end
+	end
+end
+function B747_fms_xp_payload(zones, ref_in, oew, loaded)
+	local IN_M = 0.0254
+	local payload, moment = 0, 0  --kg, kg m about the reference CG
+	for _, z in ipairs(zones) do
+		payload = payload + z[1]
+		moment = moment + z[1] * (z[2] - ref_in) * IN_M
+	end
+	if payload < 0.5 then
+		B747_fms_xp_payload_release()
+		return
+	end
+	if loaded then stations_own = true end
+	if not stations_own then return end
+	local st = {}  --the stations with a maximum, by their arms
+	for i = 0, 8 do
+		if simDR_fms_station_max[i] > 0 then st[#st + 1] = {i = i, z = simDR_fms_station_z[i]} end
+	end
+	if #st < 2 then
+		if oew + payload > 0 then simDR_cg_adjust = moment / (oew + payload) end
+		return
+	end
+	table.sort(st, function(a, b) return a.z < b.z end)
+	local n = #st
+	if st[n].z - st[1].z < 0.1 then return end  --the arms not read yet
+	local kg = {}
+	for i = 0, 8 do kg[i] = 0 end
+	local rest = 0  --kg m the end stations could not take
+	for _, z in ipairs(zones) do
+		local w, a = z[1], (z[2] - ref_in) * IN_M
+		if w > 0 then
+			if a <= st[1].z then
+				kg[st[1].i] = kg[st[1].i] + w
+				rest = rest + w * (a - st[1].z)
+			elseif a >= st[n].z then
+				kg[st[n].i] = kg[st[n].i] + w
+				rest = rest + w * (a - st[n].z)
+			else
+				for k = 1, n - 1 do
+					if a <= st[k + 1].z then
+						local f = (a - st[k].z) / (st[k + 1].z - st[k].z)
+						kg[st[k].i] = kg[st[k].i] + w * (1 - f)
+						kg[st[k + 1].i] = kg[st[k + 1].i] + w * f
+						break
+					end
+				end
+			end
+		end
+	end
+	if rest > 0 then  --to the last station, from the first on
+		for k = 1, n - 1 do
+			local d = math.min(kg[st[k].i], rest / (st[n].z - st[k].z))
+			kg[st[k].i], kg[st[n].i] = kg[st[k].i] - d, kg[st[n].i] + d
+			rest = rest - d * (st[n].z - st[k].z)
+		end
+	elseif rest < 0 then  --to the first station, from the last on
+		for k = n, 2, -1 do
+			local d = math.min(kg[st[k].i], -rest / (st[k].z - st[1].z))
+			kg[st[k].i], kg[st[1].i] = kg[st[k].i] - d, kg[st[1].i] + d
+			rest = rest + d * (st[k].z - st[1].z)
+		end
+	end
+	stations_kg = kg
+	B747_fms_xp_payload_keep()
+end
 end
 --Marauder28
 
@@ -907,6 +1044,16 @@ end
 -- where the real nav DB's come from (2026-11-05 review 4: kept, no source)
 B747DR_airspeed_Vf30 = find_dataref("laminar/B747/airspeed/Vf30")
 function update_spd_trans()
+	-- (2026-11-24, stage 4 review FMC-5; notes/ATA-34-61-FMC.md §177.4)
+	-- the climb's SPD RESTR passed (the airplane above its altitude): dashes
+	-- again (ATA34_2 p.553, 34-61 p.127: "replaced by dashes"), so a later
+	-- climb (a missed approach's) has none. Before, it stayed until a flight
+	-- complete or a DELETE
+	local ra = tonumber(fmsModules["data"]["clbrestalt"])
+	if ra and simDR_onGround ~= 1 and simDR_pressureAlt1 > ra then
+		fmsModules:setData("clbrestspd", "---")
+		fmsModules:setData("clbrestalt", "-----")
+	end
 	local cur = fmsModules["data"]["transpd"]
 	if cur == nil or cur == "---" then return end
 	local vref = tonumber(B747DR_airspeed_Vf30) or 0
@@ -2351,6 +2498,37 @@ function B747_fms_vnav_exec()
   vnavMod = nil
 end
 function B747_fms_vnav_erase() vnavMod = nil end
+-- (2026-11-24, review FMC-8) the takeoff's reference altitude: the
+-- barometric altitude the FMC records as the airplane accelerates through
+-- 100 kt on the ground (FCOM p.667 (4.20.9): for LNAV and VNAV, the flap
+-- retraction's acceleration and the climb thrust), the base of ACCEL HT,
+-- E/O ACCEL HT and THR REDUCTION's height (FCOM p.1318-1319
+-- (11.40.42-43): the runway's elevation added). None before a takeoff (an
+-- air start) or on the ground below 100 kt: the origin's elevation, as
+-- before. Before, always the origin airport's elevation from the
+-- navigation data, off by the altimeter setting's error and the runway's
+-- height on the airport (KDEN RW26 140 ft below it). (Locals in a block:
+-- the main chunk is at Lua's 200 locals)
+do
+  local toBaro, toIasPrev = nil, nil
+  function B747_fms_to_ref_alt()
+    if toBaro then return toBaro end
+    local r = B747_fmc_route.rte
+    return (r and r.origin and r.origin.elev) or 0
+  end
+  -- each frame
+  function B747_fms_to_baro_update()
+    local ias = simDR_ias_pilot
+    if simDR_onGround == 1 then
+      if ias < 100 then
+        toBaro = nil
+      elseif toIasPrev ~= nil and toIasPrev < 100 then
+        toBaro = simDR_pressureAlt1
+      end
+    end
+    toIasPrev = ias
+  end
+end
 local vnavGaSeen = nil
 local vnavEoNext = 0
 local function update_vnav()
@@ -2421,13 +2599,14 @@ local function update_vnav()
   -- the takeoff (step 9c; FCOM p.1255): V2 selected on TAKEOFF REF (999
   -- none), ACCEL HT above the origin, the flap handle; the airspeed, VNAV
   -- engaged (the AFDS's)
-  local rte = B747_fmc_route.rte
+  -- (review FMC-8) above the takeoff's reference altitude (the barometric
+  -- altitude at 100 kt: B747_fms_to_ref_alt)
   local v2 = B747DR_airspeed_V2
   vnavTakeoff.v2 = (v2 > 0 and v2 < 900) and v2 or nil
-  vnavTakeoff.accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].accelht) or 1000)
+  vnavTakeoff.accel_alt = B747_fms_to_ref_alt() + (tonumber(fmsModules["data"].accelht) or 1000)
   -- (step 9h3b) the E/O ACCEL HT above the origin; an engine failure
   -- sensed, VREF 30 (FCOM p.1265-1266)
-  vnavTakeoff.eo_accel_alt = (rte and rte.origin and rte.origin.elev or 0) + (tonumber(fmsModules["data"].eoaccelht) or 1000)
+  vnavTakeoff.eo_accel_alt = B747_fms_to_ref_alt() + (tonumber(fmsModules["data"].eoaccelht) or 1000)
   vnavTakeoff.flaps = simDR_fms_vnav_flaps
   inp.takeoff = vnavTakeoff
   inp.eo, inp.vref = B747_fms_eng_out(), B747DR_airspeed_Vf30
@@ -2585,8 +2764,7 @@ B747DR_fms_thrlim_eicas = find_dataref("laminar/B747/fms/thrlim/eicas")
 -- not see this one's string writes: s152 and s141's references were TO's)
 B747DR_fms_thrlim_code = find_dataref("laminar/B747/fms/thrlim/code")
 local THRLIM_CODE = {TO = 1, CLB = 2, CRZ = 3, CON = 4, GA = 5}
--- (2026-11-19) a freighter (the simconfig's aircraft type): with GE the
--- FCOM's 405 and 570, the climb armed by the takeoff's rating (FCOM p.1315)
+-- (2026-11-19) a freighter (the simconfig's aircraft type)
 B747DR_fms_freighter = find_dataref("laminar/B747/freighter")
 -- the FCOM's 405 (a freighter: EFFECTIVITY_405.md; read every frame by
 -- update_thrlim, so a page's read is fresh)
@@ -2624,7 +2802,7 @@ local THRLIM_PITCH = {[4] = "VNAV", [5] = "VNAV", [6] = "VNAV", [8] = "FLCH"}
 local function update_thrlim()
   local inp, r = thrlimIn, B747_fmc_route.rte
   inp.ground = simDR_onGround == 1
-  inp.alt_agl = simDR_pressureAlt1 - ((r and r.origin and r.origin.elev) or 0)
+  inp.alt_agl = simDR_pressureAlt1 - B747_fms_to_ref_alt()   -- (review FMC-8)
   inp.thr_red = tonumber(fmsModules["data"].thrred) or 5
   inp.flaps = simDR_fms_vnav_flaps
   local pitch = B747DR_fms_afds_pitch
@@ -2651,9 +2829,9 @@ local function update_thrlim()
   inp.eo_vnav = B747_fms_eo().active
   -- (step 12c1) PERF FACTORS' THR/CRZ: the cruise's limit CLB or CRZ
   inp.crz_clb = B747_fms_perf_factors().thr_crz == "CLB"
-  -- (2026-11-19) the 405 and 570 (a freighter or GE): the climb armed by
-  -- the takeoff's rating (FCOM p.1315); the 109 by its reduction (p.1273)
-  inp.by_rating = B747DR_fms_engine_type == 1 or B747DR_fms_freighter == 1
+  -- the freighter flag read every frame (another plugin's: B747_fms_is_405
+  -- on a page then reads it fresh; review FMC-1 took its use here away)
+  thrlimSeen.freighter = B747DR_fms_freighter
   local mode = B747_thrlim_model.update(thrlimState, inp)
   if B747DR_fms_thrlim_mode ~= mode then B747DR_fms_thrlim_mode = mode end
   local s = thrlimState
@@ -2673,7 +2851,10 @@ local function update_thrlim()
   if B747DR_fms_thrlim_sel ~= selOut then B747DR_fms_thrlim_sel = selOut end
   local pct = B747_fms_thrlim_pct(thrlimState.to)
   if B747DR_fms_thrlim_to_pct ~= pct then B747DR_fms_thrlim_to_pct = pct end
-  if toderate ~= thrlimState.to then toderate = thrlimState.to end
+  if toderate ~= thrlimState.to then
+    toderate = thrlimState.to
+    B747_fms_trim_again()             -- (review FCTL-4) its stab trim table
+  end
   if clbderate ~= thrlimState.clb then clbderate = thrlimState.clb end
 end
 -- UNABLE CRZ ALT: in the climb, the climb to a cruise altitude meets the
@@ -5762,6 +5943,20 @@ do
         gs = simDR_groundspeed * 1.94384}) then
       simCMD_pause_on:once()
     end
+    -- (2026-11-24, stage 4 review FMC-9; notes/ATA-34-61-FMC.md §177.6) SIM
+    -- CONFIG's CONFIG PAUSE (laminar/B747/autopilot/vnav_pause: 1 at the
+    -- T/D, more that many NM to the destination), once, then off as before:
+    -- the T/D VNAV's, the distance the predictions' (PROGRESS's DEST).
+    -- Before, the old AP's T/D and distance (setDistances, never called:
+    -- 0), so it never paused
+    local vp = B747DR_ap_vnav_pause
+    if vp > 0 and air then
+      local td, togo = B747_fms_vnav_td(), B747_fms_dest_dtg()
+      if (vp == 1 and td and td <= 1) or (vp > 1 and togo and togo <= vp) then
+        B747DR_ap_vnav_pause = 0
+        simCMD_pause_on:once()
+      end
+    end
   end
 end
 -- (6-1/6-2 step 10d; notes/ATA-34-61-FMC.md §89) flight completion (FCOM
@@ -5791,6 +5986,11 @@ function B747_fms_flight_complete()
   for _,k in ipairs(FC_KEYS) do
     if d[k]~=nil and fmsModules["data"][k]~=d[k] then fmsModules:setData(k,d[k]) end
   end
+  -- (2026-11-24, stage 4 review FMC-2) CRZ ALT's value too, not only its
+  -- text: the next flight's same entry did not show (its value unchanged)
+  -- and VNAV and the pressurization had the last one (FCOM p.1307; FMSPG
+  -- p.97: cleared at flight completion)
+  B747BR_cruiseAlt=0
   B747_route_model.clear(B747_fmc_route)
   B747_fmc_route_changed()
   renew(rtaState,B747_rta_model.new())
@@ -5803,6 +6003,14 @@ function B747_fms_flight_complete()
   navperfState.gps_inhibit,navperfState.rnp_man=false,nil
   if B747DR_airspeed_flapsRef~=0 then B747DR_airspeed_flapsRef=0 end
   if B747DR_airspeed_VrefFlap~=0 then B747DR_airspeed_VrefFlap=0 end
+  -- (2026-11-24, review CDU-2 = PERF-3) the crew's CG and CRZ CG gone with
+  -- their data: TAKEOFF REF's CG dashes (FCOM p.1320 (11.40.44)), PERF
+  -- INIT's CRZ CG the default 20.0 small (p.1311 (11.40.35)); the FMC's
+  -- trim gone, the green band's selection with it (ATA34_2 p.540: the
+  -- takeoff data cleared). Before, a crew's CG left TAKEOFF REF blank
+  -- (its line's text with the CG's data "--") until a new CG
+  cg_lineLg,crzcg_lineLg="",""
+  if B747DR_elevator_trim~=0 then B747DR_elevator_trim=0 end
   -- (step 12c1) TAKEOFF REF's defaults from PERF FACTORS again
   B747_fms_perf_to_take(true)
   -- (step 12c2) IRS MONITOR's rates
@@ -5950,7 +6158,7 @@ function get_ETA_for_Distance(distance,additionalTime)
 	local mins = 0
 	local secs = 0
 	local time_to_waypoint = 0
-	local default_speed = 275 -- kt (FMC-21; the predictions come in step 8)
+	local default_speed = 275 -- kt (FMC-21; the ND's estimate without the FMC's predictions: FMC-6 2026-11-24)
 	local actual_speed = simDR_groundspeed * meters_per_second_to_kts
 	time_to_waypoint = additionalTime + (distance / math.max(default_speed, actual_speed)) * 3600
 	
@@ -6000,13 +6208,45 @@ end
 
 -- each route entry's ETA for the ND's route data (5-2 step 5c: the DATA
 -- switch shows the FMC's ETA at each waypoint, FCOM p.1040, p.1148): from
--- the active waypoint on, the distance along the route by
--- get_ETA_for_Distance, as the active and next waypoints' ETAs (the FMC's
--- predictions come with its rebuild: FMC-20, FMC-21); the zulu time of day
--- in minutes for each entry of xtlua/fms, -1 before the active waypoint, on
--- the ground and for an entry without a position; a JSON array
--- (laminar/B747/fms/route_eta) written when it changes, once a second
+-- the active waypoint on; the zulu time of day in minutes for each entry
+-- of xtlua/fms, -1 before the active waypoint and for an entry without a
+-- position; a JSON array (laminar/B747/fms/route_eta) written when it
+-- changes, once a second. (2026-11-24, stage 4 review FMC-6 = DSP-2;
+-- notes/ATA-34-61-FMC.md §177.5) The FMC's predicted times, as RTE DATA's
+-- (B747_fms_row_pred_t: none past the E/D), on the ground too; without
+-- predictions, in the air only, the distance along the route by
+-- get_ETA_for_Distance as before (the greater of the ground speed and 275
+-- kt: 2.2 instead of 4.3 minutes for 10 NM at 140 kt)
 B747DR_fms_route_eta = find_dataref("laminar/B747/fms/route_eta")
+-- the FMC's predicted time (s from now) to the waypoint of xtlua/fms's row
+-- k, as PROGRESS, LEGS and RTE DATA have it (the predictions' points); the
+-- destination's row the predictions' destination; nil without predictions,
+-- for a row of no leg (a racetrack's or an arc's point) and while
+-- X-Plane's plan is not yet the route's (the row's name another); with
+-- past_ed nil, none past the E/D either (RTE DATA's: the missed approach)
+function B747_fms_row_pred_t(k, past_ed)
+  local p, map, st = predResult, routeMap, B747_fmc_route
+  if not (p and p.pts and map and st.active) then return nil end
+  local i = map.leg[k]
+  if not i then
+    local d = st.rte.dest
+    if k == map.n and d and p.dest and map.ident[k] == d.ident then return p.dest.t end
+    return nil
+  end
+  if not past_ed and p.ed_i and i > p.ed_i then return nil end
+  local l, q = st.rte.legs[i], p.pts[i]
+  if not (l and q and q.t) then return nil end
+  if map.ident[k] ~= (l.fix and l.fix.ident or l.name) then return nil end
+  return q.t
+end
+-- (2026-11-24, stage 4 review FMC-9) the distance to go to the destination
+-- (NM along the route: the predictions', PROGRESS's DEST), nil without
+-- predictions
+function B747_fms_dest_dtg()
+  local p = predResult
+  if not (p and p.dest and B747_fmc_route.active) then return nil end
+  return p.dest.x
+end
 local route_eta_t = -1
 -- (2026-11-13; the 2026-11-12 review DSP-2) the transition level in the
 -- FMC's data ("translvl") for the PFD's barometric setting's amber box and
@@ -6032,14 +6272,23 @@ function B747_route_eta(fms, airborne)
 	local k = B747DR_fmscurrentIndex
 	if k >= 1 and k <= table.getn(fms) then active = k end
 	local dist, lat, lon = 0, simDR_latitude, simDR_longitude
+	local pred = predResult ~= nil and B747_fmc_route.active
 	for i = 1, table.getn(fms) do
 		local v = -1
 		local wlat, wlon = fms[i][5], fms[i][6]
-		if airborne and active ~= nil and i >= active and not (wlat == 0 and wlon == 0) then
-			dist = dist + getDistance(lat, lon, wlat, wlon)
-			lat, lon = wlat, wlon
-			local _, h, m = get_ETA_for_Distance(dist, 0)
-			v = h * 60 + m
+		if active ~= nil and i >= active and not (wlat == 0 and wlon == 0) then
+			local t = nil
+			if pred then
+				t = B747_fms_row_pred_t(i)
+			elseif airborne then
+				dist = dist + getDistance(lat, lon, wlat, wlon)
+				lat, lon = wlat, wlon
+				t = (get_ETA_for_Distance(dist, 0))
+			end
+			if t then
+				local _, h, m = get_ETA_for_Distance(0, t)
+				v = h * 60 + m
+			end
 		end
 		out[i] = v
 	end
@@ -6064,6 +6313,7 @@ function waypoint_eta_display()
 	local time_to_waypoint = 0
 	local fms_distance_to_waypoint = 0
 	local fms_distance_to_next_waypoint = 0
+	local etaOk, nextEtaOk = true, true
 	if string.len(fmsJSON) > 2 then
 		fms = fms_route()
 		if fms[table.getn(fms)][8]~="LATLON" then
@@ -6071,16 +6321,27 @@ function waypoint_eta_display()
 		else
 			B747DR_destination="----"
 		end
-		if simDR_onGround ~= 1 then
-		--print(fmsJSON)
-			
+		-- (2026-11-24, stage 4 review FMC-6 = DSP-2; notes/ATA-34-61-FMC.md
+		-- §177.5) on the ground too (FCOM p.1147, 10.40.39: the active
+		-- waypoint, its distance and the FMS-calculated ETA in MAP, MAP CTR
+		-- and PLAN, no exception; PROGRESS shows them there). Before, dashes
+		-- on the ground with an active route
 		fms_current_waypoint, fms_latitude, fms_longitude = getCurrentWayPoint(fms,false)
-		--print(string.match(fms_current_waypoint, "%("))
 		fms_distance_to_waypoint,time_to_waypoint,hours,mins,secs = get_waypoint_estimate(simDR_latitude, simDR_longitude,fms_current_waypoint, fms_latitude, fms_longitude,0)
-		
+
 		fms_next_waypoint, fms_next_latitude, fms_next_longitude = getCurrentWayPoint(fms,true)
-		--print(string.match(fms_current_waypoint, "%("))
 		fms_distance_to_next_waypoint,time_to_waypoint,nhours,nmins,nsecs = get_waypoint_estimate(fms_latitude, fms_longitude,fms_next_waypoint, fms_next_latitude, fms_next_longitude,time_to_waypoint)
+		-- the ETAs the FMC's predicted ones, PROGRESS's (before, the distance
+		-- over the greater of the ground speed and 275 kt: early under 275
+		-- kt, two minutes at 180 kt 20 NM out); without predictions the old
+		-- estimate in the air, none on the ground
+		if (predResult ~= nil and B747_fmc_route.active) or simDR_onGround == 1 then
+			local k = B747DR_fmscurrentIndex
+			local t = B747_fms_row_pred_t(k, true)
+			local t2 = B747_fms_row_pred_t(k + 1, true)
+			etaOk, nextEtaOk = t ~= nil, t2 ~= nil
+			if t then time_to_waypoint, hours, mins, secs = get_ETA_for_Distance(0, t) end
+			if t2 then time_to_waypoint, nhours, nmins, nsecs = get_ETA_for_Distance(0, t2) end
 		end
 		B747_route_eta(fms, simDR_onGround ~= 1)
 		B747_fms_publish_trans_lvl()
@@ -6110,7 +6371,7 @@ function waypoint_eta_display()
 		end
 		B747DR_ND_current_waypoint = fms_current_waypoint
 		B747DR_ND_waypoint_distance = string.format("%5.1f".."nm", fms_distance_to_waypoint)
-		B747DR_ND_waypoint_eta = string.format("%02d%02d.%d".."z", hours, mins, secs * 10)			
+		B747DR_ND_waypoint_eta = etaOk and string.format("%02d%02d.%d".."z", hours, mins, secs * 10) or "------Z"
 	end
 	if B747DR_last_waypoint=="" then
 	  B747DR_last_waypoint="-----"
@@ -6127,7 +6388,7 @@ function waypoint_eta_display()
 	else
 		B747DR_next_waypoint = fms_next_waypoint
 		B747DR_next_waypoint_dist=fms_distance_to_next_waypoint
-		B747DR_next_waypoint_eta = string.format("%02d%02d.%d".."z", nhours, nmins, nsecs * 10)			
+		B747DR_next_waypoint_eta = nextEtaOk and string.format("%02d%02d.%d".."z", nhours, nmins, nsecs * 10) or "------Z"
 	end
 end
 
@@ -6260,6 +6521,9 @@ function do_flight_start()
     end
 
 	simDR_cg_adjust = 0  --reset CG slider to begin current flight
+	-- (2026-11-24) a new flight's payload is X-Plane's until the PAX/CARGO
+	-- page loads the airplane again
+	B747_fms_xp_payload_release()
 	
 	--Ensure that CG location gets updated periodically so that the CG slider repositions automatically as fuel is burned during flight
 	run_at_interval(inflight_update_CG, 60)
@@ -6451,6 +6715,7 @@ function after_physics()
     update_perf()
     update_econ()
     update_preds()
+    B747_fms_to_baro_update()     -- (review FMC-8) before VNAV's and the thrust limit's
     update_vnav()
     update_thrlim()
     update_navdb()
@@ -6531,6 +6796,9 @@ function after_physics()
 	--Ensure DR's are updated in time for use in calc_CGMAC()
 	local payload_weight = B747DR_payload_weight
 	local fuel_qty = simDR_fuel_qty
+	-- (2026-11-24) and X-Plane's payload stations for B747_fms_xp_payload
+	local station_kg, station_z, station_max = simDR_fms_station_kg, simDR_fms_station_z, simDR_fms_station_max
+	B747_fms_xp_payload_keep()
 	local simconfig = B747DR_simconfig_data
 	throttleDataRefresh()
 end

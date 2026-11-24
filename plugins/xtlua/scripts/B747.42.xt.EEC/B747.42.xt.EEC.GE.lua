@@ -113,155 +113,16 @@ function take_off_N1_GE(altitude_ft_in)
   return N1_actual, TOGA_actual_thrust_N
 end
 
-function in_flight_N1_GE(altitude_ft_in, delta_t_isa_K_in)
-    local N1_corrected = 0.0
-    local N1_actual = 0.0
-    local N1_corrected_raw_max_climb = 0.0
-    local N1_corrected_mod_max_climb = 0.0
-    local N1_real_max_climb = 0.0
-    local N1_corrected_raw_max_cruise = 0.0
-    local N1_corrected_mod_max_cruise = 0.0
-    local N1_real_max_cruise = 0.0
-    local climb_rate_fpm = 0
-    local climb_angle_deg = 0.0
-
-    local thrust_per_engine_N = 0.0
-    local corrected_thrust_lbf = 0.0
-
-    --Due to modeling differences / deficiencies, the climb rates below are tweaked (higher) to
-    --allow for more closely matched real-world performance.  Ideal generic target climb rates are:
-    --  >> 0 - 10000 ft = 2200fpm
-    --  >> 10000 - 20000ft = 2100fpm
-    --  >> 20000 - 30000ft = 1700fpm
-    if string.match(simConfigData["data"].PLANE.engines, "B1F") and not string.match(simConfigData["data"].PLANE.engines, "B1F1") then  -- B1F1 below (ENG-30)
-      if simDR_altitude < 10000 then
-        climb_rate_fpm = 2750
-      elseif simDR_altitude <= 20000 then
-        --climb_rate_fpm = 2750
-        climb_rate_fpm = B747_rescale(10000.0, 2750.0, 20000.0, 2500.0, simDR_altitude)
-      elseif simDR_altitude <= 30000 then
-        --climb_rate_fpm = 2500
-        climb_rate_fpm = B747_rescale(20000.0, 2500.0, 30000.0, 2250.0, simDR_altitude)
-      elseif simDR_altitude <= 50000 then
-        --climb_rate_fpm = 2000
-        climb_rate_fpm = B747_rescale(30000.0, 2250.0, 50000.0, 2250.0, simDR_altitude)
-      elseif simDR_altitude > 50000 then
-        climb_rate_fpm = 2250
-      end
-    elseif string.match(simConfigData["data"].PLANE.engines, "B1F1") then
-      --For now, use the same climb rates as the B1F until we have specific information for B5F and others
-      if simDR_altitude < 10000 then
-        climb_rate_fpm = 2875
-      elseif simDR_altitude <= 20000 then
-        --climb_rate_fpm = 2750
-        climb_rate_fpm = B747_rescale(10000.0, 2875.0, 20000.0, 2625.0, simDR_altitude)
-      elseif simDR_altitude <= 30000 then
-        --climb_rate_fpm = 2500
-        climb_rate_fpm = B747_rescale(20000.0, 2625.0, 30000.0, 2375.0, simDR_altitude)
-      elseif simDR_altitude <= 50000 then
-        --climb_rate_fpm = 2000
-        climb_rate_fpm = B747_rescale(30000.0, 2375.0, 50000.0, 2375.0, simDR_altitude)
-      elseif simDR_altitude > 50000 then
-        climb_rate_fpm = 2375
-      end
-    elseif string.match(simConfigData["data"].PLANE.engines, "B5F") then
-      --For now, use the same climb rates as the B1F until we have specific information for B5F and others
-      if simDR_altitude < 10000 then
-        climb_rate_fpm = 3000
-      elseif simDR_altitude <= 20000 then
-        --climb_rate_fpm = 2750
-        climb_rate_fpm = B747_rescale(10000.0, 3000.0, 20000.0, 2750.0, simDR_altitude)
-      elseif simDR_altitude <= 30000 then
-        --climb_rate_fpm = 2500
-        climb_rate_fpm = B747_rescale(20000.0, 2750.0, 30000.0, 2500.0, simDR_altitude)
-      elseif simDR_altitude <= 50000 then
-        --climb_rate_fpm = 2000
-        climb_rate_fpm = B747_rescale(30000.0, 2500.0, 50000.0, 2500.0, simDR_altitude)
-      elseif simDR_altitude > 50000 then
-        climb_rate_fpm = 2250
-      end
-    else --failsafe option / assume B1F
-      if simDR_altitude < 10000 then
-        climb_rate_fpm = 2750
-      elseif simDR_altitude <= 20000 then
-        --climb_rate_fpm = 2750
-        climb_rate_fpm = B747_rescale(10000.0, 2750.0, 20000.0, 2500.0, simDR_altitude)
-      elseif simDR_altitude <= 30000 then
-        --climb_rate_fpm = 2500
-        climb_rate_fpm = B747_rescale(20000.0, 2500.0, 30000.0, 2250.0, simDR_altitude)
-      elseif simDR_altitude <= 50000 then
-        --climb_rate_fpm = 2000
-        climb_rate_fpm = B747_rescale(30000.0, 2250.0, 50000.0, 2250.0, simDR_altitude)
-      elseif simDR_altitude > 50000 then
-        climb_rate_fpm = 2250
-      end
-  end
-
-    if fmc_alt >= (altitude_ft_in - 200) and B747DR_ref_thr_limit_mode == "CRZ" then
-      climb_rate_fpm = 0
-    end
-
-    climb_angle_deg = math.asin((0.00508 * climb_rate_fpm) / tas_mtrs_sec) * 180 / math.pi
-
-    --get in_flight_thrust() data
-    _, thrust_per_engine_N, _, corrected_thrust_lbf = in_flight_thrust(simDR_acf_weight_total_kg, climb_angle_deg)
-
-    N1_corrected = (-1.4446E-12 * mach^2 + 1.2102E-12 * mach + 4.8911E-13) * corrected_thrust_lbf^3 + (1.1197E-07 * mach^2 - 7.8717E-08 * mach -6.498200000000001E-08)
-                    * corrected_thrust_lbf^2 + (-0.0027 * mach^2 + 0.0011 * mach + 0.0036) * corrected_thrust_lbf + (36.93 * mach + 20.96)
-
-    N1_actual = N1_corrected * math.sqrt(temperature_ratio)
-
-    if delta_t_isa_K_in > 0 then
-        if delta_t_isa_K_in > 10 then
-            N1_corrected_raw_max_climb = -0.25 * delta_t_isa_K_in + 95.8 + (-5.8239E-09 * altitude_ft_in^2 + 0.00077693 * altitude_ft_in)
-            N1_corrected_raw_max_cruise = -0.255 * delta_t_isa_K_in + 96 + (-7.5969E-09 * altitude_ft_in^2 + 0.00075761 * altitude_ft_in)
-        else
-            N1_corrected_raw_max_climb = -0.04 * delta_t_isa_K_in + 96 + (-5.8239E-09 * altitude_ft_in^2 + 0.00077693 * altitude_ft_in)
-        end
-    else
-      N1_corrected_raw_max_climb = 96 + (-5.8239E-09 * altitude_ft_in^2 + 0.00077693 * altitude_ft_in)
-      N1_corrected_raw_max_cruise = 93.5 + (-7.5969E-09 * altitude_ft_in^2 + 0.00075761 * altitude_ft_in)
-    end
-    
-    if altitude_ft_in > 24000 then
-      N1_corrected_mod_max_climb = N1_corrected_raw_max_climb -3.5722E-08 * altitude_ft_in^2 + 0.002463 * altitude_ft_in - 38.585
-      N1_corrected_mod_max_cruise = N1_corrected_raw_max_cruise -3.5722E-08 * altitude_ft_in^2 + 0.002463 * altitude_ft_in - 38.585
-    else
-      N1_corrected_mod_max_climb = N1_corrected_raw_max_climb
-      N1_corrected_mod_max_cruise = N1_corrected_raw_max_cruise
-    end
-  
-    N1_real_max_climb = math.min(N1_corrected_mod_max_climb * math.sqrt(temperature_ratio_adapted), 117.5)
-    N1_real_max_cruise = math.min(N1_corrected_mod_max_cruise * math.sqrt(temperature_ratio_adapted), 117.5)
-    if N1_actual<89 then
-      N1_actual=89
-    end
-    if B747DR_log_level >= 1 then
-      print("\t\t\t\t\t<<<--- IN FLIGHT N1 (GE) --->>>")
-      print("Altitude IN = ", altitude_ft_in)
-      print("Delta T ISA IN = ", delta_t_isa_K_in)
-      print("Temperature Ratio = ", temperature_ratio)
-      print("Temperature Ratio Adapted = ", temperature_ratio_adapted)
-      print("Mach = ", mach)
-      print("Req'd Thrust per Engine N = ", thrust_per_engine_N)
-      print("Corrected Thrust LBF = ", corrected_thrust_lbf)
-      print("Climb Rate FPM = ", climb_rate_fpm)
-      print("Climb Angle = ", climb_angle_deg)
-      print("N1 Corrected Raw MAX Climb = ", N1_corrected_raw_max_climb)
-      print("N1 Corrected MOD MAX Climb = ", N1_corrected_mod_max_climb)
-      print("N1 Real MAX Climb = ", N1_real_max_climb)
-      print("N1 Corrected Raw MAX Cruise = ", N1_corrected_raw_max_cruise)
-      print("N1 Corrected MOD MAX Cruise = ", N1_corrected_mod_max_cruise)
-      print("N1 Real MAX Cruise = ", N1_real_max_cruise)
-      print("N1 Corrected = ", N1_corrected)
-      print("N1 Actual = ", N1_actual)
-    end
-
-    return N1_corrected, N1_actual, N1_corrected_raw_max_climb, N1_corrected_mod_max_climb, N1_real_max_climb, N1_corrected_raw_max_cruise, N1_corrected_mod_max_cruise, N1_real_max_cruise
-end
+-- (2026-11-24, ENG-7) in_flight_N1_GE, the upstream's climb and cruise N1,
+-- is gone with GE()'s branches that called it (their results were
+-- overwritten every frame)
 
 local last_thrust_n = {0.0, 0.0, 0.0, 0.0}
 local last_N1 = {0.0, 0.0, 0.0, 0.0}
+-- (2026-11-24, PNL-5) the EEC's own command, last frame's, for the display's
+-- idle pin below (it read laminar/B747/engines/TRA, which now carries the
+-- EICAS's command: at least the idle N1 the display is pinned to)
+local eec_cmd_ge = {[0] = 0, 0, 0, 0}
 -- (2026-11-10) the N1 shown in the air for a thrust (N) at this frame's air
 -- data (the corrected thrust's polynomial below, no state): N1_display_GE's,
 -- and the EEC's thrust control takes its slope against the thrust from it
@@ -356,7 +217,7 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
 
     --Engine Idle Logic (Minimum / Approach)
     N1_low_idle = B747_ge_idle_pin(engine_in, altitude_ft_in)
-    if simDR_reverser_on[engine_in] ==0 and B747DR_throttle_resolver_angle[engine_in] < tonumber(N1_low_idle) and simDR_engine_running[engine_in] == 1 then
+    if simDR_reverser_on[engine_in] ==0 and eec_cmd_ge[engine_in] < tonumber(N1_low_idle) and simDR_engine_running[engine_in] == 1 then
      -- N1_actual = N1_low_idle
       N1_actual = B747_animate_value(last_N1[engine_in],N1_low_idle,0,115,0.1) 
       --print(" pin N1_actual 2 "..N1_actual)
@@ -426,25 +287,10 @@ local takeoff_TOGA_n1 = 0.0
 local orig_thrust_n = 0.0
 local N1_target_bug={}
 local display_N1_ref={}
-local display_N1_max={}
 function GE(altitude_ft_in)
-	local altitude = 0.0  --round_thrustcalc(simDR_altitude, "ALT")
-	local temperature = 0
-	local nbr_packs_on = 0
-	local packs_adjustment_value = 0.0
-	local engine_anti_ice_adjustment_value = 0.0
-	local wing_anti_ice_adjustment_value = 0.0
-	local takeoff_thrust_n1 = 0.0  --100.0
-	local takeoff_thrust_n1_throttle = 0.00
   local N1_display = {}
   local N2_display = {}
 
-
-  
-  --In-flight variables
-  local N1_actual = 0.0
-  local N1_real_max_climb = 0.0
-  local N1_real_max_cruise = 0.0
 
   --Setup engine factors based on engine type
 	if string.match(simConfigData["data"].PLANE.engines, "B1F") and not string.match(simConfigData["data"].PLANE.engines, "B1F1") then  -- B1F1 below (ENG-30)
@@ -477,104 +323,29 @@ function GE(altitude_ft_in)
     simDR_compressor_area = 4.38251 --(93-inch fan -- 47.17 sq. ft)
 	end
 
-  --Find current altitude rounded to the closest 1000 feet (for use in table lookups)
-  altitude = round_thrustcalc(altitude_ft_in, "ALT")
-
-	--Packs Adjustment
-  nbr_packs_on = B747DR_packs_operating     -- the packs with their valves open (AIR-16)
-
-	if nbr_packs_on == 0 then
-		packs_adjustment_value = TOGA_N1_GE_adjustment["3PACKS_OFF"][altitude]
-	elseif nbr_packs_on == 1 then
-		packs_adjustment_value = TOGA_N1_GE_adjustment["2PACKS_OFF"][altitude]
-	else
-		packs_adjustment_value = 0.00
-	end
-
-	--Engine Anti-Ice Adjustment
-	for i = 0, 3 do
-		if simDR_engine_anti_ice[i] == 1 then
-			engine_anti_ice_adjustment_value = TOGA_N1_GE_adjustment["NACELLE_AI_ON"][altitude]
-		end
-	end
-
-	--print("Alt = "..altitude)
-	--print("Temp = "..temperature)
-
-  if simDR_onGround == 1 or takeoff_thrust_n1==0.0 or B747DR_ref_thr_limit_mode == "" or B747DR_ref_thr_limit_mode == "NONE" then
-		--temperature = find_closest_temperature(TOGA_N1_GE, simDR_temperature)
-		--airport_altitude = altitude
-		--print("Closest Temp = ", temperature)
-		--print("Takeoff Parameters = ", temperature, altitude, packs_adjustment_value, engine_anti_ice_adjustment_value)
-		takeoff_thrust_n1, _ = take_off_N1_GE(altitude_ft_in)   --TOGA_N1_GE[temperature][altitude] + packs_adjustment_value + engine_anti_ice_adjustment_value
-    
-    if B747DR_toderate == 0 then
-      takeoff_TOGA_n1 = takeoff_thrust_n1
-    end
-
-    takeoff_thrust_n1_throttle = B747_rescale(0.0, 0.0, tonumber(takeoff_TOGA_n1), 1.0, tonumber(takeoff_thrust_n1))
-    
-		-- Set N1 Target Bugs & Reference Indicator
-    for i = 0, 3 do
-      N1_target_bug[i] = math.min(string.format("%4.1f",takeoff_thrust_n1) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-      display_N1_ref[i] = math.min(string.format("%4.1f",takeoff_thrust_n1) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-      display_N1_max[i] = math.min(string.format("%4.1f",takeoff_thrust_n1) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-    end
-
-		B747DR_TO_throttle = takeoff_thrust_n1_throttle
-    --print("did init")
-    --simCMD_pause:once() 
+  --(2026-11-24, ENG-7 of the 2026-11-23 review) the upstream's takeoff,
+  --climb, cruise and go-around branches are gone (with in_flight_N1_GE):
+  --since the FMC's step 9g3 the reference below and the EEC's maximum
+  --overwrote everything they set, and in the climb and the cruise they
+  --worked out a design climb rate's thrust every frame. Kept as they were:
+  --takeoff_TOGA_n1, the factor of the N1 shown on the takeoff
+  --(N1_display_GE; the review's ENG-4, not changed here), from the takeoff
+  --N1 worked out every frame (the takeoff branch's test always held: its
+  --takeoff_thrust_n1 started at 0) and taken without a takeoff derate, in
+  --GA (and NONE) whatever the derate; the rated thrust stored for the
+  --boost's reset. laminar/B747/engines/thrustref_throttle, which only they
+  --wrote and nothing reads, stays as it is
+  local takeoff_thrust_n1 = take_off_N1_GE(altitude_ft_in)
+  if B747DR_toderate == 0 then
+    takeoff_TOGA_n1 = takeoff_thrust_n1
   end
-
   if string.match(B747DR_ref_thr_limit_mode, "TO") or B747DR_ref_thr_limit_mode == "" then
     --Store original max engine output
     if orig_thrust_n == 0.0 or B747DR_newsimconfig_data == 1 then
       orig_thrust_n = simDR_thrust_max
     end
-  elseif string.match(B747DR_ref_thr_limit_mode, "CLB") then
-    _, N1_actual, _, _, N1_real_max_climb, _, _, _ = in_flight_N1_GE(altitude_ft_in, 0)
-
-		--Set target bugs
-		for i = 0, 3 do
-      if N1_actual > N1_real_max_climb and simDR_flap_ratio == 0 or takeoff_TOGA_n1==0  or altitude_ft_in> 20000 then
-        N1_target_bug[i] = math.min(string.format("%4.1f", N1_real_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-        display_N1_ref[i] = math.min(string.format("%4.1f", N1_real_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-      else
-        N1_target_bug[i] = math.min(string.format("%4.1f", N1_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, takeoff_TOGA_n1)
-        display_N1_ref[i] = math.min(string.format("%4.1f", N1_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, takeoff_TOGA_n1)
-      end
-      --pprint(i.." display_N1_ref="..display_N1_ref[i].. "N1_actual "..N1_actual.." N1_real_max_climb ".. N1_real_max_climb .." packs_adjustment_value ".. packs_adjustment_value .." engine_anti_ice_adjustment_value ".. engine_anti_ice_adjustment_value .." takeoff_TOGA_n1 "..takeoff_TOGA_n1)
-      if B747DR_display_N1_max[i] < B747DR_display_N1_ref[i] then
-        display_N1_max[i] = B747DR_display_N1_ref[i]
-      else
-        display_N1_max[i] = math.max(display_N1_ref[i],math.min(string.format("%4.1f", N1_real_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5))
-      end
-    end
-  elseif string.match(B747DR_ref_thr_limit_mode, "CRZ") then
-      _, N1_actual, _, _, N1_real_max_climb, _, _, N1_real_max_cruise = in_flight_N1_GE(altitude_ft_in, 0)
-
-      --Set target bugs
-      for i = 0, 3 do
-          N1_target_bug[i] = math.min(string.format("%4.1f", N1_real_max_cruise) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-          display_N1_ref[i] = math.min(string.format("%4.1f", N1_real_max_cruise) + packs_adjustment_value + engine_anti_ice_adjustment_value, 117.5)
-          display_N1_max[i] = math.min(string.format("%4.1f", N1_real_max_climb), 117.5)
-          
-      end
-  elseif B747DR_ref_thr_limit_mode == "GA" or (simDR_onGround == 0 and B747DR_ref_thr_limit_mode == "" or B747DR_ref_thr_limit_mode == "NONE") then
-    --Find current temperature rounded to the closest 5 degrees (for use in table lookups)
-    --temperature = round_thrustcalc(simDR_temperature, "TEMP")
-
-    --Find G/A N1 based on current temperature
-    temperature = find_closest_temperature(TOGA_N1_GE, simDR_temperature)
-
-    takeoff_TOGA_n1, _ = take_off_N1_GE(altitude_ft_in)
-
-    --Set G/A N1 targets
-    for i = 0, 3 do
-			N1_target_bug[i], _ = takeoff_TOGA_n1  --TOGA_N1_GE[temperature][altitude] + packs_adjustment_value + engine_anti_ice_adjustment_value
-      display_N1_ref[i] = math.min(simDR_N1_target_bug[i], 117.5)
-      display_N1_max[i] = math.min(simDR_N1_target_bug[i], 117.5)
-		end
+  elseif B747DR_ref_thr_limit_mode == "GA" or B747DR_ref_thr_limit_mode == "NONE" then
+    takeoff_TOGA_n1 = takeoff_thrust_n1
   end
 
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
@@ -589,16 +360,10 @@ function GE(altitude_ft_in)
       end
     end
 
-	--Failsafe option if takeoff_thrust_n1 isn't set
-  if takeoff_thrust_n1 == nil then
-    takeoff_thrust_n1 = 105.0
-    takeoff_TOGA_n1 = 105.0
-  end
-
   --(the FMC's step 9g3) the reference thrust limit for the FMC's mode
   --(B747_eec_reference: the PI tables, the derates, the assumed temperature)
-  --for the A/T's target and the EICAS's reference; the branches above no
-  --longer set them
+  --for the A/T's target and the EICAS's reference (the upstream's branches
+  --for them are gone: above)
   --(step 9g4) the cursor at idle in VNAV's idle descent with anti-ice
   --(B747_eec_cursor, ATA34_2 p.652)
   local _, idleCursor = B747_eec_cursor()
@@ -628,7 +393,19 @@ function GE(altitude_ft_in)
     --(2026-11-10) the EGT model, from the N1 just shown (B747.42.xt.egt.lua)
     B747DR_display_GE_EGT[i] = B747_egt(i, "GE")
 
-    B747DR_throttle_resolver_angle[i] = throttle_resolver_angle_GE(i)
+    --(2026-11-24, PNL-5) the EICAS's command N1: the EEC's command, a running
+    --engine's at least the idle N1 the display is pinned to (FCOM p.873: the
+    --command N1 equals the actual N1 once stable). The EEC's own idle end
+    --commands 25 %, under any idle, so that its control comes back to
+    --X-Plane's idle (B747.42.xt.eec_thrust.lua): the mark stood 0.9 % under
+    --the idle bar's end on the ground, 10-25 % under it in the air. The
+    --display's pin still tests the EEC's own command
+    local cmd = throttle_resolver_angle_GE(i)
+    eec_cmd_ge[i] = cmd
+    if simDR_engine_running[i] == 1 and simDR_reverser_on[i] == 0 then
+      cmd = math.max(cmd, B747_ge_idle_pin(i, altitude_ft_in))
+    end
+    B747DR_throttle_resolver_angle[i] = cmd
 	end
 
   if B747DR_log_level >= 1 then

@@ -30,8 +30,11 @@ function M.inputs()
         alt_ft = 0,             -- altitude (the bugs' 20,000 ft)
         flap_ratio = 0,         -- the flap lever
         land_flap = M.LAND_NONE,
+        vref_sel = 0,           -- kt: APPROACH REF's FLAP/SPEED (laminar/B747/airspeed/Vref)
         air = false,            -- the PSEU's air mode
         ias = 0,                -- kt
+        v2 = 999,               -- kt: the V2 selected on the CDU (999: none)
+        v2_bug = false,         -- (2026-11-24, DSP-4) the 570's (GE) speed tape shows V2
     }
 end
 -- on the ground for the minimum maneuvering band only below this airspeed
@@ -50,6 +53,7 @@ function M.new()
             vf = {[0] = 0, 0, 0, 0, 0, 0, 0},       -- each detent's maneuver speed
             show_vf = {[0] = false, false, false, false, false, false, false},
             show_mins = false,
+            show_v2 = false,
         },
     }
 end
@@ -58,7 +62,18 @@ function M.update(s, inp, dt)
     local out = s.out
     local d = math.max(M.UP, math.min(M.F30, math.floor(inp.flap_ratio * 6 + 0.5)))
     out.vref25 = inp.vref25
-    for k = M.UP, M.F20 do out.vf[k] = inp.vref30 + VREF30_PLUS[k] end
+    -- (2026-11-24, review PERF-5) a FLAP/SPEED above the FMC's VREF for its
+    -- flaps raises the flap speed schedule by the difference (FCOM p.1412
+    -- (11.43.24)): UP to 20 here; the 25 and 30 bugs stay the FMC's VREFs
+    -- (the FMC reads laminar/B747/airspeed/Vf30 as its VREF 30; the
+    -- selected one is the REF bug)
+    local add = 0
+    if inp.land_flap == M.LAND_25 or inp.land_flap == M.LAND_30 then
+        local ref = inp.land_flap == M.LAND_25 and inp.vref25 or inp.vref30
+        local sel = inp.vref_sel or 0
+        if ref > 0 and sel > ref then add = sel - ref end
+    end
+    for k = M.UP, M.F20 do out.vf[k] = inp.vref30 + VREF30_PLUS[k] + add end
     out.vf[M.F25] = out.vref25
     out.vf[M.F30] = inp.vref30
     -- the bugs for the current flap setting and the next lesser one, not
@@ -87,6 +102,12 @@ function M.update(s, inp, dt)
         s.mins = true
     end
     out.show_mins = s.mins == true
+    -- (2026-11-24, the stage 4 review's DSP-4) the 570's (GE) V2 selected on
+    -- the CDU: shown for the takeoff, removed on the climb-out as the flap
+    -- retraction begins (FCOM p.972 (10.10.10)) - the first retraction after
+    -- takeoff, as the minimum maneuvering band's (p.973). The 109 and 405
+    -- show V1 and VR only
+    out.show_v2 = inp.v2_bug and inp.v2 > 0 and inp.v2 < 900 and not out.show_mins
     return out
 end
 

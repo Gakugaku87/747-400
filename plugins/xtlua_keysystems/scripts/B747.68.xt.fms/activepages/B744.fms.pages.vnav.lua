@@ -589,16 +589,6 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       fmsFunctionsDefs["VNAV"]["R5"]={"setpage","DESFORECAST"}
       fmsFunctionsDefs["VNAV"]["R6"]=nil
 
-      if B747DR_ap_vnav_state==2 and simDR_autopilot_vs_status==2 then
-	      fmsModules["data"]["fpa"]=string.format("%1.1f",B747DR_ap_fpa)
-	      fmsModules["data"]["vb"]=string.format("%1.1f", B747DR_ap_vb)
-	      fmsModules["data"]["vs"]=string.format("%4d",simDR_autopilot_vs_fpm*-1) 
-      else
-	      fmsModules["data"]["fpa"]="*.*"
-	      fmsModules["data"]["vb"]="*.*"
-	      fmsModules["data"]["vs"]="****"
-      end
-
       -- (step 12b2) E/D AT, the E/D's altitude and waypoint, and AT XXXXX,
       -- the next constraint after the T/D (FCOM p.1392), from the active route
       -- and the predictions (B747_fms_vnav_wpts; before, X-Plane's FMS legs
@@ -645,6 +635,22 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       dspd = int_title(desActive, dspd)
       if desActive and B747_fms_vnav_title() == "LIM SPD" then dspd = "LIM SPD" end
       local desTitle = (desActive and B747_fms_end_des()) and "END OF DES" or dspd .. " DES"
+      -- (2026-11-24, stage 4 review CDU-3; notes/ATA-34-61-FMC.md §177.3)
+      -- 3R WPT/ALT and 4R FPA V/B V/S: the 570's (GE: FCOM p.1391, p.1393
+      -- (11.43.5), p.1394 (11.43.6)), not the 109's (P&W, RR: p.1390
+      -- (11.43.2) has neither; laminar/B747/engines/type). WPT/ALT the AT
+      -- line's waypoint and altitude, FPA V/B V/S dashes until a WPT/ALT
+      -- entry (none here: no entry yet). Before, boxes on every airplane
+      -- always (the old AP's condition, never met)
+      local wptAlt, fpaLine = "", ""
+      if B747DR_fms_engine_type == 1 then
+        fpaLine = "   -.- -.- ----"
+        if wp.des then
+          local c = B747_route_model.constraint_text(wp.des.leg, B747_fms_trans_lvl()) or ""
+          local alt = c:match("^.-/(.*)$") or ""
+          if alt ~= "" then wptAlt = wp.des.name .. "/" .. alt end
+        end
+      end
       return{
         vnav_title(desTitle, desActive, B747_fms_vnav_mod() == "DES NOW" or B747_fms_vnav_mod() == "DES DIR"),
       "                        ",
@@ -653,9 +659,9 @@ fmsPages["VNAV"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be thi
       "                        ",
       string.format("%-24s", spd2),
       "                        ",
-      string.format("%-24s", tr3),
+      wptAlt ~= "" and lr(tr3, wptAlt) or string.format("%-24s", tr3),
       "                        ",
-      rs4.."   "..fmsModules["data"]["fpa"].." "..fmsModules["data"]["vb"].." "..fmsModules["data"]["vs"],
+      string.format("%-24s", rs4 .. fpaLine),
       "------------------------",
       lr(mode=="S" and "<ECON" or "", "FORECAST>"),
       "                        ",
@@ -749,15 +755,17 @@ fmsPages["VNAV"].getSmallPage=function(self,pgNo,fmsID)
       -- (FCOM p.1392; ATA34_2 p.564: as the large page's 2L)
       local dLbl = spd_label("desspdmode")
       if vnav_active(3) and des_segment(tonumber(fmsModules["data"]["desspd"])) then dLbl = " SEL SPD " end
+      -- (CDU-3) WPT/ALT and FPA V/B V/S the 570's only (FCOM p.1390-1391)
+      local ge = B747DR_fms_engine_type == 1
       return{
       "                    3/3 ",
       lr(edShown and " E/D AT" or "", nxWpt and ("AT " .. nxWpt) or ""),
       "                        ",
       dLbl .. "               ",
       "                        ",
-      " SPD TRANS              ",
+      ge and " SPD TRANS       WPT/ALT" or " SPD TRANS              ",
       "                        ",
-      " SPD REST   FPA V/B  V/S",
+      ge and " SPD REST   FPA V/B  V/S" or " SPD REST               ",
       "                        ",
       "                        ",
       "                        ", 
