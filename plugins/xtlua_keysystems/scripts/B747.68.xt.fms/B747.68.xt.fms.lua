@@ -3453,7 +3453,10 @@ function B747_fmc_lnav_update()
   -- X-Plane's variation: west positive (magnetic = true + it)
   local air={lat=simDR_latitude,lon=simDR_longitude,trk=simDR_lnav_trk,hdg=simDR_fms_true_psi,
     gs=simDR_groundspeed*1.94384,tas=simDR_lnav_tas*1.94384,wind=simDR_wind_speed,
-    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1,bank=simDR_lnav_bank}
+    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1,bank=simDR_lnav_bank,
+    -- (2026-11-24, AFDS-6) the flaps' handle out of up: the fly-by turns'
+    -- shorter roll lag (B747.68.lnav_model.lua's ROLL_LAG_FLAPS)
+    flaps_up=simDR_fms_vnav_flaps<0.01}
   lnavAir=air
   local n=B747_lnav_model.update(s,st.active and lnavPath or nil,air,armed,engaged)
   if n>0 then

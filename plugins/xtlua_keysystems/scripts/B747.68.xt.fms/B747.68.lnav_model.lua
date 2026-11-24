@@ -73,6 +73,19 @@ M.ROLL_LEAD = 4
 -- 0.9 s at FL370 (s271 2026-11-11: 2.7 degrees behind a 3 degree a second
 -- command, the roll in and out alike; estimate)
 M.ROLL_LAG = 0.9
+-- (2026-11-24, the 2026-11-23 review's AFDS-6) with the flaps out of up
+-- (`air.flaps_up` false) the bank follows sooner: X-Plane 0.55 s in the roll
+-- in and 0.5 s in the roll out at 5,000 ft, flaps 10 and 170 kt
+-- (tests/flight/measure/afds6_lnav_flyby_low, 2026-11-24). With FL370's
+-- 0.9 s there the roll out began early: 45 and 90 degree turns came out
+-- 0.049 and 0.057 nm outside the leg out (the user's aim of 2026-11-20:
+-- 0.02), 0.017 still a minute on. Without the input (the tests, the
+-- holds' entries) the flaps up's
+M.ROLL_LAG_FLAPS = 0.5
+local function roll_lag(air)
+    if air and air.flaps_up == false then return M.ROLL_LAG_FLAPS end
+    return M.ROLL_LAG
+end
 -- (2026-11-09) a fly-by turn's arc left before its end by the time the
 -- roll out of its bank takes at ROLL_RATE degrees a second, halved (the
 -- AFDS's command rate: B747.70.afds_roll_model.lua's ROLL_RATE, an
@@ -564,7 +577,7 @@ function M.update(s, path, air, armed, engaged)
             if not s.turn then
                 local tr = P.turn(e, nxt, vt)
                 if tr and dtg then
-                    local lead = math.abs(arc_bank(vt, tr.r, tr.dir)) / (2 * M.ROLL_RATE) + M.ROLL_LAG
+                    local lead = math.abs(arc_bank(vt, tr.r, tr.dir)) / (2 * M.ROLL_RATE) + roll_lag(air)
                     if dtg <= tr.d + air.gs * KT * lead / 1852 then s.turn = tr end
                 end
             end
@@ -598,7 +611,7 @@ function M.update(s, path, air, armed, engaged)
     if u and engaged and air.bank and not u.rollout then
         local v = math.max(air.tas or air.gs, 60) * KT
         local phi = math.min(math.abs(air.bank), 60) * RAD
-        local out = G / (v * M.ROLL_RATE * RAD) * -math.log(math.cos(phi)) + G / v * math.tan(phi) * M.ROLL_LAG
+        local out = G / (v * M.ROLL_RATE * RAD) * -math.log(math.cos(phi)) + G / v * math.tan(phi) * roll_lag(air)
         local sign = u.dir == "R" and 1 or -1
         if air.bank * sign > 0 and wrap180(u.c2 - air.trk) * sign * RAD <= out then u.rollout = true end
     end

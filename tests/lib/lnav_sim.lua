@@ -19,7 +19,7 @@ return function(N, R, P, L, VAR)
         return st
     end
     -- the airplane: {lat, lon, hdg (true), bank, tas (kt), alt, vs (fpm),
-    -- wind_from (true), wind (kt), ground}
+    -- wind_from (true), wind (kt), ground, flaps_up (nil: not given)}
     function M.plane(t)
         t.bank, t.alt, t.vs, t.wind, t.wind_from = t.bank or 0, t.alt or 10000, t.vs or 0, t.wind or 0, t.wind_from or 0
         return t
@@ -29,7 +29,7 @@ return function(N, R, P, L, VAR)
         local ve = a.tas * math.sin(a.hdg * RAD) - a.wind * math.sin(a.wind_from * RAD)
         return {lat = a.lat, lon = a.lon, hdg = a.hdg, trk = (math.atan2(ve, vn) / RAD + 360) % 360,
             gs = math.sqrt(vn * vn + ve * ve), tas = a.tas, wind = a.wind, alt = a.alt, var = VAR, ground = a.ground or false,
-            bank = a.bank}
+            bank = a.bank, flaps_up = a.flaps_up}
     end
     -- fly `seconds` (steps of 0.1 s): the route sequenced as LNAV says;
     -- opts.engaged (default true), opts.armed, opts.engage_when_valid,

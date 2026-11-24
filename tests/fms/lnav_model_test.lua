@@ -89,18 +89,20 @@ end
 -- Before (the roll out's lead by the distance, the leg's steering from
 -- there): X-Plane's 17 degree turn at FL370 came out 0.084 nm outside and
 -- about 1 degree past, the model here 0.05 nm
-local function lagged(turn, tas, wind, from)
+local function lagged(turn, tas, wind, from, o)
+    o = o or {}
     local Bf = {ident = "BG", lat = 35.5, lon = 140.0}
     local cin = 157
     local cout = cin - turn
     local Cf = P.point(Bf, cout, 40)
     local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, cin + 180, 30))
     local sf = L.new(P)
-    local p0 = P.point(Bf, cin + 180, 20)
-    local af = plane({lat = p0.lat, lon = p0.lon, hdg = cin, tas = tas, wind = wind, wind_from = from, alt = 37000})
+    local p0 = P.point(Bf, cin + 180, o.start or 20)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = cin, tas = tas, wind = wind, wind_from = from, alt = o.alt or 37000,
+        flaps_up = o.flaps_up})
     local onC, out, past, back = false, 0, 0, 0
     local sign = turn > 0 and 1 or -1
-    fly(stf, sf, af, 300, {lag = 0.9, each = function(t, s, air)
+    fly(stf, sf, af, o.seconds or 300, {lag = o.lag or 0.9, each = function(t, s, air)
         if stf.rte.legs[1].fix == Cf then onC = true end
         if onC then
             -- a left turn's outside is right of the leg out
@@ -119,6 +121,22 @@ for _, c in ipairs({{3, 497}, {6, 497}, {10, 497}, {17, 497}, {30, 497}, {-17, 4
     T.check(onC, what .. ": the leg out active")
     T.check(past < 1, string.format("%s: the course out met within 1 degree: %.2f", what, past))
     T.check(out < 0.02, string.format("%s: within 0.02 nm outside the leg out: %.4f", what, out))
+    T.check(back < 2, string.format("%s: at most 2 degrees of bank back: %.2f", what, back))
+end
+-- (2026-11-24, the 2026-11-23 review's AFDS-6) the flaps out at 170 to 200
+-- kt: the airplane's bank 0.5 s behind the command (X-Plane at flaps 10 and
+-- 170 kt: tests/flight/measure/afds6_lnav_flyby_low) and LNAV told the
+-- flaps are out (`air.flaps_up` false: ROLL_LAG_FLAPS 0.5). At these speeds
+-- the roll in and out at ROLL_RATE take much of a small turn and the aim of
+-- 0.02 nm is not met for 45 degrees (0.028 nm here; with FL370's lag of
+-- 0.9 s 0.036, X-Plane 0.049): each case no worse than with the lag matched,
+-- the course met within 1 degree (0.9 s: 1.2 at 45), at most 2 of bank back
+for _, c in ipairs({{45, 170, 0.031}, {-45, 170, 0.031}, {90, 170, 0.0205}, {-90, 170, 0.0205}, {120, 170, 0.0185}, {20, 200, 0.02}}) do
+    local onC, out, past, back = lagged(c[1], c[2], 0, 0, {lag = 0.5, flaps_up = false, alt = 5000, start = 6, seconds = 360})
+    local what = string.format("flaps out, a %d degree turn at %d kt", c[1], c[2])
+    T.check(onC, what .. ": the leg out active")
+    T.check(past < 1, string.format("%s: the course out met within 1 degree: %.2f", what, past))
+    T.check(out < c[3], string.format("%s: within %.4f nm outside the leg out: %.4f", what, c[3], out))
     T.check(back < 2, string.format("%s: at most 2 degrees of bank back: %.2f", what, back))
 end
 

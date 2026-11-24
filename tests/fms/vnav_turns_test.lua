@@ -227,4 +227,18 @@ T.check(warm > 0 and made == 0, string.format("the wind 0 and 10 kt in turn: no 
 LM.transition = transition
 rt:set(WIND, 0)
 
+-- (2026-11-24, the 2026-11-23 review's AFDS-6) the flaps' handle to LNAV
+-- through the glue (`air.flaps_up`: the fly-by turns' shorter roll lag with
+-- the flaps out, B747.68.lnav_model.lua's ROLL_LAG_FLAPS)
+local update, seen = LM.update, {}
+LM.update = function(s, path, air, ...) seen[#seen + 1] = air.flaps_up; return update(s, path, air, ...) end
+local FLAPS = "sim/cockpit2/controls/flap_ratio"
+rt:set(FLAPS, 0.5)
+frames(0.5)
+T.check(#seen > 0 and seen[#seen] == false, string.format("flaps 10: LNAV told the flaps are out (%s)", tostring(seen[#seen])))
+rt:set(FLAPS, 0)
+frames(0.5)
+T.equal(seen[#seen], true, "flaps up: LNAV told so")
+LM.update = update
+
 T.done()
