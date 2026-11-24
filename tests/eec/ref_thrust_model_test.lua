@@ -16,6 +16,9 @@ local T = dofile("tests/lib/check.lua")("ref_thrust_model")
 local E = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.eec_model.lua")
 local P = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
 local R = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.ref_thrust_model.lua")
+-- (2026-11-24, ENG-3) the GE's takeoff on the EEC's N1 model (as in X-Plane:
+-- B747.42.xt.EEC.GE.lua loads it before B747.42.xt.eec_thrust.lua)
+local G = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.ge_n1_model.lua")
 local PW, GE = E.TABLE.PW, E.TABLE.GE
 
 local function inp(t)
@@ -166,7 +169,7 @@ do
 end
 -- GA the go-around table at the TAT still; the GE's TO the go-around's
 T.near(R.reference(inp{mode = "GA", alt = 2000, tat = 20, oat = 10}), E.lookup(PW.ga, 20, 2000), 1e-9, "GA: the go-around table at the TAT")
-T.near(R.reference(inp{type = "GE", tat = 20, oat = 10}), E.lookup(GE.ga, 20, 0), 1e-9, "GE's TO: the go-around table at the TAT (ENG-3, ENG-4: not changed)")
+T.near(R.reference(inp{type = "GE", tat = 20, oat = 10}), E.lookup(GE.ga, 20, 0), 1e-9, "GE's TO: the go-around table at the TAT (ENG-4: not changed)")
 T.check(R.is_takeoff("") and R.is_takeoff("TO") and R.is_takeoff("TO 2") and R.is_takeoff("D-TO 1")
     and not R.is_takeoff("GA") and not R.is_takeoff("CLB") and not R.is_takeoff("NONE"), "a takeoff's thrust limit: none, TO..., D-TO...")
 
@@ -246,7 +249,38 @@ T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.6, kias = 25
 T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.7, kias = 300, nai = true}), 1.495, 1e-9, "CON with engine anti-ice: -0.035")
 T.near(R.reference(inp{mode = "CON", alt = 25000, tat = 0, mach = 0.7, kias = 300, packs_on = 2}), 1.54, 1e-9, "CON with a pack off: +0.01")
 T.near(R.reference(inp{type = "GE", mode = "CON", alt = 35000, tat = -30, mach = 0.75, kias = 260}), 103.85, 1e-9, "GE CON at 35,000 ft, 260 KIAS, TAT -30: 103.85 % N1")
--- GE in N1: TO 1 at 5 % less thrust as N1 x 0.95^(1/3)
+-- (2026-11-24, the 2026-11-23 review's ENG-3) GE in N1: the takeoff's
+-- thrust on the EEC's N1 model standing (B747.42.ge_n1_model.lua; before N1
+-- x the thrust ratio to the 1/3: TO 1 and TO 2 3.4 and 10.3 % less thrust
+-- for their 5 and 15). The assumed temperature's N1 the table's at SEL
+-- brought to the TAT's (the same corrected N1: estimate, no CF6 source),
+-- at most the (derated) rating's, at least 25 % less thrust (FCOM p.1273).
+-- Before, the table's at SEL as it was: sea level 15 °C TO 103.8, SEL 30
+-- 106.4 (above TO) and a negative reduction
 local ge = R.reference(inp{type = "GE"})
-T.near(R.reference(inp{type = "GE", mode = "TO 1", to_pct = 5}), ge * 0.95 ^ (1 / 3), 1e-9, string.format("GE TO 1: %.1f %% N1 from %.1f", ge * 0.95 ^ (1 / 3), ge))
+local function fc(n1, tat) return 10000 * ((n1 / math.sqrt((tat + 273.15) / 288.15) - G.N0[1]) / G.K[1]) ^ (1 / G.Q[1]) end
+local to1, red1 = R.reference(inp{type = "GE", mode = "TO 1", to_pct = 5})
+T.near(fc(to1, 15) / fc(ge, 15), 0.95, 1e-6, string.format("GE TO 1: 5 %% less thrust on the N1 model: %.2f %% N1 from %.2f", to1, ge))
+T.near(to1, 101.17, 0.01, "GE TO 1 at sea level 15 °C: 101.17 % N1 (before 102.03)")
+T.near(red1, 5, 1e-6, "its reduction 5 %")
+local to2, red2 = R.reference(inp{type = "GE", mode = "TO 2", to_pct = 15})
+T.check(math.abs(to2 - 95.74) < 0.01 and math.abs(red2 - 15) < 1e-6, string.format("GE TO 2: 95.74 %% N1, 15 %% (got %.2f, %.1f)", to2, red2))
+local d45, r45 = R.reference(inp{type = "GE", mode = "D-TO", sel = 45})
+T.check(math.abs(d45 - 100.88) < 0.01 and math.abs(r45 - 5.5) < 0.1, string.format("GE D-TO SEL 45 at 15 °C: 100.88 %% N1, 5.5 %% less thrust (got %.2f, %.1f; before 106.0, -6.5)", d45, r45))
+local ok, worst = true, ""
+for sel = 16, 75 do
+    local v, red = R.reference(inp{type = "GE", mode = "D-TO", sel = sel})
+    if v > ge + 1e-9 or red < -1e-9 or red > 25 + 1e-6 then ok, worst = false, string.format("SEL %d: %.2f, %.1f %%", sel, v, red) end
+end
+T.check(ok, "GE D-TO for SEL 16 to 75 °C: never above TO, its reduction 0 to 25 % " .. worst)
+local dd, rdd = R.reference(inp{type = "GE", mode = "D-TO 2", to_pct = 15, sel = 45})
+T.check(dd < to2 and math.abs(rdd - 19.7) < 0.1, string.format("GE D-TO 2 SEL 45: under TO 2, 19.7 %% (got %.2f, %.1f; before 100.4, above TO 2's 98.3)", dd, rdd))
+-- the 25 % floor below the (derated) rating is not reached with the CF6's
+-- go-around table (to 57 °C: at most about 18.5 % from the assumed
+-- temperature): D-TO 2 SEL 75 is 18.4 % under TO 2's thrust
+local dd75 = R.reference(inp{type = "GE", mode = "D-TO 2", to_pct = 15, sel = 75, tat = -20})
+local to2c = R.reference(inp{type = "GE", mode = "TO 2", to_pct = 15, tat = -20})
+local share = fc(dd75, -20) / fc(to2c, -20)
+T.check(share >= 0.75 - 1e-9 and math.abs(share - 0.816) < 0.002, string.format("GE D-TO 2 SEL 75 at -20 °C: %.3f of TO 2's thrust, within the 25 %% (FCOM p.1273)", share))
+T.near(R.reference(inp{type = "GE", mode = "TO 1", to_pct = 5, mach = 0.2}), to1, 1e-9, "GE TO 1 at M .2: the standing's (fixed through the roll)")
 T.done()

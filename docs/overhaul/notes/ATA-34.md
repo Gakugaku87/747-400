@@ -755,3 +755,28 @@
   - 変わる所：1,000〜1,100 ft までの復行や場周の後も、500 ft から下が鳴る。1,000 ft より下の復行（例 900 ft）の後は minimums のコールが鳴らない（前は minimums + 180 ft で再び arm した）。1,000 ft より上で arm していれば、minimums を下で入れても鳴る（前は minimums + 180 ft より上で入れたときだけ）。
 - 試験：`gpws_model_test` に 8 件（900・1,050・1,150 ft の復行、minimums、下で入れた minimums）、計 91 件。`gpws_module_test` 42 件は変わらず。
 - X-Plane（カスタム acf、2026-11-20）：新しい `s345_gpws_callout_rearm` 34/0。3,000 ft・230 kt の空中開始からフラップ 30・150 kt で 1,500 ft に降り（TWENTY FIVE HUNDRED）、DH 700 ft（RADIO）。(1) 400 ft まで降りて ONE THOUSAND・APPROACHING MINIMUMS・MINIMUMS・FIVE HUNDRED。(2) 950 ft（DH + 180 より上、1,000 ft より下）へ上がって 400 ft に降りると何も鳴らない（前は minimums が鳴った）。(3) 1,060 ft（1,000 と 1,100 の間）へ上がって降りると APPROACHING MINIMUMS・MINIMUMS・FIVE HUNDRED が鳴り、ONE THOUSAND は鳴らない（前は FIVE HUNDRED も鳴らなかった）。最初の回（160 kt・フラップ上げの空中開始で電波高度 590 ft まで沈んだ、捕捉の 10 秒後に上昇が残っていた）はシナリオの組み方の誤りで、s43 と同じ開始と「昇降率 ±100 fpm まで待つ」に作り直した。`s43_gpws` 47/0（注意 3 件は 11-04 の回と同じ mode 1 の SINK RATE・PULL UP・master WARNING）。
+
+## 24. TCAS の自機の昇降率を IRU の慣性の昇降率に（2026-11-24：段 4 のレビューの NAV-5。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：TCAS の自機の昇降率（`B747.34.xt.tcas.lua` の `own_vs`。PFD の RA の帯で、針を赤にするかどうか）が、X-Plane の `sim/flightmodel/position/vh_ind_fpm` だった。これは機長の静圧系に従うので、静圧孔が詰まると 0 になる。
+- 資料：ATA34_2 p.17（34-45 Page 15）の TCAS の入力に、昇降率の源は書いていない。
+- 直し（**推定**）：AFDS と同じ IRU の慣性の昇降率（`B747.70.xt.autopilot.lua` の `B747_afds_ivs`、65b5caf7）。
+  - X-Plane の local の y の速度に、地球の丸みに沿った水平の速度の項を足す（上向きのベクトル (x/R, 1, z/R) の 1 次）。
+  - TCAS は別のプラグイン（xtlua）なので、同じ式を置いた。
+- 試験：`tests/nav/tcas_module_test.lua`（67 件）。降下を慣性の速度（`local_vy`）で作り、VSI が 0 でも針が白になる。直す前のコードでは 2 件が落ちる。
+- 範囲の外（未確認）：`B747.34.xt.gpws.lua:15` も `vh_ind_fpm` を「inertial」として使っている（読む役の指摘）。
+
+## 25. ADC の気圧補正を X-Plane の高度計の則に（2026-11-24：段 4 のレビューの NAV-4。利用者の決定「勧めどおり全部」＝先に測る。worktree `D:/b747_cd_fix`）
+
+- 指摘：`B747.34.airdata_model.lua` の気圧補正（`baro_alt`・`pressure_alt`）は標準大気の式。資料は無い。X-Plane の高度計の則を先に測り、同じなら指摘なし、違えば合わせる（読み役の勧め、`D:\b747_review\cd_check\memo_fmc.md`）。
+- 測り：`tests/flight/measure/nav4_baro_law`（2026-11-24 19:23、RJAA の地上、気圧高度 135.3 ft）。機長・副操縦士の気圧の設定を 10 秒ずつ置いた。
+  - 29.92 で 134.2 ft、30.92 で 1,049.2 ft、28.92 で −780.8 ft、31.92 で 1,964.2 ft（機長・副操縦士・ADC の機長の出力とも同じ）。
+  - X-Plane の高度計は直線：1 inHg あたり 915 ft、基準は 29.92126 inHg（1013.25 hPa）。標準大気の式なら +905 ft と −943 ft（上下で違う）、上空ではもっと大きい。
+- 前の形の誤り：ADC は X-Plane の高度計の値から標準大気の式で気圧高度に戻していた。
+  - 設定どおりに戻すので、同じ設定での表示は X-Plane と同じだった。
+  - 気圧高度そのものが、地上で 1 inHg 外れると約 +9 ft、2 inHg で約 +53 ft、上空ではもっとずれた。
+  - これは、別の ADC を別の設定で出すとき（表示の元の切り替え）と、ADC C のマッハと昇降率に響いていた。
+- 直し：`baro_alt` と `pressure_alt` を X-Plane の則（`M.FT_PER_INHG` 915、`M.STD_INHG` からの直線）にした。実機の ADC の補正の式は入力の則とは別のもので、資料も無い。表示は今までどおり、同じ設定なら X-Plane の高度計と同じ。
+- 試験：
+  - `tests/nav/airdata_model_test.lua`（57 件）：測った 4 点。`baro_alt(135.32, 設定)` が X-Plane の値と ±0.05 ft で合い、そこから気圧高度に戻ることを確かめる。
+  - 壊し方の一覧は `tests/tools/mutations/airdata_baro.lua`（5 個）。

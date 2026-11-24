@@ -190,7 +190,9 @@ local function read_inputs(inp, t)
     local afds = B747DR_alert_afds_status
     inp.land_2_3 = afds == 3 or afds == 4          -- LAND 2, LAND 3 (autopilot init script)
     inp.ap_siren = B747DR_alert_engine_type == 1   -- the 570 (GE); PW and RR the wailer (RR: estimate)
-    inp.config_gear_lever = B747DR_alert_cfg_gear_lever == 1
+    -- (2026-11-24, review WARN-3) 1 + the further levers closed (a new alert)
+    inp.config_gear_lever = B747DR_alert_cfg_gear_lever >= 1
+    inp.config_gear_lever_n = math.floor(B747DR_alert_cfg_gear_lever + 0.5)
     inp.recall_held = B747DR_alert_rcl_switch_pos > 0.5
 
     -- one push of each button per update; more wait for the next one

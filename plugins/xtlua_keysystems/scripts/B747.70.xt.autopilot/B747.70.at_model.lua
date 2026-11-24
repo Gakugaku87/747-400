@@ -16,7 +16,10 @@
 --    CLB, CLB 1, CLB 2, CRZ or CON in ALT or V/S, on GA in G/S or FLARE
 --    or in ALT or V/S with the landing flaps, FCOM p.642; its thrust
 --    limit function the FMC's, B747.68.thrlim_model.lua).
---    No TO/GA push by 50 kt on the ground: none until 400 ft (FCOM p.656).
+--    No TO/GA push by 50 kt on the ground: none until 400 ft (FCOM p.656),
+--    the takeoff's roll only (2026-11-24, review AFDS-2: a touch and go's
+--    push takes it, FCOM p.673), and none in the air while the AFDS
+--    inhibits the switches after a touchdown (p.673).
 --  - Disengaged by the ARM switch off, the interlocks lost, a disconnect
 --    switch, the reversers. AUTOTHROT DISC latches when it was engaged
 --    (not for the reversers on the ground); the next engage or a
@@ -296,15 +299,24 @@ end
 -- vnav_phase (the FMC's: step 9d2a), vnav_dd (the FMC's driftdown: its step
 -- 9h4b), lever_idle (the levers at the aft stop); the pushes since the last
 -- update: toga, spd, thr, disc, flch (the FL CH switch's push the AFDS took)
--- (true when pushed)
+-- (true when pushed); toga_inhibit (the AFDS's TO/GA switches inhibited
+-- after a touchdown: FCOM p.673)
 function M.update(s, inp)
     local was = s.pitch
-    -- the no-TO inhibit: no push by 50 kt on the ground (FCOM p.656)
+    -- the no-TO inhibit: no push by 50 kt on the ground (FCOM p.656).
+    -- (2026-11-24, review AFDS-2) the takeoff's roll only: after a flight
+    -- not until the airplane stops again. FCOM p.673 (4.20.15) gives the
+    -- TO/GA switches to a rejected landing and a touch and go (THR at the
+    -- first push), the 400 ft of p.656 (4.10.18) and p.667 (4.20.9) is the
+    -- takeoff's ("prior to lift-off"); ATA34_2 p.674's G/A has none. Before,
+    -- a landing with the A/T off set it too and TO/GA left the A/T off to
+    -- 400 ft in a touch and go
     if inp.ground then
-        if not s.engaged and inp.cas >= M.TO_ARM_KT then s.no_to = true end
-        if inp.cas < M.STOP_KT then s.no_to = false end
-    elseif inp.ra > M.MIN_RA then
-        s.no_to = false
+        if not s.engaged and inp.cas >= M.TO_ARM_KT and not s.from_air then s.no_to = true end
+        if inp.cas < M.STOP_KT then s.no_to, s.from_air = false, false end
+    else
+        s.from_air = true
+        if inp.ra > M.MIN_RA then s.no_to = false end
     end
     local can = inp.arm and inp.ok and not s.no_to
     -- the ARM switch, the interlocks, the reversers
@@ -327,6 +339,11 @@ function M.update(s, inp)
                 engage(s, M.THR_REF)
                 s.to = "thr"
             end
+        elseif inp.toga_inhibit then
+            -- (AFDS-2) the switches inhibited from 2 s after the radio
+            -- altitude goes below 5 ft until 3 s after it goes above (FCOM
+            -- p.673: the AFDS's, B747.70.afds_model.lua; before, the A/T took
+            -- every push in the air)
         elseif inp.limit_to then
             -- after takeoff on the TO limit: THR REF (its derate off: 9g)
             engage(s, M.THR_REF)

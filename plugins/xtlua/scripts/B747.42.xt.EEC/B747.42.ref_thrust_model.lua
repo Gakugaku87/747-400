@@ -121,6 +121,45 @@ local function pw_takeoff(inp, d, alt)
     return v, red
 end
 
+-- (2026-11-24, the 2026-11-23 review's ENG-3) the GE's takeoff limit (TO,
+-- TO 1, TO 2, D-) and its thrust reduction (%). The thrust from N1 by the
+-- EEC's own N1 model (B747.42.ge_n1_model.lua: the corrected N1 of the
+-- corrected thrust, 103.8 % at the rated 57,160 lbf standing), standing
+-- (Mach 0: the takeoff's N1 fixed through the roll), not N1 x the thrust
+-- ratio to the 1/3. The assumed temperature's N1 the go-around table's at
+-- SEL brought to the TAT's (the same corrected N1, so the same corrected
+-- thrust: x sqrt((TAT + 273.15) / (SEL + 273.15))), at most the (derated)
+-- rating's, at least 25 % less thrust (FCOM p.1273). Estimates: no source
+-- has the CF6's assumed temperature method (FCOM 570's PI.20, ATA70_80
+-- p.332, the FPPM is the PW4056's). Before, the table's N1 at SEL as it
+-- was: above TO (sea level 15 °C: TO 103.8, SEL 30 106.4) with no thrust
+-- less and a negative reduction; TO 1 and TO 2 3.4 and 10.3 % less thrust
+-- for their 5 and 15
+local function ge_fc(n1c)                -- the corrected thrust (lbf) of a corrected N1, standing
+    local G = B747_ge_n1_model
+    local y = (n1c - G.N0[1]) / G.K[1]
+    if y <= 0 then return 0 end
+    return 10000 * y ^ (1 / G.Q[1])
+end
+local function ge_takeoff(inp, tables, d, gaAlt)
+    local E, G = B747_eec_model, B747_ge_n1_model
+    local th = math.sqrt((inp.tat + 273.15) / 288.15)
+    local full = E.rating(tables.ga, inp, inp.tat, gaAlt, inp.nai)
+    local fcFull = ge_fc(full / th)
+    local function n1_of(fc) return G.n1c(fc, 0) * th end
+    local x = clamp((inp.to_pct or 0) / 100, 0, 0.99)
+    local derated = x > 0 and n1_of((1 - x) * fcFull) or full
+    local v = derated
+    if d and inp.sel and inp.sel > inp.tat then
+        local hot = E.rating(tables.ga, inp, inp.sel, gaAlt, inp.nai)
+        local thSel = math.sqrt((inp.sel + 273.15) / 288.15)
+        local fcHot = (1 - x) * ge_fc(hot / thSel)
+        v = math.min(derated, math.max(n1_of(fcHot), n1_of((1 - M.SEL_MAX) * (1 - x) * fcFull)))
+    end
+    if fcFull <= 0 then return v, 0 end
+    return v, 100 * (1 - ge_fc(v / th) / fcFull)
+end
+
 -- inp: type ("PW" or "GE"), mode (the FMC's: "TO", "D-TO 1", "CLB 2", ...),
 -- to_pct (the takeoff derate, %), sel (the assumed temperature, °C, or
 -- nil), alt (pressure altitude, ft), tat (°C), mach, kias, packs_on, wai,
@@ -141,6 +180,8 @@ function M.reference(inp)
         -- (ENG-2) the P&W's (and the RB211's tables', which its glue does
         -- not read) from the FPPM
         if not ge and tables.to then return pw_takeoff(inp, d, gaAlt) end
+        -- (ENG-3) the GE's on its N1 model
+        if ge and B747_ge_n1_model then return ge_takeoff(inp, tables, d, gaAlt) end
         local full = E.rating(tables.ga, inp, inp.tat, gaAlt, inp.nai)
         local x = (inp.to_pct or 0) / 100
         local derated = less(ge, full, x, mach)

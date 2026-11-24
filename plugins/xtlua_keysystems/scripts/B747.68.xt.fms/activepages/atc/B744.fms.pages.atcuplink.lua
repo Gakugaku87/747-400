@@ -11,7 +11,8 @@
 -- N19-ATC-03 stage A) 4R LOAD> on the last page while the uplink has
 -- loadable data, no route modification and no REJECT (FCOM p.760-761;
 -- FMSPG p.290: B747_fms_atc_load_offered), the page as it is after LOAD
--- (an estimate). Not here: PRINT (no printer: blank, an estimate).
+-- (an estimate). PRINT FAIL for PRINT (no printer: an estimate;
+-- 2026-11-24, review CDU-12: before blank).
 -- VERIFY RESPONSE: 1L the response (WILCO, ROGER, AFFIRM, UNABLE, NEGATIVE,
 -- STANDBY), the reasons and free text below, RESPONSE SEND> (SENDING,
 -- SENT, RESEND> without the acknowledgement in time: 2026-11-20
@@ -76,6 +77,9 @@ fmsPages["ATCUPLINK"].getPage=function(self,pgNo,fmsID)
     out[7] = string.sub(out[7], 1, 24 - 6) .. string.format("%6s", rep.armed and "ARMED" or "ARM>")
   end
   out[13] = string.format("%24s", rep and "REPORT>" or "LOG>")
+  -- (2026-11-24, review CDU-12) the last page's 6L PRINT FAIL: no printer
+  -- (FMSPG p.366 (8-97); estimate, as ATC INDEX's)
+  if pgNo == np then out[13] = "PRINT FAIL" .. string.sub(out[13], 11) end
   return out
 end
 fmsPages["ATCUPLINK"].getSmallPage=function(self,pgNo,fmsID)

@@ -1127,6 +1127,9 @@ local function afds_at()
 	local n = B747DR_ap_toga_pushes
 	i.toga = atSeen.toga ~= nil and n ~= atSeen.toga
 	atSeen.toga = n
+	-- (2026-11-24, review AFDS-2) the AFDS's TO/GA inhibit after a
+	-- touchdown (FCOM p.673) for the A/T's push too
+	i.toga_inhibit = afds.inhibit == true
 	for _, k in ipairs({"spd", "thr", "disc", "flch"}) do
 		i[k] = atPush[k] ~= atSeen[k]
 		atSeen[k] = atPush[k]

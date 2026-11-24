@@ -11,7 +11,8 @@
 -- PASSING, REPORT SEND> on the last page (no SEND before the boxes are
 -- filled), 6L <REPORT. XXXXZ ATC REPORT: the time, STATUS, the text, LOG>.
 -- Estimates: the lines' columns; ARM> and ARMED large; a position entry a
--- waypoint of the active route only (FMSPG p.336); no PRINT (no printer).
+-- waypoint of the active route only (FMSPG p.336); PRINT FAIL for PRINT
+-- (no printer: 2026-11-24, review CDU-12).
 -- Before, ATC REPORT was a fixed picture (titled ATC INDEX) and VERIFY
 -- REPORT none.
 local A = B747_atc_report_model
@@ -255,6 +256,9 @@ fmsPages["ATCREPORTLOG"].getPage=function(self,pgNo,fmsID)
   if pgNo == 1 then out[3] = right(BLANK, d.status) end
   local list, first = spage_rows(d, pgNo)
   for k, row in ipairs(list) do out[1 + 2 * (first + k - 1)] = left(BLANK, row.data) end
+  -- (2026-11-24, review CDU-12) the last page's 6L PRINT FAIL: no printer
+  -- (FMSPG p.366 (8-97); estimate, as ATC INDEX's)
+  if pgNo == spages(d) then out[13] = left(out[13], "PRINT FAIL") end
   return out
 end
 fmsPages["ATCREPORTLOG"].getSmallPage=function(self,pgNo,fmsID)

@@ -3453,7 +3453,10 @@ function B747_fmc_lnav_update()
   -- X-Plane's variation: west positive (magnetic = true + it)
   local air={lat=simDR_latitude,lon=simDR_longitude,trk=simDR_lnav_trk,hdg=simDR_fms_true_psi,
     gs=simDR_groundspeed*1.94384,tas=simDR_lnav_tas*1.94384,wind=simDR_wind_speed,
-    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1,bank=simDR_lnav_bank}
+    alt=simDR_pressureAlt1,var=-simDR_variation,ground=simDR_onGround==1,bank=simDR_lnav_bank,
+    -- (2026-11-24, AFDS-6) the flaps' handle out of up: the fly-by turns'
+    -- shorter roll lag (B747.68.lnav_model.lua's ROLL_LAG_FLAPS)
+    flaps_up=simDR_fms_vnav_flaps<0.01}
   lnavAir=air
   local n=B747_lnav_model.update(s,st.active and lnavPath or nil,air,armed,engaged)
   if n>0 then
@@ -3913,7 +3916,16 @@ local function update_ils(db)
   local il,key=nil,nil
   if db.ready then il,key=dest_ils(db,r) end
   local ground=simDR_onGround==1
-  if ilsWasGround==true and not ground then ilsLiftoff,ilsLiftoffKey=now,key end
+  -- (2026-11-24, the 2026-11-23 review's FMC-4) the ten minutes after
+  -- takeoff (FCOM p.1305 (11.40.29)) from the flight's first lift-off only:
+  -- a touch and go's or a go-around's off the runway is no takeoff, so its
+  -- ILS stays tuned (estimate; before, each lift-off began ten minutes of
+  -- STBY). tuneState.flown until the flight complete (the FMS main chunk
+  -- has no room for a local)
+  if ilsWasGround==true and not ground then
+    if not tuneState.flown then ilsLiftoff,ilsLiftoffKey=now,key end
+    tuneState.flown=true
+  end
   ilsWasGround=ground
   if ilsLiftoff and (now-ilsLiftoff>=TM.TAKEOFF_S or key~=ilsLiftoffKey or now<ilsLiftoff) then ilsLiftoff=nil end
   local standby,auto=false,false
@@ -3928,6 +3940,14 @@ local function update_ils(db)
     standby=td~=nil and td<TM.STANDBY_TD_NM and past
     auto=not ground and ((td~=nil and td<TM.AUTO_TD_NM) or N.distance(lat,lon,thrLat,thrLon)<TM.AUTO_THR_NM
       or B747_fms_vnav_phase()=="DES")
+    -- (FMC-4) after a flight on the ground the destination's ILS stays
+    -- auto-tuned (A) until the flight complete clears the route: FCOM
+    -- p.1307 (11.40.31)'s A has no air or ground, p.1306's PARK is at the
+    -- power-up, more than 200 NM from the T/D and before half the route;
+    -- the receiver keeps the frequency, so its deviation shows (p.987).
+    -- Estimate (no source covers the landing to the turn around). Before,
+    -- PARK on the ground (under 40 kt, the FCCs' inhibit gone)
+    if ground and tuneState.flown then auto=true end
   end
   ilsIn.ils,ilsIn.standby,ilsIn.auto=il,standby,auto
   ilsIn.after_takeoff=ilsLiftoff~=nil
@@ -5969,13 +5989,16 @@ end
 -- p.1356-1357), GPS NAV (FCOM p.1369). Estimates: APPROACH REF's flaps and
 -- VREF, THRUST LIM's and the VNAV pages' selections, RTA, ENG OUT, the
 -- RNP entry; X-Plane's flight plan stays (it takes none without a
--- destination). Before, nothing cleared after a flight.
+-- destination). Before, nothing cleared after a flight. (2026-11-24, review
+-- FMC-3) the CLB page's SPD TRANS deleted comes back too (estimate: no
+-- source says when; the DES page's comes back with a new CRZ ALT, FMSPG
+-- p.192 (3.5-8): B744.fms.pages.lua's crzalt)
 local FC_DELAY_S=30
 local fcFlown,fcStop=false,nil
 local FC_KEYS={"fltno","grwt","fuel","zfw","reserves","costindex","crzalt","crzcg","stepsize","fuelman","gwsrc",
   "toflap","v1","vr","v2","v1sel","vrsel","v2sel","accelht","accelset","eoaccelht","eoaccelset","thrred","thrredset",
   "towind","toslope","posshift","selunit","thrustsel","thrustself","cg_mac","stab_trim","flapspeed","vref1","vref2",
-  "clbspd","clbspdmach","clbspdmode","clbrestspd","clbrestalt","crzspd","crzcas","crzspdmode","stepalt",
+  "clbspd","clbspdmach","clbspdmode","clbrestspd","clbrestalt","transpd","spdtransalt","crzspd","crzcas","crzspdmode","stepalt",
   "desspd","desspdmach","desspdmode","desrestspd","desrestalt"}
 local function renew(t,fresh)
   for k in pairs(t) do t[k]=nil end
@@ -5997,6 +6020,7 @@ function B747_fms_flight_complete()
   renew(eoState,B747_eo_model.new())
   renew(thrlimState,B747_thrlim_model.new())
   renew(ldgState,LA.new())
+  tuneState.flown=false          -- (review FMC-4) the next flight's takeoff
   msgInhibit=false
   local inh=B747_fmc_nav_inhibits and B747_fmc_nav_inhibits()
   if inh then inh.navaid,inh.vor,inh.vordme={},{},false end

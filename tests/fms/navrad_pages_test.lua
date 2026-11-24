@@ -209,4 +209,29 @@ T.equal(pad(), "ILS TUNE INHIBITED - MCP", "under the FCCs' inhibit: ILS TUNE IN
 T.check(line(9):find("^109%.50/157") ~= nil and rt:get("sim/cockpit/radios/nav1_freq_hz") == 10950, "the tuning held")
 rt:set("laminar/B747/autopilot/ils_tune_inhibit", 0)
 clear()
+
+-- (2026-11-24, the 2026-11-23 review's FMC-4) after the flight the
+-- destination's ILS stays A on the ground until the flight complete clears
+-- the route (estimate: FCOM p.1307's A has no air or ground, p.1306's PARK
+-- is at the power-up, far from the T/D and before half the route), and a
+-- touch and go's lift-off is no takeoff's ten minutes (estimate). Before,
+-- PARK on the ground and STBY after each lift-off
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+frames(1.2)
+T.check(small(9):find("^          A") ~= nil and rt:get("laminar/B747/autopilot/ils_dots") == 1,
+    "landed: A still, the PFDs' scales (before PARK): " .. line(9) .. "|" .. small(9))
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+frames(1.2)
+T.check(small(9):find("^          A") ~= nil and rt:get("laminar/B747/autopilot/ils_dots") == 1,
+    "a touch and go's lift-off: A (no ten minutes of STBY): " .. line(9) .. "|" .. small(9))
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+frames(1.2)
+for i = 0, 3 do rt:set("laminar/B747/engines/inop", i, 1) end
+for _ = 1, 33 do rt:frame(1) end
+frames(1.2)
+T.check(not fms.ns.B747_fmc_route.active, "the engines stopped 30 s: the flight complete (the route cleared)")
+T.check(line(9):find("PARK") ~= nil and rt:get("laminar/B747/autopilot/ils_dots") == 0, "after the flight complete: PARK, no scales: " .. line(9))
 T.done()

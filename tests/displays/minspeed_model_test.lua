@@ -171,4 +171,19 @@ T.check(not M.update(s, inp, 1).show_pli, "at 40 kt: not shown")
 inp.cas, inp.air_data = 120, false
 T.check(not M.update(s, inp, 1).show_pli, "no valid air data: not shown")
 
+-- (2026-11-24, the 2026-11-23 review's PERF-7) the flaps' lines held at the
+-- chart's highest Mach above it (estimate): high and heavy the shaker no
+-- longer runs away from the chart. At 20,000 ft and 394.6 t the minimum
+-- maneuvering speed (the amber band's top) with flaps 10 2.3 kt over its
+-- VREF 30 + 20 bug of 202.7 (before +9.8), flaps 20 1.9 over 192.7 (before
+-- +7.4: D:\b747_review\stage4\a03_perf_wb\minspeed_vs_bugs.lua)
+local function vmm(flap, alt)
+    local o, ss, ii = run({flap_pos = flap, alt_ft = alt, weight_kg = 394600, vref30 = 182.7})
+    ii.mach, ii.cas = 0.4, 250
+    for _ = 1, 600 do o = M.update(ss, ii, 0.05) end
+    return o.vmin_man
+end
+T.check(vmm(10, 20000) < 202.7 + 3, string.format("flaps 10, 20,000 ft, 394.6 t: the band's top %.1f within 3 kt of the bug 202.7 (before +9.8)", vmm(10, 20000)))
+T.check(vmm(20, 20000) < 192.7 + 3, string.format("flaps 20, 20,000 ft, 394.6 t: %.1f within 3 kt of the bug 192.7 (before +7.4)", vmm(20, 20000)))
+
 T.done()

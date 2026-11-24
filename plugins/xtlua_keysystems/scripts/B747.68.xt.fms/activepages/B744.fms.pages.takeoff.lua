@@ -211,6 +211,10 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
   local thr = set_text("thrredset") and thrred_text() or ""
   local wind = wind_texts()
   local _, pre = preflight_page()
+  -- (2026-11-24, review CDU-9) the CG blank when airborne (FMSPG p.107
+  -- (3.2-47)), its data kept to the flight complete (ATA34_2 p.540). Before,
+  -- shown in the air too
+  local cgLg = simDR_onGround == 1 and cg_lineLg or ""
   return{
   "      TAKEOFF REF       ",
   "                        ",
@@ -220,7 +224,7 @@ fmsPages["TAKEOFF"].getPage=function(self,pgNo,fmsID)--dynamic pages need to be 
   "                        ",
   string.format("%-8s CLB %1s       %s", thr, clbV, v2),
   "                        ",
-  string.format("%-21s%-3s", wind, cg_lineLg),
+  string.format("%-21s%-3s", wind, cgLg),
   "                        ",
   shift_line(),
   "                        ",
@@ -244,6 +248,11 @@ fmsPages["TAKEOFF"].getSmallPage=function(self,pgNo,fmsID)
 	  end
   end
   --Marauder28
+  -- (2026-11-24, review CDU-9) in the air the TRIM blank (ATA34_2 p.540:
+  -- "goes blank after takeoff") and the CG too (FMSPG p.107 (3.2-47))
+  local air = simDR_onGround ~= 1
+  if air then stab_trim = "" end
+  local cgSm = air and "" or cg_lineSm
 
   local _, v1S, v1T = vspeed("V1")
   local _, vrS, vrT = vspeed("VR")
@@ -263,7 +272,7 @@ string.format("%-20s%s", eo, vrS),
 string.format(" THR REDUCTION%10s", v2T),
 string.format("%-20s%s", thr, v2S),
 " WIND/SLOPE    TRIM   CG",
-string.format("%-16s", windS)..string.format("%-4s", stab_trim).." "..string.format("%-3s", cg_lineSm),
+string.format("%-16s", windS)..string.format("%-4s", stab_trim).." "..string.format("%-3s", cgSm),
 "               POS SHIFT",
 "                        ",
 page and "-----------------PRE-FLT" or "------------------------",

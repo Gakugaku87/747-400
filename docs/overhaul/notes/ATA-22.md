@@ -1650,3 +1650,31 @@ GAP ID の接頭辞：`AFDS`。2026-10-23 作成。コードは `overhaul` ブ�
   - 直し（`B747.19.xt.afds_control.lua` の `AP_PITCH_INT_FLARE`）：FMA のピッチが FLARE の間だけ、積分を比例と同じ（毎秒）に。ほかのモードは 3 分の 1 のまま。積分器の値はそのまま続くので、切り替わりで昇降舵は段にならない。**推定**（FLARE は進入の速さ・フラップ下げで約 5 秒で、そこでは前の値で揺れていなかった）。
   - 試験：`tests/hyd/afds_pitch_int_test.lua`（11 件：FLARE の間の積分の速さ、切り替わりで段にならない）。
   - X-Plane（05:25、直した後）：`s114` 22/0。差 0.24°・0.63°、接地 −315 fpm・1.45 g。G/S の間は 3 分の 1 のまま（0.05 g を超える 20 秒の窓は 20 のうち 2、0.10 g 超は 0：フラップ 30 と減速の間）。
+
+## 70. A/T の TO/GA：接地した後（2026-11-24：段 4 のレビューの AFDS-2。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘（REVIEW_2026-11-23.md の C、読む役の確かめは `D:\b747_review\cd_check\memo_warn.md`）：A/T を外して接地した後の着陸復行とタッチアンドゴーで、TO/GA を押しても A/T が RA 400 ft まで入らなかった。A/T のモデル（`B747.70.at_model.lua`）の離陸の抑止（`no_to`）が、「地上・50 kt 以上・A/T off」で着陸の滑走にも立っていた。
+- 資料：
+  - FCOM p.673 (4.20.15)：TO/GA スイッチは、RA 5 ft を下へ通過した 2 秒後に抑止され、上へ通過した 3 秒後に rejected landing とタッチアンドゴーのため再び有効になる。1 回目の押しで A/T は THR（毎分 2,000 ft）。
+  - 400 ft の抑止は離陸の所だけにある（FCOM p.656 (4.10.18) の On the ground、p.667 (4.20.9) の「prior to lift-off」）。ATA34_2 p.674 の G/A の条件に 400 ft は無い。
+- 直し：
+  - `B747.70.at_model.lua`：`no_to` は離陸の滑走のときだけ立てる。空中から接地した後は、30 kt 未満で止まるまで立てない（`from_air`）。
+  - 空中の TO/GA は、AFDS の抑止（`afds_model.lua` の `inhibit`：接地の 2 秒後から、5 ft を上へ通過した 3 秒後まで）の間は取らない。グルー（`B747.70.xt.autopilot.lua`）が `toga_inhibit` として渡す。前は、A/T が空中の押しを全部取っていた。
+  - FMC-7（notes/ATA-34-61-FMC.md §181）で推力制限が接地の後も GA のままなので、タッチアンドゴーの押しは THR になる（p.673）。
+  - `afds_model.lua` の注の出典「FCOM p.672」を p.673 (4.20.15) に直した（3 か所。その文は p.673 にある）。
+- 試験：`tests/autopilot/at_model_test.lua` に 11 件（197 件）。離陸の抑止は前のまま。着陸の滑走で立たない。滑走路の上と 5 ft の 3 秒の間の押しは何もしない。その後の 60 ft の押しで THR。止まった後の次の離陸で、また立つ。直す前のモデルでは 2 件が落ちる。
+- まだ作っていないもの：FCOM p.671 の注「逆推力レバーを下げて 10 秒後からフラップ UP まで A/T armed」。
+- X-Plane：取り込みの後に、タッチアンドゴーのシナリオ（D）で確かめる。A/T を 100 ft で切って接地し、5 ft 通過の 4 秒後に TO/GA を押して、RA 400 ft 未満で A/T が THR になるかを見る。
+
+## 71. 結線の試験：A/T の GE の利得、RTO の後の no-TO、跳ねたときの TO/GA の抑止（2026-11-24：段 4 のレビューの D の AFDS-7。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：レビューの A/T の壊し方（`D:\b747_review\stage4\a08_afds_at\mut_at.lua`）14 個のうち、2 個が試験を通っていた。
+  - グルーの `i.engine = B747DR_ap_engine_type` を 0 にする（GE の G の直し、2026-11-22 の cd1763c9 が servo に届くかを、どの試験も見ていなかった）。
+  - 地上 30 kt での `no_to` の解除をやめる（§70 の AFDS-2 で、`from_air` と同じ行になった）。
+- 足した試験：
+  - `tests/autopilot/afds_glue_test.lua`（291 件）：
+    - フラップ UP で、A/T のモデルの `lever_accel` に渡るエンジンの型が、`laminar/B747/engines/type` の 1（GE）と 0（P&W）になる。試験の側から、モデルの関数を包んで入力を記録する。利得そのものは `at_model_test` が見る。
+    - 跳ねたとき：電波高度 3 ft を 2.5 秒、そのあと 20 ft、フラップ 20。5 ft を越えて 0.1 秒の TO/GA では A/T は入らず、3 秒の後の TO/GA で G/A の THR（FCOM p.673 (4.20.15)、ATA34_2 p.674）。AFDS の抑止（`afds.inhibit`）がグルーの `i.toga_inhibit` で A/T に届くことの試験（AFDS-2 の自分の壊し方）。
+  - `tests/autopilot/at_model_test.lua`（200 件）：A/T を押さずに 80 kt まで滑走して止まる（RTO）。止まるまで no-TO の抑止は残り（40 kt での TO/GA は何もしない）、30 kt（`STOP_KT`、推定）を切ると消え、次の離陸の 50 kt 未満の TO/GA で THR REF。
+- 壊し方の一覧は `tests/tools/mutations/at_wiring.lua`（18 個：レビューの 14 個を今のコードに合わせたものと、AFDS-2 の 4 個）。18 個とも捕まる。
+- まだ（X-Plane）：GE のフラップ下げの A/T SPD（`tests/flight/measure/at_hold_f20.json` を GE のリバリーで 1 回）と、AFDS-3 の低い G/A の後の再進入。

@@ -221,4 +221,51 @@ T.equal(L.update(s, inp{alt_agl = 25000, eo_vnav = true, pitch = "FLCH", flch_up
 s = L.new()
 L.update(s, inp{ground = true, flaps = F10})
 T.equal(L.update(s, inp{alt_agl = 1600, flaps = F5, vnav = true, eo_vnav = true}), "CLB", "E/O VNAV executed before the takeoff, all engines: the reduction to CLB as usual")
+
+-- (2026-11-24, review FMC-7 (c)) a flight without VNAV and the THR switch
+-- stays on the takeoff's limit; GA's conditions from TO too (FCOM p.672
+-- (4.20.14): the flaps out of UP, the landing flaps, G/S). Before, TO
+-- returned ahead of them and TO stayed into the approach
+local function takeoff(n)
+    local t = L.new()
+    L.select_to(t, n or 1, 8, true)
+    L.update(t, inp{ground = true, flaps = F20, ra = 0, ias = 0})
+    L.update(t, inp{alt_agl = 1500, flaps = F20, ra = 1500})
+    return t
+end
+s = takeoff()
+T.equal(L.update(s, inp{alt_agl = 5000, flaps = 0, ra = 5000}), "TO 1", "no VNAV, no THR switch, the flaps up: TO 1 still (FCOM p.667)")
+T.equal(L.update(s, inp{alt_agl = 3000, flaps = 1 / 6, ra = 3000}), "GA", "TO, the flaps out of UP: GA (it was TO 1)")
+s = takeoff()
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F30, ra = 1500}), "GA", "TO, the landing flaps: GA, held")
+T.check(s.locked, "held at the landing flaps")
+s = takeoff()
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F20, gs = true, ra = 1500}), "GA", "TO, G/S captured: GA")
+s = takeoff()
+T.equal(L.update(s, inp{alt_agl = 1500, flaps = F20, ra = 1500}), "TO 1", "TO at the takeoff's flaps (not out of UP): TO 1, as before")
+-- (FMC-7 (a)) GA through a touchdown while the airplane rolls at 30 kt or
+-- more (a go-around with the wheels on the runway, a touch and go: FCOM
+-- p.672, p.673; estimate); then (FMC-7 (b)) TO without the takeoff's
+-- derate and assumed temperature (estimate). Before, TO 1 with D- at once
+s = takeoff()
+L.update(s, inp{alt_agl = 5000, flaps = 0, ra = 5000})
+L.update(s, inp{alt_agl = 1500, flaps = F30, ra = 1500})
+T.equal(L.update(s, inp{ground = true, flaps = F30, ra = 0, ias = 140, sel_up = true}), "GA", "the touchdown at 140 kt: GA kept")
+T.equal(L.update(s, inp{alt_agl = 20, flaps = F20, ra = 20, ias = 150}), "GA", "a touch and go's lift-off: GA (THR at TO/GA: FCOM p.673)")
+T.check(not s.locked, "at flaps 20 off the ground: no longer held")
+L.update(s, inp{alt_agl = 1500, flaps = F30, ra = 1500})
+T.equal(L.update(s, inp{ground = true, flaps = F30, ra = 0, ias = 31, sel_up = true}), "GA", "the rollout at 31 kt: GA")
+T.equal(L.update(s, inp{ground = true, flaps = F30, ra = 0, ias = 29, sel_up = true}), "TO", "under 30 kt: TO, not the takeoff's D-TO 1")
+T.check(s.to == 0 and s.no_sel and not s.d, "the takeoff's TO 1 and its assumed temperature gone")
+T.equal(L.update(s, inp{ground = true, flaps = 0, ra = 0, ias = 0, sel_up = true}), "TO", "and so while it stands (the SEL still entered)")
+L.select_to(s, 1, 8, true)
+T.equal(L.update(s, inp{ground = true, flaps = F20, ra = 0, ias = 0, sel_up = true}), "D-TO 1", "a new TO 1 for the next takeoff: D-TO 1 again")
+s = takeoff()
+L.update(s, inp{alt_agl = 30000, vnav = true, phase = "CRZ", ra = 30000})
+T.equal(L.update(s, inp{ground = true, flaps = F30, ra = 0, ias = 140, sel_up = true}), "TO", "landing out of CRZ (not GA): TO at once, the takeoff's derate and D- gone")
+-- a frame off the ground as the airplane is loaded is no flight (50 ft)
+s = L.new()
+L.select_to(s, 1, 8, true)
+L.update(s, inp{alt_agl = 0, flaps = F20, ra = 0})
+T.equal(L.update(s, inp{ground = true, flaps = F20, ra = 0, ias = 0, sel_up = true}), "D-TO 1", "a frame in the air at 0 ft: TO 1's D- kept")
 T.done()

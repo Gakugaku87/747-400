@@ -157281,6 +157281,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 1
+            POS 1634.500000 318.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_1[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 1
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_1[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 1
+              POS 1642.500000 318.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_1[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Temp 2
             POS 1714.000000 319.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -157297,6 +157345,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 2
+            POS 1711.500000 318.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_2[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 2
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_2[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 2
+              POS 1719.500000 318.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_2[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Temp 3
             POS 1792.000000 319.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -157313,6 +157409,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 3
+            POS 1789.500000 318.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_3[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 3
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_3[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 3
+              POS 1797.500000 318.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_3[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Temp 4
             POS 1870.000000 319.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -157329,6 +157473,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 4
+            POS 1867.500000 318.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_4[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 4
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_4[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 4
+              POS 1875.500000 318.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_4[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Pressure 1
             POS 1629.000000 346.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -165839,6 +166031,27 @@ GROUP LOWER EICAS POWER
           LED_ROWS 3
           ROUNDING ROUND_ROUND
 
+        gen_rotary NEG Sign Zone F/D Actual
+          POS 1458.000000 334.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         gen_LED Zone U/D Target
           POS 1505.000000 335.000000
           IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
@@ -165869,6 +166082,27 @@ GROUP LOWER EICAS POWER
           PERIOD_WIDTH 7
           LED_ROWS 3
           ROUNDING ROUND_ROUND
+
+        gen_rotary NEG Sign Zone U/D Actual
+          POS 1523.000000 334.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
 
         gen_LED Zone A Target
           POS 1440.000000 286.000000
@@ -165901,6 +166135,27 @@ GROUP LOWER EICAS POWER
           LED_ROWS 3
           ROUNDING ROUND_ROUND
 
+        gen_rotary NEG Sign Zone A Actual
+          POS 1458.000000 285.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[2]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         gen_LED Zone B Target
           POS 1503.500000 286.000000
           IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
@@ -165931,6 +166186,27 @@ GROUP LOWER EICAS POWER
           PERIOD_WIDTH 7
           LED_ROWS 3
           ROUNDING ROUND_ROUND
+
+        gen_rotary NEG Sign Zone B Actual
+          POS 1521.500000 285.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[3]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
 
         gen_LED Zone C Target
           POS 1566.500000 286.000000
@@ -165963,6 +166239,27 @@ GROUP LOWER EICAS POWER
           LED_ROWS 3
           ROUNDING ROUND_ROUND
 
+        gen_rotary NEG Sign Zone C Actual
+          POS 1584.500000 285.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[4]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         gen_LED Zone D Target
           POS 1630.000000 286.000000
           IMAGE CRT Displays/LED/LED_2.18R.xx###0.white
@@ -165993,6 +166290,27 @@ GROUP LOWER EICAS POWER
           PERIOD_WIDTH 7
           LED_ROWS 3
           ROUNDING ROUND_ROUND
+
+        gen_rotary NEG Sign Zone D Actual
+          POS 1648.000000 285.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[5]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
 
         gen_LED Zone E Target
           POS 1693.500000 286.000000
@@ -166025,6 +166343,27 @@ GROUP LOWER EICAS POWER
           LED_ROWS 3
           ROUNDING ROUND_ROUND
 
+        gen_rotary NEG Sign Zone E Actual
+          POS 1711.500000 285.500000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/zone_actual[6]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         gen_LED Master Temp
           POS 1678.000000 340.000000
           IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
@@ -166055,6 +166394,27 @@ GROUP LOWER EICAS POWER
           LED_ROWS 3
           ROUNDING ROUND_ROUND
 
+        gen_rotary NEG Sign Fwd Cargo Temp
+          POS 1478.500000 224.000000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/cargo[0]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
+
         gen_LED Aft Cargo Temp
           POS 1681.500000 224.500000
           IMAGE CRT Displays/LED/LED_3.26B.xxx#00.white
@@ -166069,6 +166429,27 @@ GROUP LOWER EICAS POWER
           PERIOD_WIDTH 7
           LED_ROWS 3
           ROUNDING ROUND_ROUND
+
+        gen_rotary NEG Sign Aft Cargo Temp
+          POS 1669.500000 224.000000
+          IMAGE CRT Displays/EICAS Upper/TAT_negSign
+          DATAREF 
+          SHOW_LESS -0.500000 laminar/B747/air/temp/cargo[1]
+          LIGHT_MODE GLASS_AUTO
+          LIGHT_RHEOSTAT 9
+          BUS_SRC 2
+          KEY_FRAME 0.000000 0.000000 1.000000
+          KEY_FRAME 1.000000 6.000000
+          DIGITS 1
+          ROTARY_TYPE NO_CLICK
+          CLICK_RADIUS 0.000000
+          CLICK_RADIUS_DY 0.000000
+          OFFSET 0.000000
+          STEP1 1.000000
+          STEP2 1.000000
+          CURSOR DEFAULT
+          CLICK_DX 0
+          CLICK_DY 0
 
         gen_rotary temp unit
           POS 1669.000000 372.000000
@@ -167659,6 +168040,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 1
+            POS 1450.500000 -167.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_1[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 1
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_1[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 1
+              POS 1458.500000 -167.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_1[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Temp 2
             POS 1601.000000 -168.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -167675,6 +168104,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 2
+            POS 1598.500000 -168.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_2[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 2
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_2[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 2
+              POS 1606.500000 -168.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_2[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Temp 3
             POS 1748.000000 -168.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -167691,6 +168168,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 3
+            POS 1745.500000 -168.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_3[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 3
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_3[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 3
+              POS 1753.500000 -168.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_3[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Temp 4
             POS 1893.000000 -168.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white
@@ -167707,6 +168232,54 @@ GROUP LOWER EICAS POWER
             LED_ROWS 4
             ROUNDING ROUND_ROUND
 
+          gen_rotary NEG Sign LED Temp 4
+            POS 1890.500000 -168.500000
+            IMAGE CRT Displays/EICAS Upper/TAT_negSign
+            DATAREF 
+            SHOW_LESS -9.500000 laminar/B747/hydraulics/temp_4[0]
+            HIDE
+            LIGHT_MODE GLASS_AUTO
+            LIGHT_RHEOSTAT 10
+            BUS_SRC 2
+            KEY_FRAME 0.000000 0.000000 1.000000
+            KEY_FRAME 1.000000 6.000000
+            DIGITS 1
+            ROTARY_TYPE NO_CLICK
+            CLICK_RADIUS 0.000000
+            CLICK_RADIUS_DY 0.000000
+            OFFSET 0.000000
+            STEP1 1.000000
+            STEP2 1.000000
+            CURSOR DEFAULT
+            CLICK_DX 0
+            CLICK_DY 0
+
+          GROUP NEG Sign 1 LED Temp 4
+            SHOW_GREATER -9.500000 laminar/B747/hydraulics/temp_4[0]
+            HIDE
+            gen_rotary NEG Sign 1 LED Temp 4
+              POS 1898.500000 -168.500000
+              IMAGE CRT Displays/EICAS Upper/TAT_negSign
+              DATAREF 
+              SHOW_LESS -0.500000 laminar/B747/hydraulics/temp_4[0]
+              HIDE
+              LIGHT_MODE GLASS_AUTO
+              LIGHT_RHEOSTAT 10
+              BUS_SRC 2
+              KEY_FRAME 0.000000 0.000000 1.000000
+              KEY_FRAME 1.000000 6.000000
+              DIGITS 1
+              ROTARY_TYPE NO_CLICK
+              CLICK_RADIUS 0.000000
+              CLICK_RADIUS_DY 0.000000
+              OFFSET 0.000000
+              STEP1 1.000000
+              STEP2 1.000000
+              CURSOR DEFAULT
+              CLICK_DX 0
+              CLICK_DY 0
+
+          END_GROUP
           gen_LED LED Pressure 1
             POS 1446.000000 -137.000000
             IMAGE CRT Displays/LED/LED_3.26B.xx###0.white

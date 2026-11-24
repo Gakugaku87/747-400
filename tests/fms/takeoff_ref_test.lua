@@ -246,9 +246,12 @@ T.check(small(6):find("^ TO 1") and small(8):find("^ TO 2") and line(9):find("^<
 T.equal(rt:get(LIM), "TO 1", "the thrust limit: TO 1")
 T.equal(rt:get("laminar/B747/fms/thrlim/code"), 11, "its number for the EEC: 11")
 T.equal(rt:get("laminar/B747/engine/derate/CLB"), 1, "CLB 1 armed (TO 1's 8 %)")
+-- the takeoff's flaps 20 set on the ground (2026-11-24, review FMC-7 (c):
+-- flaps out of UP in the air are GA's, from TO too)
+rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)
+frames(0.2)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
-rt:set("sim/cockpit2/controls/flap_ratio", 4 / 6)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 1000)
 rt:set("laminar/B747/autopilot/vnav_state", 2)
 frames(0.2)
@@ -276,7 +279,11 @@ T.equal(rt:get(LIM), "CLB 1", "the THR switch: CLB 1")
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
-T.equal(rt:get(LIM), "TO 1", "on the ground: TO 1 again")
+-- (2026-11-24, review FMC-7 (b)) after a flight TO without the takeoff's
+-- derate (estimate; before, TO 1 again), TO 1 selected again for the next
+T.equal(rt:get(LIM), "TO", "on the ground after the flight: TO, the takeoff's TO 1 gone")
+key("ls_key/L3")                                       -- <TO 1
+T.equal(rt:get(LIM), "TO 1", "TO 1 selected again: TO 1")
 
 -- (2026-11-24, review FMC-1, notes/ATA-34-61-FMC.md §179) the armed climb
 -- by the takeoff's whole reduction on every airplane (the EEC's, with an
@@ -307,6 +314,15 @@ rt:set("laminar/B747/engines/to_reduction", 0)
 -- user's cruise)
 local EICAS = "laminar/B747/fms/thrlim/eicas"
 clear()                                                -- TAKEOFF SPEEDS DELETED from before
+-- (2026-11-24, D of the 2026-11-23 review: DSP-6 d) an SEL not over the OAT
+-- makes no D- and the line shows no temperature (FCOM p.831 (7.10.3): for
+-- reduced thrust takeoff; the mutant showing the SEL without D- passed every
+-- test)
+type_in("10")
+key("ls_key/L1")
+frames(0.2)
+T.equal(rt:get(EICAS), "TO 1", "SEL 10 under the OAT 15: TO 1, no temperature on the line")
+clear()
 type_in("47")
 key("ls_key/L1")
 frames(0.2)
@@ -327,6 +343,14 @@ T.equal(rt:get(EICAS), "CRZ", "the cruise's limit: CRZ without the assumed tempe
 rt:set("sim/flightmodel/failures/onground_any", 1)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
 frames(0.2)
-T.equal(rt:get(EICAS), "D-TO 1 +47C", "on the ground again: D-TO 1 +47C")
+-- (2026-11-24, review FMC-7 (b)) after a flight the takeoff's derate and
+-- assumed temperature are gone until the flight complete or a new TO
+-- selection (estimate; ATA34_2 p.535: TO on the ground). Before, the
+-- takeoff's "D-TO 1 +47C" came back after every landing
+T.equal(rt:get(EICAS), "TO", "on the ground again after the flight: TO, not the takeoff's D-TO 1 +47C")
+T.equal(rt:get("laminar/B747/fms/thrlim/code") % 100, rt:get("laminar/B747/fms/thrlim/code"), "the EEC's number without D- after the flight")
+key("ls_key/L3")                                       -- <TO 1
+frames(0.2)
+T.equal(rt:get(EICAS), "D-TO 1 +47C", "TO 1 selected again (the next takeoff's): D-TO 1 +47C, the SEL still entered")
 
 T.done()

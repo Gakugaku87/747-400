@@ -119,6 +119,48 @@ for n = 1, 4 do
     T.equal(get(SYN .. "dem", n - 1), 3, "engines: synoptic DEM " .. n .. " AUTO (cyan)")
 end
 
+-- (2026-11-24, D of the 2026-11-23 review: SYS-7) the flaps' signal to the
+-- demand pumps 1 and 4 through the glue (B747.19.xt.hyd_power.lua): on the
+-- ground the flaps in transit run both (AUTO), the right FCU's for pump 1
+-- and the left's for pump 4 only (N19-HYD-01; ATA29_32 p.61-62 (29 Page
+-- 59-60), MMEL p.139 (27-3)); in the air the flaps down run them, ten
+-- seconds on after they are up. The review's mutants on this wiring
+-- (which FCU, failed never, the flaps never) passed every test
+local TE_MOVING, TE_DOWN, FCU_FAIL = "laminar/B747/flt_ctrls/fcu/te_moving", "laminar/B747/flt_ctrls/fcu/te_down", "laminar/B747/flt_ctrls/fail/fcu"
+rt:set(TE_MOVING, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") > 2900, "on the ground, the flaps in transit: demand pumps 1 and 4 run")
+rt:set(FCU_FAIL, 2, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") == 0 and get(HYD .. "dem_pressure_4") > 2900, "the right FCU failed: pump 1 not by the flaps, pump 4 still")
+rt:set(FCU_FAIL, 2, 0)
+rt:set(FCU_FAIL, 0, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") == 0, "the left FCU failed: pump 4 not by the flaps, pump 1 still")
+rt:set(FCU_FAIL, 0, 0)
+rt:set(FCU_FAIL, 1, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") > 2900, "the centre FCU failed: both still (neither takes it)")
+rt:set(FCU_FAIL, 1, 0)
+rt:set(TE_MOVING, 0)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") == 0 and get(HYD .. "dem_pressure_4") == 0, "the flaps stopped: both stop")
+rt:set("sim/flightmodel/failures/onground_any", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+rt:set("laminar/B747/gear/air_ground/alt_air", 1)        -- the hydraulics' air/ground (ATA29_32 p.63)
+rt:set(TE_DOWN, 1)
+frames(3)
+T.check(get(HYD .. "dem_pressure_1") > 2900 and get(HYD .. "dem_pressure_4") > 2900, "in the air, the flaps down: both run")
+rt:set(TE_DOWN, 0)
+frames(5)
+T.check(get(HYD .. "dem_pressure_1") > 2900, "the flaps up: on for ten seconds")
+frames(8)
+T.check(get(HYD .. "dem_pressure_1") == 0 and get(HYD .. "dem_pressure_4") == 0, "13 s after: both stopped")
+rt:set("sim/flightmodel/failures/onground_any", 1)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set("laminar/B747/gear/air_ground/alt_air", 0)
+frames(3)
+
 -- ENGINE pump 1 OFF: ADP 1 keeps system 1, ENGINE PRESS and HYD PRESS ENG
 rt:set(SW, 30, 0)
 frames(3)
@@ -765,10 +807,23 @@ T.equal(get(ADVISORY, 203), 1, "fail overheat 2: HYD OVHT SYS 2")
 T.equal(get(HYD .. "light/sys_fault", 1), 1, "fail overheat 2: SYS FAULT 2")
 T.equal(get(ADVISORY, 202), 0, "fail overheat 2: not HYD OVHT SYS 1")
 rt:set(FAIL .. "overheat", 1, 0)
--- (2026-11-12 review HA-2) the fluid's outside temperature: the air at the
--- airplane (before, the planet's mean sea-level temperature, 15 C always)
-T.check(rt.bound["sim/weather/aircraft/temperature_ambient_deg_c"] ~= nil, "the outside air temperature at the airplane looked up")
+-- (2026-11-24, the 2026-11-23 review's PNL-8 = SYS-4) the fluid's base
+-- temperature the fuel's (laminar/B747/fuel/temperature: the heat
+-- exchangers in the main tanks, ATA29_32 p.76; estimate). From 2026-11-12
+-- (review HA-2) the static air at the airplane (about -24 C in the cruise),
+-- before that the planet's mean sea-level temperature (15 C always)
+T.check(rt.bound["laminar/B747/fuel/temperature"] ~= nil, "the fuel temperature looked up")
+T.check(rt.bound["sim/weather/aircraft/temperature_ambient_deg_c"] == nil, "not the static air's")
 T.check(rt.bound["sim/physics/earth_temp_c"] == nil, "not the planet's mean sea-level temperature")
+-- (D of the 2026-11-23 review: SYS-7) the base through the glue: the fluid
+-- of a system with a pump running goes toward the fuel's + 30 C (the
+-- review's mutant with the base fixed at 15 passed every test)
+rt:set("laminar/B747/fuel/temperature", -20)
+frames(3600)
+T.check(math.abs(get(HYD .. "temp_1") - 10) < 2, "the fuel at -20 C, an hour on: system 1's fluid about 10 C (" .. get(HYD .. "temp_1") .. ")")
+rt:set("laminar/B747/fuel/temperature", 20)
+frames(3600)
+T.check(math.abs(get(HYD .. "temp_1") - 50) < 2, "the fuel at 20 C: about 50 C, FCOM p.1485's example (" .. get(HYD .. "temp_1") .. ")")
 
 -- (2026-11-13; the 2026-11-12 review HA-1, 案 26) the flow left for the gear
 -- (spare_gpm, read by the gear module) and the gear's take

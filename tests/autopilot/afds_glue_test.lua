@@ -1128,4 +1128,44 @@ rt:set("laminar/B747/irs/hdg_valid", 1, 1)
 rt:command(CMD .. "heading_select")
 frames()
 T.check(rt:get(RFAIL) == 0 and rt:get(RB) == 1 and rt:get(CAUTION, 4) == 0, "the headings back, HDG SEL: no failure, the bar, no AUTOPILOT")
+
+-- (2026-11-24, D of the 2026-11-23 review: AFDS-7) the engine type to the
+-- A/T's lever gain through the glue (i.engine: lever_accel's GE_K for the
+-- GE, 2026-11-22; the gain itself is at_model_test's): what the A/T model
+-- is given each frame, flaps up. The review's mutant (i.engine a constant)
+-- passed the tests before
+local atm = ap.ns.B747_at_model
+local lever_accel, seen = atm.lever_accel, {}
+atm.lever_accel = function(inp) seen[#seen + 1] = inp.engine; return lever_accel(inp) end
+rt:set(FLAPS, 0)
+rt:set("laminar/B747/engines/type", 1)
+frames()
+T.check(#seen > 0 and seen[#seen] == 1, string.format("the GE (engines/type 1): the A/T's lever gain for engine 1 (%s)", tostring(seen[#seen])))
+rt:set("laminar/B747/engines/type", 0)
+frames()
+T.equal(seen[#seen], 0, "the P&W (engines/type 0): engine 0")
+atm.lever_accel = lever_accel
+
+-- (2026-11-24, D of the 2026-11-23 review: AFDS-7, on AFDS-2) the AFDS's
+-- TO/GA inhibit after a touchdown to the A/T through the glue
+-- (i.toga_inhibit): a bounce, the radio altitude 3 ft for 2.5 s and then 20
+-- ft, the flaps 20: a push within 3 s of 5 ft engages no A/T, one after
+-- them its G/A THR (FCOM p.673 (4.20.15); ATA34_2 p.674)
+rt:command(CMD .. "autothrottle_disco_L")
+frames()
+rt:set("laminar/B747/autothrottle/armed", 1)
+rt:set(ONGND, 0)
+rt:set(PRIGND, 0)
+rt:set(FLAPS, 0.668)
+rt:set(RA, 3)
+frames(75)
+rt:set(RA, 20)
+frames()
+local at0 = rt:get(AT_FMA)
+push()
+T.check(rt:get(AT_FMA) == at0 and at0 ~= 4 and at0 ~= 5,
+    string.format("a bounce: a push 0.1 s above 5 ft engages no A/T (FMA %s, %s before)", tostring(rt:get(AT_FMA)), tostring(at0)))
+frames(100)
+push()
+T.check(rt:get(AT_FMA) == 4 or rt:get(AT_FMA) == 5, string.format("3 s after 5 ft: the push's G/A THR (FMA %s)", tostring(rt:get(AT_FMA))))
 T.done()

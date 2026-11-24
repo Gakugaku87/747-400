@@ -11,7 +11,8 @@
 -- lines, the free text, REPORT SEND> on the last page (then EMERGENCY
 -- REPORT: FCOM p.732), CONTINUED before it, 6L <EMERGENCY. XXXXZ
 -- EMERGENCY: the time, STATUS, the text, LOG>. Estimates: the FMC's values
--- small, the crew's and the selected large; the lines' columns; no PRINT.
+-- small, the crew's and the selected large; the lines' columns; PRINT
+-- FAIL for PRINT (no printer: 2026-11-24, review CDU-12).
 -- Before, the pages wrote FMS data fields unchecked and VERIFY the shared
 -- text while drawing (CDU-34)
 local E = B747_atc_emergency_model
@@ -213,6 +214,9 @@ fmsPages["ATCEMERGENCYLOG"].getPage=function(self,pgNo,fmsID)
   if pgNo == 1 then out[3] = right(BLANK, d.status) end
   local list, first = spage_rows(d, pgNo)
   for k, row in ipairs(list) do out[1 + 2 * (first + k - 1)] = left(BLANK, row.data) end
+  -- (2026-11-24, review CDU-12) the last page's 6L PRINT FAIL: no printer
+  -- (FMSPG p.366 (8-97); estimate, as ATC INDEX's)
+  if pgNo == spages(d) then out[13] = left(out[13], "PRINT FAIL") end
   return out
 end
 fmsPages["ATCEMERGENCYLOG"].getSmallPage=function(self,pgNo,fmsID)

@@ -3494,3 +3494,154 @@ GAP_ANALYSIS.md §7 の中の段 N19-NAV-01・N19-ATC-01〜03・N19-WB-03 と、
   - 積んだ後（01:21 の回）：置き場所は 3,340・9,185・12,830・14,536・7,200・6,313・3,196 kg（合計 56,600）、ZFW の重心のずれ +0.2659 m（計算 +0.2659）。60 秒ごとの書き込みの後と、PERF INIT の ZFW の入力の後も同じ。
   - 1 回だけ書く作り（01:06 の回）では、ページが積んだ時は X-Plane の配り方のまま（4,489・5,811・6,973・10,039・1,743・14,557・12,988 kg、ZFW のずれ +0.124 m）、60 秒後の書き込みでは 9 つのうち 3 番目の置き場所だけが届いた（合計が 62,457 kg になった）。XTLua から配列の要素を一度に書くと全部は届かないので、毎フレーム、合っていない置き場所を書き直す形にした（燃料のモジュールがタンクを書くのと同じ形）。
   - この回は燃料に中央タンク 20 t を入れたが、X-Plane の燃料は合計 112.0 t になり（頼んだのは 130.6 t）、全体の重心の期待値が合わなかった（PASS 9 / FAIL 1）。シナリオの燃料を主タンクと予備タンクだけ（110.6 t）にして回し直した（01:53 の回、PASS 12 / FAIL 0）：置き場所と ZFW の重心のずれは同じ（+0.2659 m）、全体の重心のずれ +0.070 m（実機の MAC の 23.8 %。燃料の系統が始めに配り直すので、頼んだ配分で計算した +0.085 m から少し動く：期待値は +0.05〜+0.11 m に）、60 秒後と ZFW の入力の後も ±0.001 m。
+
+## 181. 推力制限：TO の飛行の GA、接地の後の GA と TO（2026-11-24：段 4 のレビューの FMC-7＝DSP-3。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘（REVIEW_2026-11-23.md の C、読む役の確かめは `D:\b747_review\cd_check\memo_eng.md`）：
+  - (c) 空中の TO は、GA の判定より前で処理が終わっていた（`thrlim_model.lua` の `if s.mode == "TO" then ... return`）。VNAV も THR も使わない飛行では、推力制限が進入まで TO のままで、GA にならない。
+  - (a) 地上ではいつも TO に戻し、前の減格と SEL を保っていた。そのため、接地のある着陸復行では、A/T の THR REF と EEC の基準が減格した離陸の値（「D-TO 2 +47C」）になった。
+  - (b) 通常の着陸の後も、地上で「D-TO 1 +47C」が戻っていた。
+- 資料：
+  - FCOM p.672 (4.20.14)：GA は、フラップが UP から出る・着陸フラップ・G/S 捕捉で選ばれ、着陸フラップか G/S で固定される。着陸復行のモードは接地しても続く。
+  - FCOM p.673 (4.20.15)：TO/GA スイッチは、rejected landing とタッチアンドゴーのためのもの。
+  - ATA34_2 p.535：地上では TO が自動で選ばれる。
+  - 着陸の後に SEL と減格を消すかどうかは、FCOM・ATA34_2・FMSPG のどこにも無い。
+- 直し（`B747.68.thrlim_model.lua`）：
+  - (c)：GA の条件（フラップが UP から出る・着陸フラップ・G/S）を TO にも当てる。離陸のフラップのままなら TO のまま（地上で離陸のフラップにしてから浮けば「UP から出る」にならない）。
+  - (a)（**推定**）：一度飛んだ後の接地で GA なら、IAS `GA_GROUND_KT` 30 kt 以上の間は GA を保つ（接地のある着陸復行とタッチアンドゴー）。30 kt は A/T の `STOP_KT` と同じ値で、速さの資料は無い。
+  - (b)（**推定**）：一度飛んだ後の地上の TO は、離陸の減格と SEL なし（`s.to = 0`、`no_sel`）。flight complete（状態の作り直し）か、新しい TO の選択（`select_to`）まで続く。
+  - 「一度飛んだ」は電波高度 `FLOWN_RA` 50 ft より上に出たとき（**推定**）。読み込みのときに一瞬「空中」になるフレームを数えないため。
+- 試験：
+  - `tests/fms/thrlim_model_test.lua` に 16 件（99 件）。そのうち 11 件は直す前のモデルで落ちる（TO から GA、接地の GA、30 kt での TO、着陸の後の TO、新しい TO 1 で D- が戻る、読み込みの 0 ft のフレーム）。
+  - `tests/fms/takeoff_ref_test.lua`（85 件）：
+    - 離陸のフラップ 20 を地上で入れるようにした。前は空中で初めて入れていて、今の作りでは「UP から出る」になる。
+    - 着陸の後は「TO」と、EEC への番号に D- が無いことを確かめる（前は「D-TO 1 +47C」を期待していた）。次の飛行の TO 1 を選び直す手順も足した。
+- X-Plane：取り込みの後に、タッチアンドゴーと接地後の復行のシナリオ（D）で確かめる。
+
+## 182. 消した SPD TRANS が戻るとき（2026-11-24：段 4 のレビューの FMC-3。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：消した上昇と降下の SPD TRANS（CLB 3L・DES 3L）が、flight complete を越えて残っていた。`FC_KEYS`（`B747.68.xt.fms.lua`）に無く、消した後に戻る道もどこにも無かった。機体を読み直すまで、次の飛行も SPD TRANS なしで飛んだ。
+- 資料：
+  - FMSPG p.192 (3.5-8)：消した降下の SPD TRANS は、nav DB に入っている高度より上の新しい巡航高度を入れたときだけ、また出る。nav DB に値が無ければ 240/10000（X-Plane の nav データには空港の速度制限が無い：FCOM p.1392）。レビューはこのページを見落としていた。
+  - 上昇の SPD TRANS を消した後に戻る条件は、資料に無い（FMSPG p.113 (3.3-4) は「消せる」とだけ書く）。
+  - FCOM p.1236 (11.31.2)：flight complete で飛行前のデータの一部が既定に戻る（どの欄かは書いていない）。
+- 直し：
+  - 降下：CDU で CRZ ALT を 10,000 ft より上に入れると（`B744.fms.pages.lua` の `crzalt`）、消した DES の SPD TRANS を 240/10000 に戻す（FMSPG p.192）。MCP の高度で CRZ ALT が変わったときは「入れた」に数えない（**推定**）。
+  - 上昇：flight complete で `transpd`・`spdtransalt` を既定（250/10000）に戻す（`FC_KEYS` に足した。**推定**）。そのあとは、VREF 30 + 100 の決め方（`update_spd_trans`）がまた働く。
+  - FMC-2 の直しで、次の飛行では CRZ ALT を必ず入れ直す。そのため、降下の SPD TRANS も次の飛行の CRZ ALT で戻る。
+- 試験：`tests/fms/flight_complete_test.lua` に 12 件（39 件）。
+  - 飛行の前に両方を消す。9,000 ft の CRZ ALT では戻らず、FL350 で降下のが戻る。
+  - flight complete で上昇のが戻り、降下のは次の CRZ ALT まで消えたまま。
+  - 直す前のコードでは 3 件が落ちる。
+  - この試験は、flight complete の 30 秒を 1 秒刻みのフレームで数えていて、FMC は時計を 1 フレーム遅れて読む。足した手順の時間に秒の端数があると、31 秒の確かめを過ぎた。そこで手順の終わりで時間を秒にそろえる。
+- X-Plane：取り込みの後に v02 の形で確かめる。着陸の前に DES 3L を消し、flight complete の後に経路と CRZ ALT 350 を入れて、DES 3L が 240/10000、CLB 3L が 250/10000 に戻るかを見る。
+
+## 183. 空中の TAKEOFF REF と INIT/REF INDEX（2026-11-24：段 4 のレビューの CDU-9 と CDU-12 の <TAKEOFF。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：
+  - CDU-9：TAKEOFF REF の乗員の CG とその TRIM が、空中でも出ていた。
+  - CDU-12：INIT/REF INDEX の <TAKEOFF が、空中では MAINT> と一緒に消えていた。
+- 資料：
+  - ATA34_2 p.540（34-61 Page 114）：TRIM は離陸の後に空白になる。どの欄も flight completion で消える。
+  - FMSPG p.107 (3.2-47)：CG は空中では空白。
+  - FMSPG p.68 (3.2-8)：空中の図に <TAKEOFF があり、MAINT> が無い。ATA34_2 p.514（34-61 Page 88）も同じ。
+- 直し：
+  - `B744.fms.pages.takeoff.lua`：空中では CG（大きい字と小さい字）と TRIM を表示しない。データ（`cg_mac`・`stab_trim`）は flight complete まで保つので、地上に戻るとまた出る。
+  - フラップと選んだ V 速度を flight complete まで保つ案（レビューの B 案）は、PFD の作りに響くので入れていない（レビューの勧め）。
+  - `B744.fms.pages.lua` の INITREF：<TAKEOFF（5L）はいつも出して押せる。MAINT>（6R）は地上だけ。
+- 試験：新しい `tests/fms/takeoff_ref_air_test.lua`（10 件。準備は flight_complete_test と同じ）。
+  - 地上の CG 22 と TRIM、空中の空白、ラベルは残る、空中の INDEX の <TAKEOFF と MAINT> なし、<TAKEOFF で TAKEOFF REF が開く、地上に戻ると CG と TRIM、<TAKEOFF と MAINT>。
+  - 直す前のコードでは 5 件が落ちる。
+
+## 184. ATC のページの PRINT：PRINT FAIL（2026-11-24：段 4 のレビューの CDU-12 の 6L。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：ATC INDEX の 6L（PRINT LOG）を空白にしていた（2026-11-20、N19-ATC-05、§ の「N19-ATC-05 PRINT LOG と PRINT」）。FMSPG p.366 (8-97) の表 8.9-2（印字機の状態）には空白の状態が無い。
+- 資料：
+  - FMSPG p.366 (8-97)：PRINT LOG は ATC INDEX の 6L に、PRINT は XXXXZ のページの最後のページの 6L に出る。状態は PRINT BUSY・PRINT FAIL・<PRINT LOG／<PRINT・<PRINT ERROR・PRINTING。PRINT FAIL は「FMC が印字機を故障と判断した」。
+  - FCOM p.727 (5.33.3)：ATC INDEX の <PRINT LOG。
+- 直し（**推定**：シムには印字機が無い）：次の 5 か所の 6L を PRINT FAIL にした。
+  - ATC INDEX（`atcindex.lua`）。
+  - XXXXZ ATC UPLINK（`atcuplink.lua`）・XXXXZ ATC REPORT（`atcreport.lua` の ATCREPORTLOG）・XXXXZ EMERGENCY（`emergency.lua` の ATCEMERGENCYLOG）・XXXXZ ATC REQUEST（`request.lua` の ATCREQUESTLOG）の最後のページ。
+  - 押しても何もしない（前と同じ）。
+- 試験：
+  - `atc_n19_test`：ATC INDEX の 6L。
+  - `atc_uplink_pages_test`：LOG> の行。
+  - `atc_request_pages_test`：REPORT> の行。
+  - どれも期待を PRINT FAIL に改めた。ATC の試験 13 本、935 件が合格。
+
+## 185. SPD RESTR と TRANS ALT の高度の入力と表示（2026-11-24：段 4 のレビューの CDU-13。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：本家の `validAlt`（`B744.fms.pages.lua`）が、SPD RESTR（CLB と DES の 4L）と TRANS ALT の入力にまだ使われていた。次のような問題があった。
+  - 2,000 ft 未満を拒む。
+  - 上限が機体の重さからの式（58.16 − 0.0615 × t）で、395 t では 33,850 ft。
+  - 「0900」を 90,000 ft と読んで拒む。
+  - 表示は ft のままで、遷移高度より上でも FL にならない。
+- 資料：FCOM p.1269 (11.31.35) の高度の入力の形と表示（XXX は百 ft、XXXX と XXXXX は ft、FLXXX。遷移高度より上は FL で出す）。
+- 直し：
+  - `validAlt` は `B747_cdu_model.parse_alt` で読み、0 ft より上で、CRZ ALT と同じ最大認定高度 45,100 ft までを取る。値は ft の文字で返す（VNAV と予測が数として読むので、データは ft のまま）。
+  - 表示（`B744.fms.pages.vnav.lua` の `rest_alt`）は `format_alt` で出す。上昇の SPD RESTR は TRANS ALT、降下の SPD RESTR は TRANS LVL より上なら FLXXX。
+  - どこからも呼ばれていなかった本家の `updateCRZ`（CRZ ALT を X-Plane の FMS から読み戻す）と `validFL` を消した。
+- 試験：`tests/fms/fmc_fixes_test.lua` に 4 件（53 件）。
+  - 240/0900 で 900 ft、240/1500 も取る、395 t で 240/FL350 を取って FL350 と出す、45,200 ft は INVALID ENTRY。
+  - 直す前のコードでは 3 件が落ちる。
+- X-Plane：取り込みの後に、CLB の 4L に 240/0900 と 240/FL240 を入れて表示を見る（5 分）。
+
+## 186. 飛行の後の ILS の自動同調（2026-11-24：段 4 のレビューの FMC-4。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：ILS の自動同調の「A」が空中だけだった（`B747.68.xt.fms.lua` の `update_ils` の `auto=not ground`）。
+  - 着陸の後は、FCC の地上の抑止（`afds_model.lua` の `ils_inhibit`：地上で LOC を受け、方位 45° 以内・対地 40 kt 超）が解けたところで PARK になり、PFD の目盛も消えた。毎回の着陸で、滑走路を出るあたり。
+  - タッチアンドゴーや接地のある復行では、浮揚ごとに「離陸後 10 分」を数え直し、復行中も 2 回目の進入も STBY（目盛なし）になった。
+- 資料：
+  - FCOM p.1307 (11.40.31)：A の条件に、空中か地上かは無い。
+  - FCOM p.1306 (11.40.30)：PARK になるのは、電源投入、T/D の 200 NM より遠い、経路の半分の手前だけ。
+  - FCOM p.1305 (11.40.29)：地上の 40 kt 超は同調を抑止する。離陸後 10 分は自動同調しない。
+  - FCOM p.987 (10.10.25)：目盛は周波数を同調したら出る。
+  - ATA34_1 p.460（34-31 Page 38）：出発と turn around の間は手動の同調だけ。
+  - 接地から turn around までの間は、どの資料にも無い。
+- 直し（**推定**）：
+  - 一度飛んだ後の地上では、目的地の ILS を A のまま同調し続ける。flight complete が経路を消すと PARK になる。
+  - 離陸後 10 分は、その飛行の最初の浮揚からだけ数える。タッチアンドゴーや復行の浮揚は離陸に数えない。
+  - 状態は `tuneState.flown` に置き、flight complete で戻す。FMS の主のチャンクは local が 200 個で、もう足せないため。
+- 試験：`tests/fms/navrad_pages_test.lua` に 4 件（52 件）。着陸しても A と目盛、タッチアンドゴーの浮揚でも A、flight complete の後は PARK で目盛なし。直す前のコードでは 2 件が落ちる。
+- X-Plane：取り込みの後に確かめる。A/P と両方の F/D を切って手で着陸し、止めて 1 分地上を走る。`ils_dots` が 1 で A のまま、エンジンを止めた 30 秒後に PARK になるかを見る（15 分）。タッチアンドゴーは D のシナリオで見る。
+
+## 187. 速度テープの琥珀の帯：フラップの線は図のマッハの上端で止める（2026-11-24：段 4 のレビューの PERF-7。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：最小機動速度（琥珀の帯の上端：stick shaker まで 1.3 g）のフラップを出したときの境界は、10,000 ft の図に合わせた直線（`B747.60.minspeed_model.lua` の `LINES`）で作っている。これを図のマッハの外まで延ばしていた。そのため高い所や重い機体で、帯の上端がフラップの機動速度のバグを越えた。
+  - 20,000 ft・394.6 t：フラップ 10 で +9.8 kt、フラップ 20 で +7.4、フラップ 30 で +3.9。
+  - 標高の高い空港（FAOR 5,558 ft）の重い離陸で、バグの速さを保つと AIRSPEED LOW が出うる。
+- 資料：FCTM p.34 (1.4)：どの重さでも、shaker まで 40° バンクの余裕。高度には触れていない。
+- 直し（**推定**）：フラップを出した detent の線は、図の最も高いマッハより上ではその値で止める（`detent_b`）。フラップ UP は前のまま（M .86 の buffet onset へ）。
+- 値（レビュー役の `D:\b747_review\stage4\a03_perf_wb\minspeed_vs_bugs.lua` で回し直した）：
+  - 20,000 ft・394.6 t：フラップ 10 +2.3、20 +1.9、30 −1.7。
+  - 10,000 ft・394.6 t：フラップ 10 +0.6（前 +3.0）、20 +0.5（前 +2.2）。
+  - 残る 2 kt ほどは、図の外の圧縮性の分。
+- 試験：`tests/displays/minspeed_model_test.lua` に 2 件（58 件）。20,000 ft・394.6 t のフラップ 10・20 で、帯の上端がバグの 3 kt 以内。直す前のモデルでは 2 件が落ちる。X-Plane の確かめは要らない（レビューの勧め）。
+
+## 188. 結線の試験：LNAV の fly-by の旋回の終わりと戻し（2026-11-24：段 4 のレビューの D の AFDS-7。利用者の決定「勧めどおり全部」。worktree `D:/b747_cd_fix`）
+
+- 指摘：レビューの §171 の壊し方（`D:\b747_review\stage4\a08_afds_at\mut_lnav.lua`）15 個のうち、5 個が試験を通っていた。`ROLLOUT_END` を 10 に、戻しの始まりで旋回を終える、2 NM 外れで旋回をやめる条件を外す、LNAV が入っていなくても戻しを始める、バンクの向きを見ずに戻しを始める。
+- 足した試験（`tests/fms/lnav_model_test.lua`、115 件）：
+  - 497 kt の 30° の左旋回（0.9 秒遅れの機体）：旋回は、戻しが始まった後にバンクが 2°（`ROLLOUT_END`、推定の値）を切ったときに終わる。戻しは旋回の中で、10° より大きなバンクから始まる。
+  - 250 kt の 90° の旋回：二等分線を越え、戻しの前に機体を 3 NM 横に動かすと、旋回をやめる（次の区間の steering）。
+  - 497 kt の 3° の右旋回（fix の 0.8 NM 手前、旋回がすぐ始まる）。右に 20° のバンクなら、残りの向き（3°）がバンクの戻しで回る分（約 3.3°）より小さいので、すぐに戻しを始める。左に 20°（逆の向き、逆の旋回の後のように）や、LNAV が入っていないときは始めない。
+- 壊し方の一覧は `tests/tools/mutations/lnav_flyby.lua`（レビューの 15 個）。15 個とも捕まる。
+
+## 189. LNAV の fly-by：フラップを出した低速のロールの遅れ（2026-11-24：段 4 のレビューの AFDS-6。利用者の決定「勧めどおり全部」＝先に測る。worktree `D:/b747_cd_fix`）
+
+- 指摘：§171 の `ROLL_LAG` 0.9 秒は FL370 の 1 点で測った値。模型では、150〜170 kt の旋回は外へ 0.03〜0.08 NM 出る。X-Plane での値は分からなかった。
+- 測り：`tests/flight/measure/afds6_lnav_flyby_low`（2026-11-24 19:25）。条件は銚子沖の海の上、5,000 ft、フラップ 10、170 kt、270 t、緯度経度の点の 45° と 90° の右の fly-by。
+  - 前の形のまま：45° は外へ最大 0.049 NM、90° は 0.057 NM。1 分たっても 0.017〜0.034 NM 残った。逆のバンクは 1.1° と 1.0°（目安の 2° の内）。
+  - 実際のバンクの A/P の指令からの遅れは、入りで 0.55 秒、戻しで 0.5 秒（FL370 は 0.9 秒）。
+  - 戻しを 0.9 秒ぶん早めるので早く戻しすぎ、約 1° 曲がり足りずに外へずれていた。
+- 直し（`B747.68.lnav_model.lua`）：
+  - フラップのレバーが UP でないとき（`air.flaps_up` が false）は、遅れを `ROLL_LAG_FLAPS` 0.5 秒にする（上の測りの値）。
+  - グルー（`B747.68.xt.fms.lua` の `B747_fmc_lnav_update`）は、`sim/cockpit2/controls/flap_ratio` < 0.01 を渡す。
+  - 入力が無いとき（試験、待機経路の入り方）は今までどおり 0.9 秒。
+- 残ること：模型では、遅れを合わせても 170 kt の 45° は外へ 0.028 NM 出る（前の形は 0.036）。目安の 0.02 NM には届かない。90° は 0.019（前は 0.021）、120° は 0.018。
+  - 低速では、3°/s のロールの入りと戻しが小さな旋回の大きな部分を占めるため。遅れの値だけでは詰まらない。
+  - X-Plane では直しの後に測り直す。
+- 試験：
+  - `tests/fms/lnav_model_test.lua`（139 件）：遅れ 0.5 秒の機体で、170 kt の ±45°・±90°・120°、200 kt の 20°。各場面は今の値より悪くならない幅（45° は 0.031 NM、90° は 0.0205 NM）で見る。コースへは 1° 以内（前の形は 45° で 1.2°）、逆のバンクは 2° 以内。
+  - `tests/fms/vnav_turns_test.lua`（35 件）：グルーがフラップの状態を LNAV に渡すこと。`tests/lib/lnav_sim.lua` に `flaps_up` を足した。
+  - 壊し方の一覧 `tests/tools/mutations/lnav_flyby.lua` に 3 個を足した（18 個）。

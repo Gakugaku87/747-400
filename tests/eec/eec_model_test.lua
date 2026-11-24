@@ -196,10 +196,16 @@ inp.alt = 23500
 out = E.update(s, inp, DT)
 local clb = E.lookup(GE.clb, -5, 23500)
 mct = E.lookup_mct(GE.mct, -5, 23500, 290)
-T.near(out.max[1], clb + 0.5 * math.max(0, mct - clb), 1e-9, "GE at 23,500 ft: half way from the maximum continuous to the climb rating")
+-- (2026-11-24, the 2026-11-23 review's ENG-6) the CF6's maximum continuous
+-- band at every altitude as the P&W's (FCOM p.379-381: its Max Continuous
+-- %N1 above 18,000 ft too; before, gone from 22,000 to 25,000 ft by
+-- ATA70_80 p.208: half way at 23,500 ft, the climb rating at 26,000 ft)
+T.near(out.max[1], math.max(clb, mct), 1e-9, "GE at 23,500 ft: the maximum continuous, not under the climb rating (before half way to the climb's)")
 inp.alt = 26000
 out = E.update(s, inp, DT)
-T.near(out.max[1], E.lookup(GE.clb, -5, 26000), 1e-9, "GE climb rating at 26,000 ft")
+local mct26 = E.lookup_mct(GE.mct, -5, 26000, 290)
+T.check(mct26 > E.lookup(GE.clb, -5, 26000), "GE at 26,000 ft, 290 KIAS: the maximum continuous table over the climb's")
+T.near(out.max[1], mct26, 1e-9, "GE at 26,000 ft: the maximum continuous (before the climb rating 104.5)")
 -- P&W at 20,000 ft, 280 KIAS: the maximum continuous 1.512 over the climb's 1.43
 inp.type, inp.alt, inp.tat, inp.kias = "PW", 20000, -14, 280
 inp.idle = {1.0, 1.0, 1.0, 1.0}

@@ -107,11 +107,15 @@ local tas_fpm = 165 * 1.943844 * 6076.12 / 60
 T.near(rt:get(TC .. "pfd/pitch_hi"), math.deg(math.asin(-1500 / tas_fpm)), 0.01,
     "level: the upper region's edge below the airplane symbol (the path of -1,500 fpm)")
 T.equal(rt:get(TC .. "pfd/vs_red"), 1, "level is in the red region: the pointer red")
-rt:set("sim/flightmodel/position/vh_ind_fpm", -1800)
-frames(0.1)
-T.equal(rt:get(TC .. "pfd/vs_red"), 0, "descending at 1,800 fpm: white")
-T.check(rt:get(TC .. "pfd/pitch_hi") > 0, "the region above the airplane symbol")
+-- (2026-11-24, the 2026-11-23 review's NAV-5) the own V/S the IRUs'
+-- inertial one (X-Plane's local y velocity, as the AFDS's: estimate), not
+-- the Captain's VSI's vh_ind_fpm (0 here: a blocked static port)
 rt:set("sim/flightmodel/position/vh_ind_fpm", 0)
+rt:set("sim/flightmodel/position/local_vy", -1800 / 196.850394)
+frames(0.1)
+T.equal(rt:get(TC .. "pfd/vs_red"), 0, "descending at 1,800 fpm (inertial; the VSI's 0): white")
+T.check(rt:get(TC .. "pfd/pitch_hi") > 0, "the region above the airplane symbol")
+rt:set("sim/flightmodel/position/local_vy", 0)
 rt:set("laminar/B747/nd/range/capt/sel_dial_pos", 0)             -- 10 nm
 rt:set(TI .. "relative_distance_mtrs", 1, 12 * 1852)
 frames(0.1)

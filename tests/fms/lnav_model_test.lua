@@ -89,18 +89,20 @@ end
 -- Before (the roll out's lead by the distance, the leg's steering from
 -- there): X-Plane's 17 degree turn at FL370 came out 0.084 nm outside and
 -- about 1 degree past, the model here 0.05 nm
-local function lagged(turn, tas, wind, from)
+local function lagged(turn, tas, wind, from, o)
+    o = o or {}
     local Bf = {ident = "BG", lat = 35.5, lon = 140.0}
     local cin = 157
     local cout = cin - turn
     local Cf = P.point(Bf, cout, 40)
     local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, cin + 180, 30))
     local sf = L.new(P)
-    local p0 = P.point(Bf, cin + 180, 20)
-    local af = plane({lat = p0.lat, lon = p0.lon, hdg = cin, tas = tas, wind = wind, wind_from = from, alt = 37000})
+    local p0 = P.point(Bf, cin + 180, o.start or 20)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = cin, tas = tas, wind = wind, wind_from = from, alt = o.alt or 37000,
+        flaps_up = o.flaps_up})
     local onC, out, past, back = false, 0, 0, 0
     local sign = turn > 0 and 1 or -1
-    fly(stf, sf, af, 300, {lag = 0.9, each = function(t, s, air)
+    fly(stf, sf, af, o.seconds or 300, {lag = o.lag or 0.9, each = function(t, s, air)
         if stf.rte.legs[1].fix == Cf then onC = true end
         if onC then
             -- a left turn's outside is right of the leg out
@@ -121,6 +123,94 @@ for _, c in ipairs({{3, 497}, {6, 497}, {10, 497}, {17, 497}, {30, 497}, {-17, 4
     T.check(out < 0.02, string.format("%s: within 0.02 nm outside the leg out: %.4f", what, out))
     T.check(back < 2, string.format("%s: at most 2 degrees of bank back: %.2f", what, back))
 end
+-- (2026-11-24, the 2026-11-23 review's AFDS-6) the flaps out at 170 to 200
+-- kt: the airplane's bank 0.5 s behind the command (X-Plane at flaps 10 and
+-- 170 kt: tests/flight/measure/afds6_lnav_flyby_low) and LNAV told the
+-- flaps are out (`air.flaps_up` false: ROLL_LAG_FLAPS 0.5). At these speeds
+-- the roll in and out at ROLL_RATE take much of a small turn and the aim of
+-- 0.02 nm is not met for 45 degrees (0.028 nm here; with FL370's lag of
+-- 0.9 s 0.036, X-Plane 0.049): each case no worse than with the lag matched,
+-- the course met within 1 degree (0.9 s: 1.2 at 45), at most 2 of bank back
+for _, c in ipairs({{45, 170, 0.031}, {-45, 170, 0.031}, {90, 170, 0.0205}, {-90, 170, 0.0205}, {120, 170, 0.0185}, {20, 200, 0.02}}) do
+    local onC, out, past, back = lagged(c[1], c[2], 0, 0, {lag = 0.5, flaps_up = false, alt = 5000, start = 6, seconds = 360})
+    local what = string.format("flaps out, a %d degree turn at %d kt", c[1], c[2])
+    T.check(onC, what .. ": the leg out active")
+    T.check(past < 1, string.format("%s: the course out met within 1 degree: %.2f", what, past))
+    T.check(out < c[3], string.format("%s: within %.4f nm outside the leg out: %.4f", what, c[3], out))
+    T.check(back < 2, string.format("%s: at most 2 degrees of bank back: %.2f", what, back))
+end
+
+-- (2026-11-24, D of the 2026-11-23 review: AFDS-7) the fly-by turn's end and
+-- its roll out's conditions (§171), the review's five mutants that passed
+-- the tests before. (a) The turn over only once its bank is under
+-- ROLLOUT_END (2 degrees, the estimate's value) after the roll out began, not
+-- at the roll out's start: a 30 degree left turn at 497 kt, the bank when
+-- the turn ends and the most while rolling out in it
+do
+    local Bf = {ident = "BH", lat = 35.5, lon = 140.0}
+    local Cf = P.point(Bf, 127, 40)
+    local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, 337, 30))
+    local sf = L.new(P)
+    local p0 = P.point(Bf, 337, 20)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = 157, tas = 497, alt = 37000})
+    local had, endBank, rolling = false, nil, 0
+    fly(stf, sf, af, 300, {lag = 0.9, each = function(t, s, air)
+        if s.turn then
+            had = true
+            if s.turn.rollout then rolling = math.max(rolling, math.abs(air.bank)) end
+        elseif had and not endBank then
+            endBank = math.abs(air.bank)
+        end
+    end})
+    T.check(endBank ~= nil and endBank <= 2, string.format("a 30 degree turn: over with its bank under 2 degrees: %s", tostring(endBank)))
+    T.check(rolling > 10, string.format("its roll out begun in the turn, with %.1f degrees of bank", rolling))
+end
+-- (b) Past the bisector 2 nm off the turn's arc (the airplane moved 3 nm
+-- aside before its roll out): the turn dropped, the leg out's steering
+do
+    local Bf = {ident = "BI", lat = 35.5, lon = 140.0}
+    local Cf = P.point(Bf, 67, 40)
+    local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, 337, 30))
+    local sf = L.new(P)
+    local p0 = P.point(Bf, 337, 20)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = 157, tas = 250, alt = 10000})
+    local moved, after = false, "not moved"
+    fly(stf, sf, af, 400, {each = function(t, s, air)
+        if moved then after = s.turn and "kept" or "dropped" return true end
+        if s.turn and s.turn.past and not s.turn.rollout then
+            local q = P.point(af, (air.trk + 90) % 360, 3)
+            af.lat, af.lon = q.lat, q.lon
+            moved = true
+        end
+    end})
+    T.equal(after, "dropped", "a 90 degree turn past its bisector, 3 nm off its arc: the turn dropped")
+end
+-- (c), (d) A 3 degree right fly-by at 497 kt, the airplane 0.8 nm before its
+-- fix (the turn begun at once) with 20 degrees of bank: the heading still
+-- to turn (3 degrees) is under what the bank's coming off turns (about 3.3),
+-- so the roll out begins at once, but only with LNAV engaged and the bank
+-- to the turn's side (banked the other way, as after a turn the other way,
+-- or LNAV off and the turn's state kept for its engagement: none)
+local function first_rollout(bank, engaged)
+    local Bf = {ident = "BJ", lat = 35.5, lon = 140.0}
+    local Cf = P.point(Bf, 160, 40)
+    local stf = route({{via = "DIRECT", fix = Bf}, {via = "DIRECT", fix = Cf}}, P.point(Bf, 337, 30))
+    local sf = L.new(P)
+    local p0 = P.point(Bf, 337, 0.8)
+    local af = plane({lat = p0.lat, lon = p0.lon, hdg = 157, tas = 497, alt = 37000, bank = bank})
+    local turn, rollout
+    fly(stf, sf, af, 0.1, {engaged = engaged, each = function(t, s)
+        turn, rollout = s.turn ~= nil, (s.turn and s.turn.rollout) == true
+        return true
+    end})
+    return turn, rollout
+end
+local t1, r1 = first_rollout(20, true)
+T.check(t1 and r1, "a 3 degree right turn begun banked 20 degrees right, LNAV engaged: its roll out at once")
+local t2, r2 = first_rollout(-20, true)
+T.check(t2 and not r2, "banked 20 degrees left (the other way): no roll out")
+local t3, r3 = first_rollout(20, false)
+T.check(t3 and not r3, "LNAV not engaged: the turn's state, no roll out")
 
 -- a fly-over fix: over it, then back onto the leg
 st = route({{via = "DIRECT", fix = B, flyover = true}, {via = "DIRECT", fix = C}}, A)

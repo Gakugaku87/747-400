@@ -1,6 +1,6 @@
 {
   "name": "s400_pw_takeoff_epr_fppm",
-  "description": "P&W の離陸の定格を FPPM の Takeoff EPR の表に（2026-11-24、段 4 のフルレビューの ENG-2、notes/ATA-70-80.md §28）の X-Plane での確認、地上。RJAA 34L（約 140 ft）でエンジン運転中に始め（機体を読み直す）、海面 40 ℃。THRUST LIM で TO・TO 2・D-TO（SEL 55・65）を選び、基準の EPR（EICAS の REF、THRUST LIM、A/T の目標）と EEC の最大 EPR が FPPM の値か：TO 1.46（p.44 の 40 ℃ の行、前は着陸復行の表の 1.48）、最大も 1.46、TO 2 1.33（p.69、前は約 1.365）・減り 20 %、D-TO SEL 55 1.35（p.44 の 55 ℃）、SEL 65 は p.22 の 25 % 減の下限 約 1.297（前は 54 ℃ で止まって 1.38）。EICAS を撮る。Lua の誤りも確かめる",
+  "description": "P&W の離陸の定格を FPPM の Takeoff EPR の表に（2026-11-24、段 4 のフルレビューの ENG-2、notes/ATA-70-80.md §28）の X-Plane での確認、地上。RJAA 34L（約 140 ft）でエンジン運転中に始め（機体を読み直す）、地上の OAT 約 40 ℃（海面 42.5 ℃ を書く）。THRUST LIM で TO・TO 2・D-TO（SEL 55・65）を選び、基準の EPR（EICAS の REF、THRUST LIM、A/T の目標）と EEC の最大 EPR が FPPM の値か：TO 1.46（p.44 の 40 ℃ の行、前は着陸復行の表の 1.48）、最大も 1.46、TO 2 1.33（p.69、前は約 1.365）・減り 20 %、D-TO SEL 55 1.35（p.44 の 55 ℃）、SEL 65 は p.22 の 25 % 減の下限 約 1.297（前は 54 ℃ で止まって 1.38）。EICAS を撮る。Lua の誤りも確かめる",
   "reload": true,
   "flight": {
     "runway_start": { "airport_id": "RJAA", "runway": "34L" },
@@ -32,8 +32,11 @@
   "steps": [
     { "do": "sleep", "seconds": 10 },
     { "do": "check", "note": "P&W（EPR）の機体", "dref": "laminar/B747/engines/type", "op": "==", "value": 0, "stop": true },
+    { "do": "set", "note": "気温の変更をすぐに反映（s10 と同じ）", "dref": "sim/weather/region/update_immediately", "value": 1 },
+    { "do": "set", "note": "海面 42.5 ℃：空港で約 40 ℃。この空港・日時の地上の OAT は、海面の温度より約 2.5 ℃ 低い（ISA の減り方なら 0.3 ℃。理由は分からない）：2026-11-24 の 1 回目は天気の定義の海面 40 ℃ で 37.57 ℃、2 回目は上空の層の表 temperatures_aloft_deg_c を書いても 37.63 ℃（地上には効かない）、3 回目は海面 40.3 ℃ を書いて 37.84 ℃（書いた分だけ動く）", "dref": "sim/weather/region/sealevel_temperature_c", "value": 42.5 },
+    { "do": "wait", "note": "OAT が約 40 ℃ になる", "dref": "sim/cockpit2/temperature/outside_air_temp_degc", "op": "between", "value": [39.6, 40.4], "timeout": 60 },
     { "do": "snapshot", "note": "開始", "drefs": [ "sim/cockpit2/temperature/outside_air_temp_degc", "sim/weather/temperature_ambient_c", "sim/flightmodel2/position/pressure_altitude", "laminar/B747/engines/ref_thr_limit_mode", "laminar/B747/engines/display_EPR_ref[0]", "laminar/B747/engines/display_EPR_max[0]" ] },
-    { "do": "check", "note": "OAT は約 40 ℃（海面 40 ℃ の設定）", "dref": "sim/cockpit2/temperature/outside_air_temp_degc", "op": "between", "value": [38.5, 41], "stop": true },
+    { "do": "check", "note": "OAT は約 40 ℃（海面 42.5 ℃ の設定）", "dref": "sim/cockpit2/temperature/outside_air_temp_degc", "op": "between", "value": [38.5, 41], "stop": true },
     { "do": "cdu", "note": "MENU、<FMC（IDENT）", "keys": ["MENU", "L1"] },
     { "do": "wait", "note": "航法データを読み終える", "dref": "laminar/B747/fms3/Line05_L", "op": "contains", "value": "AIRAC", "timeout": 120 },
     { "do": "cdu", "note": "INIT REF、<INDEX、THRUST LIM", "keys": ["INITREF", "L6", "L4"] },
@@ -59,7 +62,7 @@
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "推力制限は D-TO", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "==", "value": "D-TO" },
     { "do": "check", "note": "D-TO SEL 55 の基準は p.44 の 55 ℃ の 1.35（前は 54 ℃ で止まって 1.38）", "dref": "laminar/B747/engines/display_EPR_ref[0]", "op": "between", "value": [1.345, 1.356], "cite": "FPPM p.22 (1.1.4), p.44 (1.2.20)" },
-    { "do": "check", "note": "減りは 20〜25 %", "dref": "laminar/B747/engines/to_reduction", "op": "between", "value": [20, 24.9] },
+    { "do": "check", "note": "減りは約 17 %：OAT 40 ℃ の 6 点（全推力 1.461、TO 1 1.411、TO 2 1.331）の間の EPR 1.35（推定の直線）。海面 15 ℃ なら 21.5 %（前の期待 20〜25 % は 15 ℃ の値で、2026-11-24 の 4 回目は 17.13 % で落ちた。模型も同じ 17.1 %）", "dref": "laminar/B747/engines/to_reduction", "op": "between", "value": [16.7, 17.5] },
     { "do": "snapshot", "note": "D-TO SEL 55", "drefs": [ "laminar/B747/engines/display_EPR_ref[0]", "laminar/B747/engines/to_reduction", "laminar/B747/fms/thrlim/eicas" ] },
     { "do": "cdu", "note": "SEL 65（L1）", "keys": ["65", "L1"] },
     { "do": "sleep", "seconds": 1 },

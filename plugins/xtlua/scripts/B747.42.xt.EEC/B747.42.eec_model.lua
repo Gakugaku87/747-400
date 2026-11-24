@@ -1214,10 +1214,16 @@ function M.update(s, inp, dt)
     if inp.takeoff and inp.type ~= "GE" and not inp.rr and tables.to then ga_t = tables.to end
     local ga = M.lookup(ga_t, ga_t == tables.ga and inp.tat or (inp.oat or inp.tat), ga_alt)
     local clb = M.lookup(tables.clb, inp.tat, inp.alt)
-    -- (the FMC's step 9h1) the maximum continuous band: the table's to
-    -- 22,000 ft, not under the maximum climb's, gone by 25,000 ft (the CF6;
-    -- the P&W's at every altitude: see the top)
-    local mct_share = inp.type == "GE" and clamp((M.CLB_ALT - inp.alt) / (M.CLB_ALT - M.MCT_ALT_TOP), 0, 1) or 1
+    -- (the FMC's step 9h1) the maximum continuous band: the table's, not
+    -- under the maximum climb's, at every altitude. (2026-11-24, the
+    -- 2026-11-23 review's ENG-6) on the CF6 too: FCOM p.379-381 (the 570's
+    -- PI.23.1-23.3) has its Max Continuous %N1 above 18,000 ft (to 27,000 ft
+    -- and over, p.380), against ATA70_80 p.208's maximum climb above
+    -- 25,000 ft; the crew's FCOM taken, as the P&W's (see the top). The
+    -- lever angle of the full-forward rating as before (35 degrees above
+    -- 25,000 ft: estimate). Before, the CF6's band gone from 22,000 to
+    -- 25,000 ft, so its CON reference stood over the maximum there
+    local mct_share = 1
     local mct = (mct_share > 0 and to_share < 1) and M.lookup_mct(tables.mct, inp.tat, inp.alt, inp.kias) or nil
     -- (B2) the P&W's maximum continuous at every speed (its full-forward
     -- rating above the go-around table's 10,000 ft)

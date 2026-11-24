@@ -191,4 +191,34 @@ T.equal(rt:get(ADV, 119), 1, "oil overheat 2: ENG 2 OIL TEMP")
 T.equal(rt:get(ADV, 118), 0, "no ENG 1 OIL TEMP")
 rt:set(ENG .. "fail/oil_temp", 1, 0)
 
+-- (2026-11-24, D of the 2026-11-23 review: DSP-6 d) the glue's CUTOFF and
+-- the CF6's oil differential, both passed by the review's mutants: a fuel
+-- control switch partway (not RUN) is CUTOFF (the start limit line); the
+-- lowest engine's quantity 6 quarts below another is magenta in cruise only,
+-- in the air with the flaps up (FCOM p.849), not on the ground
+rt:set(FUEL_CONTROL, 0, 0.5)
+frames(0.5)
+T.equal(flags(0).line, 1, "the fuel control switch partway (0.5): CUTOFF, the start limit line")
+rt:set(FUEL_CONTROL, 0, 1)
+frames(0.5)
+T.equal(flags(0).line, 0, "at RUN: no line")
+for i = 0, 3 do rt:set(OIL .. "oil_quantity_ratio", i, 1) end
+rt:set(OIL .. "oil_quantity_ratio", 2, 0.5)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set("laminar/B747/cablecontrols/flap_ratio", 0)
+frames(0.5)
+local qd = rt:get(ENG .. "oil_qty_liters", 0) - rt:get(ENG .. "oil_qty_liters", 2)
+T.check(qd * 1.0566882 >= 6, string.format("(engine 3 %.1f L under engine 1)", qd))
+T.equal(rt:get(ENG .. "oil_qty_magenta", 2), 0, "on the ground with the flaps up: engine 3's low quantity not magenta (no cruise)")
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
+frames(0.5)
+T.equal(rt:get(ENG .. "oil_qty_magenta", 2), 1, "in the air with the flaps up (cruise): engine 3 6 quarts under another, magenta")
+rt:set("laminar/B747/cablecontrols/flap_ratio", 0.5)
+frames(0.5)
+T.equal(rt:get(ENG .. "oil_qty_magenta", 2), 0, "the flaps out: not cruise, white")
+rt:set("laminar/B747/cablecontrols/flap_ratio", 0)
+rt:set("laminar/B747/gear/air_ground/pri_gnd", 1)
+rt:set(OIL .. "oil_quantity_ratio", 2, 1)
+frames(0.5)
+
 T.done()

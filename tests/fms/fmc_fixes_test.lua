@@ -73,6 +73,26 @@ T.check(line(7):find("^%-%-%-/"), "and it stays deleted: " .. line(7))
 type_in("240/8000")
 key("ls_key/L4")
 T.check(line(9):find("^240/8000"), "SPD RESTR 240/8000 entered: " .. line(9))
+-- (2026-11-24, the 2026-11-23 review's CDU-13) the altitude in FCOM p.1269
+-- (11.31.35)'s forms and display: XXXX feet ("0900" 900 ft, before read
+-- as 90,000 ft and refused), under 2,000 ft taken (before refused), FLXXX
+-- shown above the TRANS ALT, up to 45,100 ft whatever the weight (before
+-- the upstream's 58.16 - 0.0615 x t: 33,850 ft at 395 t)
+type_in("240/0900")
+key("ls_key/L4")
+T.check(line(9):find("^240/900 ") ~= nil, "SPD RESTR 240/0900: 900 ft (before INVALID ENTRY): " .. line(9))
+type_in("240/1500")
+key("ls_key/L4")
+T.check(line(9):find("^240/1500") ~= nil, "SPD RESTR 240/1500: taken (before refused under 2,000 ft): " .. line(9))
+rt:set("sim/flightmodel/weight/m_total", 395000)
+type_in("240/FL350")
+key("ls_key/L4")
+T.check(line(9):find("^240/FL350") ~= nil, "SPD RESTR 240/FL350 at 395 t: FL350 above the TRANS ALT (before refused, and feet): " .. line(9))
+type_in("240/45200")
+key("ls_key/L4")
+T.check(line(14):find("INVALID ENTRY") ~= nil, "SPD RESTR 240/45200: above 45,100 ft INVALID ENTRY: " .. line(14))
+for _ = 1, 30 do rt:command("laminar/B747/fms1/key/clear") end
+frames(0.1)
 key("key/del")
 key("ls_key/L4")
 T.check(line(9):find("^%-%-%-/%-%-%-%-%-"), "SPD RESTR deleted: dashes again: " .. line(9))

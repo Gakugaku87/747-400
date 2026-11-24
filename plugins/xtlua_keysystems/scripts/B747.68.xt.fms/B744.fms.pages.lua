@@ -201,15 +201,17 @@ dofile("B744.fms.pages.waypointwinds.lua")
 
 fmsPages["INITREF"]=createPage("INITREF")
 fmsPages["INITREF"].getPage=function(self,pgNo,fmsID)
-  local lineA="                        "
+  -- (2026-11-24, the 2026-11-23 review's CDU-12) <TAKEOFF in the air too,
+  -- MAINT> on the ground only (FMSPG p.68 (3.2-8): the in-flight figure
+  -- has <TAKEOFF and no MAINT>; ATA34_2 p.514). Before, <TAKEOFF went in the
+  -- air with MAINT>
+  fmsFunctionsDefs["INITREF"]["L5"]={"setpage","TAKEOFF"}
+  local lineA="<TAKEOFF                "
   local LineB="<APPROACH               "
   if simDR_onGround ==1 then
-    fmsFunctionsDefs["INITREF"]["L5"]={"setpage","TAKEOFF"}
     fmsFunctionsDefs["INITREF"]["R6"]={"setpage","MAINT"}
-    lineA="<TAKEOFF                "
     LineB="<APPROACH         MAINT>"
   else
-    fmsFunctionsDefs["INITREF"]["L5"]=nil
     fmsFunctionsDefs["INITREF"]["R6"]=nil
   end
   return {
@@ -518,20 +520,10 @@ function fmsFunctions.key2fmc(fmsO,value)
   fmsO["scratchpad"]=""
   fmsO["notify"]=""
 end
-local updateFrom="fmsL"
+-- (2026-11-24, the 2026-11-23 review's CDU-13) the upstream's updateCRZ
+-- (CRZ ALT read back from X-Plane's FMS) and validFL taken out: nothing
+-- called them
 local lastCrz=0
-
-function updateCRZ()
-  local setVal=string.sub(B747DR_srcfms[updateFrom][3],20,24)
-  print("from line".. updateFrom.." "..B747DR_srcfms[updateFrom][3])
-  print("to:"..setVal)
-  local alt=validAlt(setVal)
-  if alt~=nil then 
-	B747BR_cruiseAlt=alt 
-	lastCrz=B747BR_cruiseAlt
-  end
-  fmsModules:setData("crzalt",setVal)
-end
 
 function monitorCRZALT()
 	local thisCRZ=B747BR_cruiseAlt
@@ -564,16 +556,17 @@ function validateSpeed(value)
 
   return true
 end
+-- (2026-11-24, the 2026-11-23 review's CDU-13) an altitude entry (SPD
+-- RESTR's, TRANS ALT's) in FCOM p.1269 (11.31.35)'s forms
+-- (B747_cdu_model.parse_alt: XXX hundreds of feet, XXXX and XXXXX feet,
+-- FLXXX), above 0 ft to the maximum certified 45,100 ft (as CRZ ALT's), in
+-- feet as text; nil when not valid. Before, the upstream's: under 2,000 ft
+-- refused, the top from the weight (58.16 - 0.0615 x t: 33,850 ft at
+-- 395 t), "0900" read as 90,000 ft and refused
 function validAlt(value)
-  local val=tonumber(value)
-  if string.len(value)>2 and string.sub(value,1,2)=="FL" then val=tonumber(string.sub(value,3)) end
-  
-  if val==nil then return nil end
-  if val<1000 then val=val*100 end
-  local maxA = 58.16363636 - 0.06154545  * (simDR_GRWT/1000) -- model derived fcom p. 1576, ISA+10 and below
-  if val<2000 or val>(maxA*1000) then return nil end
-
-  return ""..val
+  local ft = B747_cdu_model.parse_alt(value)
+  if ft == nil or ft <= 0 or ft > 45100 then return nil end
+  return string.format("%d", ft)
 end
 -- (2026-11-13; the 2026-11-12 review FMC-10) SPD RESTR (the CLB and DES
 -- pages' 4L): a speed, "/" and an altitude, both valid (FMSPG p.114), else
@@ -586,17 +579,6 @@ function B747_spd_rest_entry(sp)
   local alt = validAlt(a)
   if not alt then return nil end
   return s, alt
-end
-function validFL(value)
-  local val=tonumber(value)
-  if string.len(value)>2 and string.sub(value,1,2)=="FL" then val=tonumber(string.sub(value,3)) end
-  
-  if val==nil then return nil end
-  if val<1000 then val=val*100 end
-  local maxA = 58.16363636 - 0.06154545  * (simDR_GRWT/1000) -- model derived fcom p. 1576, ISA+10 and below
-  if val<10000 or val>(maxA*1000) then return nil end
-
-  return "FL".. (val/100)
 end
 -- a speed entry (6-1/6-2 step 8b; FMSPG p.113): a CAS of 100 to 400 kt, a
 -- Mach of .100 to .990 (the point and one to three digits) or both, CAS/Mach
@@ -1337,6 +1319,16 @@ function fmsFunctions.setdata(fmsO,value)
 	monitorCRZALT()
 	B747_fms_econ_now()
 	setFMSData("stepalt", "")
+	-- (2026-11-24, review FMC-3) the DES page's SPD TRANS deleted comes back
+	-- with a new cruise altitude above the nav data base's altitude (FMSPG
+	-- p.192 (3.5-8)), 240/10000 (X-Plane's nav data have no airport speed
+	-- limit: FCOM p.1392). An MCP altitude's change of CRZ ALT is no entry
+	-- (estimate). Before, a deletion stayed until the airplane was loaded
+	-- again, through the flight complete too
+	if str_trim(fmsModules["data"].destranspd) == "---" and ft > 10000 then
+		setFMSData("destranspd", "240")
+		setFMSData("desspdtransalt", "10000")
+	end
 	-- above the maximum altitude the entry stands with MAX ALT FLXXX (6-1/6-2
 	-- step 8b2; FMSPG p.131, FCOM p.1435)
 	local maxft = B747_perf_db.max_alt(B747_fms_perf(), B747_fms_gw_kg(), B747_fms_isa_dev())
@@ -2734,8 +2726,15 @@ end
 -- (2026-11-05, the user) the chocks in or out: GROUND HANDLING's L2 below
 -- and the sim's ground handling window's button (b747_fms_bridge
 -- gh_window.c, through laminar/B747/gear/chocks_toggle)
+-- (2026-11-24, the 2026-11-23 review's NAV-3) in only on the ground and
+-- standing (under 1 m/s, as the GPU's: B747.03.xt.electrical.lua's
+-- ELEC_GPU_STANDING_MS), out at any time (a sim convenience: no source;
+-- estimate). Before, also in the air and rolling: the brakes' chocks on a
+-- takeoff roll
+local CHOCKS_STANDING_MS = 1
 function B747_fms_toggle_chocks()
 	local chocked = B747DR__gear_chocked == 1 and 0 or 1
+	if chocked == 1 and (simDR_onGround ~= 1 or simDR_groundspeed > CHOCKS_STANDING_MS) then return end
 	B747DR__gear_chocked = chocked
 	--Stop refueling operation if CHOCKS are removed
 	if chocked == 0 then

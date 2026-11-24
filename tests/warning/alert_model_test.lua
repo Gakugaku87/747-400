@@ -481,6 +481,26 @@ do
     alerts(inp, {{">CONFIG GEAR", "warning"}})
     out = run(s, inp, 0.5)
     T.check(out.aural.siren, "CONFIG GEAR by the thrust lever again later: sounds again (a new one)")
+
+    -- (2026-11-24, the 2026-11-23 review's WARN-3) a further lever closed
+    -- while it stands (the flight controls' 1 + the further ones): a new
+    -- alert, the master WARNING and the siren again after a reset (ATA31
+    -- p.209, p.214). Before, it stayed silent
+    s, inp = flying()
+    inp.config_gear_lever, inp.config_gear_lever_n = true, 1
+    alerts(inp, {{">CONFIG GEAR", "warning"}})
+    out = run(s, inp, 0.5)
+    out = push(s, inp, "master_reset")
+    T.check(not out.aural.siren and not out.master_warning, "CONFIG GEAR by one lever: reset, silent")
+    out = run(s, inp, 0.5)
+    T.check(not out.aural.siren, "the same lever: silent still")
+    inp.config_gear_lever_n = 2
+    out = run(s, inp, 0.5)
+    T.check(out.aural.siren and out.master_warning, "a second lever closed (2): the siren and master WARNING again")
+    out = push(s, inp, "master_reset")
+    T.check(not out.aural.siren and not out.master_warning, "reset again: silent")
+    out = run(s, inp, 0.5)
+    T.check(not out.aural.siren, "the count unchanged: silent")
 end
 
 -- the wailer: while >AUTOPILOT DISC is shown, at least 1 s (FCOM p.1550)
