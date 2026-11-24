@@ -55,11 +55,14 @@ T.equal(ns.B747_fms_to_ref_alt(), 500, "through 100 kt: the altimeter's 500 ft r
 rt:set(ALT, 510)
 frames(0.2)
 T.equal(ns.B747_fms_to_ref_alt(), 500, "the record kept as the altitude moves")
--- THR REDUCTION 1000 ft (FCOM p.1319: above the runway) with VNAV
+-- THR REDUCTION 1000 ft (FCOM p.1319: above the runway) with VNAV; the
+-- takeoff's flaps 10 set on the ground (2026-11-24, review FMC-7 (c): flaps
+-- out of UP in the air are GA's, from TO too)
 ns.fmsModules["data"].thrred = "1000"
+rt:set("sim/cockpit2/controls/flap_ratio", 3 / 6)
+frames(0.2)
 rt:set("sim/flightmodel/failures/onground_any", 0)
 rt:set("laminar/B747/gear/air_ground/pri_gnd", 0)
-rt:set("sim/cockpit2/controls/flap_ratio", 3 / 6)
 rt:set("sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot", 600)
 rt:set("laminar/B747/autopilot/vnav_state", 2)
 rt:set(IAS, 170)
