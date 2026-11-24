@@ -63,55 +63,10 @@ end
   return TOGA_corrected_thrust_lbf  --, TOGA_actual_thrust_lbf, TOGA_actual_thrust_N
 end]]
 
-function take_off_N1_GE(altitude_ft_in)
-  local N1_corrected = 0.0
-  local N1_actual = 0.0
-  local temperature_K = 0.0
-  local temperature_ratio = 0.0
-
-  --locals to hold returned values from take_off_thrust_corrected() function
-  local TOGA_corrected_thrust_lbf = 0.0
-  local TOGA_actual_thrust_N = 0.0
-
-  --For Takeoff, use actual Sim temperature instead of atmosphere() temperature_K
-  --If a derate temperature is entered in the THRUST LIM page of the FMC, use that instead
-  --if fmsModules["data"]["thrustsel"] ~= "  " then
-  --  temperature_K = tonumber(fmsModules["data"]["thrustsel"]) + 273.15
-  --else
-    temperature_K = simDR_temperature + 273.15
-  --end
-
-  temperature_ratio = temperature_K / 288.15
-
-  --get take_off_thrust_corrected() data
-  TOGA_corrected_thrust_lbf, _, TOGA_actual_thrust_N = take_off_thrust_corrected(altitude_ft_in, temperature_K)
-
-  --Mach should always be 0 for purposes of this calculation
-  --(2026-11-10) local, as in the P&W's and the RB211's: it set the module's
-  --mach to 0, and GE() calls this every frame (its takeoff_thrust_n1 starts
-  --at 0 each call), so the N1 shown in the air came from the corrected
-  --thrust's polynomial at Mach 0: about 10 % low in the cruise (FL390,
-  --M.86: 82.7 for 93.5; notes/ATA-70-80.md §15)
-  local mach = 0.0
-
-  N1_corrected = (-1.4446E-12 * mach^2 + 1.2102E-12 * mach + 4.8911E-13) * TOGA_corrected_thrust_lbf^3 + (1.1197E-07 * mach^2 - 7.8717E-08 * mach - 6.498200000000002E-08)
-                  * TOGA_corrected_thrust_lbf^2 + (-0.0027 * mach^2 + 0.0011 * mach + 0.0036) * TOGA_corrected_thrust_lbf + (36.93 * mach + 20.96)
-
-  N1_actual = string.format("%4.1f", N1_corrected * math.sqrt(temperature_ratio))
-
-  if B747DR_log_level >= 1 then
-    print("\t\t\t\t\t<<<--- TAKEOFF N1 (GE) --->>>")
-    print("Altitude IN = ", altitude_ft_in)
-    print("Temperature K = ", temperature_K)
-    print("Temperature Ratio = ", temperature_ratio)
-    print("Mach = ", mach)
-    print("TOGA Corrected Thrust = ", TOGA_corrected_thrust_lbf)
-    print("N1 Corrected = ", N1_corrected)
-    print("N1 Actual = ", N1_actual)
-  end
-
-  return N1_actual, TOGA_actual_thrust_N
-end
+-- (2026-11-25, the 2026-11-23 review's ENG-4) take_off_N1_GE is gone: it
+-- gave the factor of the N1 shown on the takeoff (X-Plane's N1 times the
+-- upstream's cubic in the takeoff thrust, at Mach 0), and the takeoff shows
+-- the N1 model's now (N1_display_GE)
 
 -- (2026-11-24, ENG-7) in_flight_N1_GE, the upstream's climb and cruise N1,
 -- is gone with GE()'s branches that called it (their results were
@@ -123,14 +78,15 @@ local last_N1 = {0.0, 0.0, 0.0, 0.0}
 -- idle pin below (it read laminar/B747/engines/TRA, which now carries the
 -- EICAS's command: at least the idle N1 the display is pinned to)
 local eec_cmd_ge = {[0] = 0, 0, 0, 0}
--- (2026-11-10) the N1 shown in the air for a thrust (N) at this frame's air
--- data (the corrected thrust's polynomial below, no state): N1_display_GE's,
--- and the EEC's thrust control takes its slope against the thrust from it
--- (B747.42.xt.eec_thrust.lua). B747_ge_n1_from_xp(engine): the display is
--- X-Plane's N1 instead (the takeoff), the EEC then uses its tables. Local
--- state: a table in a global turns into XTLua's namespace
-local ge_n1_from_xp = {[0] = true, true, true, true}
-function B747_ge_n1_from_xp(engine) return ge_n1_from_xp[engine] ~= false end
+-- (2026-11-10) the N1 shown for a thrust (N) at this frame's air data (the
+-- N1 model below, no state): N1_display_GE's, and the EEC's thrust control
+-- takes its slope against the thrust from it (B747.42.xt.eec_thrust.lua).
+-- (2026-11-25, ENG-4) on the takeoff too: before, while the thrust limit was
+-- a TO one (or GA on the ground, or none under 2,000 ft RA) the display was
+-- X-Plane's N1 times the upstream's takeoff factor and the EEC used its
+-- tables; leaving it the N1 jumped (s325 2026-11-22: 105.5 to 110.0 at the
+-- thrust reduction, 104.1 against 110.0 at 161 kt) and the same N1 gave 8
+-- to 9 % more thrust on the takeoff (224-227 kN at 141-161 kt)
 -- (2026-11-10, ENG-33) the formula fitted to the FCOM's CF6-80C2B1F %N1
 -- (B747.42.ge_n1_model.lua, notes/ATA-70-80.md §17); before, the upstream's
 -- cubic in the corrected thrust, 1.5 % high in the cruise and up to 14 % in
@@ -160,12 +116,11 @@ end
 -- the idle N1). Not the model's at the thrust then: the pin's 10 s lag
 -- would come into the EEC's control on every reduction
 function B747_ge_idle_pin(engine, altitude_ft)
-    local idle = engine_idle_control_GE(altitude_ft)
-    if not ge_n1_from_xp[engine] then idle = math.max(idle, B747_ge_n1_of_thrust(0)) end
-    return idle
+    -- (2026-11-25, ENG-4) everywhere: the display is the model's everywhere
+    return math.max(engine_idle_control_GE(altitude_ft), B747_ge_n1_of_thrust(0))
 end
 
-function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
+function N1_display_GE(altitude_ft_in, thrust_N_in, engine_in)
     local N1_corrected = 0.0
     local N1_actual = 0.0
     local corrected_thrust_N = 0.0
@@ -194,26 +149,12 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
       thrust_N_in = 0.0
     end
 
-    if n1_factor_in == 0 or n1_factor_in == nil then
-      --Failsafe incase n1_factor_in is 0 or nil
-      n1_factor_in = 105.0
-      takeoff_TOGA_n1 = n1_factor_in
-    end
-
     corrected_thrust_N = thrust_N_in / pressure_ratio
     corrected_thrust_lbf = corrected_thrust_N / lbf_to_N
 
     actual_thrust_lbf = corrected_thrust_lbf * pressure_ratio
 
     N1_actual = B747_ge_n1_of_thrust(thrust_N_in)
-
-    --Keep the N1 display steady during TO until we manage thrust or 2000 AGL unmanaged
-    ge_n1_from_xp[engine_in] = false
-    if (string.match(B747DR_ref_thr_limit_mode, "TO") or (simDR_onGround == 1 and B747DR_ref_thr_limit_mode == "GA"))
-      or ((B747DR_ref_thr_limit_mode == "NONE" or B747DR_ref_thr_limit_mode == "") and B747DR_radio_altitude < 2000) then
-        N1_actual = simDR_N1[engine_in] * n1_factor_in
-        ge_n1_from_xp[engine_in] = true
-    end
 
     --Engine Idle Logic (Minimum / Approach)
     N1_low_idle = B747_ge_idle_pin(engine_in, altitude_ft_in)
@@ -237,7 +178,6 @@ function N1_display_GE(altitude_ft_in, thrust_N_in, n1_factor_in, engine_in)
       print("N1_low_idle = ", N1_low_idle)
       print("Corrected Thrust LBF = ", corrected_thrust_lbf)
       print("Actual Thrust LBF = ", actual_thrust_lbf)
-      print("TO Factor = ", n1_factor_in)
       print("N1 Actual = ", N1_actual)
       print("Last Thrust In = ", last_thrust_n[engine_in])
     end
@@ -283,7 +223,6 @@ end
 --B747_egt in B747.42.xt.egt.lua) from the engine's state and the N1 shown.
 --Before, EGT_display_GE: X-Plane's EGT 1:1, then egt_thermal_profile
 
-local takeoff_TOGA_n1 = 0.0
 local orig_thrust_n = 0.0
 local N1_target_bug={}
 local display_N1_ref={}
@@ -327,25 +266,16 @@ function GE(altitude_ft_in)
   --climb, cruise and go-around branches are gone (with in_flight_N1_GE):
   --since the FMC's step 9g3 the reference below and the EEC's maximum
   --overwrote everything they set, and in the climb and the cruise they
-  --worked out a design climb rate's thrust every frame. Kept as they were:
-  --takeoff_TOGA_n1, the factor of the N1 shown on the takeoff
-  --(N1_display_GE; the review's ENG-4, not changed here), from the takeoff
-  --N1 worked out every frame (the takeoff branch's test always held: its
-  --takeoff_thrust_n1 started at 0) and taken without a takeoff derate, in
-  --GA (and NONE) whatever the derate; the rated thrust stored for the
-  --boost's reset. laminar/B747/engines/thrustref_throttle, which only they
-  --wrote and nothing reads, stays as it is
-  local takeoff_thrust_n1 = take_off_N1_GE(altitude_ft_in)
-  if B747DR_toderate == 0 then
-    takeoff_TOGA_n1 = takeoff_thrust_n1
-  end
+  --worked out a design climb rate's thrust every frame. Kept as it was:
+  --the rated thrust stored for the boost's reset.
+  --laminar/B747/engines/thrustref_throttle, which only they wrote and
+  --nothing reads, stays as it is. (2026-11-25, ENG-4) the takeoff N1's
+  --factor (takeoff_TOGA_n1) is gone with the takeoff display's branch
   if string.match(B747DR_ref_thr_limit_mode, "TO") or B747DR_ref_thr_limit_mode == "" then
     --Store original max engine output
     if orig_thrust_n == 0.0 or B747DR_newsimconfig_data == 1 then
       orig_thrust_n = simDR_thrust_max
     end
-  elseif B747DR_ref_thr_limit_mode == "GA" or B747DR_ref_thr_limit_mode == "NONE" then
-    takeoff_TOGA_n1 = takeoff_thrust_n1
   end
 
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
@@ -381,8 +311,9 @@ function GE(altitude_ft_in)
     B747DR_display_N1_max[i] = B747_eec_max(i)  --the EEC's maximum rated N1, not the FMC's reference
   end
 	for i = 0, 3 do
-    --takeoff_TOGA_n1 (max TO) is used as a factor to compute N1 for TO based on the simDR_N1 to prevent N1 display loss during TO -- in flight it is calculated based on Newtons
-    N1_display[i] = string.format("%4.1f", math.min(N1_display_GE(altitude_ft_in, simDR_thrust_n[i], takeoff_TOGA_n1 / 100, i), 118.0))  --use i as a reference for engine number
+    --(2026-11-25, ENG-4) the N1 model's on the takeoff too (before, X-Plane's
+    --N1 times the takeoff factor in the TO modes)
+    N1_display[i] = string.format("%4.1f", math.min(N1_display_GE(altitude_ft_in, simDR_thrust_n[i], i), 118.0))  --use i as a reference for engine number
     B747DR_display_N1[i] = math.max(N1_display[i], 0.0)
 
     local n2 = N2_display_GE(N1_display[i], i)  --use N1 as input for calcs
@@ -408,9 +339,6 @@ function GE(altitude_ft_in)
     B747DR_throttle_resolver_angle[i] = cmd
 	end
 
-  if B747DR_log_level >= 1 then
-    print("Takeoff TOGA = ", takeoff_TOGA_n1)
-  end
   --Manage Thrust
   throttle_management()
   --thrust_ref_control_N1()

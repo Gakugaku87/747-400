@@ -33,6 +33,7 @@
       "laminar/B747/engines/display_N1[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "laminar/B747/engine/throttle_reversor[0]",
       "sim/aircraft/engine/acf_throtmax_REV" ] },
     { "do": "check", "note": "N1 は 70 % を超える（放す前で、まだ上がっている）", "dref": "sim/flightmodel/engine/ENGN_N1_[0]", "op": ">", "value": 70 },
+    { "do": "check", "note": "表示の N1 も 70 % を超える（2026-11-25 の ENG-4 から、表示は thrust_dry_n の N1 の模型の値。X-Plane の thrust_dry_n は逆推力でも前向きの推力で、この回は 203 kN で 92.9 %。前は X-Plane の N1 × 離陸の係数で 89.2 %。表示がアイドル付近に残る誤りを捕まえる）", "dref": "laminar/B747/engines/display_N1[0]", "op": ">", "value": 70 },
     { "do": "view", "name": "eicas" },
     { "do": "shot", "name": "eicas_reverse_ge" },
     { "do": "sleep", "seconds": 8, "note": "放す（reverse idle）" },

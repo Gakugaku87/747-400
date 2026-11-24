@@ -183,7 +183,10 @@ do
     ns.find_closest_weight, ns.find_closest_altitude = fw, fa
     T.check(ns.take_off_EPR_PW == nil and ns.in_flight_EPR_PW == nil and ns.in_flight_N1_GE == nil
         and ns.find_closest_temperature == nil, "take_off_EPR_PW, in_flight_EPR_PW, in_flight_N1_GE and find_closest_temperature are gone")
-    T.check(type(ns.take_off_N1_GE) == "function", "take_off_N1_GE stays (the GE's takeoff N1 factor: ENG-4, not changed)")
+    -- (2026-11-25, ENG-4) the GE's takeoff N1 factor went with the takeoff
+    -- display's branch
+    T.check(ns.take_off_N1_GE == nil and ns.takeoff_TOGA_n1 == nil and ns.B747_ge_n1_from_xp == nil,
+        "take_off_N1_GE, takeoff_TOGA_n1 and B747_ge_n1_from_xp are gone (ENG-4)")
 end
 rt:set("laminar/B747/engines/type", 0)
 rt:set("laminar/B747/fms/thrlim/code", 0)
@@ -617,6 +620,59 @@ frames(3)
 T.near(get(ENG .. "TRA", 1), ns.B747_eec_command(1), 1e-6, "GE: the lever forward: the EICAS's command the EEC's")
 rt:set("sim/flightmodel/engine/ENGN_running", 1, running_was)
 frames(1)
+-- (2026-11-25, the 2026-11-23 review's ENG-4) the GE's takeoff shows the N1
+-- model's too, not X-Plane's N1 times the upstream's takeoff factor: on the
+-- takeoff roll with the thrust limit TO, the N1 shown is the model's at the
+-- engine's thrust, the same with CLB (the thrust reduction: before, 105.5 to
+-- 110.0 in s325's point), whatever X-Plane's own N1, and the EEC's thrust
+-- control has the model's slope (before nil: its tables)
+do
+    local F, MACH = 224000, 0.24            -- N, s325's 161 kt
+    local was = {mach = get("sim/flightmodel/misc/machno"), n1 = get("sim/flightmodel/engine/ENGN_N1_", 0),
+        thrust = get("sim/cockpit2/engine/indicators/thrust_dry_n", 0), mode = get(ENG .. "ref_thr_limit_mode"),
+        baro = get("sim/weather/aircraft/barometer_current_pas")}
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325)
+    rt:set("sim/flightmodel/misc/machno", MACH)
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, F)
+    rt:set("sim/flightmodel/engine/ENGN_N1_", 0, 99.0)
+    rt:set(ENG .. "ref_thr_limit_mode", "TO")
+    frames(3)
+    local to_n1 = get(ENG .. "display_N1", 0)
+    local want = ns.B747_ge_n1_of_thrust(F)
+    T.near(to_n1, want, 0.06, string.format("GE: TO on the takeoff roll: the N1 shown %.1f the model's at %d kN, M%.2f (%.1f)", to_n1, F / 1000, MACH, want))
+    rt:set("sim/flightmodel/engine/ENGN_N1_", 0, 103.0)
+    frames(3)
+    T.near(get(ENG .. "display_N1", 0), to_n1, 0.06, "GE: TO: X-Plane's own N1 does not move it (before, X-Plane's N1 times the factor)")
+    rt:set(ENG .. "ref_thr_limit_mode", "CLB")
+    frames(1)
+    T.near(get(ENG .. "display_N1", 0), to_n1, 0.06, "GE: TO to CLB at the same thrust: no jump (before, 105.5 to 110.0 in s325)")
+    rt:set(ENG .. "ref_thr_limit_mode", "TO")
+    frames(1)
+    local slope = ns.B747_eec_plant_slope("GE", 0, 1.0)
+    T.check(slope ~= nil and slope > 15, string.format("GE: TO: the thrust control's slope the model's (%s; before nil, the tables)", tostring(slope)))
+    -- the reverser out on the ground: X-Plane's thrust_dry_n stays the
+    -- engine's forward thrust (s187 2026-11-21, full reverse: +203,170 N at
+    -- X-Plane's N1 84.1; the net thrust, POINT_thrust, below none), so the N1
+    -- shown is the model's at it, as in forward thrust (about 93 %; before
+    -- ENG-4, X-Plane's N1 times the takeoff factor: 89.2), not the idle pin's
+    -- and not the model's no-thrust N1
+    local rev_was = get("sim/cockpit2/annunciators/reverser_on", 0)
+    rt:set("sim/cockpit2/annunciators/reverser_on", 0, 1)
+    rt:set("sim/flightmodel/misc/machno", 0.0)
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, 203170)
+    rt:set("sim/flightmodel/engine/ENGN_N1_", 0, 84.1)
+    frames(1)
+    local rev_n1, rev_want = get(ENG .. "display_N1", 0), ns.B747_ge_n1_of_thrust(203170)
+    T.check(math.abs(rev_n1 - rev_want) < 0.06 and rev_n1 > 88,
+        string.format("GE: full reverse on the ground: the N1 shown %.1f the model's at 203 kN (%.1f)", rev_n1, rev_want))
+    rt:set("sim/cockpit2/annunciators/reverser_on", 0, rev_was)
+    rt:set("sim/flightmodel/misc/machno", was.mach)
+    rt:set("sim/flightmodel/engine/ENGN_N1_", 0, was.n1)
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, was.thrust)
+    rt:set(ENG .. "ref_thr_limit_mode", was.mode)
+    rt:set("sim/weather/aircraft/barometer_current_pas", was.baro)
+    frames(1)
+end
 
 -- (ENG-31) GE in reverse: X-Plane's maximum reverse throttle 1, the
 -- reverse throttle the ECU's share of the maximum rated thrust (0.9 at full
@@ -916,9 +972,10 @@ frames(30)
 local n1 = get(ENG .. "display_N1", 0)
 T.check(n1 > 60 and n1 < 110, string.format("EGT: the GE's N1 shown in the cruise %.1f", n1))
 -- (2026-11-10) the module's Mach stays the cruise's through the GE's frame
--- (take_off_N1_GE's own Mach is local now; before, it set the module's to
+-- (take_off_N1_GE's own Mach was made local; before, it set the module's to
 -- 0 every frame and the N1 shown in the air came from the corrected
--- thrust's polynomial at Mach 0)
+-- thrust's polynomial at Mach 0. take_off_N1_GE is gone since 2026-11-25,
+-- ENG-4)
 T.check(ns.mach > 0.8, string.format("GE: the module's Mach after a frame %.3f (the cruise's, not 0)", ns.mach))
 T.near(n1, ns.B747_ge_n1_of_thrust(get("sim/cockpit2/engine/indicators/thrust_dry_n", 0)), 0.06,
     string.format("GE: the N1 shown (%.1f) the corrected thrust's polynomial at the cruise's Mach", n1))
