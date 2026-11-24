@@ -3913,7 +3913,16 @@ local function update_ils(db)
   local il,key=nil,nil
   if db.ready then il,key=dest_ils(db,r) end
   local ground=simDR_onGround==1
-  if ilsWasGround==true and not ground then ilsLiftoff,ilsLiftoffKey=now,key end
+  -- (2026-11-24, the 2026-11-23 review's FMC-4) the ten minutes after
+  -- takeoff (FCOM p.1305 (11.40.29)) from the flight's first lift-off only:
+  -- a touch and go's or a go-around's off the runway is no takeoff, so its
+  -- ILS stays tuned (estimate; before, each lift-off began ten minutes of
+  -- STBY). tuneState.flown until the flight complete (the FMS main chunk
+  -- has no room for a local)
+  if ilsWasGround==true and not ground then
+    if not tuneState.flown then ilsLiftoff,ilsLiftoffKey=now,key end
+    tuneState.flown=true
+  end
   ilsWasGround=ground
   if ilsLiftoff and (now-ilsLiftoff>=TM.TAKEOFF_S or key~=ilsLiftoffKey or now<ilsLiftoff) then ilsLiftoff=nil end
   local standby,auto=false,false
@@ -3928,6 +3937,14 @@ local function update_ils(db)
     standby=td~=nil and td<TM.STANDBY_TD_NM and past
     auto=not ground and ((td~=nil and td<TM.AUTO_TD_NM) or N.distance(lat,lon,thrLat,thrLon)<TM.AUTO_THR_NM
       or B747_fms_vnav_phase()=="DES")
+    -- (FMC-4) after a flight on the ground the destination's ILS stays
+    -- auto-tuned (A) until the flight complete clears the route: FCOM
+    -- p.1307 (11.40.31)'s A has no air or ground, p.1306's PARK is at the
+    -- power-up, more than 200 NM from the T/D and before half the route;
+    -- the receiver keeps the frequency, so its deviation shows (p.987).
+    -- Estimate (no source covers the landing to the turn around). Before,
+    -- PARK on the ground (under 40 kt, the FCCs' inhibit gone)
+    if ground and tuneState.flown then auto=true end
   end
   ilsIn.ils,ilsIn.standby,ilsIn.auto=il,standby,auto
   ilsIn.after_takeoff=ilsLiftoff~=nil
@@ -6000,6 +6017,7 @@ function B747_fms_flight_complete()
   renew(eoState,B747_eo_model.new())
   renew(thrlimState,B747_thrlim_model.new())
   renew(ldgState,LA.new())
+  tuneState.flown=false          -- (review FMC-4) the next flight's takeoff
   msgInhibit=false
   local inh=B747_fmc_nav_inhibits and B747_fmc_nav_inhibits()
   if inh then inh.navaid,inh.vor,inh.vordme={},{},false end
