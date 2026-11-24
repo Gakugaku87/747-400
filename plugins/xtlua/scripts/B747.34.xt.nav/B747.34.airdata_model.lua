@@ -65,15 +65,25 @@ function M.new()
     return s
 end
 
--- the altitude for a baro setting from a pressure altitude (standard atmosphere)
+-- (2026-11-24, the 2026-11-23 review's NAV-4) the altitude for a baro
+-- setting from a pressure altitude, and back, as X-Plane's altimeters
+-- (sim/cockpit2/gauges/indicators/altitude_ft_pilot and the others, the
+-- ADC's inputs) do it: FT_PER_INHG feet for an inch of mercury, in a
+-- straight line from STD_INHG (measured: tests/flight/measure/nav4_baro_law,
+-- 2026-11-24 on the ground at RJAA, the pressure altitude 135.3 ft: 134.2 ft
+-- at 29.92, 1,049.2 at 30.92, -780.8 at 28.92, 1,964.2 at 31.92). The ADC
+-- undoes it for the pressure altitude, so what it shows with the same
+-- setting is X-Plane's. Before, the standard atmosphere's correction (about
+-- 905 ft for the first inch near sea level, more aloft): the pressure
+-- altitude 9 ft off for an inch at the field and 53 for two, more aloft; what
+-- a side showed from another ADC with another setting, ADC C's Mach and V/S
+-- the same. The real ADC's own correction is not the input's (no source)
+M.FT_PER_INHG = 915
 function M.baro_alt(alt_std, baro)
-    local p = M.STD_INHG * (1 - alt_std / 145442.16) ^ (1 / 0.190263)
-    return 145442.16 * (1 - (p / baro) ^ 0.190263)
+    return alt_std + (baro - M.STD_INHG) * M.FT_PER_INHG
 end
--- and back: the pressure altitude from an altitude and its baro setting
 function M.pressure_alt(alt, baro)
-    local p = baro * (1 - alt / 145442.16) ^ (1 / 0.190263)
-    return 145442.16 * (1 - (p / M.STD_INHG) ^ 0.190263)
+    return alt - (baro - M.STD_INHG) * M.FT_PER_INHG
 end
 
 -- the Mach number from a computed airspeed (kt) and a pressure altitude (ft),

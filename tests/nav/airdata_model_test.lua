@@ -20,7 +20,13 @@ end
 
 -- the baro conversions
 T.near(M.baro_alt(0, 29.92126), 0, 0.5, "29.92: the pressure altitude")
-T.near(M.baro_alt(0, 30.92), 920, 20, "one inch more: about 940 ft higher near sea level")
+-- (2026-11-24, NAV-4) X-Plane's altimeters, measured at RJAA with the
+-- pressure altitude 135.32 ft (tests/flight/measure/nav4_baro_law): 915 ft
+-- an inch, a straight line (the standard atmosphere's 905 up and 943 down)
+for _, c in ipairs({{29.92, 134.178}, {30.92, 1049.178}, {28.92, -780.821}, {31.92, 1964.178}}) do
+    T.near(M.baro_alt(135.32, c[1]), c[2], 0.05, string.format("%.2f: X-Plane's altimeter's %.1f ft", c[1], c[2]))
+    T.near(M.pressure_alt(c[2], c[1]), 135.32, 0.05, string.format("and from it at %.2f the pressure altitude", c[1]))
+end
 T.near(M.pressure_alt(M.baro_alt(5000, 29.5), 29.5), 5000, 0.01, "and back")
 T.near(M.mach_from(250, 0), 0.378, 0.002, "250 kt at sea level: M0.378")
 T.near(M.mach_from(280, 35000), 0.821, 0.003, "280 kt at FL350: M0.82")
