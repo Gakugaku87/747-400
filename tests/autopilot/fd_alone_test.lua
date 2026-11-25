@@ -7,7 +7,9 @@
 -- diagram), so the F/D's command is the attitude and FD_S seconds of the
 -- law's rate. The user's flight (2026-11-25): before CMD the pitch F/D was
 -- off after the lift-off; in s109 (2026-11-22) it stood 4 to 6 degrees
--- under the airplane for 6 s while the law asked for more pitch. On
+-- under the airplane for 6 s while the law asked for more pitch. (Their
+-- descent after the acceleration height was on the A/P: spd_flap_ramp_
+-- test.lua.) On
 -- plugins/xtlua_keysystems/scripts/B747.70.xt.autopilot/B747.70.afds_pitch_model.lua:
 --  - the command: V/S +1,000 not followed for 30 s, the attitude and FD_S
 --    of the law's rate (not wound up), the integrator at the attitude; with

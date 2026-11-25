@@ -105,6 +105,21 @@
 -- record: the user's flight, 2026-11-12). On the lagged airplane with that
 -- excess (1.0 kt/s): down to -968 fpm and 514 ft lost before, not under
 -- 100 fpm since, within a knot of 340 kt after 85 s (62 s before).
+-- (2026-11-26; notes/ATA-22.md §73) "In step with its target" takes the
+-- target's own rate only against the way (a climb's falling target: a Mach
+-- held; a descent's rising one): a target moving with the way (rising in a
+-- climb, falling in a descent) asks for no more than the near-level path.
+-- The takeoff's acceleration moves its target up with the flaps (FCOM
+-- p.667, p.1255, p.1326: 5 kt under the placard of the flap setting; here
+-- the FMC's target and the protection's maximum go with the flaps'
+-- position, some 3 kt a second from flaps 10 to 5), and before the near
+-- level floor fell with it wherever the thrust gave less than that: a heavy
+-- airplane on its climb thrust went down (the user's flight, 2026-11-25:
+-- the vertical speed negative after the acceleration height with the A/P;
+-- on the lagged airplane at 390 t, 1.2 kt/s of excess, -212 fpm). FCTM
+-- p.118: the acceleration near level, what the thrust gives; only the speed
+-- protection takes the path past level (FCOM p.675: the stall protection
+-- through the elevators), as before.
 -- Pure: the airplane's state in, the command out.
 --   local P = B747_afds_pitch_model                       -- in XTLua, after dofile
 --   local P = dofile(".../B747.70.afds_pitch_model.lua")  -- in the tests
@@ -286,8 +301,9 @@ M.TOGA_RATE = 3
 -- of V/S +1,000: 6 degrees). A heavy takeoff held at 15 degrees (the speed
 -- under the target) wound it 15 degrees under the airplane by the
 -- acceleration height, and VNAV SPD went on from there: flown from there
--- the airplane went down at 1,400 fpm (a model: fd_alone_test.lua). FLARE
--- (LAND 2 and 3: the A/Ps) as before
+-- the airplane went down at 1,400 fpm (a model: fd_alone_test.lua; the
+-- user's own descent there, 2026-11-25, was on the A/P: this file's head,
+-- 2026-11-26). FLARE (LAND 2 and 3: the A/Ps) as before
 M.FD_S = 2
 -- G/S (step 3c): the distance to the transmitter from the radio altitude
 -- (in its range, GS_RA_MAX) on GS_DEG (ATA22 p.346); estimates: the
@@ -689,7 +705,9 @@ function M.update(s, inp, dt)
         -- flight at the most; past level flight only where the thrust is
         -- short of it: then to the path that keeps the speed (`hold`: in step
         -- with its target, and back within the speed protection's limit,
-        -- FCOM p.675) and as far again as that is past level, at most `step`
+        -- FCOM p.675) and as far again as that is past level, at most `step`.
+        -- (2026-11-26) The target's own rate in `hold` only against the way
+        -- (this file's head: the takeoff's flap-by-flap acceleration)
         local way = toga and 0 or (inp.way or 0)
         if way ~= 0 then
             local fpm = inp.way_fpm or M.SPD_LEVEL_FPM
@@ -697,11 +715,11 @@ function M.update(s, inp, dt)
             local level = path(way * fpm, v) - gam
             local step = path(M.SPD_LEVEL_FPM, v)
             if way > 0 then
-                local keep = tr + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S
+                local keep = math.min(0, tr) + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S
                 local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
                 dpath = math.max(dpath, math.min(level, math.max(hold - step, math.min(0, 2 * hold)) - gam))
             else
-                local keep = tr + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S
+                local keep = math.max(0, tr) + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S
                 local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
                 dpath = math.min(dpath, math.max(level, math.min(hold + step, math.max(0, 2 * hold)) - gam))
             end
