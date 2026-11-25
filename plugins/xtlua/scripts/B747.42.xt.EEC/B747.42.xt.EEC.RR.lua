@@ -13,10 +13,32 @@
 *****************************************************************************************
 ]]
 
+-- (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md §8, notes/ATA-70-80.md
+-- §40) the RB211's thrust and EPR by difference from the PW4056's
+-- (B747.42.rr_model.lua). The EEC (B747.42.xt.eec_thrust.lua) runs on the
+-- PW4056's scale for it, with the P&W's ratings and its own takeoff table;
+-- this file shows the RB211's own EPR (the reference, the maximum, the
+-- command and the engine's), N3 X-Plane's N2 and N2 (IP) shown only (below,
+-- N2_display_RR), N1 and EGT as before.
+-- Gone with the rebuild: the upstream's takeoff EPR (take_off_EPR_RR: its
+-- thrust estimate through the EPR cubic, whose top at 1.71 left the takeoff
+-- thrust free), the climb EPR (in_flight_EPR_RR: a design climb rate's
+-- thrust), the cruise table's lookups (P85M_epr_RR), the go-around formula,
+-- the EPR shown from thrust / density ratio, the 0.97 floor and its PID
+dofile("B747.42.rr_model.lua")
+local RRM = B747_rr_model
+
+-- the engine (G or H) from the simconfig's string
+local function rr_variant()
+  return RRM.variant(simConfigData["data"].PLANE.engines)
+end
+
 --This function calculates the target position of the throttle target on the Upper EICAS
+--(2026-11-25) the EEC's command for the lever (B747.42.xt.eec_thrust.lua, on the
+--PW4056's scale) shown as the RB211's EPR. Before, 0.95 to 0.99 x the max line
+--along the lever
 function throttle_resolver_angle_RR(engine_in)
-  local EPR_target=B747_rescale(0.0, 0.95, 1.0, B747DR_display_EPR_max[engine_in]*0.99, B747DR_throttle[engine_in])
-  return EPR_target
+  return RRM.display(B747_eec_command(engine_in), simDR_epr_mach)
 end
 
   --The N1 the display shows at minimum idle. The idle selection (minimum or
@@ -25,323 +47,7 @@ end
 function engine_idle_control_RR(altitude_ft_in)
     return -1.45E-08 * altitude_ft_in^2 + 0.00121 * altitude_ft_in + 21.9
   end
-  
-  
-  
-  --[[function take_off_thrust_assumed(altitude_ft_in, temperature_K_in)
-    local TOGA_corrected_thrust_lbf = 0.0
-    local TOGA_actual_thrust_lbf = 0.0
-    local TOGA_actual_thrust_N = 0.0
-    local approximate_max_TO_thrust_lbf = 0
-    local temperature_K = 0.0
-  
-    temperature_K = fmsModules["data"]["thrustsel"] + 274.15
-  
-    if temperature_K_in > corner_temperature_K then
-        TOGA_corrected_thrust_lbf = (-1.79545 * (temperature_K / corner_temperature_K) + 2.7874) * (-0.0000546 * altitude_ft_in^2 + 1.37 * altitude_ft_in + approximate_max_TO_thrust_lbf)
-    else
-        TOGA_corrected_thrust_lbf = (-0.0000546 * altitude_ft_in^2 + 1.37 * altitude_ft_in + approximate_max_TO_thrust_lbf)
-    end
-  
-    TOGA_actual_thrust_lbf = TOGA_corrected_thrust_lbf * pressure_ratio
-    TOGA_actual_thrust_N = TOGA_actual_thrust_lbf * lbf_to_N
-  
-    if B747DR_log_level >= 2 then
-      print("\t\t\t\t\t<<<--- Assumed Temp Takeoff Calcs --->>>")
-      print("Altitude IN = ", altitude_ft_in)
-      print("Temperature K IN = ", temperature_K_in)
-      print("Approximate Takeoff Thrust Required = ", approximate_max_TO_thrust_lbf)
-      print("TOGA Corrected LBF = ", TOGA_corrected_thrust_lbf)
-      print("TOGA Actual LBF = ", TOGA_actual_thrust_lbf)
-      print("TOGA Actual N = ", TOGA_actual_thrust_N)
-    end
-  
-    return TOGA_corrected_thrust_lbf  --, TOGA_actual_thrust_lbf, TOGA_actual_thrust_N
-  end]]
-  
-  function take_off_EPR_RR(altitude_ft_in)
-    local EPR_actual = 0.0
-    local mach = 0.0
-    local TOGA_corrected_thrust_N = 0.0
-    local TOGA_corrected_thrust_calibrated_N = 0.0
-    local RR_EPR_factor = 1.00
 
-    --locals to hold returned values from take_off_thrust_corrected() function
-    local TOGA_actual_thrust_N = 0.0
-
-  
-    --For Takeoff, use actual Sim temperature instead of atmosphere() temperature_K
-    --If a derate temperature is entered in the THRUST LIM page of the FMC, use that instead
-    --if fmsModules["data"]["thrustsel"] ~= "  " then
-    --  temperature_K = tonumber(fmsModules["data"]["thrustsel"]) + 273.15
-    --else
-      --temperature_K = simDR_temperature + 273.15
-    --end
-  
-    --temperature_ratio = temperature_K / 288.15
-  
-    --get take_off_thrust_corrected() data
-    _, _, TOGA_actual_thrust_N = take_off_thrust_corrected(altitude_ft_in, temperature_K)
-
-    TOGA_corrected_thrust_N = TOGA_actual_thrust_N / (1000 * sigma_density_ratio)
-    --TOGA_corrected_thrust_N = TOGA_actual_thrust_N / (1000 * pressure_ratio)
-    --TOGA_corrected_thrust_calibrated_N = (-0.4795 * mach^2 + 0.5903 * mach + 0.925) * TOGA_corrected_thrust_N  --Sigma version 2
-    TOGA_corrected_thrust_calibrated_N = TOGA_corrected_thrust_N  --no calibration needed
-    
-    --Mach should always be 0 for purposes of this calculation
-    mach = 0.0
-  
-    --NEW RR EPR formula (11/3/21)
-    RR_EPR_factor = B747_rescale(4.0, 1.00, 50.0, 1.05, TOGA_corrected_thrust_N)
-    EPR_actual = (2.8E-08 * mach^2 + 1.86E-08 * mach - 3.33E-08) * TOGA_corrected_thrust_N^3 + (-0.0000143 * mach^2 - 9.38E-06 * mach + 7.32E-06)
-      * TOGA_corrected_thrust_N^2 + (0.0021 * mach^2 + 0.0015 * mach + 0.0029) * TOGA_corrected_thrust_N + (-0.1773 * mach^2 - 0.0283 * mach + RR_EPR_factor)  --1.05)
-  
-    if B747DR_log_level >= 2 then
-      print("\t\t\t\t\t<<<--- TAKEOFF EPR (RR) --->>>")
-      print("Altitude IN = ", altitude_ft_in)
-      print("Temperature K = ", temperature_K)
-      print("Temperature Ratio = ", temperature_ratio)
-      print("Mach = ", mach)
-      print("TOGA Actual Thrust N = ", TOGA_actual_thrust_N)
-      print("TOGA Corrected Thrust = ", TOGA_corrected_thrust_N * 1000)
-      print("TOGA Corrected Thrust - Calibrated = ", TOGA_corrected_thrust_calibrated_N)
-      print("Temp < Corner = ", temperature_K < corner_temperature_K)
-      print("EPR Actual = ", EPR_actual)
-    end
-  
-    return EPR_actual, TOGA_actual_thrust_N
-  end
-
-  local EPR_initial_climb = 0.0
-  local last_climb_rate_fpm = 0.0
-  function in_flight_EPR_RR(altitude_ft_in, delta_t_isa_K_in)
-    local EPR_corrected_thrust_N = 0.0
-    local EPR_corrected_thrust_calibrated_N = 0.0
-    local EPR_actual = 0.0
-    local EPR_max_climb = 0.0
-    local climb_rate_fpm = 0
-    local climb_angle_deg = 0.0
-    local thrust_per_engine_N = 0.0
-    local corrected_thrust_lbf = 0.0
-    local RR_EPR_factor = 1.00
-    local RR_EPR_correction = 0.0
-  
-      --Due to modeling differences / deficiencies, the climb rates below are tweaked (higher) to
-      --allow for more closely matched real-world performance.  Ideal generic target climb rates are:
-      --  >> 0 - 10000 ft = 2200fpm
-      --  >> 10000 - 20000ft = 2100fpm
-      --  >> 20000 - 30000ft = 1700fpm
-      if string.match(simConfigData["data"].PLANE.engines, "524G") then
-        --V/S mode / use what the pilot has input on the MCP for V/S
-        if B747DR_ap_FMA_active_pitch_mode == 7 then
-          if B747DR_ap_vvi_fpm > 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm + 500
-          elseif B747DR_ap_vvi_fpm <= 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm
-          end
-
-          if B747DR_airspeed_pilot < (simDR_ind_airspeed_kts_pilot - 3) then
-            if last_climb_rate_fpm <= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm + 1, B747DR_ap_vvi_fpm + 1000)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          elseif B747DR_airspeed_pilot > simDR_ind_airspeed_kts_pilot then
-            if last_climb_rate_fpm >= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm - 1, B747DR_ap_vvi_fpm)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          end
-        elseif simDR_altitude < 10000 then
-          climb_rate_fpm = 2750
-        elseif simDR_altitude <= 20000 then
-          climb_rate_fpm = B747_rescale(10000.0, 2750.0, 20000.0, 2500.0, simDR_altitude)
-        elseif simDR_altitude <= 30000 then
-          climb_rate_fpm = B747_rescale(20000.0, 2500.0, 30000.0, 2250.0, simDR_altitude)
-        elseif simDR_altitude <= 40000 then
-          climb_rate_fpm = B747_rescale(30000.0, 2250.0, 40000.0, 2250.0, simDR_altitude)
-        elseif simDR_altitude <= 50000 then
-          climb_rate_fpm = 2250
-        end
-      elseif string.match(simConfigData["data"].PLANE.engines, "524H") and not string.match(simConfigData["data"].PLANE.engines, "524H8T") then  -- 524H8T below (ENG-30)
-        --V/S mode / use what the pilot has input on the MCP for V/S
-        if B747DR_ap_FMA_active_pitch_mode == 7 then
-          if B747DR_ap_vvi_fpm > 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm + 500
-          elseif B747DR_ap_vvi_fpm <= 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm
-          end
-
-          if B747DR_airspeed_pilot < (simDR_ind_airspeed_kts_pilot - 3) then
-            if last_climb_rate_fpm <= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm + 1, B747DR_ap_vvi_fpm + 1000)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          elseif B747DR_airspeed_pilot > simDR_ind_airspeed_kts_pilot then
-            if last_climb_rate_fpm >= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm - 1, B747DR_ap_vvi_fpm)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          end
-        elseif simDR_altitude < 10000 then
-          climb_rate_fpm = 2875
-        elseif simDR_altitude <= 20000 then
-          climb_rate_fpm = B747_rescale(10000.0, 2875.0, 20000.0, 2625.0, simDR_altitude)
-        elseif simDR_altitude <= 30000 then
-          climb_rate_fpm = B747_rescale(20000.0, 2625.0, 30000.0, 2375.0, simDR_altitude)
-        elseif simDR_altitude <= 40000 then
-          climb_rate_fpm = B747_rescale(30000.0, 2375.0, 40000.0, 2375.0, simDR_altitude)
-        elseif simDR_altitude <= 50000 then
-          climb_rate_fpm = 2375
-        end
-      elseif string.match(simConfigData["data"].PLANE.engines, "524H8T") then
-        --V/S mode / use what the pilot has input on the MCP for V/S
-        if B747DR_ap_FMA_active_pitch_mode == 7 then
-          if B747DR_ap_vvi_fpm > 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm + 500
-          elseif B747DR_ap_vvi_fpm <= 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm
-          end
-
-          if B747DR_airspeed_pilot < (simDR_ind_airspeed_kts_pilot - 3) then
-            if last_climb_rate_fpm <= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm + 1, B747DR_ap_vvi_fpm + 1000)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          elseif B747DR_airspeed_pilot > simDR_ind_airspeed_kts_pilot then
-            if last_climb_rate_fpm >= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm - 1, B747DR_ap_vvi_fpm)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          end
-        elseif simDR_altitude < 10000 then
-          climb_rate_fpm = 3000
-        elseif simDR_altitude <= 20000 then
-          climb_rate_fpm = B747_rescale(10000.0, 3000.0, 20000.0, 2750.0, simDR_altitude)
-        elseif simDR_altitude <= 30000 then
-          climb_rate_fpm = B747_rescale(20000.0, 2750.0, 30000.0, 2500.0, simDR_altitude)
-        elseif simDR_altitude <= 40000 then
-          climb_rate_fpm = B747_rescale(30000.0, 2500.0, 40000.0, 2500.0, simDR_altitude)
-        elseif simDR_altitude <= 50000 then
-          climb_rate_fpm = 2500
-        end
-      else  --Assume 524G if all else fails
-        if B747DR_ap_FMA_active_pitch_mode == 7 then
-          if B747DR_ap_vvi_fpm > 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm + 500
-          elseif B747DR_ap_vvi_fpm <= 0 then
-            climb_rate_fpm = B747DR_ap_vvi_fpm
-          end
-
-          if B747DR_airspeed_pilot < (simDR_ind_airspeed_kts_pilot - 3) then
-            if last_climb_rate_fpm <= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm + 1, B747DR_ap_vvi_fpm + 1000)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          elseif B747DR_airspeed_pilot > simDR_ind_airspeed_kts_pilot then
-            if last_climb_rate_fpm >= climb_rate_fpm then
-              last_climb_rate_fpm = climb_rate_fpm
-            else
-              last_climb_rate_fpm = math.min(last_climb_rate_fpm - 1, B747DR_ap_vvi_fpm)
-            end
-            climb_rate_fpm = last_climb_rate_fpm
-          end
-        elseif simDR_altitude < 10000 then
-          climb_rate_fpm = 2750
-        elseif simDR_altitude <= 20000 then
-          climb_rate_fpm = B747_rescale(10000.0, 2750.0, 20000.0, 2500.0, simDR_altitude)
-        elseif simDR_altitude <= 30000 then
-          climb_rate_fpm = B747_rescale(20000.0, 2500.0, 30000.0, 2250.0, simDR_altitude)
-        elseif simDR_altitude <= 40000 then
-          climb_rate_fpm = B747_rescale(30000.0, 2250.0, 40000.0, 2250.0, simDR_altitude)
-        elseif simDR_altitude <= 50000 then
-          climb_rate_fpm = 2250
-        end
-      end
-  
-      if fmc_alt >= (altitude_ft_in - 200) and B747DR_ref_thr_limit_mode == "CRZ" then
-        climb_rate_fpm = 0
-      end
-  
-      last_climb_rate_fpm = climb_rate_fpm
-
-      climb_angle_deg = math.asin(0.00508 * climb_rate_fpm / tas_mtrs_sec) * 180 / math.pi
-  
-      --get in_flight_thrust() data
-      _, thrust_per_engine_N, _, corrected_thrust_lbf = in_flight_thrust(simDR_acf_weight_total_kg, climb_angle_deg)
-  
-      EPR_corrected_thrust_N =   thrust_per_engine_N / (1000 * sigma_density_ratio)
-      --EPR_corrected_thrust_N =   thrust_per_engine_N / (1000 * pressure_ratio)
-      --EPR_corrected_thrust_calibrated_N = (-0.4795 * mach^2 + 0.5903 * mach + 0.925) * EPR_corrected_thrust_N  --Sigma version 2
-      EPR_corrected_thrust_calibrated_N = EPR_corrected_thrust_N  --no calibration needed
-
-      --NEW RR EPR formula (11/3/21)
-      RR_EPR_factor = B747_rescale(4.0, 1.00, 50.0, 1.05, EPR_corrected_thrust_N)
-      EPR_actual = (2.8E-08 * mach^2 + 1.86E-08 * mach - 3.33E-08) * EPR_corrected_thrust_N^3 + (-0.0000143 * mach^2 - 9.38E-06 * mach + 7.32E-06)
-        * EPR_corrected_thrust_N^2 + (0.0021 * mach^2 + 0.0015 * mach + 0.0029) * EPR_corrected_thrust_N + (-0.1773 * mach^2 - 0.0283 * mach + RR_EPR_factor)  --1.05)
-
-      if simDR_TAT > -13.0 then
-        RR_EPR_correction = (-13.0 - simDR_TAT) / 10 * 0.06
-      else
-        RR_EPR_correction = 0.0
-      end
-
-      --Calculate Initial Climb EPR
-      if EPR_initial_climb == 0.0 then
-        EPR_initial_climb = -4.38E-06 * simDR_altitude + 1.87 + RR_EPR_correction - 0.05  --reduce max climb by 0.05 EPR as a target for initial climb
-      end
-
-      --Calculate Max Climb EPR
-      EPR_max_climb = -4.38E-06 * simDR_altitude + 1.87 + RR_EPR_correction
-
-      --Keep the Initial and Max Climb values per the FCOM tables
-      --if EPR_initial_climb > 1.50 then
-      --  EPR_initial_climb = 1.50
-      --end
-
-      if EPR_max_climb > 1.90 then
-        EPR_max_climb = 1.90
-      end
-
-      --Temporary correction until a better initial climb formula can be implemented
-      if EPR_initial_climb > EPR_actual then
-        EPR_initial_climb = EPR_actual
-      end
-
-      if B747DR_log_level >= 2 then
-        print("\t\t\t\t\t<<<--- IN FLIGHT EPR (RR) --->>>")
-        print("Altitude IN = ", altitude_ft_in)
-        print("Delta T ISA IN = ", delta_t_isa_K_in)
-        print("Temperature Ratio = ", temperature_ratio)
-        print("Temperature Ratio Adapted = ", temperature_ratio_adapted)
-        print("Mach = ", mach)
-        print("Req'd Thrust per Engine N = ", thrust_per_engine_N)
-        print("Corrected Thrust N = ", EPR_corrected_thrust_N)
-        print("Corrected Thrust N - Calibrated = ", EPR_corrected_thrust_calibrated_N)
-        print("Corrected Thrust LBF = ", corrected_thrust_lbf)
-        print("Climb Rate FPM = ", climb_rate_fpm)
-        print("Climb Angle = ", climb_angle_deg)
-        print("EPR Intial Climb = ", EPR_initial_climb)
-        print("EPR Max Climb = ", EPR_max_climb)
-        print("EPR Actual = ", EPR_actual)
-      end
-  
-      return EPR_actual, EPR_initial_climb, EPR_max_climb
-  end
-  
   local last_thrust_n = {0.0, 0.0, 0.0, 0.0}
   local N1_engine_start = {0.0, 0.0, 0.0, 0.0}
   local last_N1 = {0.0, 0.0, 0.0, 0.0}
@@ -357,6 +63,8 @@ function engine_idle_control_RR(altitude_ft_in)
 
     if N1_engine_start[engine_in] == nil then N1_engine_start[engine_in] = 0.0 end
     if last_N1[engine_in] == nil then last_N1[engine_in] = 0.0 end
+    --(2026-11-25) engine 0's (the tables count from 1); EPR_display_RR set it before
+    if last_thrust_n[engine_in] == nil then last_thrust_n[engine_in] = 0.0 end
 
     if simDR_engine_running[engine_in] == 0 and thrust_N_in >= 0.0  and simDR_engine_starter_status[engine_in] == 0 then
       thrust_N_in = last_thrust_n[engine_in]-25
@@ -486,38 +194,31 @@ function engine_idle_control_RR(altitude_ft_in)
     return N1_actual
   end
 
+  --(2026-11-25, the user's 「XP内のN2をN3として扱ってN2はプラグイン活用して表示だけ」:
+  --GAP_ANALYSIS.md §8) the RB211's three spools on X-Plane's two. X-Plane's
+  --N2, the spool its starter, fuel, windmilling and failures turn, is the
+  --RB211's HP, N3: its gearbox drives the IDG, the pumps and the starter
+  --(LH24 p.66 gives the RB211's IDG underspeed in N3), and what reads X-Plane's
+  --N2 (the start, the IDG, the pumps' power, the alerts) sees it so. 1:1
+  --(estimate: no source has the RB211's HP against X-Plane's; X-Plane's N2 is
+  --69.7 % at ground idle and 98-99 % on a takeoff, under TCDS_RB211 p.18-19's
+  --99.2 %). The IP, N2, only shown: between the shown N1 and N3,
+  --N1 + IP_SHARE (N3 - N1) (estimate: near what the upstream's IP formula
+  --showed - 49.9 against 49.0 at idle with N1 26.8 and N3 68.7, 89.3 against
+  --87.0 in the cruise with 84.2 and 93.4, 101.5 against 101.0 on the takeoff
+  --with 105.7 and 98.1, s427-s429 2026-11-25 - and under N3 in a start,
+  --where the shown N1 runs ahead of X-Plane's: the formula alone showed the IP
+  --at 45 % with N3 at 21, s429). What reads the shown N2 as the core's speed
+  --takes N3 for the RB211 (B747.42.xt.EEC.lua's start-up hold, the bleed, the
+  --cargo heat, the oil pressure's band, the vibration). Before, the shown N2
+  --followed X-Plane's N2 10 s behind (its local started at 0 and always took
+  --that branch: the IP formula never ran) and N3 was a cubic of the shown N1
+  local IP_SHARE = 0.55
   local last_N2 = {0.0, 0.0, 0.0, 0.0}
-  function N2_display_RR(engine_N1_in, engine_in)
-    local N2_display = 0.0
-    local N1_low_idle = engine_idle_control_RR(simDR_altitude)
-
-    if N1_engine_start[engine_in] == nil then N1_engine_start[engine_in] = 0.0 end
-
-    --print("++++++ N2 Engine Start +++++  N1-in -> ", engine_N1_in, N1_engine_start[engine_in])
-
-    --Handle display of engine startup
-    if (simDR_engine_running[engine_in] == 0 and simDR_engine_starter_status[engine_in] == 1)
-      or (simDR_engine_running[engine_in] == 1 and (engine_N1_in < N1_engine_start[engine_in] and engine_N1_in < N1_low_idle) or (engine_N1_in < 51)) then
-      engine_N1_in = N1_engine_start[engine_in]
-    end
-
-    N2_display_target = 0.0000663 * engine_N1_in^3 - 0.0163 * engine_N1_in^2 + 1.94 * engine_N1_in
-    
+  function N2_display_RR(engine_N1_in, engine_N3_in, engine_in)
+    local target = engine_N1_in + IP_SHARE * (engine_N3_in - engine_N1_in)
     if last_N2[engine_in] == nil then last_N2[engine_in] = 0.0 end
-    if (simDR_engine_running[engine_in] == 0 or simDR_N2[engine_in]<35) then
-      N2_display = B747_animate_value(last_N2[engine_in],simDR_N2[engine_in],0,115,0.1) 
-    elseif N2_display < simDR_N2[engine_in] then --and N2_display < 30.0 then
-      N2_display = B747_animate_value(last_N2[engine_in],simDR_N2[engine_in],0,115,0.1)
-    else
-      N2_display = B747_animate_value(last_N2[engine_in],N2_display_target,0,115,10)
-    end
-    
-    if B747DR_log_level >= 2 then
-      print("----- N2 Display -----")
-      print("N1 in, N2 = ", engine_N1_in, N2_display)
-      print("************ LAST N2 = ", last_N2[engine_in])
-    end
-
+    local N2_display = B747_animate_value(last_N2[engine_in], math.max(0, target), 0, 115, 10)
     last_N2[engine_in] = N2_display
 
     return N2_display
@@ -525,76 +226,19 @@ function engine_idle_control_RR(altitude_ft_in)
 
   local last_N3 = {0.0, 0.0, 0.0, 0.0}
   function N3_display_RR(engine_N1_in, engine_in)
-    local N3_display = 0.0
-    local N1_low_idle = engine_idle_control_RR(simDR_altitude)
-
-    --Handle display of engine startup
-    if (simDR_engine_running[engine_in] == 0 and simDR_engine_starter_status[engine_in] == 1)
-      or (simDR_engine_running[engine_in] == 1 and (engine_N1_in < N1_engine_start[engine_in] and engine_N1_in < N1_low_idle) or (engine_N1_in < 51)) then
-      engine_N1_in = N1_engine_start[engine_in]
-    end
-
-    N3_display = 0.000164 * engine_N1_in^3 - 0.035 * engine_N1_in^2 + 2.8 * engine_N1_in
-    
     if last_N3[engine_in] == nil then last_N3[engine_in] = 0.0 end
-
-    if B747DR_log_level >= 2 then
-      print("----- N3 Display -----")
-      print("N1 in, N3 = ", engine_N1_in, N3_display)
-      print("************ LAST N3 = ", last_N3[engine_in])
-    end
-
+    local N3_display = B747_animate_value(last_N3[engine_in], simDR_N2[engine_in], 0, 115, 10)
     last_N3[engine_in] = N3_display
 
     return N3_display
   end
 
+  --(2026-11-25) the EPR shown: the RB211's (B747_rr_model.epr) from the engine's
+  --net thrust, the ambient pressure and the Mach. Before, the upstream's cubic
+  --on thrust / density ratio (its top 1.713 near 255 kN standing, falling
+  --beyond), 0.97 at least and the max line at most with the flaps out
   function EPR_display_RR(altitude_ft_in, thrust_N_in, engine_in)
-      local EPR_actual = 0.0
-      local EPR_corrected_thrust_N = 0.0
-      local EPR_corrected_thrust_calibrated_N = 0.0
-      local RR_EPR_factor = 1.00
-
-      if last_thrust_n[engine_in] == nil then
-        last_thrust_n[engine_in] = 0.0
-      end
-
-      EPR_corrected_thrust_N = thrust_N_in / (1000 * sigma_density_ratio)
-      --EPR_corrected_thrust_N = thrust_N_in / (1000 * pressure_ratio)
-    
-      --EPR_corrected_thrust_calibrated_N = (-0.4795 * mach^2 + 0.5903 * mach + 0.925) * EPR_corrected_thrust_N  --Sigma version 2
-      EPR_corrected_thrust_calibrated_N = EPR_corrected_thrust_N
-
-      --NEW RR EPR formula (11/3/21)
-      RR_EPR_factor = B747_rescale(4.0, 1.00, 50.0, 1.05, EPR_corrected_thrust_N)
-      EPR_actual = (2.8E-08 * mach^2 + 1.86E-08 * mach - 3.33E-08) * EPR_corrected_thrust_N^3 + (-0.0000143 * mach^2 - 9.38E-06 * mach + 7.32E-06)
-        * EPR_corrected_thrust_N^2 + (0.0021 * mach^2 + 0.0015 * mach + 0.0029) * EPR_corrected_thrust_N + (-0.1773 * mach^2 - 0.0283 * mach + RR_EPR_factor)  --1.05)
-      
-      --Ensure EPR doesn't drop to an unrealistic value during IDLE descent.  This also ensures that the EPR tapes don't fall off the display.
-      if EPR_actual < 0.97 then
-        EPR_actual = 0.97
-      --try to combat the formula issue where EPR increases due to mach rising faster than thrust decreases during TO
-    elseif B747DR_ref_thr_limit_mode ~= "GA" and simDR_flap_ratio > 0.0 then
-      if EPR_actual > B747DR_display_EPR_max[engine_in] then
-        EPR_actual = B747DR_display_EPR_max[engine_in]
-      end
-    end
-
-      if B747DR_log_level >= 2 then
-        print("\t\t\t\t\t<<<--- EPR DISPLAY (RR) --->>>".."\t\tEngine # "..engine_in + 1)
-        print("Altitude IN = ", altitude_ft_in)
-        print("Thrust IN = ", thrust_N_in)
-        print("Pressure Ratio = ", pressure_ratio)
-        print("Temperature K = ", temperature_K)
-        print("Temperature Ratio = ", temperature_ratio)
-        print("Mach = ", mach)
-        print("Corrected Thrust N (1000's) = ", EPR_corrected_thrust_N)
-        print("Corrected Thrust Calibrated N (1000's) = ", EPR_corrected_thrust_calibrated_N)
-        print("EPR Actual = ", EPR_actual)
-        print("Last Thrust In = ", last_thrust_n[engine_in])
-      end
-      
-      return EPR_actual
+      return RRM.epr(thrust_N_in / 1000, simDR_epr_ambient_pa / 101325, simDR_epr_mach, rr_variant())
   end
 
   function EGT_display_RR(engine_in)
@@ -612,38 +256,15 @@ function engine_idle_control_RR(altitude_ft_in)
   
     return EGT_display
   end
-  
+
   local orig_thrust_n = 0.0
   function RR(altitude_ft_in)
-    local altitude = 0.0  --round_thrustcalc(simDR_altitude, "ALT")
-    local nbr_packs_on = 0
-    local packs_adjustment_value = 0.0
-    local engine_anti_ice_adjustment_value = 0.0
-    local wing_anti_ice_adjustment_value = 0.0
-    local takeoff_thrust_epr = 1.0  --100.0
-    local takeoff_thrust_epr_throttle = 0.00
-    local EPR_initial_climb = 0.0
-    local EPR_max_climb = 0.0
-    local EPR_max_cruise = 0.0
-    local EPR_display = {}
+    local EPR_target_bug = {}
+    local display_EPR_ref = {}
     local N1_display = {}
     local N2_display = {}
     local N3_display = {}
     local EGT_display = {}
-    local target_weight = 0.0
-    local target_alt = 0.0
-    local RR_EPR_correction = 0.0
-  
-    --In-flight variables
-    local EPR_actual = 0.0
-    local EPR_target_bug = {}
-    local display_EPR_ref = {}
-    local display_EPR_max = {}
-    for i = 0, 3 do
-      EPR_target_bug[i] = simDR_EPR_target_bug[i]
-      display_EPR_ref[i] = B747DR_display_EPR_ref[i]
-      display_EPR_max[i] = B747DR_display_EPR_max[i]
-    end
     --Setup engine factors based on engine type
     if string.match(simConfigData["data"].PLANE.engines, "524G") then
       engine_max_thrust_n = 258000
@@ -679,145 +300,35 @@ function engine_idle_control_RR(altitude_ft_in)
       simDR_compressor_area = 3.54136  --(86.3-inch fan -- 48.19 sq. ft)
     end
 
-    --Find current altitude rounded to the closest 1000 feet (for use in table lookups)
-    altitude = round_thrustcalc(altitude_ft_in, "ALT")
-  
-      --Packs Adjustment
-    nbr_packs_on = B747DR_packs_operating     -- the packs with their valves open (AIR-16)
-  
-    if nbr_packs_on == 0 then
-        packs_adjustment_value = 0.01
-    elseif nbr_packs_on == 1 then
-        packs_adjustment_value = 0.01
-    else
-        packs_adjustment_value = 0.00
-    end
-  
-    --Engine Anti-Ice Adjustment
-    --for i = 0, 3 do
-    --    if simDR_engine_anti_ice[i] == 1 then
-    --        engine_anti_ice_adjustment_value = TOGA_epr_PW4056_adjustment["NACELLE_AI_ON"][altitude]
-    --    end
-    --end
-  
-    --print("Alt = "..altitude)
-    --print("Temp = "..temperature)
-
-    --Initialize N1 targets to 100% in case someone starts the flight scenario in the air (i.e. 10nm final, etc.)
-    if takeoff_TOGA_epr == 0.0 then
-      takeoff_thrust_epr = 1.70
-      takeoff_TOGA_epr = 1.70
-    end
-  
-    if simDR_onGround == 1 or B747DR_ref_thr_limit_mode == "" or B747DR_ref_thr_limit_mode == "NONE" then
-        --temperature = find_closest_temperature(TOGA_N1_GE, simDR_temperature)
-        --airport_altitude = altitude
-        --print("Closest Temp = ", temperature)
-        --print("Takeoff Parameters = ", temperature, altitude, packs_adjustment_value, engine_anti_ice_adjustment_value)
-        takeoff_thrust_epr, _ = take_off_EPR_RR(altitude_ft_in)
-    
-      if B747DR_toderate == 0 then
-        takeoff_TOGA_epr = takeoff_thrust_epr
-      end
-
-      takeoff_thrust_epr_throttle = B747_rescale(0.0, 0.0, tonumber(takeoff_TOGA_epr), 1.0, tonumber(takeoff_thrust_epr))
-      
-      -- Set EPR Target Bugs & Reference Indicator
-      --Due to display issues on the EICAS, keep the REF and MAX limit lines at a max of 1.90 otherwise they get painted above the EPR tape
-      for i = 0, 3 do
-        EPR_target_bug[i] = string.format("%3.2f",takeoff_thrust_epr) + packs_adjustment_value + engine_anti_ice_adjustment_value
-        display_EPR_ref[i] = math.min(string.format("%3.2f",takeoff_thrust_epr) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
-        display_EPR_max[i] = math.min(string.format("%3.2f",takeoff_thrust_epr) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
-      end
-
-      B747DR_TO_throttle = takeoff_thrust_epr_throttle
-    end
-  
-    if simDR_TAT > -13.0 then
-      RR_EPR_correction = (-13.0 - simDR_TAT) / 10 * 0.06
-    else
-      RR_EPR_correction = 0.0
-    end
-
+    --(2026-11-25) as the P&W's (ENG-7): the upstream's takeoff, climb, cruise and
+    --go-around branches are gone; kept the rated thrust stored for the boost's
+    --reset
     if string.match(B747DR_ref_thr_limit_mode, "TO") or B747DR_ref_thr_limit_mode == "" then
       --Store original max engine output
-      
       if orig_thrust_n == 0.0 or B747DR_newsimconfig_data == 1 then
         orig_thrust_n = simDR_thrust_max
       end
-    elseif string.match(B747DR_ref_thr_limit_mode, "CLB") then
-      EPR_actual, EPR_initial_climb, EPR_max_climb = in_flight_EPR_RR(altitude_ft_in, 0)
-  
-        --Set target bugs
-      for i = 0, 3 do
-        if EPR_actual > EPR_max_climb then
-          if EPR_initial_climb > EPR_max_climb then
-            EPR_target_bug[i] = string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
-            display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_initial_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
-          else
-            EPR_target_bug[i] = string.format("%3.2f", EPR_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value
-            display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_max_climb) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
-          end
-        else
-          EPR_target_bug[i] = string.format("%3.2f", EPR_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value
-          display_EPR_ref[i] = math.min(string.format("%3.2f", EPR_actual) + packs_adjustment_value + engine_anti_ice_adjustment_value, 1.90)
-        end
+    end
 
-        if B747DR_display_EPR_max[i] < B747DR_display_EPR_ref[i] then
-          display_EPR_max[i] = B747DR_display_EPR_ref[i]
-        end
-      end
-    elseif string.match(B747DR_ref_thr_limit_mode, "CRZ") then
-      EPR_actual, _, EPR_max_climb = in_flight_EPR_RR(altitude_ft_in, 0)
-
-      target_weight = find_closest_weight(P85M_epr_RR, math.ceil(simDR_acf_weight_total_kg / 1000))
-      target_alt = find_closest_altitude(P85M_epr_RR, math.ceil(altitude_ft_in / 1000))
-
-      EPR_max_cruise = P85M_epr_RR[target_weight][target_alt]
-
-      --Set target bugs
-      for i = 0, 3 do
-          EPR_target_bug[i] = string.format("%3.2f", EPR_max_cruise) + packs_adjustment_value + engine_anti_ice_adjustment_value
-          display_EPR_ref[i] = string.format("%3.2f", EPR_max_cruise) + packs_adjustment_value + engine_anti_ice_adjustment_value
-          display_EPR_max[i] = EPR_max_climb  --simDR_EPR_target_bug[i]
-      end
-
-      if B747DR_log_level >= 2 then
-        print("CRZ Lookup - Weight = ", target_weight)
-        print("CRZ Lookup - Alt = ", target_alt)
-      end
-    elseif B747DR_ref_thr_limit_mode == "GA" then
-      --Find current temperature rounded to the closest 5 degrees (for use in table lookups)
-      --temperature = round_thrustcalc(simDR_temperature, "TEMP")
-  
-      --Find G/A N1 based on current temperature
-      --temperature = find_closest_temperature(TOGA_epr_PW4056, simDR_temperature)
-  
-      --Set G/A N1 targets
-      for i = 0, 3 do
-        if simDR_TAT < 5 then
-          EPR_target_bug[i] = -7.640000000000001E-10 * altitude_ft_in^2 + 0.000014 * altitude_ft_in + 1.7078
-        else
-          if simDR_TAT > 39 then
-            EPR_target_bug[i] = -0.00504 * simDR_TAT + 1.84
-          else
-            EPR_target_bug[i] = (3.81E-12 * simDR_TAT^2 - 1.39E-10 * simDR_TAT - 1.08E-10) * altitude_ft_in^2 + (-2.91E-08 * simDR_TAT^2 + 7.24E-07 * simDR_TAT + 0.0000111)
-                                      * altitude_ft_in + (-0.0000727 * simDR_TAT^2 + 0.0022 * simDR_TAT + 1.7)
-          end
-        end
-        display_EPR_ref[i] = math.min(simDR_EPR_target_bug[i], 1.90)
-        display_EPR_max[i] = math.min(simDR_EPR_target_bug[i], 1.90)
-      end
+    --(2026-11-25) the reference thrust limit for the FMC's mode
+    --(B747_eec_reference: the P&W's tables, the RB211's takeoff table; the
+    --PW4056's scale) shown as the RB211's EPR: the A/T's target, the EICAS's
+    --reference and the CDU's THRUST LIM (it reads the target bug); the cursor
+    --at idle in VNAV's idle descent with anti-ice (B747_eec_cursor). Before,
+    --the upstream's branches, the cruise table's EPR and 0.9 in a descent's
+    --THR REF or IDLE (the P&W's dropped in step 9g4)
+    local mach = simDR_epr_mach
+    local _, idleCursor = B747_eec_cursor()
+    for i = 0, 3 do
+      local ref = B747_eec_reference(i)
+      EPR_target_bug[i] = RRM.display(ref, mach)
+      display_EPR_ref[i] = math.min(RRM.display(idleCursor and B747_eec_idle(i) or ref, mach), 1.90)
     end
 
     --Handle minor engine thrust differences where calculated (requested) thrust is less than the defined XP engine model can produce
-    --Boost engine output as necessary
-    if math.max(simDR_engn_thro_use[0], simDR_engn_thro_use[1], simDR_engn_thro_use[2], simDR_engn_thro_use[3]) == 1
-      and math.max(simDR_N1[0], simDR_N1[1], simDR_N1[2], simDR_N1[3]) > 99.99
-      and (B747DR_display_EPR[0] < simDR_EPR_target_bug[0] or B747DR_display_EPR[1] < simDR_EPR_target_bug[1]
-          or B747DR_display_EPR[2] < simDR_EPR_target_bug[2] or B747DR_display_EPR[3] < simDR_EPR_target_bug[3]) --then
-      and math.max(simDR_EPR_target_bug[0] - B747DR_display_EPR[0], simDR_EPR_target_bug[1] - B747DR_display_EPR[1], simDR_EPR_target_bug[2] - B747DR_display_EPR[2],
-                    simDR_EPR_target_bug[3] - B747DR_display_EPR[3]) > 0.045 then  --set a tolerance to ensure the engines don't overboost unnecessarily
+    --Boost engine output as necessary: an engine at full throttle still short of the EEC's target
+    --(2026-11-25: the EEC's, as the P&W's; before, the shown EPR 0.045 under the bug at full throttle)
+    if B747_eec_thrust_short() then
                       B747_setMaxThrust(B747_eec_boosted_max(simDR_thrust_max, engine_max_thrust_n))  -- (2026-11-11 review) with a top
     elseif simDR_thrust_max > orig_thrust_n and simDR_onGround == 0 and B747DR_radio_altitude > 1500 then  --slowly reset max engine thrust to normal
       if simDR_thrust_max > orig_thrust_n + 10 then
@@ -832,42 +343,28 @@ function engine_idle_control_RR(altitude_ft_in)
       B747_setMaxThrust(engine_max_thrust_n)
     end
 
-    --Failsafe option in case takeoff_thrust_epr isn't set
-    if takeoff_thrust_epr == nil then
-      takeoff_thrust_epr = 1.70
-      takeoff_TOGA_epr = 1.70
-    end
-  
     for i = 0, 3 do
-      if (B747DR_ap_FMA_autothrottle_mode==5 or B747DR_ap_FMA_autothrottle_mode==2) and B747DR_ap_flightPhase>2 then
-        simDR_EPR_target_bug[i] = 0.9
-      else
-        simDR_EPR_target_bug[i] = EPR_target_bug[i]
-      end
+      simDR_EPR_target_bug[i] = EPR_target_bug[i]
       B747DR_display_EPR_ref[i] = display_EPR_ref[i]
-      B747DR_display_EPR_max[i] = display_EPR_max[i]
-      EPR_display[i] = math.min(EPR_display_RR(altitude_ft_in, simDR_thrust_n[i], i), 1.90)--string.format("%3.2f", math.min(EPR_display_RR(altitude_ft_in, simDR_thrust_n[i], i), 1.90))  --use i as a reference for engine number
-      B747DR_display_EPR[i] = math.max(EPR_display[i], 0.0)
+      --the EEC's maximum rated EPR, not the FMC's reference (as the P&W's)
+      B747DR_display_EPR_max[i] = math.min(RRM.display(B747_eec_max(i), mach), 1.90)
+      B747DR_display_EPR[i] = math.max(math.min(EPR_display_RR(altitude_ft_in, simDR_thrust_n[i], i), 1.90), 0.0)
 
       N1_display[i] = string.format("%4.1f", math.min(N1_display_RR(altitude_ft_in, simDR_thrust_n[i], i), 112.5))
       B747DR_display_N1[i] = math.max(N1_display[i], 0.0)
 
-      N2_display[i] = string.format("%3.0f", math.min(N2_display_RR(B747DR_display_N1[i], i), 111.5))
-      B747DR_display_N2[i] = math.max(N2_display[i], 0.0)
-
+      --(2026-11-25) N3 first (X-Plane's N2), then N2 (the IP) between N1 and N3
       N3_display[i] = string.format("%4.1f", math.min(N3_display_RR(B747DR_display_N1[i], i), 102.5))
       B747DR_display_N3[i] = math.max(N3_display[i], 0.0)
-     -- print("RR EGT 1 "..i.." "..B747DR_display_EGT[i])
+
+      N2_display[i] = string.format("%3.0f", math.min(N2_display_RR(B747DR_display_N1[i], B747DR_display_N3[i], i), 111.5))
+      B747DR_display_N2[i] = math.max(N2_display[i], 0.0)
       EGT_display[i] = EGT_display_RR(i)
       B747DR_display_EGT[i] = egt_thermal_profile(EGT_display[i],i,B747DR_display_EGT[i])--math.max(EGT_display[i], 0.0)
-     -- print("RR EGT 2 "..i.." "..B747DR_display_EGT[i])
       B747DR_throttle_resolver_angle[i] = throttle_resolver_angle_RR(i)
 
     end
-  
-    if B747DR_log_level >= 2 then
-      print("Takeoff TOGA = ", takeoff_TOGA_epr)
-    end
+
     --Manage Thrust
     throttle_management()
   end

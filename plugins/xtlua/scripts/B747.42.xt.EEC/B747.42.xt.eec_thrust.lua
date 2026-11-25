@@ -38,8 +38,29 @@ B747DR_eec_altn_light_out       = find_dataref("laminar/B747/engines/eec/altn_li
 -- engine (s148)
 local IDLE_COMMAND = {GE = 25, PW = 0.95}
 local function idle_command(key)
-    if key == "PW" and B747DR_engineType == 0 then return B747_epr_model.idle_command(simDR_epr_mach) end
+    -- (2026-11-25) the RB211's too: the EEC runs on the PW4056's scale for it
+    -- (below); before, 0.95 at any Mach with its own EPR
+    if key == "PW" and (B747DR_engineType == 0 or B747DR_engineType == 2) then
+        return B747_epr_model.idle_command(simDR_epr_mach)
+    end
     return IDLE_COMMAND[key]
+end
+-- (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md §8, notes/ATA-70-80.md
+-- §40) the RB211's value the EEC controls: the PW4056's scale's EPR of its
+-- net thrust over the RB211's multiplier (B747_rr_model.pw_epr: its
+-- ratings' and bypass ratio's difference); its ratings and commands are the
+-- P&W's tables' (the RB211's takeoff its own table on that scale:
+-- B747_eec_model.rr_to_table). The EICAS shows the RB211's own EPR
+-- (B747.42.xt.EEC.RR.lua). Before, the RB211's own PID held its shown EPR
+-- (the upstream's thrust / density ratio cubic) at the lever's
+local function rr_variant()
+    return B747_rr_model.variant(simConfigData["data"].PLANE.engines)
+end
+local function rr_actual(engine, delta, v)
+    return B747_rr_model.pw_epr(simDR_thrust_n[engine] / 1000, delta, simDR_epr_mach, v)
+end
+B747_eec_rr_actual = function(engine)    -- (for the glue and the tests)
+    return rr_actual(engine, math.max(0.1, simDR_epr_ambient_pa / 101325), rr_variant())
 end
 -- the flap lever's detents (0, 1, 5, 10, 20, 25, 30 at even steps of
 -- sim/cockpit2/controls/flap_ratio) as trailing edge flap degrees
@@ -110,6 +131,8 @@ function B747_eec_update()
     inp.flaps_deg = flap_degrees(simDR_eec_flap_handle)
     inp.con = B747DR_button_switch_position[44] > 0.5
     inp.freighter = B747DR_eec_freighter == 1
+    local rr = B747DR_engineType == 2
+    local rrv, rrd = rr and rr_variant(), math.max(0.1, simDR_epr_ambient_pa / 101325)
     for n = 1, 4 do
         inp.nai[n] = B747DR_nacelle_ai_valve_pos[n - 1] > 0.5
         inp.lever[n] = B747DR_throttle[n - 1]
@@ -123,6 +146,7 @@ function B747_eec_update()
         inp.n1[n] = B747DR_display_N1[n - 1]
         inp.n2[n] = rotor_n2[n]
         if inp.type == "GE" then inp.actual[n] = B747DR_display_N1[n - 1]
+        elseif rr then inp.actual[n] = rr_actual(n - 1, rrd, rrv)
         else inp.actual[n] = B747DR_display_EPR[n - 1] end
     end
     -- (N19-ENG-05) the RR keeps its alternate mode on EPR (no sources); the
@@ -230,6 +254,7 @@ function B747_eec_reference(engine)
     refIn.mach = simDR_epr_mach
     refIn.kias = inp.kias
     refIn.freighter = inp.freighter     -- (2026-11-19) the 405's climb derate washout
+    refIn.rr = inp.rr                   -- (2026-11-25) the RB211's own takeoff table (P&W's scale)
     refIn.mode = B747_eec_thrlim_mode()
     refIn.to_pct = B747DR_eec_thrlim_to_pct
     local sel = B747DR_eec_thrlim_sel
@@ -343,6 +368,11 @@ local function plant_slope(key, engine, delta)
         -- formula's: estimate) through its EPR
         local P, M, tat = B747_epr_model, simDR_epr_mach, simDR_TAT
         dydf = P.n1(P.epr(f + 0.5, delta, M), M, tat) - P.n1(P.epr(f - 0.5, delta, M), M, tat)
+    elseif B747DR_engineType == 2 then
+        -- (2026-11-25) the RB211: the PW4056's scale's EPR of its thrust
+        -- over its multiplier (rr_actual)
+        local R, M, v = B747_rr_model, simDR_epr_mach, rr_variant()
+        dydf = R.pw_epr(f + 0.5, delta, M, v) - R.pw_epr(f - 0.5, delta, M, v)
     else
         local M = simDR_epr_mach
         dydf = (B747_epr_model.epr(f + 0.5, delta, M) - B747_epr_model.epr(f - 0.5, delta, M)) / 1.0
@@ -368,6 +398,8 @@ function B747_eec_throttle(engine)
     local key = eec_inputs.type
     local n = engine + 1
     local actual = B747DR_display_EPR[engine]
+    -- (2026-11-25) the RB211's on the P&W's scale (rr_actual)
+    if B747DR_engineType == 2 then actual = B747_eec_rr_actual(engine) end
     local idle
     if eec_out.n1_mode[n] then
         key, actual, idle = "PWN1", B747DR_display_N1[engine], E.pw_altn_n1(0, simDR_TAT)
@@ -454,7 +486,10 @@ function B747_eec_thrust_short()
         local key = eec_inputs.type
         if eec_out.n1_mode[engine + 1] then key = "GE" end
         local actual = B747DR_display_EPR[engine]
-        if key == "GE" then actual = B747DR_display_N1[engine] end
+        if key == "GE" then actual = B747DR_display_N1[engine]
+        -- (2026-11-25) the RB211's on the P&W's scale, as its target (before,
+        -- its shown EPR, on its own scale, never fell short)
+        elseif B747DR_engineType == 2 then actual = B747_eec_rr_actual(engine) end
         if simDR_engine_running[engine] == 1 and simDR_engn_thro_use[engine] >= 0.999
             and actual < eec_out.target[engine + 1] - THRUST_SHORT[key] then
             return true

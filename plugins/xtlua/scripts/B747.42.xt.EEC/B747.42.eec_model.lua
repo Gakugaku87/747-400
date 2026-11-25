@@ -211,6 +211,14 @@ M.PW_ALTN = {
 -- rpm) and N2 104 % (10,300 rpm), under the N2 red line 105.5 (PW_PPM
 -- p.204); before, N2 at the display's 111.4
 M.REDLINE = {GE = {n1 = 117.5, n2 = 112.5}, PW = {n1 = 111.4, n2 = 104}}
+-- (2026-11-25, the RB211's rebuild) the RB211 on the P&W's scale (inp.rr):
+-- its shown N1's red line (B747.40.xt.engines.lua's RPM LIM at 111.51), no
+-- N2 (its N2 the IP spool's; B747.42.xt.EEC.RR.lua sets none). Estimate: no
+-- source has the RB211's EEC; before, its own PID cut the thrust over a
+-- shown N1 of 110.1 %. Its shown N1 counts 3,600 rpm as 100 % (the
+-- upstream's; TCDS_RB211 p.10: 3,900 rpm), so a hot and high takeoff reaches
+-- this before its rating (GAP_ANALYSIS.md N19-ENG-23)
+M.REDLINE.RR = {n1 = 111.5, n2 = 1000}
 M.RPM_MARGIN = 0.5                          -- %
 M.RPM_BAND = 2                              -- %
 -- (N19-ENG-05) PWN1: the P&W in its N1 mode, controlling N1 as the GE (its
@@ -884,14 +892,58 @@ end
 -- linear, beyond them on the end segments' lines (estimates): pw_to_epr
 -- for a share (a derate the operator sets other than 8 and 20 %, 25 % less
 -- than a derate), pw_to_share for an EPR (an assumed temperature's)
-function M.pw_to_points(oat, alt, es, ss)
+function M.pw_to_points(oat, alt, es, ss, rr)
     local T, s, q = M.TABLE.PW, M.PW_TO_SHARE, 1 - M.PW_TO_MIN.less
+    local rt = rr and M.rr_to_table()
+    if rt then
+        -- (2026-11-25, the RB211's rebuild) its own takeoff table on the
+        -- PW4056's scale; TO 1, TO 2 and each one's 25 % less as shares of
+        -- that thrust on the EPR model standing (estimate: no RB211 source
+        -- for its derates; the FPPM's 8 and 20 % taken)
+        local P = B747_epr_model
+        local e0 = M.lookup(rt, oat, alt)
+        local f0 = P.thrust(e0, 1, 0)
+        for i = 1, 3 do
+            es[i] = i == 1 and e0 or P.epr(f0 * s[i], 1, 0)
+            es[i + 3] = P.epr(f0 * s[i] * q, 1, 0)
+            ss[i], ss[i + 3] = s[i], s[i] * q
+        end
+        return es, ss
+    end
     local e0, e1, e2 = M.lookup(T.to, oat, alt), M.lookup(T.to1, oat, alt), M.lookup(T.to2, oat, alt)
     es[1], es[2], es[3] = e0, e1, e2
     es[4], es[5], es[6] = M.pw_to_min(e0), M.pw_to_min(e1), M.pw_to_min(e2)
     ss[1], ss[2], ss[3] = s[1], s[2], s[3]
     ss[4], ss[5], ss[6] = s[1] * q, s[2] * q, s[3] * q
     return es, ss
+end
+
+-- (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md §8, notes/ATA-70-80.md
+-- §40) the RB211's takeoff EPR table (TOGA_epr_RR, B747.42.xt.EEC.tbls.lua:
+-- the upstream's, its source not given; laid out as an FCOM's, flat to 30 C
+-- at sea level as TCDS_RB211 p.15's ISA+15) on the PW4056's scale (B747_
+-- rr_model.pw_of_display standing), in TABLE.PW.to's form: the EEC's and
+-- the FMC's takeoff limit for the RB211 (the EEC runs on the P&W's scale).
+-- Built once; nil without the table or the RR model (the tests that load
+-- neither)
+local rr_to = nil
+function M.rr_to_table()
+    if rr_to then return rr_to end
+    local R, src = B747_rr_model, TOGA_epr_RR
+    if not (R and src) then return nil end
+    local base = M.TABLE.PW.to
+    local oat = {70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5}
+    local v = {}
+    for j, t in ipairs(oat) do
+        local row = {}
+        for i, a in ipairs(base.alt) do
+            local e = src[t] and src[t][a]
+            row[i] = e and R.pw_of_display(e, 0) or F
+        end
+        v[j] = row
+    end
+    rr_to = {alt = base.alt, tat = oat, packs_off = base.packs_off, v = v}
+    return rr_to
 end
 function M.pw_to_epr(es, ss, share) return on_points(ss, es, share) end
 function M.pw_to_share(es, ss, epr) return on_points(es, ss, epr) end
@@ -1034,7 +1086,7 @@ end
 -- whether a rotor limit holds it back (>ENG n RPM LIM)
 local function overspeed(inp, out)
     local key = inp.type == "GE" and "GE" or "PW"
-    local red = M.REDLINE[key]
+    local red = (key == "PW" and inp.rr) and M.REDLINE.RR or M.REDLINE[key]
     -- a rotor's limit loop: the controlled value it allows (nil while the
     -- rotor is short of its band)
     local function limit(rpm, redline, actual, gain)
@@ -1210,8 +1262,14 @@ function M.update(s, inp, dt)
     -- (the two are the same rating, PW_PPM p.196; which table at which mode
     -- change: estimate, so the TO reference stays under the maximum after
     -- the liftoff, where the TAT rises over the OAT)
+    -- (2026-11-25, the RB211's rebuild) the RB211's own takeoff table on the
+    -- P&W's scale (M.rr_to_table); before, the go-around table's (its own
+    -- branches set its limits)
     local ga_t = tables.ga
-    if inp.takeoff and inp.type ~= "GE" and not inp.rr and tables.to then ga_t = tables.to end
+    if inp.takeoff and inp.type ~= "GE" then
+        local t = (inp.rr and M.rr_to_table()) or (not inp.rr and tables.to)
+        if t then ga_t = t end
+    end
     local ga = M.lookup(ga_t, ga_t == tables.ga and inp.tat or (inp.oat or inp.tat), ga_alt)
     local clb = M.lookup(tables.clb, inp.tat, inp.alt)
     -- (the FMC's step 9h1) the maximum continuous band: the table's, not

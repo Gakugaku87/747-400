@@ -76,92 +76,9 @@ function B747_rescale(in1, out1, in2, out2, x)
     return out1 + (out2 - out1) * (x - in1) / (in2 - in1)
 end
 
-function round_thrustcalc(x, input_type)
-    --print("x IN = "..x)
-
-    if input_type == "ALT" then
-      if x < -2000 then
-        x = -2000
-      elseif x > 10000 then
-        x = 10000
-      end
-      --print("x Corrected = "..x)
-      return x >= 0 and math.floor((x / 1000) + 0.5) * 1000 or math.ceil((x / 1000) - 0.5) * 1000  --Alts in 1000s
-    elseif input_type == "ALT-CLB" then
-      if x < 0 then
-        x = 0
-      elseif x > 45000 then
-        x = 45000
-      end
-      --print("x Corrected = "..x)
-      return x >= 0 and math.floor((x / 5000) + 0.5) * 5000 or math.ceil((x / 5000) - 0.5) * 5000  --Alts in 5000s
-    elseif input_type == "TEMP" then
-  --    if x < 10 then
-  --      x = 10
-  --    elseif x > 70 then
-  --      x = 70
-  --    end
-      --print("x Corrected = "..x)
-      return x >= 0 and math.floor((x / 5) + 0.5) * 5 or math.ceil((x / 5) - 0.5) * 5  --Temps by 5's
-    end
-  end
-
-  -- (2026-11-24, ENG-7) find_closest_temperature is gone with the GE's
-  -- go-around branch, its only caller; the RB211's cruise table still uses
-  -- find_closest_weight and find_closest_altitude
-
-	function find_closest_weight(table_in, weight_target)
-		local temp_table = {}
-		local closest_match
-		local last_difference = 99999999
-		local counter = 1
-
-		for i, v in pairs(table_in) do
-			for i, v in pairs(v) do
-				table.insert(temp_table, i)
-			end
-		end
-		table.sort(temp_table)
-
-		for i,v in pairs(temp_table) do
-			--print("Weight i, v = ", i, v)
-			local distance = math.abs(weight_target - v) --Distance away
-			if distance < last_difference then
-				closest_match = v
-				last_difference = distance
-			end
-		end
-
-		return closest_match
-	end
-
-	function find_closest_altitude(table_in, alt_target)
-		local temp_table = {}
-		local closest_match
-		local last_difference = 99999999
-		local counter = 1
-
-		for i, v in pairs(table_in) do
-			for i, v in pairs(v) do
-				for i, v in pairs(v) do
-					table.insert(temp_table, i)
-				end
-			end
---			table.insert(temp_table, i)
-		end
-		table.sort(temp_table)
-
-		for i,v in pairs(temp_table) do
-			--print("Alt i, v = ", i, v)
-			local distance = math.abs(alt_target - v) --Distance away
-			if distance < last_difference then
-				closest_match = v
-				last_difference = distance
-			end
-		end
-
-		return closest_match
-	end
+-- (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md §8) round_thrustcalc,
+-- find_closest_weight and find_closest_altitude are gone with the RB211's
+-- branches, their last callers (its cruise table's lookups)
 
 --[[
 *************************************************************************************
@@ -585,110 +502,10 @@ function clear_thrust_targets()
 	end
 end
 
-function take_off_thrust_corrected(altitude_ft_in, temperature_K_in)
-	local TOGA_corrected_thrust_lbf = 0.0
-	local TOGA_actual_thrust_lbf = 0.0
-	local TOGA_actual_thrust_N = 0.0
-	local approximate_max_TO_thrust_lbf = 0
+-- (2026-11-25, the RB211's rebuild) take_off_thrust_corrected and
+-- in_flight_thrust are gone with the RB211's takeoff and climb EPR, their
+-- last callers (atmosphere and flight_coefficients stay: the N1 formulas)
 
-	--Approximate TOGA Max thrust
-	--  GE CFG-802C-B1F = 57160 lbf (Engine Max = 58000 lbf / 258000 Newtons)
-	--  GE CFG-802C-B5F = 60030 lbf (Engine Max = 60800 lbf / 270500 Newtons)
-	--  PW4056 = 56750 lbf (Engine Max = 56750 lbf / 252500 Newtons)
-	--  PW4060 = 60000 lbf (Engine Max = 60000 lbf / 266900 Newtons)
-	--  PW4062 = 62000 lbf (Engine Max = 62000 lbf / 275800 Newtons)
-	--  RR RB211-524G = 56870 lbf (Engine Max = 58000 lbf / 258000 Newtons)
-	--  RR RB211-524H = 59450 lbf (Engine Max = 60600 lbf / 269600 Newtons)
-
-	if string.match(simConfigData["data"].PLANE.engines, "B1F") and not string.match(simConfigData["data"].PLANE.engines, "B1F1") then  -- B1F1 below (ENG-30)
-		approximate_max_TO_thrust_lbf = 57160
-	elseif string.match(simConfigData["data"].PLANE.engines, "B5F")  then
-		approximate_max_TO_thrust_lbf = 60030
-	elseif string.match(simConfigData["data"].PLANE.engines, "B1F1")  then
-	  approximate_max_TO_thrust_lbf = 60030
-	elseif string.match(simConfigData["data"].PLANE.engines, "4056") then
-	    approximate_max_TO_thrust_lbf = 56750
-	elseif string.match(simConfigData["data"].PLANE.engines, "4060")  then
-	    approximate_max_TO_thrust_lbf = 60000
-	elseif string.match(simConfigData["data"].PLANE.engines, "4062")  then
-	    approximate_max_TO_thrust_lbf = 62000
-	elseif string.match(simConfigData["data"].PLANE.engines, "524G")  then
-	    approximate_max_TO_thrust_lbf = 56870
-	elseif string.match(simConfigData["data"].PLANE.engines, "524H")  then
-	    approximate_max_TO_thrust_lbf = 59450
-	else
-	    approximate_max_TO_thrust_lbf = 56500  --failsafe option
-	end
-
-	if temperature_K_in > corner_temperature_K then
-		TOGA_corrected_thrust_lbf = (-1.79545 * (temperature_K_in / corner_temperature_K) + 2.7874) * (-0.0000546 * altitude_ft_in^2 + 1.37 * altitude_ft_in + approximate_max_TO_thrust_lbf)
-	else
-		TOGA_corrected_thrust_lbf = (-0.0000546 * altitude_ft_in^2 + 1.37 * altitude_ft_in + approximate_max_TO_thrust_lbf)
-	end
-
-	-- the takeoff derate in the takeoff modes only, not on the go-around
-	-- thrust (CDU-10, 6-1 step 1; FCOM p.1314-1316)
-	-- (1-2) the ground: the PSEU's primary (notes/ATA-32.md §16; before,
-	-- X-Plane's onground_any)
-	local takeoff = B747DR_eec_pseu_pri_gnd == 1 or string.match(B747DR_ref_thr_limit_mode or "", "^TO") ~= nil
-	if not takeoff then
-	elseif B747DR_toderate == 1 then
-	  TOGA_corrected_thrust_lbf = TOGA_corrected_thrust_lbf * 0.9
-	elseif B747DR_toderate == 2 then
-	  TOGA_corrected_thrust_lbf = TOGA_corrected_thrust_lbf * 0.8
-	end
-
-	TOGA_actual_thrust_lbf = TOGA_corrected_thrust_lbf * sigma_density_ratio  --pressure_ratio
-	TOGA_actual_thrust_N = TOGA_actual_thrust_lbf * lbf_to_N
-
-	if B747DR_log_level >= 1 then
-	  print("\t\t\t\t\t<<<--- Takeoff Calcs --->>>")
-	  print("Altitude IN = ", altitude_ft_in)
-	  print("Temperature K IN = ", temperature_K_in)
-	  print("Approximate Takeoff Thrust Required = ", approximate_max_TO_thrust_lbf)
-	  print("TOGA Corrected LBF = ", TOGA_corrected_thrust_lbf)
-	  print("TOGA Actual LBF = ", TOGA_actual_thrust_lbf)
-	  print("TOGA Actual N = ", TOGA_actual_thrust_N)
-	end
-
-	return TOGA_corrected_thrust_lbf, TOGA_actual_thrust_lbf, TOGA_actual_thrust_N
-end
-
-function in_flight_thrust(gw_kg_in, climb_angle_deg_in)
-	local total_thrust_required_N = 0.0
-	local thrust_per_engine_N = 0.0
-	local corrected_thrust_N = 0.0
-	local corrected_thrust_lbf = 0.0
-
-	total_thrust_required_N = 0.5 * cD * tas_mtrs_sec^2 * density * 511 + math.sin(climb_angle_deg_in / 180 * math.pi) * gw_kg_in * 9.81
-
-	if B747DR_clbderate == 1 then
-		total_thrust_required_N = total_thrust_required_N * B747_rescale(10000.0, 0.9, 15000.0, 1.0, simDR_altitude)  --0.9  --Scale linearly from CLB1 to CLB from 10K to 15K ft  FCOM 7/11.32.3
-	elseif B747DR_clbderate == 2 then
-		total_thrust_required_N = total_thrust_required_N * B747_rescale(10000.0, 0.8, 15000.0, 1.0, simDR_altitude)  --0.8  --Scale linearly from CLB1 to CLB from 10K to 15K ft
-	end
-
-	thrust_per_engine_N = total_thrust_required_N / 4
-
-	corrected_thrust_N = thrust_per_engine_N / pressure_ratio
-	corrected_thrust_lbf = corrected_thrust_N / lbf_to_N
-
-	if B747DR_log_level >= 1 then
-		print("\t\t\t\t<<<--- IN FLIGHT THRUST --->>>")
-		print("Gross Weight IN = ", gw_kg_in)
-		print("Climb Angle IN = ", climb_angle_deg_in)
-		print("Pressure Ratio = ", pressure_ratio)
-		print("Density = ", density)
-		print("Coefficient of Drag = ", cD)
-		print("TAS MTRS Sec = ", tas_mtrs_sec)
-		print("Total Thrust Required N = ", total_thrust_required_N)
-		print("Thrust per Engine N = ", thrust_per_engine_N)
-		print("Corrected Thrust N = ", corrected_thrust_N)
-		print("Corrected Thrust LBF = ", corrected_thrust_lbf)
-	end
-
-	return total_thrust_required_N, thrust_per_engine_N, corrected_thrust_N, corrected_thrust_lbf
-end
 function B747_interpolate_value(current_value, target, min, max, speed)--speed in sex min->max
 	local change = ((max-min)/speed)*(SIM_PERIOD)
 	newValue=current_value
@@ -728,31 +545,26 @@ function ecc_spd()
 			simDR_override_throttles = 1
 		end
 		local diffSpeed=2
-		local eec_control = {} --GE and PW: the EEC's thrust control (B747.42.xt.eec_thrust.lua)
+		local eec_control = {} --the EEC's thrust control (B747.42.xt.eec_thrust.lua)
 		--print("ecc spd")
 		for i = 0, 3 do
 			eec_control[i] = false
-			if B747DR_display_N2[i]<60 and simDR_onGround == 1 then
+			-- (2026-11-25) the core's speed: the RB211's N3 (X-Plane's N2; its
+			-- shown N2 is the IP's, B747.42.xt.EEC.RR.lua)
+			local core = B747DR_engineType == 2 and B747DR_display_N3[i] or B747DR_display_N2[i]
+			if core<60 and simDR_onGround == 1 then
 				eccPid[i].kp=0.06
 				eccPid[i].ki=0
 				eccPid[i].kd=0
 				eccPid[i].input = 100
 				eccPid[i].target = 1
 				--print("cull fuel")
-			elseif B747DR_engineType~=2 then --GE (N1) or PW (EPR)
+			else
+				-- GE (N1), PW (EPR) and (2026-11-25, the RB211's rebuild:
+				-- GAP_ANALYSIS.md §8) the RB211 on the PW4056's scale. Before,
+				-- the RB211's own PID held its shown EPR at the lever's
+				-- (and at 1.5 over N1 110.1 %)
 				eec_control[i] = true
-			else --RR, EPR target
-				if B747DR_display_N1[i]>110.1 then
-					eccPid[i].input = 50.0*B747DR_display_EPR[i]
-					eccPid[i].target = 1.5 --cull fuel if exceeding N1 limit
-				else
-					eccPid[i].input = 50.0*B747DR_display_EPR[i]
-					eccPid[i].target = 50.0*B747DR_throttle_resolver_angle[i]
-				end
-				eccPid[i].kp=100*B747DR_pidepr_eccP
-				eccPid[i].ki=B747DR_pidepr_eccI
-				eccPid[i].kd=50*B747DR_pidepr_eccD
-				diffSpeed=4
 			end
 
 		end

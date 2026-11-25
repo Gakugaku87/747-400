@@ -157,36 +157,27 @@ for _, ty in ipairs({0, 1, 2}) do
     frames(0.5)
     T.equal(get(ENG .. "ref_thr_limit_mode"), "CRZ", "type " .. ty .. ": the number 30, CRZ for the EEC")
     local ref = get(ENG .. "display_EPR_ref", 1)
-    T.check(ref > 1.0 and ref <= 1.71, string.format("type %d at CRZ: a reference %.3f, no Lua error", ty, ref))
+    -- (2026-11-25) the RB211's its own EPR scale (B747_rr_model.display), to 1.90
+    T.check(ref > 1.0 and ref <= (ty == 2 and 1.90 or 1.71), string.format("type %d at CRZ: a reference %.3f, no Lua error", ty, ref))
 end
-T.equal(ns.find_closest_weight(ns.P85M_epr_PW4062, 270), 260, "the cruise table (a namespace): the nearest weight, the lower on a tie: 260 t for 270")
-T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 35), 35, "its nearest altitude: 35 kft")
-T.equal(ns.find_closest_altitude(ns.P85M_epr_PW4062, 36), 35, "on a tie the lower one")
 -- (2026-11-24, ENG-7 of the 2026-11-23 review) the upstream's takeoff,
 -- climb, cruise and go-around branches of PW() and GE() are gone: the FMC's
--- reference and the EEC's maximum overwrote what they set. The P&W in CRZ
--- looks up no cruise table (before, two lookups a frame, each building and
--- sorting a table), the RB211 still does (its own branches); the functions
--- only they called are gone
+-- reference and the EEC's maximum overwrote what they set; the functions
+-- only they called are gone. (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md
+-- §8) the RB211's too, with its cruise table's lookups (find_closest_weight
+-- and find_closest_altitude), its takeoff and climb EPR and the thrust
+-- estimates they used
 do
-    local calls = 0
-    local fw, fa = ns.find_closest_weight, ns.find_closest_altitude
-    ns.find_closest_weight = function(...) calls = calls + 1; return fw(...) end
-    ns.find_closest_altitude = function(...) calls = calls + 1; return fa(...) end
-    rt:set("laminar/B747/engines/type", 0)
-    rt:set("laminar/B747/fms/thrlim/code", 30)
-    frames(1)
-    T.equal(calls, 0, "P&W in CRZ: no cruise table lookups (ENG-7; before, two a frame)")
-    rt:set("laminar/B747/engines/type", 2)
-    frames(0.2)
-    T.check(calls > 0, "the RB211 in CRZ: its own cruise table lookups still run (" .. calls .. ")")
-    ns.find_closest_weight, ns.find_closest_altitude = fw, fa
     T.check(ns.take_off_EPR_PW == nil and ns.in_flight_EPR_PW == nil and ns.in_flight_N1_GE == nil
         and ns.find_closest_temperature == nil, "take_off_EPR_PW, in_flight_EPR_PW, in_flight_N1_GE and find_closest_temperature are gone")
     -- (2026-11-25, ENG-4) the GE's takeoff N1 factor went with the takeoff
     -- display's branch
     T.check(ns.take_off_N1_GE == nil and ns.takeoff_TOGA_n1 == nil and ns.B747_ge_n1_from_xp == nil,
         "take_off_N1_GE, takeoff_TOGA_n1 and B747_ge_n1_from_xp are gone (ENG-4)")
+    T.check(ns.take_off_EPR_RR == nil and ns.in_flight_EPR_RR == nil and ns.find_closest_weight == nil
+        and ns.find_closest_altitude == nil and ns.take_off_thrust_corrected == nil and ns.in_flight_thrust == nil
+        and ns.round_thrustcalc == nil,
+        "the RB211's take_off_EPR_RR, in_flight_EPR_RR and the cruise table's and the thrust estimates' helpers are gone")
 end
 rt:set("laminar/B747/engines/type", 0)
 rt:set("laminar/B747/fms/thrlim/code", 0)
@@ -1077,6 +1068,68 @@ for i = 0, 3 do
 end
 frames(20)
 T.near(get(ENG .. "display_EGT", 0), 600 * 785 / 960, 1, "EGT: the RB211's X-Plane's EGT x 785/960 as before")
+-- (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md §8, notes/ATA-70-80.md
+-- §40) the RB211 on the PW4056's scale: the EPR shown its own
+-- (B747_rr_model.epr), the EEC's value the P&W's scale's, the command mark,
+-- the reference and the max line the EEC's on its scale; N3 (HP) X-Plane's
+-- N2 (the user's 「XP内のN2をN3として」), N2 (IP) only shown between the
+-- shown N1 and N3 (N1 + 0.55 (N3 - N1), estimate)
+do
+    local R = ns.B747_rr_model
+    local was = {mach = get("sim/flightmodel/misc/machno"), baro = get("sim/weather/aircraft/barometer_current_pas"),
+        thr = get("sim/cockpit2/engine/indicators/thrust_dry_n", 0), n2 = get(XN2, 0)}
+    rt:set("sim/flightmodel/misc/machno", 0.5)
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325 * 0.6)
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, 90000)
+    rt:set(XN2, 0, 92)
+    frames(3)
+    local v = R.variant("RB211-524G")
+    T.near(get(ENG .. "display_EPR", 0), R.epr(90, 0.6, 0.5, v), 0.002, "RB211: the EPR shown its own (B747_rr_model.epr) of the thrust")
+    T.near(ns.B747_eec_rr_actual(0), R.pw_epr(90, 0.6, 0.5, v), 1e-9, "RB211: the EEC's value the P&W's scale's EPR of the thrust over the multiplier")
+    T.check(get(ENG .. "display_EPR", 0) > ns.B747_eec_rr_actual(0) + 0.1,
+        string.format("RB211: its EPR shown (%.3f) above the P&W's scale's (%.3f) for the same thrust", get(ENG .. "display_EPR", 0), ns.B747_eec_rr_actual(0)))
+    T.near(get(ENG .. "TRA", 0), R.display(ns.B747_eec_command(0), 0.5), 0.002, "RB211: the command mark the EEC's command on its scale")
+    T.near(get("sim/cockpit2/engine/actuators/EPR_target_bug", 0), R.display(ns.B747_eec_reference(0), 0.5), 0.002,
+        "RB211: the reference (the A/T's target, the CDU's THRUST LIM) on its scale")
+    T.near(get(ENG .. "display_EPR_max", 0), math.min(R.display(ns.B747_eec_max(0), 0.5), 1.90), 0.002, "RB211: the max line the EEC's maximum on its scale")
+    T.near(get(ENG .. "display_N3", 0), 92, 0.5, "RB211: N3 (HP) is X-Plane's N2")
+    local n1, n3 = get(ENG .. "display_N1", 0), get(ENG .. "display_N3", 0)
+    T.near(get(ENG .. "display_N2", 0), n1 + 0.55 * (n3 - n1), 1.0,
+        string.format("RB211: N2 (IP) only shown, between the shown N1 (%.1f) and N3 (%.1f)", n1, n3))
+    rt:set(XN2, 0, 50)
+    frames(2)
+    T.near(get(ENG .. "display_N3", 0), 50, 0.5, "RB211: N3 follows X-Plane's N2 within 2 s (before, the N2 shown lagged it about 10 s)")
+    -- N3 under N1 (as in a start, where the shown N1 runs ahead of X-Plane's):
+    -- the IP still between them (before, the IP formula of the shown N1 alone
+    -- showed 45 % with N3 at 21, s429 2026-11-25)
+    n1, n3 = get(ENG .. "display_N1", 0), get(ENG .. "display_N3", 0)
+    local n2 = get(ENG .. "display_N2", 0)
+    T.check(n3 < n1 and n2 >= n3 - 1 and n2 <= n1 + 1,
+        string.format("RB211: N3 (%.1f) under N1 (%.1f), N2 (IP) %.0f between them", n3, n1, n2))
+    -- the boost's "short" (B747_eec_thrust_short): the RB211's EEC value on
+    -- the P&W's scale against its target, not its shown EPR (its own scale,
+    -- above the target: it never fell short)
+    local run_was = {}
+    for i = 0, 3 do
+        run_was[i] = get("sim/flightmodel/engine/ENGN_running", i)
+        rt:set("sim/flightmodel/engine/ENGN_running", i, i == 0 and 1 or 0)   -- engine 1 alone
+    end
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, 150000)
+    rt:set(USER, 0, 1.0)
+    frames(10)
+    local tgt = ns.B747_eec_target(0)
+    T.check(ns.B747_eec_rr_actual(0) < tgt - 0.005 and get(ENG .. "display_EPR", 0) > tgt
+        and get("sim/flightmodel/engine/ENGN_thro_use", 0) >= 0.999 and ns.B747_eec_thrust_short(),
+        string.format("RB211 at full throttle short of its target (P&W's scale %.3f, target %.3f, shown %.3f, throttle %.3f): short",
+            ns.B747_eec_rr_actual(0), tgt, get(ENG .. "display_EPR", 0), get("sim/flightmodel/engine/ENGN_thro_use", 0)))
+    rt:set(USER, 0, 0)
+    for i = 0, 3 do rt:set("sim/flightmodel/engine/ENGN_running", i, run_was[i]) end
+    rt:set("sim/flightmodel/misc/machno", was.mach)
+    rt:set("sim/weather/aircraft/barometer_current_pas", was.baro)
+    rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, was.thr)
+    rt:set(XN2, 0, was.n2)
+    frames(1)
+end
 -- (ENG-19) a stopped engine's N2 on the ground held at 0 for every type
 -- (B747_eec_hold_stopped_n2, every frame; before inside egt_thermal_profile)
 rt:set("sim/flightmodel/failures/onground_any", 1)
