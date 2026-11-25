@@ -2,9 +2,19 @@
 
 次のセッションは、ここと [PLAN.md](PLAN.md) を読んでから続きに入る。
 
-最終更新：2026-11-25 17 時（PC のセッション「段1-3実装」：GE のフラップ下げの A/T の利得（82a4440d）。その前は 2026-11-25 16 時（RR の N1 を TCDS の目盛りに、11122334）。
+最終更新：2026-11-25 21 時（PC のセッション「段1-3実装」：離着陸性能の窓）。その前は 2026-11-25 17 時（GE のフラップ下げの A/T の利得、82a4440d）。
 
 ## いまどこか
+
+- **離着陸性能の窓（2026-11-25 20 時〜、PC のセッション「段1-3実装」、Opus 5.5）**：利用者の「離着陸性能計算機作れる？」「XPの中のウィンドウで」（notes/ATA-34-61-FMC.md §191）。
+  - 窓：プラグイン → 747-400 → Takeoff and landing performance...（`perf_window.c`）。FCOM 10.45 の EFB の PERFORMANCE - TAKEOFF / LANDING の欄。CALC・SEND・FMC/SIM。
+  - 計算は FMC（`B747.68.efb_glue.lua`、`B747.68.efb_to_model.lua`）：FPPM の滑走路長・上昇・タイヤ速度・ブレーキエネルギーの図（PDF の線から読んだ：`B747.68.efb_field_model.lua`・`B747.68.efb_limits_model.lua`、道具 `pdf_paths.lua`）、減格の換算表、assumed temperature、FMC と EEC の V 速度・トリム・EPR／N1・VREF。SEND は TAKEOFF REF と THRUST LIM の入力の入口へ。
+  - 着陸のページ（`B747.68.efb_ldg_model.lua`）：VREF と進入速度、FCOM PI.12・PI.22 の着陸距離（DRY・GOOD・MEDIUM・POOR、MAX MANUAL・MAX AUTO・オートブレーキ 4〜1、逆推力 4・2・0 発）と LDA、FPPM の制限重量（通常・着氷・低視程）、quick turnaround、構造の最大着陸重量（FCOM p.78）。
+  - **推定**：assumed temperature の探し方、GE・RR に PW4056 の図、GE の減格（5・15 %）の換算、勾配を両端の標高から、RR の着陸距離に PW の表。
+  - 残り：湿った滑走路・汚染滑走路の離陸（FPPM p.36–40 ほか）、障害物の制限。
+  - 試験：`efb_to_model_test`（66 件）、`efb_to_real_test`（27 件）、`efb_field_model_test`（115 件）、`efb_limits_model_test`（176 件）、`efb_ldg_model_test`（295 件）、`efb_glue_test`（54 件）。
+  - コミット：78a38bb4（道具 pdf_paths.lua）、0d0613b2（離陸の図）、06cd66c8（着陸のデータ）、33f317c9（窓と FMC の計算）。
+  - X-Plane：`s435`（窓の離陸と SEND）19/19、`s438`（着陸と窓の 2 ページ）14/14、`s436`（加速停止）・`s437`（全発の離陸）は 340.3 t で、加速停止 2,273 m は FPPM の滑走路長（約 2,400 m）に収まり、全発の 35 ft までの 2,359 m は FPPM の想定（約 2,090 m）より約 13 % 長い（引き起こしの遅れを除いても 5〜10 %）。滑走中の EPR が 1.52 → 1.46 に下がる：**シムの離陸の加速は別に調べる**。
 
 - **GE のフラップ下げの A/T の利得（2026-11-25 17 時、PC のセッション「段1-3実装」、Opus 5.5）**：利用者の「RRのN1→GEのA/T」（段 4 のレビューの AFDS-7、notes/ATA-34-61-FMC.md §190）。
   - 82a4440d：フラップを出しているとき、GE の SPD の利得を `GE_FLAPS_K` = 0.477 倍に（**推定**）。新しい測り（`at_lever_gain_ge_f20`・`at_lever_gain_f20`）で、フラップ 20 のレバー 1 単位あたりの加速が GE 9.66・P&W 4.61 kt/s：GE の A/T は P&W の約 2.1 倍の強さで効いていた。

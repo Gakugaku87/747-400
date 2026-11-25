@@ -6677,6 +6677,10 @@ function throttleDataRefresh()
 	local ref26=simDR_throttle_max      
 end
 
+-- (2026-11-25, notes/ATA-34-61-FMC.md §191) the EFB's takeoff and landing
+-- performance for the sim's window: its models and requests
+dofile("B747.68.efb_glue.lua")
+
 -- (2026-11-13) the livery's and the .acf's paths read every PATHS_S
 -- seconds, the livery's index every frame: XTLua gives a read the value
 -- fetched at the read before it (the first ""), and B747_fms_livery_file
@@ -6700,6 +6704,9 @@ function after_physics()
   -- from the start, without the FMCs' power or warm-up (the sim's, as the
   -- CDU's PAX/CARGO data)
   B747_fms_wb_update()
+  -- (2026-11-25) the sim's takeoff and landing performance window's
+  -- requests (B747.68.efb_glue.lua)
+  B747_efb_update()
   -- (2026-11-13; the 2026-11-12 review C-2, case 11) a livery's simconfig
   -- that did not decode: an advisory on the CDUs while its defaults are in
   -- use (no such message in the sources: the sim's own; the wording an
