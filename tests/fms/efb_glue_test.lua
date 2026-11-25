@@ -200,4 +200,15 @@ T.equal(out(22), 285763, "the 109's structural landing weight (FCOM p.78)")
 LF[3] = 300000
 ask(4, LI, LF)
 T.check(out(1) == 1 and msg() == "ABOVE THE MAXIMUM LANDING WEIGHT", "300 t: worked out, above the maximum landing weight (" .. msg() .. ")")
+-- a wet runway (cond 1: the slippery tables' good braking action, FPPM
+-- p.24), 2 reversers: the contaminated working in out[31-35], no assumed
+-- temperature (p.20)
+local WI = {}
+for k, v in pairs(TO_I) do WI[k] = v end
+WI[7], WI[10] = 1, 2
+ask(2, WI, TO_F)
+T.equal(out(1), 1, "wet: worked out (" .. msg() .. ")")
+T.equal(out(34), 1, "wet: the condition answered")
+T.check(out(31) > 0 and out(32) == 0, string.format("wet: the adjusted field limit %.0f; the VMCG limit past the tables (not limiting) none: %.0f", out(31), out(32)))
+T.check(out(10) == -99 and out(11) == 6, "wet: no assumed temperature (runway not dry)")
 T.done()

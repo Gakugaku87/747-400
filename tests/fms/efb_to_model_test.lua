@@ -167,9 +167,23 @@ out = P.calc(inp{atm = true})
 T.equal(out.sel_c, math.min(55, t25 or 99), "climb 360 t falling 1.5 t a degree: 300 t up to 55 °C")
 if (t25 or 99) > 55 then T.equal(out.atm_why, "CLIMB", "held by the climb") end
 climbAt15 = 400000
--- a wet runway: none (p.22)
+-- a wet runway: no assumed temperature (p.22); a stand-in contaminated
+-- runway model (efb_contam_model_test.lua tests the real one): the field
+-- limit 5 t less, the VMCG limit 380 t, V1 3 kt less
+B747_efb_contam_model = {
+    limit = function(kind, d, rev, pct, field) return math.min(field - 5000, 380000),
+        {vmcg_kg = 380000, adjust_kg = -5000, vmcg_limited = field - 5000 > 380000} end,
+    v1 = function(kind, d, rev, pct, w, v1) return v1 - 3, {} end,
+}
 out = P.calc(inp{atm = true, cond = 1})
 T.check(out.sel_c == nil and out.atm_why == "RUNWAY NOT DRY", "not on a runway that is not dry")
+T.equal(out.lim.field, 380000, "wet: the lesser of the adjusted field limit (420 t less 5 t) and the VMCG limit (380 t)")
+T.check(out.contam and out.contam.vmcg_kg == 380000, "wet: the VMCG limit weight kept")
+local v1w = S.speeds({flaps = 20, weight_kg = 300000, hw = 0, slope = 0, oat_c = 15, pa_ft = 0, engine = 0, pct = 0})
+T.equal(out.v1, v1w - 3, "wet: V1 through the contaminated model")
+B747_efb_contam_model = nil
+out = P.calc(inp{cond = 2, depth_mm = 6})
+T.equal(out.err, "NO CONTAMINATED RUNWAY DATA", "no contaminated model: a reason, not a dry answer")
 -- V1 at the assumed temperature above VMBE: a cooler one
 vmbeKt = v1a - 2
 out = P.calc(inp{atm = true, mtow_kg = 500000})
