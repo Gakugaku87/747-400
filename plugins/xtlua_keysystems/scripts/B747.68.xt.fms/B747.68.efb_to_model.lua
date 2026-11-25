@@ -35,6 +35,10 @@
 --    FPPM p.44, 57, 69), the stabilizer trim the FMC's
 --    (B747.68.to_trim_model.lua: FPPM p.44, 57, 69), VREF 30 for a return
 --    the FMC's (B747.68.vref_model.lua: FCOM PI.10.2).
+--  - a contaminated runway (ADVISORY: p.20-21, B747.68.efb_contam_model.lua):
+--    the field length limit adjusted and the VMCG limit weight, V1 by the
+--    V1 adjustment (VMCG at the VMCG limit weight); wet as the slippery
+--    tables' good braking action (p.24); no assumed temperature (p.20).
 -- GE and RR on the PW4056 freighter's data (estimate, as the FMC's takeoff
 -- speeds).
 --
@@ -42,14 +46,17 @@
 --   local out = P.calc(inp)
 -- inp: engine (0 PW, 1 GE, 2 RR), flaps (10, 20), rating (0 TO, 1 TO 1,
 -- 2 TO 2), to_pct (its thrust reduction, %), atm (the assumed temperature
--- wanted), cond (0 dry), packs (3, 1 or 0 on), eng_ai, wing_ai (anti-ice
+-- wanted), cond (0 dry, 1 wet, 2 slush or standing water: depth_mm, 3
+-- medium, 4 poor braking action), rev (a contaminated runway's reverse
+-- thrust: 2 engines or 0), packs (3, 1 or 0 on), eng_ai, wing_ai (anti-ice
 -- on), oat_c, qnh_hpa, elev_ft (the airport's), fla_ft (the field length
 -- available), slope_pct (uphill +), wind_kt (headwind +), tow_kg (nil: the
 -- limits only), cg_pct (nil: no trim), mtow_kg (the structural limit).
 -- out: pa_ft; lim = {field, climb, tire, brake, struct} (kg; nil off the
 -- charts); max_kg and limit (the least's name); err (a reason: then no
 -- speeds); sel_c (the assumed temperature or nil) and atm_why (what held it);
--- v1, vr, v2, vmbe, vmbe_check; thrust (EPR or %N1), thrust_n1 (true for
+-- contam = {limit_kg, vmcg_kg, adjust_kg, vmcg_limited} on a contaminated
+-- runway; v1, vr, v2, vmbe, vmbe_check; thrust (EPR or %N1), thrust_n1 (true for
 -- N1), thrust_red (%); trim; vref30.
 local M = setmetatable({}, {})
 B747_efb_to_model = M
@@ -173,6 +180,13 @@ local function sel_by_thrust(inp, hi)
     return best
 end
 
+-- a contaminated runway (FPPM p.20-21 (1.1.2-3), ADVISORY INFORMATION:
+-- B747.68.efb_contam_model.lua): cond 1 wet (the slippery runway tables'
+-- good braking action: "good" is wet-runway testing, p.24), 2 slush or
+-- standing water (inp.depth_mm), 3 medium, 4 poor braking action; the
+-- tables' reverse thrust (inp.rev: 2 engines or 0)
+local CONTAM = {[1] = {"SLIPPERY", "GOOD"}, [2] = {"SLUSH"}, [3] = {"SLIPPERY", "MEDIUM"}, [4] = {"SLIPPERY", "POOR"}}
+
 local function least(lim)
     local best, name
     for _, k in ipairs({"field", "climb", "tire", "brake", "struct"}) do
@@ -207,6 +221,27 @@ function M.calc(inp)
     if not f or not c or not tire then
         out.err = fwhy or cwhy or twhy or "OFF THE CHARTS"
         return out
+    end
+    -- a contaminated runway: the field length limit (the rating's own, as
+    -- the field/obstacle limit weight: no obstacles here) adjusted, and
+    -- the VMCG limit weight for the field length (p.20 steps 1-4)
+    local ck = CONTAM[inp.cond or 0]
+    local cd
+    if ck then
+        local C = B747_efb_contam_model
+        if not C then
+            out.err = "NO CONTAMINATED RUNWAY DATA"
+            return out
+        end
+        cd = ck[2] or (inp.depth_mm or 0)
+        local wl, work = C.limit(ck[1], cd, inp.rev or 2, inp.to_pct or 0, f, inp.fla_ft, inp.pa_ft, inp.flaps)
+        if not wl then
+            out.err = type(work) == "string" and work or "OFF THE CONTAMINATED RUNWAY TABLES"
+            return out
+        end
+        out.contam = {limit_kg = wl, vmcg_kg = work.vmcg_kg, adjust_kg = work.adjust_kg,
+            vmcg_limited = work.vmcg_limited}
+        lim.field = wl
     end
     local maxw, name = least(lim)
     -- the brake energy at that weight (p.20): V1 above VMBE takes the
@@ -254,7 +289,22 @@ function M.calc(inp)
     end
     out.sel_c = sel
     -- the speeds, VMBE, thrust, trim
-    out.v1, out.vr, out.v2 = speeds(inp, w, sel)
+    local sinfo
+    out.v1, out.vr, out.v2, sinfo = speeds(inp, w, sel)
+    -- a contaminated runway's V1 (p.21 steps 1-2): VMCG when the weight is
+    -- the VMCG limit weight, else the V1 adjustment, not below VMCG, not
+    -- above VR
+    if ck then
+        local c = out.contam
+        local at_vmcg = c.vmcg_limited and w >= (c.vmcg_kg or 0) - 500
+        local v1c, why = B747_efb_contam_model.v1(ck[1], cd, inp.rev or 2, inp.to_pct or 0, w, out.v1,
+            sinfo and sinfo.vmcg, at_vmcg, inp.pa_ft, inp.flaps)
+        if not v1c then
+            out.err = type(why) == "string" and why or "OFF THE CONTAMINATED RUNWAY TABLES"
+            return out
+        end
+        out.v1 = math.min(math.floor(v1c + 0.5), out.vr)
+    end
     out.vmbe, out.vmbe_check = vmbe(inp, w)
     if out.vmbe and out.vmbe_check and out.v1 > out.vmbe then out.v1 = math.floor(out.vmbe) end
     out.thrust, out.thrust_red = thrust(inp, sel)

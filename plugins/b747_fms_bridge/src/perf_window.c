@@ -59,10 +59,10 @@
 /* the text fields (the takeoff page's, then the landing page's) and the
    choices */
 enum {
-    PF_APT, PF_RWY, PF_SHIFT, PF_LEN, PF_SLOPE, PF_WIND, PF_OAT, PF_QNH, PF_WT, PF_CG,
+    PF_APT, PF_RWY, PF_SHIFT, PF_LEN, PF_SLOPE, PF_WIND, PF_OAT, PF_QNH, PF_WT, PF_CG, PF_DEPTH,
     PF_LAPT, PF_LRWY, PF_LLEN, PF_LSLOPE, PF_LWIND, PF_LOAT, PF_LQNH, PF_LWT, PF_LADD, PF_N
 };
-enum { PT_COND, PT_FLAPS, PT_RATING, PT_ATM, PT_PACKS, PT_AI, PT_LFLAPS, PT_LCOND, PT_LBRAKE, PT_LREV, PT_N };
+enum { PT_COND, PT_FLAPS, PT_RATING, PT_ATM, PT_PACKS, PT_AI, PT_REV, PT_LFLAPS, PT_LCOND, PT_LBRAKE, PT_LREV, PT_N };
 enum { PB_CALC, PB_SEND, PB_FILL, PB_N };
 /* each page's fields of a kind */
 static const int PW_F_APT[2] = {PF_APT, PF_LAPT}, PW_F_RWY[2] = {PF_RWY, PF_LRWY};
@@ -85,12 +85,14 @@ static int pw_req_i[PWN_NI];
 static float pw_req_f[PWN_NF];
 
 static char pw_txt[PF_N][16];
-/* the choices: the takeoff's condition (0 dry), flaps, rating, assumed
-   temperature, packs (3, 1, 0), anti-ice (0 off, 1 engines, 2 and wings);
+/* the choices: the takeoff's condition (0 dry, 1 wet, 2 slush or standing
+   water, 3 medium, 4 poor braking action: FPPM p.20, p.24), flaps, rating, assumed
+   temperature, packs (3, 1, 0), anti-ice (0 off, 1 engines, 2 and wings),
+   reversers on a contaminated runway (engines: 2, 0);
    the landing's flaps, condition (0 dry, 1 good, 2 medium, 3 poor braking
    action), autobrakes (0 MAX MANUAL, 1 MAX AUTO, 2 to 5 the selector's 4 to
    1), reversers (engines: 4, 2, 0) */
-static int pw_tog[PT_N] = {0, 20, 0, 1, 3, 0, 30, 0, 3, 4};
+static int pw_tog[PT_N] = {0, 20, 0, 1, 3, 0, 2, 30, 0, 3, 4};
 static int pw_edit = -1;
 static char pw_buf[16];
 static int pw_page = 0;                 /* 0 takeoff, 1 landing */
@@ -269,6 +271,7 @@ static void pw_fill_request(int p)
         pw_req_i[5] = pw_tog[PT_PACKS];
         pw_req_i[6] = pw_tog[PT_AI];
         pw_req_i[7] = pw_tog[PT_COND];
+        pw_req_i[10] = pw_tog[PT_REV];
     } else {
         pw_req_i[2] = pw_tog[PT_LFLAPS];
         pw_req_i[7] = pw_tog[PT_LCOND];
@@ -288,6 +291,8 @@ static void pw_fill_request(int p)
         pw_req_f[4] = ok ? (float)v : 0.0f;
         v = pw_num(pw_txt[PF_SHIFT], &ok);
         pw_req_f[5] = ok && v > 0 ? (float)v : 0.0f;
+        v = pw_num(pw_txt[PF_DEPTH], &ok);
+        pw_req_f[10] = ok && v > 0 ? (float)v : 0.0f;
     } else {
         v = pw_num(pw_txt[PF_LADD], &ok);
         pw_req_f[8] = ok && v >= 0 ? (float)v : 5.0f;
@@ -408,6 +413,10 @@ static void pw_adopt(void)
         pw_tog[PT_ATM] = pw_req_i[4] != 0;
         pw_tog[PT_PACKS] = pw_req_i[5] == 0 || pw_req_i[5] == 1 ? pw_req_i[5] : 3;
         pw_tog[PT_AI] = pw_req_i[6] >= 0 && pw_req_i[6] <= 2 ? pw_req_i[6] : 0;
+        pw_tog[PT_COND] = pw_req_i[7] >= 0 && pw_req_i[7] <= 4 ? pw_req_i[7] : 0;
+        pw_tog[PT_REV] = pw_req_i[10] == 0 ? 0 : 2;
+        if (pw_req_f[10] > 0.5f) snprintf(pw_txt[PF_DEPTH], sizeof pw_txt[0], "%.0f", pw_req_f[10]);
+        else pw_txt[PF_DEPTH][0] = 0;
         snprintf(pw_txt[PF_CG], sizeof pw_txt[0], "%.1f", pw_req_f[4]);
         if (pw_req_f[5] > 0.5f) snprintf(pw_txt[PF_SHIFT], sizeof pw_txt[0], "%.0f", pw_req_f[5]);
         else pw_txt[PF_SHIFT][0] = 0;
@@ -528,7 +537,11 @@ static const char *pw_tog_text(int t)
     static const char *ab[6] = {"MAX MAN", "MAX AUTO", "4", "3", "2", "1"};
     static const char *cond[4] = {"DRY", "GOOD", "MEDIUM", "POOR"};
     switch (t) {
-    case PT_COND: return "DRY";
+    case PT_COND: {
+        static const char *c[5] = {"DRY", "WET", "SLUSH/WATER", "MEDIUM", "POOR"};
+        return c[pw_tog[t] % 5];
+    }
+    case PT_REV: return pw_tog[t] == 2 ? "2 REV" : "NO REV";
     case PT_FLAPS: case PT_LFLAPS: snprintf(s, sizeof s, "%d", pw_tog[t]); return s;
     case PT_RATING:
         if (pw_tog[t] == 0) return "TO";
@@ -663,7 +676,11 @@ static void pw_draw_takeoff(int l, int t, int r, int b, int fh)
     y -= lh;
     fw_text(x0, y, FWN_LIGHT, "Slope %");
     pw_field(PF_SLOPE, x0 + 100, y, 56, fh);
-    pw_choice(PT_COND, "Runway", x0 + 170, y, 70, 60, fh);
+    pw_choice(PT_COND, "Runway", x0 + 170, y, 70, 96, fh);
+    y -= lh;
+    fw_text(x0, y, pw_tog[PT_COND] == 2 ? FWN_LIGHT : FWN_GREY, "Depth MM");
+    pw_field(PF_DEPTH, x0 + 100, y, 56, fh);
+    pw_choice(PT_REV, "Reverse", x0 + 170, y, 70, 96, fh);
     y -= lh;
     pw_draw_wind(0, PF_WIND, x0, y, fh);
     y -= lh;
@@ -724,6 +741,18 @@ static void pw_draw_takeoff(int l, int t, int r, int b, int fh)
     fw_text(xr + 10, y, FWN_WHITE, a);
     fw_text(xe - fw_width(c), y, FWN_WHITE, c);
     y -= lh;
+    /* a contaminated runway (FPPM p.20, advisory): the field length limit
+       above is the dry one adjusted; the VMCG limit weight beside it */
+    if (o[34] > 0.5f) {
+        static const char *cn[5] = {"DRY", "WET", "SLUSH/WATER", "MEDIUM", "POOR"};
+        char d[32];
+        pw_kg(d, sizeof d, o[32]);
+        snprintf(a, sizeof a, "%s%s: adjusted, VMCG limit %s", cn[(int)(o[34] + 0.5f) % 5],
+            o[35] > 0.5f ? " (MM)" : "", d);
+        if (o[35] > 0.5f) snprintf(a, sizeof a, "%s %.0f MM: adjusted, VMCG limit %s", cn[2], o[35], d);
+        fw_text(xr + 10, y, FWN_AMBER, a);
+        y -= lh;
+    }
     int why = (int)(o[11] + 0.5f);
     if (o[10] > -90.0f) {
         snprintf(a, sizeof a, "ASSUMED TEMP %.0fC", o[10]);
@@ -956,7 +985,8 @@ static void pw_button(int k)
 static void pw_toggle(int t)
 {
     switch (t) {
-    case PT_COND: pw_tog[t] = 0; break;
+    case PT_COND: pw_tog[t] = (pw_tog[t] + 1) % 5; break;
+    case PT_REV: pw_tog[t] = pw_tog[t] == 2 ? 0 : 2; break;
     case PT_FLAPS: pw_tog[t] = pw_tog[t] == 10 ? 20 : 10; break;
     case PT_RATING: pw_tog[t] = (pw_tog[t] + 1) % 3; break;
     case PT_ATM: pw_tog[t] = !pw_tog[t]; break;

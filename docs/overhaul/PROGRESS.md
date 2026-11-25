@@ -11,7 +11,8 @@
   - 計算は FMC（`B747.68.efb_glue.lua`、`B747.68.efb_to_model.lua`）：FPPM の滑走路長・上昇・タイヤ速度・ブレーキエネルギーの図（PDF の線から読んだ：`B747.68.efb_field_model.lua`・`B747.68.efb_limits_model.lua`、道具 `pdf_paths.lua`）、減格の換算表、assumed temperature、FMC と EEC の V 速度・トリム・EPR／N1・VREF。SEND は TAKEOFF REF と THRUST LIM の入力の入口へ。
   - 着陸のページ（`B747.68.efb_ldg_model.lua`）：VREF と進入速度、FCOM PI.12・PI.22 の着陸距離（DRY・GOOD・MEDIUM・POOR、MAX MANUAL・MAX AUTO・オートブレーキ 4〜1、逆推力 4・2・0 発）と LDA、FPPM の制限重量（通常・着氷・低視程）、quick turnaround、構造の最大着陸重量（FCOM p.78）。
   - **推定**：assumed temperature の探し方、GE・RR に PW4056 の図、GE の減格（5・15 %）の換算、勾配を両端の標高から、RR の着陸距離に PW の表。
-  - 残り：湿った滑走路・汚染滑走路の離陸（FPPM p.36–40 ほか）、障害物の制限。
+  - 湿った滑走路・汚染滑走路の離陸（`B747.68.efb_contam_model.lua`）：FPPM p.36–40・p.48–53・p.60–65 の ADVISORY の表（重さの調整、VMCG の制限重量、V1 の調整）。WET は滑りやすい滑走路の good（p.24）。X-Plane `s439` 14/14。コミット c22e0380（道具の TJ の直し）、b195478b（表）、c19b9124（窓と計算）。
+  - 残り：障害物の制限（障害物のデータが無い）、着陸の窓の初期値に FMC の予想の着陸重量を使うこと。
   - 試験：`efb_to_model_test`（66 件）、`efb_to_real_test`（27 件）、`efb_field_model_test`（115 件）、`efb_limits_model_test`（176 件）、`efb_ldg_model_test`（295 件）、`efb_glue_test`（54 件）。
   - コミット：78a38bb4（道具 pdf_paths.lua）、0d0613b2（離陸の図）、06cd66c8（着陸のデータ）、33f317c9（窓と FMC の計算）。
   - X-Plane：`s435`（窓の離陸と SEND）19/19、`s438`（着陸と窓の 2 ページ）14/14、`s436`（加速停止）・`s437`（全発の離陸）は 340.3 t で、加速停止 2,273 m は FPPM の滑走路長（約 2,400 m）に収まり、全発の 35 ft までの 2,359 m は FPPM の想定（約 2,090 m）より約 13 % 長い（引き起こしの遅れを除いても 5〜10 %）。滑走中の EPR が 1.52 → 1.46 に下がる：**シムの離陸の加速は別に調べる**。

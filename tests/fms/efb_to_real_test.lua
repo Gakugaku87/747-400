@@ -95,4 +95,38 @@ T.equal(P.calc(inp{engine = 1, wind_kt = -12}).err, "TAILWIND ABOVE 10 KT", "GE 
 out = P.calc(inp{elev_ft = 5558, fla_ft = 4418 / 0.3048, oat_c = 30, tow_kg = 300000, wind_kt = -10})
 T.check(out.vmbe ~= nil and out.vmbe_check, string.format("tailwind: VMBE %.1f checked", out.vmbe or -1))
 T.check(out.v1 <= out.vmbe, string.format("V1 %d not above VMBE %.1f", out.v1, out.vmbe))
+
+-- a contaminated runway (FPPM p.20-21, B747.68.efb_contam_model.lua): the
+-- dry field limit through the model's limit(), V1 through its v1(); wet as
+-- the slippery tables' good; no assumed temperature
+local C = dofile(D .. "B747.68.efb_contam_model.lua")
+local S = B747_to_speeds_model
+local fla = 4000 / 0.3048
+local dry = P.calc(inp{fla_ft = fla, tow_kg = nil})
+local wet = P.calc(inp{fla_ft = fla, tow_kg = nil, cond = 1, rev = 2})
+local want = C.limit("SLIPPERY", "GOOD", 2, 0, dry.lim.field, fla, wet.pa_ft, 20)
+T.near(wet.lim.field, want, 1e-6, string.format("wet: the field limit through the slippery good tables (%.0f from %.0f)", want, dry.lim.field))
+T.check(wet.contam and wet.contam.vmcg_kg > 0, "wet: the VMCG limit weight " .. tostring(wet.contam and wet.contam.vmcg_kg))
+T.check(wet.max_kg <= dry.max_kg, string.format("wet %.0f not above dry %.0f", wet.max_kg, dry.max_kg))
+local poor = P.calc(inp{fla_ft = fla, tow_kg = nil, cond = 4, rev = 2})
+local medium = P.calc(inp{fla_ft = fla, tow_kg = nil, cond = 3, rev = 2})
+T.check(poor.max_kg < medium.max_kg and medium.lim.field <= wet.lim.field,
+    string.format("poor %.0f < medium %.0f; medium's field %.0f <= good's %.0f", poor.max_kg, medium.max_kg,
+    medium.lim.field, wet.lim.field))
+local norev = P.calc(inp{fla_ft = fla, tow_kg = nil, cond = 3, rev = 0})
+T.check(norev.lim.field < medium.lim.field, string.format("medium, no reverse: field %.0f < 2 reverse %.0f",
+    norev.lim.field, medium.lim.field))
+local poor0 = P.calc(inp{fla_ft = fla, tow_kg = nil, cond = 4, rev = 0})
+T.check(poor0.err ~= nil, "poor, no reverse, 4,000 m: off the VMCG table (" .. tostring(poor0.err) .. ")")
+-- slush 6 mm at 280 t: V1 the model's from the dry V1 and VMCG
+local sl = P.calc(inp{fla_ft = fla, tow_kg = 280000, cond = 2, depth_mm = 6, rev = 2})
+T.check(not sl.err, "slush 6 mm, 280 t: " .. tostring(sl.err))
+local v1d, vrd, _, info = S.speeds({flaps = 20, weight_kg = 280000, hw = 0, slope = 0, oat_c = 15, pa_ft = sl.pa_ft, engine = 0, pct = 0})
+local v1w = C.v1("SLUSH", 6, 2, 0, 280000, v1d, info.vmcg, sl.contam.vmcg_limited and 280000 >= sl.contam.vmcg_kg - 500,
+    sl.pa_ft, 20)
+T.equal(sl.v1, math.min(math.floor(v1w + 0.5), vrd), string.format("slush V1 %d: the dry %d adjusted (%.1f)", sl.v1, v1d, v1w))
+T.check(sl.v1 < v1d and sl.v1 >= info.vmcg - 0.5, string.format("lower than dry, not below VMCG %.0f", info.vmcg))
+T.check(sl.sel_c == nil, "no assumed temperature")
+local deep = P.calc(inp{fla_ft = fla, tow_kg = 280000, cond = 2, depth_mm = 20, rev = 2})
+T.check(deep.err ~= nil, "slush 20 mm: " .. tostring(deep.err))
 T.done()

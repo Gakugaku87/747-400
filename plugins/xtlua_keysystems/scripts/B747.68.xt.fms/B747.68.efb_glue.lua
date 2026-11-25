@@ -21,15 +21,20 @@
 --                              TO 1, 2 TO 2), 4 the assumed temperature
 --                              wanted, 5 the packs on (3, 1, 0), 6 the
 --                              anti-ice (0 off, 1 engines, 2 engines and
---                              wings), 7 the runway's condition (0 dry), 8
---                              the autobrake, 9 the reversers
+--                              wings), 7 the runway's condition (0 dry; the
+--                              takeoff's 1 wet, 2 slush or standing water, 3
+--                              medium, 4 poor braking action; the landing's
+--                              1 good, 2 medium, 3 poor), 8 the autobrake, 9
+--                              the landing's reversers (4, 2, 0), 10 the
+--                              takeoff's on a contaminated runway (2, 0)
 --   laminar/B747/efb/req_f     (float[16]) 0 OAT (°C), 1 QNH (hPa), 2 the
 --                              headwind (kt, tail -), 3 the weight (kg), 4
 --                              the CG (% MAC), 5 the runway not available
 --                              behind the start (m: an intersection), 6 the
 --                              runway's length (m) for one the data lack (0
 --                              the data's), 7 the slope (%, -99 the data's),
---                              8 VREF's additive (kt)
+--                              8 VREF's additive (kt), 9 the crosswind (kt),
+--                              10 the slush or standing water's depth (mm)
 -- This module's answers:
 --   laminar/B747/efb/ans_id    the request answered (its req_id)
 --   laminar/B747/efb/rwy       (array[16]) 0 1 found, 0 no airport, -1 no
@@ -58,7 +63,10 @@
 --                              24 the headwind, 25 the elevation, 26 the
 --                              flaps, 27 the rating, 28 the weight, 29 SEND
 --                              done (1) or refused (0: msg); 30 the rating's
---                              thrust reduction (%). The landing's (4): 0
+--                              thrust reduction (%); a contaminated runway's
+--                              31 adjusted field length limit, 32 VMCG limit
+--                              weight, 33 weight adjustment, 34 condition,
+--                              35 depth (mm). The landing's (4): 0
 --                              the kind, 1 1 worked out, 2 the pressure
 --                              altitude, 3 VREF (the flaps'), 4 the approach
 --                              speed (VREF and the additive), 5 the FCOM's
@@ -91,7 +99,7 @@
 local EEC = "../../../xtlua/scripts/B747.42.xt.EEC/"
 local efbLoaded = true
 for _, path in ipairs({"B747.68.efb_field_model.lua", "B747.68.efb_limits_model.lua", "B747.68.efb_to_model.lua",
-    "B747.68.efb_ldg_model.lua",
+    "B747.68.efb_ldg_model.lua", "B747.68.efb_contam_model.lua",
     "../B747.60.xt.fltInst/B747.60.to_speeds_model.lua", EEC .. "B747.42.eec_model.lua",
     EEC .. "B747.42.epr_model.lua", EEC .. "B747.42.ge_n1_model.lua", EEC .. "B747.42.rr_model.lua",
     EEC .. "B747.42.ref_thrust_model.lua"}) do
@@ -261,6 +269,7 @@ local function takeoff_inputs(r)
         engine = engine, flaps = (reqI[2] == 10) and 10 or 20, rating = rating,
         to_pct = B747_fms_thrlim_pct and B747_fms_thrlim_pct(rating) or ({[0] = 0, 8, 20})[rating],
         atm = (reqI[4] or 0) ~= 0, cond = math.floor(reqI[7] or 0),
+        rev = (reqI[10] or 2) == 0 and 0 or 2, depth_mm = reqF[10] or 0,
         packs = ({[0] = 0, [1] = 1})[math.floor(reqI[5] or 3)] or 3,
         eng_ai = (reqI[6] or 0) >= 1, wing_ai = (reqI[6] or 0) >= 2,
         oat_c = reqF[0] or 15, qnh_hpa = (reqF[1] or 0) > 800 and reqF[1] or 1013.25,
@@ -297,6 +306,15 @@ local function answer_takeoff(kind, inp, out)
     a[27] = inp.rating
     a[28] = inp.tow_kg or 0
     a[30] = inp.to_pct or 0
+    -- a contaminated runway's working (B747.68.efb_to_model.lua out.contam)
+    local c = out.contam
+    if c then
+        -- the VMCG limit weight read past the tables' heavy end (the model
+        -- carries it on: not limiting) shown as none
+        local vm = c.vmcg_kg or 0
+        a[31], a[32], a[33] = c.limit_kg or 0, vm < 500000 and vm or 0, c.adjust_kg or 0
+        a[34], a[35] = inp.cond or 0, (inp.cond == 2) and (inp.depth_mm or 0) or 0
+    end
 end
 
 local function request_takeoff(kind)
