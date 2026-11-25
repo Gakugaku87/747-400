@@ -19,7 +19,7 @@
 -- PW4056's scale for it, with the P&W's ratings and its own takeoff table;
 -- this file shows the RB211's own EPR (the reference, the maximum, the
 -- command and the engine's), N3 X-Plane's N2 and N2 (IP) shown only (below,
--- N2_display_RR), N1 and EGT as before.
+-- N2_display_RR), N1 on the TCDS's scale (N1_TCDS) and EGT as before.
 -- Gone with the rebuild: the upstream's takeoff EPR (take_off_EPR_RR: its
 -- thrust estimate through the EPR cubic, whose top at 1.71 left the takeoff
 -- thrust free), the climb EPR (in_flight_EPR_RR: a design climb rate's
@@ -27,6 +27,17 @@
 -- the EPR shown from thrust / density ratio, the 0.97 floor and its PID
 dofile("B747.42.rr_model.lua")
 local RRM = B747_rr_model
+
+-- (2026-11-25, the user's 「RRのN1」: GAP_ANALYSIS.md N19-ENG-23) the N1
+-- shown on the TCDS's scale, 100 % LP = 3,900 rpm (TCDS_RB211 p.10). The
+-- upstream's N1 (N1_display_RR, with its idle, start and ground shaping)
+-- counts 3,600 rpm as 100 % and stays so inside; shown = it x 3,600 /
+-- 3,900. The limits are the TCDS's on that scale (p.18: LP 110.5 % at
+-- take-off, 5 min; 91 % in reverse, 40 s). Before, the upstream's N1 shown
+-- itself, 8.3 % over: 111.0 % at FAOR on a 30 C day (s432) for 102.5 %,
+-- just under its 111.5 % red line, which then held the takeoff thrust
+-- (TCDS: 119.7 % on that scale)
+local N1_TCDS = 3600 / 3900
 
 -- the engine (G or H) from the simconfig's string
 local function rr_variant()
@@ -164,8 +175,10 @@ function engine_idle_control_RR(altitude_ft_in)
     end
 
     --Try to keep REVERSER N1 at or below 91% per the engine TCDS
+    --(2026-11-25) on the TCDS's scale (p.18: 91 % of 3,900 rpm, 40 s); before,
+    --the upstream's N1 at 91, 84 % of the TCDS's
     if simDR_onGround == 1 and math.max(simDR_reverser_on[0], simDR_reverser_on[1], simDR_reverser_on[2], simDR_reverser_on[3]) == 1 then
-      if N1_actual > 91.0 then
+      if N1_actual * N1_TCDS > 91.0 then
         B747_setMaxThrust( simDR_thrust_max - 250)
       end
     elseif simDR_onGround == 1 and math.max(simDR_reverser_deploy_ratio[0], simDR_reverser_deploy_ratio[1], simDR_reverser_deploy_ratio[2], simDR_reverser_deploy_ratio[3]) > 0.0
@@ -202,8 +215,10 @@ function engine_idle_control_RR(altitude_ft_in)
   --N2 (the start, the IDG, the pumps' power, the alerts) sees it so. 1:1
   --(estimate: no source has the RB211's HP against X-Plane's; X-Plane's N2 is
   --69.7 % at ground idle and 98-99 % on a takeoff, under TCDS_RB211 p.18-19's
-  --99.2 %). The IP, N2, only shown: between the shown N1 and N3,
-  --N1 + IP_SHARE (N3 - N1) (estimate: near what the upstream's IP formula
+  --99.2 %). The IP, N2, only shown: between the upstream's N1 (3,600 rpm as
+  --100 %: the share was fitted on it; the shown N1 is on the TCDS's scale
+  --since the same day) and N3, N1 + IP_SHARE (N3 - N1) (estimate: near what
+  --the upstream's IP formula
   --showed - 49.9 against 49.0 at idle with N1 26.8 and N3 68.7, 89.3 against
   --87.0 in the cruise with 84.2 and 93.4, 101.5 against 101.0 on the takeoff
   --with 105.7 and 98.1, s427-s429 2026-11-25 - and under N3 in a start,
@@ -339,7 +354,12 @@ function engine_idle_control_RR(altitude_ft_in)
     end
 
     --After manipulating simDR_thrust_max, ensure that it doesn't go below the max output
-    if simDR_thrust_max < engine_max_thrust_n then
+    --(2026-11-25) except in reverse on the ground, where N1_display_RR lowers it to
+    --keep the reverse N1 to the TCDS's 91 % (it resets it as the reversers stow).
+    --Before, this undid that every frame: at full reverse the N1 went to 103 % on
+    --the TCDS's scale (s433's first run)
+    local reversing = simDR_onGround == 1 and math.max(simDR_reverser_on[0], simDR_reverser_on[1], simDR_reverser_on[2], simDR_reverser_on[3]) == 1
+    if simDR_thrust_max < engine_max_thrust_n and not reversing then
       B747_setMaxThrust(engine_max_thrust_n)
     end
 
@@ -350,14 +370,17 @@ function engine_idle_control_RR(altitude_ft_in)
       B747DR_display_EPR_max[i] = math.min(RRM.display(B747_eec_max(i), mach), 1.90)
       B747DR_display_EPR[i] = math.max(math.min(EPR_display_RR(altitude_ft_in, simDR_thrust_n[i], i), 1.90), 0.0)
 
-      N1_display[i] = string.format("%4.1f", math.min(N1_display_RR(altitude_ft_in, simDR_thrust_n[i], i), 112.5))
+      --(2026-11-25) the upstream's N1 (3,600 rpm as 100 %) shown on the TCDS's
+      local n1_upstream = N1_display_RR(altitude_ft_in, simDR_thrust_n[i], i)
+      N1_display[i] = string.format("%4.1f", math.min(n1_upstream * N1_TCDS, 112.5))
       B747DR_display_N1[i] = math.max(N1_display[i], 0.0)
 
-      --(2026-11-25) N3 first (X-Plane's N2), then N2 (the IP) between N1 and N3
+      --(2026-11-25) N3 first (X-Plane's N2), then N2 (the IP) between the
+      --upstream's N1 and N3
       N3_display[i] = string.format("%4.1f", math.min(N3_display_RR(B747DR_display_N1[i], i), 102.5))
       B747DR_display_N3[i] = math.max(N3_display[i], 0.0)
 
-      N2_display[i] = string.format("%3.0f", math.min(N2_display_RR(B747DR_display_N1[i], B747DR_display_N3[i], i), 111.5))
+      N2_display[i] = string.format("%3.0f", math.min(N2_display_RR(math.max(n1_upstream, 0), B747DR_display_N3[i], i), 111.5))
       B747DR_display_N2[i] = math.max(N2_display[i], 0.0)
       EGT_display[i] = EGT_display_RR(i)
       B747DR_display_EGT[i] = egt_thermal_profile(EGT_display[i],i,B747DR_display_EGT[i])--math.max(EGT_display[i], 0.0)

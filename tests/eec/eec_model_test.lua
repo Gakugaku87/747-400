@@ -519,6 +519,18 @@ do
     i.n1[4] = red.n1 - M_ + 3
     o = E.update(st, i, DT)
     T.near(o.target[4], 1.40 - 3 * g, 1e-9, "P&W: both rotors past: the lower limit wins")
+    -- (2026-11-25, N19-ENG-23) the RB211 (inp.rr) on the P&W's path: its N1
+    -- limit the TCDS's maximum take-off LP 110.5 % (TCDS_RB211 p.18, of
+    -- 3,900 rpm, the shown N1's scale), no N2 limit (its shown N2 the IP's)
+    T.equal(E.REDLINE.RR.n1, 110.5, "RB211: the N1 limit 110.5 % (TCDS_RB211 p.18)")
+    i.rr = true
+    i.n1, i.n2 = {110.5 - M_ + 2, 100, 110.5 - M_ - 2, 100}, {100, 100, 100, 120}
+    o = E.update(st, i, DT)
+    T.near(o.target[1], 1.40 - 2 * g, 1e-9, "RB211: N1 2 % past 110.5 less the margin: the target the present EPR less twice the gain")
+    T.check(o.rpm_lim[1] and not o.rpm_lim[3] and not o.rpm_lim[4],
+        "RB211: RPM LIM by N1 past 110.0 %; none 2 % under it, nor by its N2 (the IP's) at 120 %")
+    i.rr = nil
+    i.n1, i.n2 = {red.n1 - M_ + 2, 100, 100, red.n1 - M_ + 3}, {100, 100, 100, red.n2 - M_ + 1}
     -- the lever at idle: the command is below any limit, no message
     i.lever = {0, 0, 0, 0}
     o = E.update(st, i, DT)

@@ -283,6 +283,10 @@ do
     o = D.update(s, inp, DT)
     T.check(o.n2_red[1], "RB211: N2 red from 109.5 %")
     T.check(o.n3_red[2] and not o.n3_red[3], "RB211: N3 red from 101.5 %")
+    inp.n1 = {110.5, 110.4, 100, 100}
+    o = D.update(s, inp, DT)
+    T.check(o.n1_red[1] and not o.n1_red[2],
+        "RB211: N1 red from 110.5 % (TCDS_RB211 p.18, of 3,900 rpm: 2026-11-25; before 111.4, P&W's)")
 end
 
 -- the P&W EPR tape red when max EPR is reached (FCOM p.834, p.873), with the

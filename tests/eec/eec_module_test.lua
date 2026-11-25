@@ -174,6 +174,12 @@ do
     -- display's branch
     T.check(ns.take_off_N1_GE == nil and ns.takeoff_TOGA_n1 == nil and ns.B747_ge_n1_from_xp == nil,
         "take_off_N1_GE, takeoff_TOGA_n1 and B747_ge_n1_from_xp are gone (ENG-4)")
+    -- (2026-11-25, N19-ENG-23) the RB211's >ENG n RPM LIM from the EEC, as
+    -- the others': B747.40.xt.engines.lua's own (its shown N1 at 111.51 %) gone
+    local fe = io.open("plugins/xtlua/scripts/B747.40.xt.engines/B747.40.xt.engines.lua", "rb")
+    local esrc = fe:read("*a"); fe:close()
+    T.check(not esrc:find("display_N1[0] >= 111.51", 1, true) and not esrc:find("advisory_status[134]", 1, true),
+        "RB211: >ENG n RPM LIM from the EEC (B747.40.xt.engines.lua's own at 111.51 % gone)")
     T.check(ns.take_off_EPR_RR == nil and ns.in_flight_EPR_RR == nil and ns.find_closest_weight == nil
         and ns.find_closest_altitude == nil and ns.take_off_thrust_corrected == nil and ns.in_flight_thrust == nil
         and ns.round_thrustcalc == nil,
@@ -758,12 +764,14 @@ rt:set("laminar/B747/simconfig", '{"PLANE":{"engines":"CF6-80C2-B1F"}}')
 frames(0.2)
 T.equal(ns.engine_max_thrust_n, 258000, "CF6-80C2-B1F: 258,000 N")
 
--- RR: no source, its RPM LIM stays with B747.40.xt.engines.lua
+-- RR: (2026-11-25, N19-ENG-23) its RPM LIM from the EEC as the others'
+-- (before, B747.40.xt.engines.lua's own on its shown N1 at 111.51 %: the EEC
+-- left it alone); no limit holding: cleared
 rt:set("laminar/B747/engines/type", 2)
 rt:set(ADV, RPM_LIM, 1)
 ns.B747_eec_set_n2(0, 50)
 rt:frame(1 / 30)
-T.equal(get(ADV, RPM_LIM), 1, "RR: the EEC leaves RPM LIM alone")
+T.equal(get(ADV, RPM_LIM), 0, "RR: the EEC writes RPM LIM (none: no limit holding)")
 
 -- (the FMC's step 9f2) the A/T's servo excited: the levers to its command
 -- at 10 degrees a second (5 s the travel); the hand moving one: it follows
@@ -1093,19 +1101,25 @@ do
         "RB211: the reference (the A/T's target, the CDU's THRUST LIM) on its scale")
     T.near(get(ENG .. "display_EPR_max", 0), math.min(R.display(ns.B747_eec_max(0), 0.5), 1.90), 0.002, "RB211: the max line the EEC's maximum on its scale")
     T.near(get(ENG .. "display_N3", 0), 92, 0.5, "RB211: N3 (HP) is X-Plane's N2")
-    local n1, n3 = get(ENG .. "display_N1", 0), get(ENG .. "display_N3", 0)
+    -- (2026-11-25, the user's 「RRのN1」: N19-ENG-23) N1 shown on the TCDS's
+    -- scale (100 % LP = 3,900 rpm, TCDS_RB211 p.10): the upstream's N1
+    -- (3,600 rpm as 100 %) x 3,600 / 3,900; the IP's share on the upstream's
+    local n1u = ns.N1_display_RR(0, 90000, 0)
+    T.near(get(ENG .. "display_N1", 0), n1u * 3600 / 3900, 0.06,
+        string.format("RB211: N1 shown %.1f, the upstream's %.1f on the TCDS's 3,900 rpm", get(ENG .. "display_N1", 0), n1u))
+    local n1, n3 = n1u, get(ENG .. "display_N3", 0)
     T.near(get(ENG .. "display_N2", 0), n1 + 0.55 * (n3 - n1), 1.0,
-        string.format("RB211: N2 (IP) only shown, between the shown N1 (%.1f) and N3 (%.1f)", n1, n3))
+        string.format("RB211: N2 (IP) only shown, between the upstream's N1 (%.1f) and N3 (%.1f)", n1, n3))
     rt:set(XN2, 0, 50)
     frames(2)
     T.near(get(ENG .. "display_N3", 0), 50, 0.5, "RB211: N3 follows X-Plane's N2 within 2 s (before, the N2 shown lagged it about 10 s)")
     -- N3 under N1 (as in a start, where the shown N1 runs ahead of X-Plane's):
     -- the IP still between them (before, the IP formula of the shown N1 alone
     -- showed 45 % with N3 at 21, s429 2026-11-25)
-    n1, n3 = get(ENG .. "display_N1", 0), get(ENG .. "display_N3", 0)
+    n1, n3 = ns.N1_display_RR(0, 90000, 0), get(ENG .. "display_N3", 0)
     local n2 = get(ENG .. "display_N2", 0)
     T.check(n3 < n1 and n2 >= n3 - 1 and n2 <= n1 + 1,
-        string.format("RB211: N3 (%.1f) under N1 (%.1f), N2 (IP) %.0f between them", n3, n1, n2))
+        string.format("RB211: N3 (%.1f) under the upstream's N1 (%.1f), N2 (IP) %.0f between them", n3, n1, n2))
     -- the boost's "short" (B747_eec_thrust_short): the RB211's EEC value on
     -- the P&W's scale against its target, not its shown EPR (its own scale,
     -- above the target: it never fell short)
@@ -1128,6 +1142,66 @@ do
     rt:set("sim/weather/aircraft/barometer_current_pas", was.baro)
     rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", 0, was.thr)
     rt:set(XN2, 0, was.n2)
+    frames(1)
+end
+-- (2026-11-25, N19-ENG-23) the RB211 in reverse on the ground: over the
+-- TCDS's 91 % N1 (TCDS_RB211 p.18, on its 3,900 rpm scale) N1_display_RR
+-- lowers X-Plane's maximum thrust and RR() leaves it so while reversing
+-- (before, it put it back every frame: the reverse N1 went to 103 %, s433's
+-- first run); the reversers stowing, back to the rating
+do
+    local REV, DEP, TMAX = "sim/cockpit2/annunciators/reverser_on", "sim/flightmodel2/engines/thrust_reverser_deploy_ratio", "sim/aircraft/engine/acf_tmax"
+    local was = {ground = get("sim/flightmodel/failures/onground_any"), mach = get("sim/flightmodel/misc/machno"),
+        baro = get("sim/weather/aircraft/barometer_current_pas"), rev = get(REV, 0), dep = get(DEP, 0), thr = {},
+        alt = get("sim/cockpit2/gauges/indicators/altitude_ft_pilot"), oat = get("sim/cockpit2/temperature/outside_air_temp_degc"),
+        tas = get("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot")}
+    -- the simconfig's new-data flag down (in X-Plane it is up for a moment;
+    -- up, the RB211's setup puts the maximum thrust back every frame)
+    was.newcfg = get("laminar/B747/newsimconfig")
+    rt:set("laminar/B747/newsimconfig", 0)
+    -- standing at sea level, ISA (the N1's atmosphere: B747.42.xt.EEC.lua's)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", 0)
+    rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", 0)
+    was.run = {}
+    for e = 0, 3 do
+        was.thr[e], was.run[e] = get("sim/cockpit2/engine/indicators/thrust_dry_n", e), get("sim/flightmodel/engine/ENGN_running", e)
+        rt:set("sim/flightmodel/engine/ENGN_running", e, 1)
+    end
+    rt:set("laminar/B747/engines/type", 2)
+    rt:set("sim/flightmodel/failures/onground_any", 1)
+    rt:set("sim/flightmodel/misc/machno", 0)
+    rt:set("sim/weather/aircraft/barometer_current_pas", 101325)
+    -- (s433's first run: X-Plane's thrust_dry_n 280 kN at full reverse, the
+    -- forward thrust's: the N1 shown 103 %)
+    for e = 0, 3 do rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", e, 280000) end
+    -- the upstream's start ramp of the N1's thrust (50 N a frame from a
+    -- stopped engine's, the earlier checks') first
+    frames(60)
+    rt:set(REV, 0, 1)
+    rt:set(DEP, 0, 1)
+    frames(1)
+    local tmax0 = ns.engine_max_thrust_n
+    T.check(get(ENG .. "display_N1", 0) > 91 and get(TMAX) < tmax0 - 1000,
+        string.format("RB211: full reverse at N1 %.1f (over 91 %%): X-Plane's maximum thrust lowered and kept (%.0f under %.0f)",
+            get(ENG .. "display_N1", 0), get(TMAX), tmax0))
+    rt:set(REV, 0, 0)
+    rt:set(DEP, 0, 0.05)
+    frames(0.1)
+    T.near(get(TMAX), tmax0, 1, "RB211: the reversers stowing: X-Plane's maximum thrust back to the rating")
+    rt:set(DEP, 0, was.dep)
+    rt:set(REV, 0, was.rev)
+    for e = 0, 3 do
+        rt:set("sim/cockpit2/engine/indicators/thrust_dry_n", e, was.thr[e])
+        rt:set("sim/flightmodel/engine/ENGN_running", e, was.run[e])
+    end
+    rt:set("sim/weather/aircraft/barometer_current_pas", was.baro)
+    rt:set("sim/flightmodel/misc/machno", was.mach)
+    rt:set("sim/flightmodel/failures/onground_any", was.ground)
+    rt:set("sim/cockpit2/gauges/indicators/altitude_ft_pilot", was.alt)
+    rt:set("sim/cockpit2/temperature/outside_air_temp_degc", was.oat)
+    rt:set("sim/cockpit2/gauges/indicators/true_airspeed_kts_pilot", was.tas)
+    rt:set("laminar/B747/newsimconfig", was.newcfg)
     frames(1)
 end
 -- (ENG-19) a stopped engine's N2 on the ground held at 0 for every type

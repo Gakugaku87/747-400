@@ -1010,25 +1010,11 @@ function B747_engines_EICAS_msg()
 
     -- ENG n REVERSER: from the reverser model (B747.40.xt.reverser.lua)
 
-    -- >ENG n RPM LIM: P&W and GE from the EEC's overspeed protection (B747.42.xt.eec_thrust.lua)
-
-    if B747DR_engineType == 2 then  --RR RB211
-        -- >ENG 1 RPM LIM
-
-        if B747DR_display_N1[0] >= 111.51 then B747DR_CAS_advisory_status[134] = 1 else B747DR_CAS_advisory_status[134] = 0 end
-
-        -- >ENG 2 RPM LIM
-        
-        if B747DR_display_N1[1] >= 111.51 then B747DR_CAS_advisory_status[135] = 1 else B747DR_CAS_advisory_status[135] = 0 end
-
-        -- >ENG 3 RPM LIM
-        
-        if B747DR_display_N1[2] >= 111.51 then B747DR_CAS_advisory_status[136] = 1 else B747DR_CAS_advisory_status[136] = 0 end
-
-        -- >ENG 4 RPM LIM
-        
-        if B747DR_display_N1[3] >= 111.51 then B747DR_CAS_advisory_status[137] = 1 else B747DR_CAS_advisory_status[137] = 0 end
-    end
+    -- >ENG n RPM LIM: from the EEC's overspeed protection for every engine type
+    -- (B747.42.xt.eec_thrust.lua). (2026-11-25, N19-ENG-23) the RB211's too,
+    -- its N1 limit the TCDS's on the TCDS's scale; before, here, its shown N1
+    -- at 111.51 % on the upstream's scale, which the EEC holding it below
+    -- never let show
 
 
     

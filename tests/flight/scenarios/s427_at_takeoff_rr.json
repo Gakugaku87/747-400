@@ -62,6 +62,7 @@
     { "do": "snapshot", "note": "80 kt の EPR と基準（2026-11-11 レビュー）", "drefs": [ "laminar/B747/engines/display_EPR[0]", "laminar/B747/engines/display_EPR[3]", "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "laminar/B747/engine/throttle[0]" ] },
     { "do": "check", "note": "80 kt で EPR が TO の基準に届いている（FCOM p.667、FCTM p.93。前は HOLD でレバーが止まり 0.016〜0.028 足りなかった）", "dref": "laminar/B747/engines/display_EPR[0]", "op": "between", "rel": "epr_ref", "value": [-0.01, 0.01] },
     { "do": "snapshot", "note": "80 kt の RR の 3 軸と推力", "drefs": [ "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]", "laminar/B747/engines/display_N3[0]", "sim/flightmodel/engine/ENGN_N1_[0]", "sim/flightmodel/engine/ENGN_N2_[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "sim/flightmodel/engine/ENGN_thro_use[0]" ] },
+    { "do": "check", "note": "表示の N1 は TCDS の目盛り（TCDS_RB211 p.10：100 % = 3,900 rpm。2026-11-25 から：前は本家の 3,600 rpm の目盛り）：94〜101 %（前の目盛りの 105.7 の 0.923 倍で約 97.6）", "dref": "laminar/B747/engines/display_N1[0]", "op": "between", "value": [94, 101] },
     { "do": "check", "note": "N3（HP）は X-Plane の N2（95〜100 %：X-Plane の N2 は離陸で 98〜99 %）", "dref": "laminar/B747/engines/display_N3[0]", "op": "between", "value": [95, 100] },
     { "do": "check", "note": "N2（IP）は表示だけ（IP の式：90〜105 %）", "dref": "laminar/B747/engines/display_N2[0]", "op": "between", "value": [90, 105] },
     { "do": "wait", "note": "150 kt", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "op": ">", "value": 150, "timeout": 90 },
