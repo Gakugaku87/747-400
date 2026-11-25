@@ -620,19 +620,28 @@ run_content = function(content, res, ctm0, depth)
         end
         path, cur = {}, nil
     end
-    local function text_out(str)
+    -- a text run's line where a text matrix puts it
+    local function emit_at(str, m)
         if not font then return end
-        local f = font_info(font)
-        local text, w, codes = show_codes(f, str)
-        local trm = mul({fsize * th, 0, 0, fsize, 0, rise}, mul(tm, gs.ctm))
+        local text = show_codes(font_info(font), str)
+        local trm = mul({fsize * th, 0, 0, fsize, 0, rise}, mul(m, gs.ctm))
         local x, y = trm[5], trm[6]
         local ang = deg(atan2(trm[2], trm[1]))
         local size = sqrt(trm[3] * trm[3] + trm[4] * trm[4])
         emit("T " .. fmt(x) .. " " .. fmt(y) .. " " .. fmt(size) .. " " .. string.format("%.1f", ang) .. " " .. text)
+    end
+    -- the text matrix moved past a string, as the show operators move it
+    local function advance(str)
+        if not font then return end
+        local f = font_info(font)
+        local _, w, codes = show_codes(f, str)
         local spaces = 0
         if not f.two then for _, c in ipairs(codes) do if c == 32 then spaces = spaces + 1 end end end
-        local tx = (w * fsize + tc * #codes + tw * spaces) * th
-        tm = mul({1, 0, 0, 1, tx, 0}, tm)
+        tm = mul({1, 0, 0, 1, (w * fsize + tc * #codes + tw * spaces) * th, 0}, tm)
+    end
+    local function text_out(str)
+        emit_at(str, tm)
+        advance(str)
     end
     while true do
         i = skip_ws(content, i)
@@ -751,23 +760,28 @@ run_content = function(content, res, ctm0, depth)
             elseif op == "TJ" then
                 local arr = a[1] and a[1].v or {}
                 if tm then
-                    local buf = {}
-                    local first_x
+                    -- the strings between kerns as one run, emitted where
+                    -- its first string starts; each string and kern moves
+                    -- the text matrix; a big gap (< -300) starts a new run.
+                    -- (2026-11-25) Before, the kerns moved the run's start
+                    -- before it was emitted: FPPM p.49's and p.53's rows
+                    -- (Tc 5.569, +5560 kerns) came out at x = -534
+                    local buf, start = {}, nil
+                    local function flush()
+                        if #buf > 0 then emit_at(table.concat(buf), start) end
+                        buf, start = {}, nil
+                    end
                     for _, el in ipairs(arr) do
-                        if el.t == "str" then buf[#buf + 1] = el.v
-                        elseif el.t == "num" and #buf == 0 then
-                            tm = mul({1, 0, 0, 1, -el.v / 1000 * fsize * th, 0}, tm)
+                        if el.t == "str" then
+                            start = start or tm
+                            buf[#buf + 1] = el.v
+                            advance(el.v)
                         elseif el.t == "num" then
-                            -- a big gap splits the run
-                            if el.v < -300 then
-                                text_out(table.concat(buf))
-                                buf = {}
-                            end
+                            if el.v < -300 then flush() end
                             tm = mul({1, 0, 0, 1, -el.v / 1000 * fsize * th, 0}, tm)
                         end
                     end
-                    if #buf > 0 then text_out(table.concat(buf)) end
-                    first_x = first_x
+                    flush()
                 end
             elseif op == "Do" then
                 local xo = D(res, "XObject")
