@@ -267,6 +267,28 @@ M.GA_EO_ADD = 10
 M.EO_BLEND_LO, M.EO_BLEND_HI = 0, 600
 M.K_ATT = 0.5
 M.TOGA_RATE = 3
+-- (2026-11-26) the F/Ds alone (no A/P engaged: `inp.fd_only`): the pitch
+-- attitude integrator is synchronized to the pitch attitude while the A/P
+-- is disengaged (ATA22 p.332), and the F/D's command is made from the
+-- command sections' output, the versine and the pitch attitude, not from
+-- the integrator (p.333, the pitch axis's diagram). So the F/D's command is
+-- the attitude and the law's command input: FD_S seconds of the rate the
+-- law asks for (estimate: the A/P's attitude follows its command about 2 s
+-- behind, this file's lagged airplane, so the bar stands as far off the
+-- attitude as it does with the A/P engaged; a pilot holding the bar on the
+-- airplane symbol flies the law's rate). Before, the F/D showed the law's
+-- own integrated command, which went its own way from the attitude where
+-- the law started: after the lift-off it started at the lift-off's attitude
+-- and rose at the law's rate (about half a degree a second) while the
+-- pilot rotated to 15 degrees, and stood 4 to 6 degrees under the airplane
+-- for 6 s while the law asked for more pitch (s109, 2026-11-22: 8.96 at
+-- 15.1, the speed 6 kt above the target); not followed it wound up (30 s
+-- of V/S +1,000: 6 degrees). A heavy takeoff held at 15 degrees (the speed
+-- under the target) wound it 15 degrees under the airplane by the
+-- acceleration height, and VNAV SPD went on from there: flown from there
+-- the airplane went down at 1,400 fpm (a model: fd_alone_test.lua). FLARE
+-- (LAND 2 and 3: the A/Ps) as before
+M.FD_S = 2
 -- G/S (step 3c): the distance to the transmitter from the radio altitude
 -- (in its range, GS_RA_MAX) on GS_DEG (ATA22 p.346); estimates: the
 -- deviation blended over GS_BLEND_S, the beam's vertical speed corrected
@@ -395,6 +417,7 @@ function M.inputs()
         mode = nil,         -- the AFDS model's pitch mode
         vnav_law = nil,     -- the old VNAV's law by its flags: "VS", "ALT", "FLCH"
         active = false,     -- an A/P engaged or a F/D shown
+        fd_only = false,    -- (2026-11-26) the F/Ds alone, no A/P engaged (FD_S)
         ground = false,
         pitch = 0,          -- the pitch attitude, degrees
         vs = 0,             -- the inertial vertical speed, fpm
@@ -633,6 +656,9 @@ function M.update(s, inp, dt)
         return s.cmd
     end
     if s.cmd == nil or s.law == "TOGND" then s.cmd = inp.pitch end
+    -- (2026-11-26) the F/Ds alone: the integrator at the attitude (FD_S)
+    local fd_only = inp.fd_only and law ~= "FLARE"
+    if fd_only then s.cmd = inp.pitch end
     local v = math.max(inp.tas, 100) * KT
     local lim = math.deg(M.G_LIMIT * G / v)
     local rate
@@ -751,7 +777,15 @@ function M.update(s, inp, dt)
     end
     s.law, s.target = law, target
     if law == "FLARE" then lim = math.deg(M.FLARE_G * G / v) end
-    local cmd = s.cmd + clamp(rate, -lim, lim) * dt
+    local r = clamp(rate, -lim, lim)
+    -- (2026-11-26) the F/Ds alone: the attitude and FD_S of the law's rate
+    -- (ATA22 p.332-333), not over the PLI in T/O and G/A (FCOM p.664)
+    if fd_only then
+        local fd = clamp(inp.pitch + r * M.FD_S, M.PITCH_MIN, M.PITCH_MAX)
+        if (inp.mode == "TO" or inp.mode == "GA") and inp.pli then fd = math.min(fd, inp.pitch + inp.pli) end
+        return fd
+    end
+    local cmd = s.cmd + r * dt
     -- FLARE: not down under the landing attitude (FLARE_FLOOR)
     if law == "FLARE" and cmd < s.cmd then
         cmd = math.max(cmd, math.min(s.cmd, s.flare_pitch + M.FLARE_FLOOR))

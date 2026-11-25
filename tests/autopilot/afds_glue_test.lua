@@ -298,6 +298,10 @@ T.equal(rt:get(PITCH), 7, "the FMA's V/S")
 -- more than flown: the command up
 local PITCH_LAW, PITCH_CMD = "laminar/B747/autopilot/pitch_law", "laminar/B747/autopilot/pitch_cmd"
 rt:set("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot", 5)
+-- (2026-11-26) the F/Ds alone (no A/P engaged here): the F/D's command is
+-- the attitude and the law's command input (ATA22 p.332-333; the pitch
+-- model's FD_S), so the law's way is the command against the attitude
+local function fd_off() return rt:get(PITCH_CMD) - rt:get("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot") end
 rt:set("sim/flightmodel/position/local_vy", 1840 / FPM)
 -- (2026-11-13) the TAS 300 kt: the FCC's ADC's Mach at 15 degrees C (B747_afds_tas)
 rt:set("sim/cockpit2/temperature/outside_air_temp_degc", 15)
@@ -358,7 +362,7 @@ rt:set(IAS, 180)
 frames(200)
 local p1 = rt:get(PITCH_CMD)
 frames(30)
-T.check(rt:get(PITCH_CMD) < p1 - 0.1, "FLCH up to the MCP altitude, climbing and 20 kt slow: the command down")
+T.check(fd_off() < -0.1, string.format("FLCH up to the MCP altitude, climbing and 20 kt slow: the command down (%.2f from the attitude)", fd_off()))
 rt:set("sim/flightmodel/position/local_vy", 0 / FPM)
 -- (2026-11-13, B3) the IAS stepped with the TAS held: the speed laws' rate
 -- (the speed complemented by the inertial acceleration) settles through
@@ -550,7 +554,7 @@ fvn({alt = a0 - 60})
 frames(3)
 local p4 = rt:get(PITCH_CMD)
 frames(30)
-T.check(rt:get(PITCH) == 6 and rt:get(PITCH_CMD) > p4, string.format("60 ft above CRZ ALT at 1,200 fpm down: captured, VNAV PTH, the command up (%.2f from %.2f)", rt:get(PITCH_CMD), p4))
+T.check(rt:get(PITCH) == 6 and fd_off() > 0.1, string.format("60 ft above CRZ ALT at 1,200 fpm down: captured, VNAV PTH, the command up (%.2f from the attitude)", fd_off()))
 rt:set(VSI, 0 / FPM)
 fvn({mode = 2, alt = a0, at = 3, vs = 0})
 frames(30)
@@ -653,7 +657,7 @@ frames()
 T.check(rt:get(NOTIFY, 9) == 0 and rt:get(NOTIFY, 45) == 0, "none")
 rt:command(CMD .. "autothrottle_disco_R")
 frames()
-T.check(rt:get(PITCH_CMD) < p2 - 0.1, "-2,000 fpm asked from level: the command down")
+T.check(fd_off() < -0.1, string.format("-2,000 fpm asked from level: the command down (%.2f from the attitude)", fd_off()))
 T.equal(rt:get("sim/cockpit2/autopilot/airspeed_is_mach"), 0, "the dial in knots")
 T.equal(rt:get(DIAL), 280, "the FMC's 280 kt")
 T.equal(rt:get(PHASE), 3, "the descent's phase")
@@ -858,7 +862,7 @@ T.equal(rt:get(PITCH_ARMED), 0, "nothing armed in pitch")
 -- G/S's law (not the old one): under the beam level, down onto it
 local gs_p0 = rt:get(PITCH_CMD)
 frames(150)
-T.check(rt:get(PITCH_LAW) == 1 and rt:get(PITCH_CMD) < gs_p0 - 0.5, "G/S's law: the nose down onto the beam (" .. gs_p0 .. " to " .. rt:get(PITCH_CMD) .. ")")
+T.check(rt:get(PITCH_LAW) == 1 and fd_off() < -0.2, string.format("G/S's law: the nose down onto the beam (%.2f from the attitude)", fd_off()))
 -- the signals lost: LOC stays engaged (its latch; the old monitor armed it
 -- again)
 ils(false, false)

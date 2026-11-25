@@ -4,9 +4,11 @@
 -- while the A/P is disengaged (ATA22 p.332), so an engagement starts from
 -- the attitude. Before, the law's command, an integrator, wound up during
 -- F/D-only flight nobody followed (30 s of V/S +1,000: 6 degrees above the
--- attitude) and the engagement flew to it (1.83 g in X-Plane). The F/D's
--- bars themselves are not changed. Through the real glue
--- (B747.70.xt.autopilot.lua) on the XTLua mock.
+-- attitude) and the engagement flew to it (1.83 g in X-Plane). (2026-11-26)
+-- The F/D's own command no more winds up either: with the F/Ds alone it is
+-- the attitude and the law's command input (ATA22 p.332-333; the pitch
+-- model's FD_S). Through the real glue (B747.70.xt.autopilot.lua) on the
+-- XTLua mock.
 local xtlua = dofile("tests/lib/xtlua.lua")
 -- (2026-11-13) the IRU's inertial V/S is X-Plane's vertical velocity
 -- (local_vy, m/s: B747_afds_ivs); before, its vh_ind_fpm (fpm)
@@ -64,7 +66,10 @@ frames(5)
 T.equal(rt:get("laminar/B747/autopilot/FMA/active_pitch_mode"), 7, "F/D L on in the air: V/S")
 rt:set("sim/cockpit2/autopilot/vvi_dial_fpm", 1000)
 frames(30 * 30)
-T.check(rt:get(PC) > 6, string.format("30 s of V/S +1,000 not followed: the F/D's command wound up to %.2f (the attitude 2)", rt:get(PC)))
+-- (2026-11-26) the F/D alone: the attitude and FD_S (2 s) of the law's
+-- rate, 0.05 g at 270 kt of TAS (0.2 degree a second): 0.4 over the
+-- attitude, not wound up (before, over 6 degrees)
+T.check(rt:get(PC) > 2.35 and rt:get(PC) < 2.45, string.format("30 s of V/S +1,000 not followed: the F/D's command %.2f, 0.4 over the attitude 2 (not wound up)", rt:get(PC)))
 -- CMD L: the A/P engaged; the law starts from the attitude
 rt:command(CMD .. "cmd_L")
 frames(1)

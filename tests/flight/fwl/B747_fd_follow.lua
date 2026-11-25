@@ -21,17 +21,25 @@
 -- and the airplane went 3.5 degrees over the bar (s109, 20261104_151822: 17.9
 -- for 14.4 at 334 ft); the A/P took over from that column and swung it back
 -- while the speed went 5 kt over V2 + 25.
+-- v4 (2026-11-26; notes/ATA-22.md §72): KI 0.03 to 0.10, I_BAND 1.5 to 3.
+-- The F/D alone now shows the attitude and 2 s of the law's rate (ATA22
+-- p.332-333), so the bar no longer lags the rotation (v3's reason) and its
+-- errors are small: 1 to 1.6 degrees under the airplane at the rotation's
+-- end in s109. The integral took the rotation's pull (the column at the
+-- start) off at 0.03 a second a degree, over 10 s, and the airplane went
+-- on up to 20 degrees (s109, 20261126_033135); a pilot holds the bar on
+-- the airplane symbol within a few seconds (estimate).
 
-local VERSION = "3"
+local VERSION = "4"
 
 if not string.find(AIRCRAFT_PATH or "", "747-400", 1, true) then
     logMsg("B747 F/D follow: not the 747-400, inactive")
     return
 end
 
-local KP, KI, KD = 0.10, 0.03, 0.20
+local KP, KI, KD = 0.10, 0.10, 0.20
 local RATE = 0.5
-local I_BAND = 1.5
+local I_BAND = 3
 dataref("B747FF_theta", "sim/flightmodel/position/theta", "readonly")
 dataref("B747FF_q", "sim/flightmodel/position/Q", "readonly")
 dataref("B747FF_fd", "laminar/B747/autopilot/flight_director_pitch_deg", "readonly")
