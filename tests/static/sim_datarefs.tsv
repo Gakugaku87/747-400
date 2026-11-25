@@ -24,6 +24,7 @@ sim/aircraft/weight/acf_cgZ_original	number
 sim/aircraft/weight/acf_m_empty	number
 sim/aircraft/weight/acf_m_fuel_tot	number
 sim/aircraft/weight/acf_m_jettison	number
+sim/aircraft/weight/acf_m_max	number
 sim/aircraft/weight/acf_m_station_max	array[9]
 sim/aircraft/weight/acf_stations_ref_z	array[9]
 sim/aircraft2/engine/high_idle_ratio	number

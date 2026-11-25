@@ -98,6 +98,11 @@
  * Plugins > 747-400 > Failures..., the airplane's failures by ATA chapter
  * from the list failures.txt (failures_window.c).
  *
+ * The takeoff and landing performance window (2026-11-25 the user; docs/
+ * overhaul/notes/ATA-34-61-FMC.md §191): Plugins > 747-400 > Takeoff and
+ * landing performance..., the EFB's PERFORMANCE pages worked out by the FMC
+ * (XTLua: B747.68.efb_glue.lua) (perf_window.c).
+ *
  * Built with docs/overhaul/tools/build_fms_bridge.sh (MinGW-w64, the X-Plane
  * SDK 4.3.0) into ../64/win.xpl. Windows only (2026-11-01 the user).
  */
@@ -427,15 +432,17 @@ static void opt_set(int i, int v, int keep)
     if (keep) opts_save();
 }
 
-/* the failure window's, the weight and balance window's and the ground
-   handling window's menu items (failures_window.c, wb_window.c,
-   gh_window.c) */
+/* the failure window's, the weight and balance window's, the ground
+   handling window's and the performance window's menu items
+   (failures_window.c, wb_window.c, gh_window.c, perf_window.c) */
 #define FWN_MENU_REF 100
 #define WBW_MENU_REF 101
 #define GHW_MENU_REF 102
+#define PWN_MENU_REF 103
 static void fw_menu_pick(void);
 static void wb_menu_pick(void);
 static void gh_menu_pick(void);
+static void pw_menu_pick(void);
 
 static void menu_handler(void *menu_ref, void *item_ref)
 {
@@ -445,6 +452,7 @@ static void menu_handler(void *menu_ref, void *item_ref)
     if (i == FWN_MENU_REF) fw_menu_pick();
     if (i == WBW_MENU_REF) wb_menu_pick();
     if (i == GHW_MENU_REF) gh_menu_pick();
+    if (i == PWN_MENU_REF) pw_menu_pick();
 }
 
 static int opt_toggle(XPLMCommandRef cmd, XPLMCommandPhase phase, void *ref)
@@ -487,6 +495,7 @@ static XPLMDataRef text_ref(const char *name, XPLMGetDatab_f get)
 #include "failures_window.c"
 #include "wb_window.c"
 #include "gh_window.c"
+#include "perf_window.c"
 
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
 {
@@ -542,6 +551,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc)
     fw_start(menu);
     wb_start(menu);
     gh_start(menu);
+    pw_start(menu);
     return 1;
 }
 
@@ -566,6 +576,7 @@ PLUGIN_API void XPluginStop(void)
     fw_stop();
     wb_stop();
     gh_stop();
+    pw_stop();
     if (menu) XPLMDestroyMenu(menu);
     if (menu_item >= 0) XPLMRemoveMenuItem(XPLMFindPluginsMenu(), menu_item);
     menu = NULL;
@@ -582,4 +593,5 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param)
     fw_message(msg);
     wb_message(msg);
     gh_message(msg);
+    pw_message(msg);
 }
