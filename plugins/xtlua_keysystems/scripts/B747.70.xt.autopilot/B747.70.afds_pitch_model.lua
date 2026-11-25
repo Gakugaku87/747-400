@@ -105,6 +105,21 @@
 -- record: the user's flight, 2026-11-12). On the lagged airplane with that
 -- excess (1.0 kt/s): down to -968 fpm and 514 ft lost before, not under
 -- 100 fpm since, within a knot of 340 kt after 85 s (62 s before).
+-- (2026-11-26; notes/ATA-22.md §73) "In step with its target" takes the
+-- target's own rate only against the way (a climb's falling target: a Mach
+-- held; a descent's rising one): a target moving with the way (rising in a
+-- climb, falling in a descent) asks for no more than the near-level path.
+-- The takeoff's acceleration moves its target up with the flaps (FCOM
+-- p.667, p.1255, p.1326: 5 kt under the placard of the flap setting; here
+-- the FMC's target and the protection's maximum go with the flaps'
+-- position, some 3 kt a second from flaps 10 to 5), and before the near
+-- level floor fell with it wherever the thrust gave less than that: a heavy
+-- airplane on its climb thrust went down (the user's flight, 2026-11-25:
+-- the vertical speed negative after the acceleration height with the A/P;
+-- on the lagged airplane at 390 t, 1.2 kt/s of excess, -212 fpm). FCTM
+-- p.118: the acceleration near level, what the thrust gives; only the speed
+-- protection takes the path past level (FCOM p.675: the stall protection
+-- through the elevators), as before.
 -- Pure: the airplane's state in, the command out.
 --   local P = B747_afds_pitch_model                       -- in XTLua, after dofile
 --   local P = dofile(".../B747.70.afds_pitch_model.lua")  -- in the tests
@@ -267,6 +282,29 @@ M.GA_EO_ADD = 10
 M.EO_BLEND_LO, M.EO_BLEND_HI = 0, 600
 M.K_ATT = 0.5
 M.TOGA_RATE = 3
+-- (2026-11-26) the F/Ds alone (no A/P engaged: `inp.fd_only`): the pitch
+-- attitude integrator is synchronized to the pitch attitude while the A/P
+-- is disengaged (ATA22 p.332), and the F/D's command is made from the
+-- command sections' output, the versine and the pitch attitude, not from
+-- the integrator (p.333, the pitch axis's diagram). So the F/D's command is
+-- the attitude and the law's command input: FD_S seconds of the rate the
+-- law asks for (estimate: the A/P's attitude follows its command about 2 s
+-- behind, this file's lagged airplane, so the bar stands as far off the
+-- attitude as it does with the A/P engaged; a pilot holding the bar on the
+-- airplane symbol flies the law's rate). Before, the F/D showed the law's
+-- own integrated command, which went its own way from the attitude where
+-- the law started: after the lift-off it started at the lift-off's attitude
+-- and rose at the law's rate (about half a degree a second) while the
+-- pilot rotated to 15 degrees, and stood 4 to 6 degrees under the airplane
+-- for 6 s while the law asked for more pitch (s109, 2026-11-22: 8.96 at
+-- 15.1, the speed 6 kt above the target); not followed it wound up (30 s
+-- of V/S +1,000: 6 degrees). A heavy takeoff held at 15 degrees (the speed
+-- under the target) wound it 15 degrees under the airplane by the
+-- acceleration height, and VNAV SPD went on from there: flown from there
+-- the airplane went down at 1,400 fpm (a model: fd_alone_test.lua; the
+-- user's own descent there, 2026-11-25, was on the A/P: this file's head,
+-- 2026-11-26). FLARE (LAND 2 and 3: the A/Ps) as before
+M.FD_S = 2
 -- G/S (step 3c): the distance to the transmitter from the radio altitude
 -- (in its range, GS_RA_MAX) on GS_DEG (ATA22 p.346); estimates: the
 -- deviation blended over GS_BLEND_S, the beam's vertical speed corrected
@@ -395,6 +433,7 @@ function M.inputs()
         mode = nil,         -- the AFDS model's pitch mode
         vnav_law = nil,     -- the old VNAV's law by its flags: "VS", "ALT", "FLCH"
         active = false,     -- an A/P engaged or a F/D shown
+        fd_only = false,    -- (2026-11-26) the F/Ds alone, no A/P engaged (FD_S)
         ground = false,
         pitch = 0,          -- the pitch attitude, degrees
         vs = 0,             -- the inertial vertical speed, fpm
@@ -633,6 +672,9 @@ function M.update(s, inp, dt)
         return s.cmd
     end
     if s.cmd == nil or s.law == "TOGND" then s.cmd = inp.pitch end
+    -- (2026-11-26) the F/Ds alone: the integrator at the attitude (FD_S)
+    local fd_only = inp.fd_only and law ~= "FLARE"
+    if fd_only then s.cmd = inp.pitch end
     local v = math.max(inp.tas, 100) * KT
     local lim = math.deg(M.G_LIMIT * G / v)
     local rate
@@ -663,7 +705,9 @@ function M.update(s, inp, dt)
         -- flight at the most; past level flight only where the thrust is
         -- short of it: then to the path that keeps the speed (`hold`: in step
         -- with its target, and back within the speed protection's limit,
-        -- FCOM p.675) and as far again as that is past level, at most `step`
+        -- FCOM p.675) and as far again as that is past level, at most `step`.
+        -- (2026-11-26) The target's own rate in `hold` only against the way
+        -- (this file's head: the takeoff's flap-by-flap acceleration)
         local way = toga and 0 or (inp.way or 0)
         if way ~= 0 then
             local fpm = inp.way_fpm or M.SPD_LEVEL_FPM
@@ -671,11 +715,11 @@ function M.update(s, inp, dt)
             local level = path(way * fpm, v) - gam
             local step = path(M.SPD_LEVEL_FPM, v)
             if way > 0 then
-                local keep = tr + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S
+                local keep = math.min(0, tr) + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S
                 local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
                 dpath = math.max(dpath, math.min(level, math.max(hold - step, math.min(0, 2 * hold)) - gam))
             else
-                local keep = tr + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S
+                local keep = math.max(0, tr) + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S
                 local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
                 dpath = math.min(dpath, math.max(level, math.min(hold + step, math.max(0, 2 * hold)) - gam))
             end
@@ -751,7 +795,15 @@ function M.update(s, inp, dt)
     end
     s.law, s.target = law, target
     if law == "FLARE" then lim = math.deg(M.FLARE_G * G / v) end
-    local cmd = s.cmd + clamp(rate, -lim, lim) * dt
+    local r = clamp(rate, -lim, lim)
+    -- (2026-11-26) the F/Ds alone: the attitude and FD_S of the law's rate
+    -- (ATA22 p.332-333), not over the PLI in T/O and G/A (FCOM p.664)
+    if fd_only then
+        local fd = clamp(inp.pitch + r * M.FD_S, M.PITCH_MIN, M.PITCH_MAX)
+        if (inp.mode == "TO" or inp.mode == "GA") and inp.pli then fd = math.min(fd, inp.pitch + inp.pli) end
+        return fd
+    end
+    local cmd = s.cmd + r * dt
     -- FLARE: not down under the landing attitude (FLARE_FLOOR)
     if law == "FLARE" and cmd < s.cmd then
         cmd = math.max(cmd, math.min(s.cmd, s.flare_pitch + M.FLARE_FLOOR))

@@ -1558,6 +1558,10 @@ local function afds_pitch_law()
 	local engaged = (afds.L or afds.C or afds.R) and true or false
 	if engaged and not afdsPitchEngaged then B747_afds_pitch_model.sync(afdsPitch) end
 	afdsPitchEngaged = engaged
+	-- (2026-11-26) the F/Ds alone: the integrator at the attitude, the F/D's
+	-- command the attitude and the law's command input (ATA22 p.332-333;
+	-- the pitch model's FD_S)
+	p.fd_only = not engaged
 	local cmd = B747_afds_pitch_model.update(afdsPitch, p, afds_dt())
 	local law = cmd and 1 or 0
 	if B747DR_ap_pitch_law ~= law then B747DR_ap_pitch_law = law end

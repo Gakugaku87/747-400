@@ -40,6 +40,8 @@
     { "do": "sleep", "seconds": 1 },
     { "do": "check", "note": "V2 を選んだ（999 でない）", "dref": "laminar/B747/airspeed/V2", "op": "<", "value": 900 },
     { "do": "check", "note": "推力の基準は TO", "dref": "laminar/B747/engines/ref_thr_limit_mode", "op": "contains", "value": "TO" },
+    { "do": "remember", "dref": "laminar/B747/airspeed/V2", "as": "v2_mcp" },
+    { "do": "set", "note": "MCP の速さを V2 に（FCOM p.118 の MCP の準備：IAS/MACH selector – Set V2。AFDS の T/O の V2 は窓の値：FCOM p.664 の注。2026-11-26 から。前は電源投入の 200 kt（FCOM p.643）のままで、T/O の目標が 210 kt だった）", "dref": "laminar/B747/autopilot/ias_dial_value", "value": 0, "rel": "v2_mcp" },
     { "do": "switch", "note": "A/T ARM", "dref": "laminar/B747/toggle_switch/position[29]", "value": 1, "cmd": "laminar/B747/authrottle_arm" },
     { "do": "cmd", "note": "VNAV（arm）", "name": "laminar/B747/autopilot/button_switch/VNAV" },
     { "do": "sleep", "seconds": 1 },
