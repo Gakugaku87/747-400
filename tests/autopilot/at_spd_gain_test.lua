@@ -170,17 +170,26 @@ end
 
 -- the flaps out: SPD's gains and its reduction near the target as before
 do
-    local function rate(flaps_up)
+    local function rate(flaps_up, engine)
         local s = A.new()
         A.update(s, {arm = true, ok = true, ground = false, cas = 170, ra = 2000, flaps_up = flaps_up, reverse = false,
             limit_to = false, limit_ga = false, pitch = "ALT", spd = true, lever_idle = false})
         A.servo(s, {dt = 0.05, ias = 172, accel = 0.2, target = 170, v_max = 365, v_min = 0, flaps_up = flaps_up,
             vs = 0, ivs = 0, alt = 2000, mcp_alt = 2000, thrust = 1.1, thrust_ref = 1.5, n1 = false, lever = 0.4,
-            tas = 175, mach = 0.27, weight = 250000})
+            tas = 175, mach = 0.27, weight = 250000, engine = engine})
         return (s.cmd - 0.4) / 0.05
     end
     local want = (A.K_SPD * (170 - 172) - A.K_ACC * 0.2) * A.SPD_DOWN
     T.near(rate(false), want, 1e-9, "the flaps out, 2 kt over at 0.2 kt/s: the lever's rate as before (the gains 1, SPD_DOWN)")
     T.check(rate(true) < rate(false), "  the flaps up: the reduction cut less (SPD_DOWN_UP)")
+    -- (2026-11-25, the user's 「GEのA/T」) the GE (engine type 1) with the
+    -- flaps out: the gains times GE_FLAPS_K, the P&W's G over the GE's
+    -- measured at flaps 20 (tests/flight/measure/at_lever_gain_ge_f20 and
+    -- at_lever_gain_f20: 9.66 and 4.61 kt/s a unit of lever); the P&W (0)
+    -- and the RR (2) as before
+    T.near(A.GE_FLAPS_K, 4.61 / 9.66, 1e-12, "GE_FLAPS_K: the P&W's 4.61 over the GE's 9.66 kt/s a unit of lever at flaps 20")
+    T.near(rate(false, 1), want * A.GE_FLAPS_K, 1e-9, "the GE, the flaps out: the lever's rate times GE_FLAPS_K (about half)")
+    T.near(rate(false, 0), want, 1e-9, "the P&W, the flaps out: as before")
+    T.near(rate(false, 2), want, 1e-9, "the RR, the flaps out: as the P&W (not measured)")
 end
 T.done()
