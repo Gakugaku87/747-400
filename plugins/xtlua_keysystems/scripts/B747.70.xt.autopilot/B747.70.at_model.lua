@@ -126,6 +126,22 @@ M.G_TGT = {{0.66, 5.0}, {0.37, 3.8}, {0.194, 2.7}}
 -- at_lever_gain_fl370); its gains stay as they are (s262, s277 and s279
 -- pass in X-Plane)
 M.GE_K = {{0.688, 1.15}, {0.371, 2.31}, {0.214, 3.82}}
+-- (2026-11-25, the user's 「GEのA/T」: the stage 4 review's AFDS-7) SPD with
+-- the flaps out for the GE. K_SPD and K_ACC were tuned on the P&W there
+-- (above: 270 t, low, the flaps out), and the gains' scale is 1 for every
+-- engine type with the flaps out; the GE's lever gives about twice the
+-- acceleration there: 9.66 against 4.61 kt/s a unit of lever, the thrust's
+-- change over the weight (GV, the IAS's slope: 8.82 against 4.53), measured
+-- in X-Plane with the A/T off and the levers stepped by 0.04 and 0.08
+-- (tests/flight/measure/at_lever_gain_ge_f20 and at_lever_gain_f20: 270 t,
+-- 2,250 ft, flaps 20, gear down, 170 to 196 kt; tests/flight/tools/
+-- lever_gain.lua). At twice the loop's gain the GE's levers swung: 0.027
+-- 40 s after the start of at_hold_f20_ge, 0.047-0.053 after the GE's
+-- low-Mach thrust (35bb377a: some 5 % more thrust an N1 there), the P&W's
+-- 0.001. GE_FLAPS_K: the GE's gains' scale with the flaps out, the P&W's G
+-- over the GE's (the P&W's loop; estimate: the sources give no gains). The
+-- RR as the P&W (not measured)
+M.GE_FLAPS_K = 4.61 / 9.66
 M.SPD_DOWN_UP = 0.75
 -- (2026-11-14) B5's thrust following the path's change (the inertial V/S's
 -- rate) only with a vertical speed: none under FF_VS_FPM[1], all of it
@@ -607,6 +623,8 @@ function M.servo(s, inp)
     -- (B5) the lever's acceleration G and SPD's gains' scale, flaps up
     local g_lev = inp.flaps_up and M.lever_accel(inp) or nil
     local k = g_lev and clamp(M.g_target(inp.alt) / g_lev, 1, M.G_SCALE_MAX) or 1
+    -- (2026-11-25) the GE with the flaps out: the P&W's loop (GE_FLAPS_K)
+    if not inp.flaps_up and inp.engine == 1 then k = M.GE_FLAPS_K end
     -- (B5, AT-3) the inertial V/S's rate (m/s/s), over a second
     if s.ff_vs and inp.ivs and inp.dt > 0 then
         s.ff_acc = (s.ff_acc or 0) + (((inp.ivs - s.ff_vs) * 0.3048 / 60) / inp.dt - (s.ff_acc or 0)) * math.min(1, inp.dt)
