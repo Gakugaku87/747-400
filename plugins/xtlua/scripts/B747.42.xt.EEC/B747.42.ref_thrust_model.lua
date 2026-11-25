@@ -90,7 +90,10 @@ end
 -- thrust (0.026 to 0.042 EPR over the FPPM on average), the assumed
 -- temperature held from the table's 54 °C up (21.3 % at most at sea
 -- level). The last result kept for the same inputs: the glue asks for
--- each engine every frame
+-- each engine every frame. (2026-11-25, the RB211's rebuild) inp.rr: the
+-- RB211's own takeoff table on the P&W's scale and its derates as shares
+-- of its thrust (B747_eec_model.pw_to_points; the EEC runs on the P&W's
+-- scale, the glue shows the RB211's EPR)
 local ES, SS = {}, {}
 local last = {}
 local function pw_takeoff(inp, d, alt)
@@ -99,24 +102,25 @@ local function pw_takeoff(inp, d, alt)
     local pct = inp.to_pct or 0
     local sel = (d and inp.sel and inp.sel > oat) and inp.sel or nil
     local packs = inp.packs_on
+    local rr = inp.rr and true or false
     if last.oat == oat and last.alt == alt and last.pct == pct and last.sel == sel and last.packs == packs
-        and last.most == M.SEL_MAX then
+        and last.most == M.SEL_MAX and last.rr == rr then
         return last.v, last.red
     end
     local share = 1 - clamp(pct / 100, 0, 0.99)
-    E.pw_to_points(oat, alt, ES, SS)
+    E.pw_to_points(oat, alt, ES, SS, rr)
     local v = E.pw_to_epr(ES, SS, share)
     if sel then
         local floor = E.pw_to_epr(ES, SS, share * (1 - M.SEL_MAX))
-        E.pw_to_points(sel, alt, ES, SS)
+        E.pw_to_points(sel, alt, ES, SS, rr)
         local hot = E.pw_to_epr(ES, SS, share)
         v = math.min(v, math.max(hot, floor))
-        E.pw_to_points(oat, alt, ES, SS)
+        E.pw_to_points(oat, alt, ES, SS, rr)
         share = math.min(share, E.pw_to_share(ES, SS, v))
     end
     v = v + E.adjustment(E.TABLE.PW.to, inp, alt, false)
     local red = 100 * (1 - share)
-    last.oat, last.alt, last.pct, last.sel, last.packs, last.most = oat, alt, pct, sel, packs, M.SEL_MAX
+    last.oat, last.alt, last.pct, last.sel, last.packs, last.most, last.rr = oat, alt, pct, sel, packs, M.SEL_MAX, rr
     last.v, last.red = v, red
     return v, red
 end

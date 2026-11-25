@@ -21,6 +21,10 @@ B747DR_bleed_light_sys_fault    = find_dataref("laminar/B747/air/light/sys_fault
 B747DR_bleed_light_isln_valve   = find_dataref("laminar/B747/air/light/isln_valve")
 B747DR_bleed_light_apu_valve    = find_dataref("laminar/B747/air/light/apu_valve")
 simDR_bleed_fail_apu_press      = find_dataref("sim/operation/failures/rel_APU_press")
+-- (2026-11-25) the RB211's core's speed is its N3 (its shown N2 is the IP's,
+-- B747.42.xt.EEC.RR.lua)
+B747DR_bleed_engine_type        = find_dataref("laminar/B747/engines/type")
+B747DR_bleed_display_N3         = find_dataref("laminar/B747/engines/display_N3")
 -- (2026-11-04) the failures (notes/ATA-36.md §10)
 B747DR_bleed_fail_ovht          = find_dataref("laminar/B747/air/fail/bleed_ovht")
 B747DR_bleed_fail_ovpress       = find_dataref("laminar/B747/air/fail/bleed_ovpress")
@@ -122,7 +126,7 @@ local function read_inputs(inp)
         inp.fuel_run[n] = B747DR_fuel_control_toggle_switch_pos[n - 1] > 0.95
         inp.start_cmd[n] = B747DR_bleed_start_valve_cmd[n - 1] > 0.5   -- the engine start model (manual or autostart)
         inp.fire_out[n] = fire_out(n)
-        inp.n2[n] = B747DR_display_N2[n - 1]
+        inp.n2[n] = B747DR_bleed_engine_type == 2 and B747DR_bleed_display_N3[n - 1] or B747DR_display_N2[n - 1]
         inp.dc[n] = B747DR_bleed_elec_dc[n - 1] > 0.5
         inp.ac[n] = B747DR_bleed_elec_ac[n - 1] > 0.5
     end

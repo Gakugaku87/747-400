@@ -157,6 +157,8 @@ simDR_engine_auto_ignite_on     = find_dataref("sim/cockpit2/engine/actuators/au
 simDR_engine_igniter_on         = find_dataref("sim/cockpit2/engine/actuators/igniter_on")
 B747DR_display_N1				= find_dataref("laminar/B747/engines/display_N1")
 B747DR_display_N2				= find_dataref("laminar/B747/engines/display_N2")
+-- (2026-11-25) the RB211's core's speed (its shown N2 is the IP's)
+B747DR_eng_display_N3			= find_dataref("laminar/B747/engines/display_N3")
 
 simDR_engine_EGT_degC           = find_dataref("sim/cockpit2/engine/indicators/EGT_deg_C")
 simDR_engine_fuel_mix_ratio     = find_dataref("sim/cockpit2/engine/actuators/mixture_ratio")
@@ -941,7 +943,9 @@ function B747_secondary_EICAS2_engine_vibration()
     local airspeedReduction=(400-simDR_ind_airspeed_kts_pilot)/400
     for i = 0, 3 do
     timeNow=B747_engine_lastClock[i]+(os.clock()-B747_engine_lastClock[i])
-    thrust=math.max((B747DR_display_N2[i]-60)/10,0)
+    -- the core's speed: (2026-11-25) the RB211's N3 (its shown N2 is the IP's)
+    local core = B747DR_engineType == 2 and B747DR_eng_display_N3[i] or B747DR_display_N2[i]
+    thrust=math.max((core-60)/10,0)
     phaseNow=(timeNow*thrust)-(B747_engine_lastClock[i]*thrust)
     B747_engine_lastPos[i]=B747_engine_lastPos[i]+phaseNow
     

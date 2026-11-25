@@ -129,7 +129,31 @@ do
     i3.packs_on, i3.takeoff = 3, false
     T.near(E.update(s3, i3, DT).max[1], ga5, 1e-9, "not a takeoff's limit (GA, CLB...): the go-around table at the TAT, as before")
     i3.takeoff, i3.rr = true, true
-    T.near(E.update(s3, i3, DT).max[1], ga5, 1e-9, "the RB211 (its own branches): the go-around table's, as before")
+    T.near(E.update(s3, i3, DT).max[1], ga5, 1e-9, "the RB211 without its takeoff table loaded (the tests): the go-around table's")
+    -- (2026-11-25, the RB211's rebuild: GAP_ANALYSIS.md §8) with its takeoff
+    -- EPR table (TOGA_epr_RR) and the RR model: that table on the P&W's scale
+    -- (the EEC runs on it for the RB211), at the OAT
+    do
+        dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.epr_model.lua")
+        local R = dofile("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.rr_model.lua")
+        local f = io.open("plugins/xtlua/scripts/B747.42.xt.EEC/B747.42.xt.EEC.tbls.lua", "rb")
+        local src = f:read("*a"):gsub("\r", ""); f:close()
+        assert(loadstring(src:match("(TOGA_epr_RR = {.-\n}\n)")))()
+        local rt = E.rr_to_table()
+        T.check(rt ~= nil, "the RB211's takeoff table on the P&W's scale is built")
+        local want = R.pw_of_display(1.73, 0)   -- TOGA_epr_RR[25][5000]
+        T.near(E.update(s3, i3, DT).max[1], E.lookup(rt, 25, 5000), 1e-9, "the RB211 in a takeoff: its own table at the OAT (P&W's scale)")
+        T.near(E.lookup(rt, 25, 5000), want, 1e-9, "5,000 ft, 25 C: its 1.73 on the P&W's scale")
+        T.near(R.display(E.lookup(rt, 25, 5000), 0), 1.73, 1e-9, "shown back as the RB211's 1.73")
+        T.near(R.display(E.lookup(rt, 15, 0), 0), 1.71, 1e-9, "sea level, 15 C: the RB211's 1.71")
+        local es, ss = {}, {}
+        E.pw_to_points(15, 0, es, ss, true)
+        local P = B747_epr_model
+        T.near(P.thrust(es[2], 1, 0) / P.thrust(es[1], 1, 0), 0.92, 1e-6, "TO 1: 92 % of its takeoff thrust (the FPPM's 8 %: estimate)")
+        T.near(P.thrust(es[3], 1, 0) / P.thrust(es[1], 1, 0), 0.80, 1e-6, "TO 2: 80 %")
+        T.near(P.thrust(es[4], 1, 0) / P.thrust(es[1], 1, 0), 0.75, 1e-6, "25 % less thrust at most")
+        TOGA_epr_RR = nil
+    end
     i3.rr, i3.oat = false, nil
     T.near(E.update(s3, i3, DT).max[1], E.lookup(PW.to, 28, 5000), 1e-9, "no OAT: p.44 at the TAT")
     i3.type, i3.idle = "GE", {25, 25, 25, 25}

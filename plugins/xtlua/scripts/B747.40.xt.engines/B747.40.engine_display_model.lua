@@ -189,7 +189,9 @@ end
 local function oil(s, inp, out, dt)
     local lim = M.OIL[inp.type] or M.OIL.PW
     for n = 1, 4 do
-        local n2 = inp.n2[n]
+        -- the core's speed: (2026-11-25) the RB211's N3, X-Plane's N2 (its
+        -- shown N2 is the IP's: B747.42.xt.EEC.RR.lua)
+        local n2 = inp.type == "RR" and inp.n3[n] or inp.n2[n]
         local f = clamp(n2 / 100, 0, 1)
         local p = math.max(0, inp.oil_psi[n] + s.press_spread[n] * f)
         out.oil_psi[n] = p
@@ -205,7 +207,9 @@ local function oil(s, inp, out, dt)
         else
             out.oil_press_msg[n] = p < along(lim.press_red, n2)
         end
-        local hot = (inp.oil_hot[n] and inp.n2[n] > M.OIL_FILT_N2) and M.OIL_HOT_ADD_C or 0
+        -- the oil flowing: the core's speed above (2026-11-25: the RB211's
+        -- N3; before its shown N2, the IP's since that day)
+        local hot = (inp.oil_hot[n] and n2 > M.OIL_FILT_N2) and M.OIL_HOT_ADD_C or 0
         s.oil_hot_c[n] = s.oil_hot_c[n] + (hot - s.oil_hot_c[n]) * clamp((dt or 0) / M.OIL_HOT_S, 0, 1)
         local t = inp.oil_degc[n] + s.temp_spread[n] * f + s.oil_hot_c[n]
         out.oil_degc[n] = t

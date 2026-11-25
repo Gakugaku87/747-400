@@ -155,6 +155,13 @@ do
     s = D.new(fixed(1))
     o = D.update(s, inp, DT)
     T.near(o.oil_psi[1], 156, 1e-9, "the widest spread: 6 psi at 100 % N2")
+    -- (2026-11-25) the RB211's core's speed is its N3 (X-Plane's N2; its
+    -- shown N2 is the IP's): the spread along N3
+    inp.type, inp.starting[2] = "RR", false
+    inp.n2 = {50, 50, 50, 50}
+    inp.n3 = {100, 100, 100, 100}
+    o = D.update(s, inp, DT)
+    T.near(o.oil_psi[1], 156, 1e-9, "RB211: the spread along N3 (100 %), not the IP's N2 (50 %)")
 end
 
 -- CF6 oil pressure: the red line and the amber band's top rise with N2
@@ -394,5 +401,22 @@ do
     inp.oil_hot[2] = false
     o = run(s, inp, 240)
     T.check(not o.oil_temp_msg[2], "repaired: cooled, no ENG 2 OIL TEMP (" .. o.oil_degc[2] .. " °C)")
+end
+
+-- (2026-11-25) the RB211's oil flowing by its core's speed, N3 (X-Plane's
+-- N2), as the others' by their N2: in a start's first seconds its IP's
+-- shown N2 (between N1 and N3) is still under the 10 % the N3 is past
+do
+    local s, inp = D.new(fixed(0)), D.inputs()
+    inp.type = "RR"
+    running(inp, 65)
+    inp.n1 = {3, 3, 3, 3}
+    inp.n2 = {9.6, 9.6, 9.6, 9.6}
+    inp.n3 = {15, 15, 15, 15}
+    for n = 1, 4 do inp.oil_degc[n] = 80 end
+    inp.oil_hot[2] = true
+    local o = run(s, inp, 120)
+    T.check(o.oil_degc[2] > o.oil_degc[1] + 50, string.format(
+        "RB211: the oil flowing by N3 (15 %%), its IP's N2 at 9.6 %%: overheat 2 heats it (%.0f against %.0f °C)", o.oil_degc[2], o.oil_degc[1]))
 end
 T.done()

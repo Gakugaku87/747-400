@@ -123,6 +123,23 @@ frames(16)
 T.check(get(AIR .. "engine4/bleed_air_psi") > 50, "engine 4 running: bleed air (anti-ice reads it)")
 T.equal(get(AIR .. "engine4/bleed_valve_pos"), 1, "engine 4 running: bleed valve open (synoptic, OFF light)")
 T.equal(get("sim/cockpit2/pressurization/actuators/bleed_air_mode"), 5, "engine air: X-Plane bleed air auto")
+-- (2026-11-25) the RB211's core's speed is its N3 (X-Plane's N2; its shown
+-- N2 is the IP's, about 40 % at idle): the bleed reads N3
+do
+    local psi65 = get(AIR .. "engine4/bleed_air_psi")
+    rt:set("laminar/B747/engines/type", 2)
+    rt:set("laminar/B747/engines/display_N2", 3, 30)
+    rt:set("laminar/B747/engines/display_N3", 3, 65)
+    frames(3)
+    T.near(get(AIR .. "engine4/bleed_air_psi"), psi65, 1, "RB211: N3 65 % (its IP's N2 30 %): the bleed air as at 65 % N2")
+    rt:set("laminar/B747/engines/display_N3", 3, 30)
+    frames(5)
+    T.check(get(AIR .. "engine4/bleed_air_psi") < psi65 - 5, "RB211: N3 30 %: less bleed air")
+    rt:set("laminar/B747/engines/type", 0)
+    rt:set("laminar/B747/engines/display_N2", 3, 65)
+    rt:set("laminar/B747/engines/display_N3", 3, 0)
+    frames(5)
+end
 
 -- ENGINE BLEED 4 off with the engine running: >BLEED 4 OFF
 rt:set(SW, 80, 0)

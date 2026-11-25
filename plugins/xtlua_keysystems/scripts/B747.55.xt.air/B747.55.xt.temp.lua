@@ -33,6 +33,10 @@ B747DR_air_fail_zone_valve      = find_dataref("laminar/B747/air/fail/zone_valve
 -- its water and its HUMID switch (not in the 3D: ON) are not modelled
 B747DR_air_fail_humidifier      = find_dataref("laminar/B747/air/fail/humidifier")
 B747DR_temp_engine_type         = find_dataref("laminar/B747/engines/type")
+-- (2026-11-25) the RB211's core's speed is its N3 (its shown N2 is the IP's,
+-- B747.42.xt.EEC.RR.lua)
+B747DR_temp_display_N3          = find_dataref("laminar/B747/engines/display_N3")
+local ENGINE_RR = 2
 
 local SW_ZONE_RST, SW_TRIM_AIR, SW_AFT_CARGO_HT, SW_CARGO_ARM_AFT = 36, 37, 40, 85
 -- EICAS slots (B747.87.xt.warning.lua)
@@ -95,7 +99,8 @@ function B747_temp()
     local engines, n2 = 0, 0
     for e = 0, 3 do
         if simDR_engine_running[e] == 1 then engines = engines + 1 end
-        if B747DR_display_N2[e] > T.FWD_N2 then n2 = n2 + 1 end
+        local core = B747DR_temp_engine_type == ENGINE_RR and B747DR_temp_display_N3[e] or B747DR_display_N2[e]
+        if core > T.FWD_N2 then n2 = n2 + 1 end
     end
     inp.engines, inp.engines_n2 = engines, n2
     inp.ee_exhaust = B747_eqcool_out.cargo_warm
