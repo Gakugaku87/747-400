@@ -1,6 +1,6 @@
 {
   "name": "s432_faor_hot_takeoff_rr",
-  "description": "s430 の暑い日の版（2026-11-25：RR の作り直し、GAP_ANALYSIS.md §8、notes/ATA-70-80.md §40）：FAOR（5,559 ft）で外気温約 30 ℃（海面 48.5 ℃ を書く）、リバリー British Airways（RB211-524H2、エンジン型式 2）、270 t。手順は s430 のまま、レバーを全開の離陸を 100 kt まで見て中止する。暑く高い空港の RR：離陸の定格は RR の離陸 EPR の表（5,559 ft の 30 ℃ で 1.71。s430 の 4 ℃ では 1.766）。表示の N1 は温度で上がり（本家の式：3,600 rpm を 100 %、TCDS は 3,900：N19-ENG-23）、赤線 111.5 % の手前で EEC が抑える（推定）。確かめ：外気温、基準が 4 ℃ のより下、100 kt で表示の N1 が赤線を超えない、EPR が基準の ±0.02（N1 で抑えたら下回る：警告）。",
+  "description": "s430 の暑い日の版（2026-11-25：RR の作り直し、GAP_ANALYSIS.md §8、notes/ATA-70-80.md §40）：FAOR（5,559 ft）で外気温約 30 ℃（海面 48.5 ℃ を書く）、リバリー British Airways（RB211-524H2、エンジン型式 2）、270 t。手順は s430 のまま、レバーを全開の離陸を 100 kt まで見て中止する。暑く高い空港の RR：離陸の定格は RR の離陸 EPR の表（5,559 ft の 30 ℃ で 1.71。s430 の 4 ℃ では 1.766）。表示の N1 は温度で上がる（2026-11-25 から TCDS の 3,900 rpm を 100 %、赤線は離陸の LP の限界 110.5 %：N19-ENG-23。前は本家の 3,600 rpm の目盛りで、30 ℃ で 111.0 % と本家の赤線 111.5 % のすぐ手前だった）。確かめ：外気温、基準が 4 ℃ のより下、100 kt で表示の N1 が赤線を超えない、EPR が基準の ±0.02（N1 で抑えたら下回る：警告）。",
   "reload": true,
   "livery": "British Airways",
   "flight": {
@@ -69,11 +69,14 @@
     { "do": "snapshot", "note": "100 kt の RR：EPR・基準・N1・N3・推力・スロットル・X-Plane の最大推力", "drefs": [ "laminar/B747/engines/display_EPR[0]", "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "laminar/B747/engines/display_EPR_max[0]", "laminar/B747/engines/display_N1[0]", "laminar/B747/engines/display_N2[0]", "laminar/B747/engines/display_N3[0]", "sim/flightmodel/engine/ENGN_N2_[0]", "sim/cockpit2/engine/indicators/thrust_dry_n[0]", "sim/flightmodel/engine/ENGN_thro_use[0]", "sim/aircraft/engine/acf_tmax", "sim/weather/aircraft/temperature_ambient_deg_c" ] },
     { "do": "remember", "dref": "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "as": "epr_ref" },
     { "do": "check", "note": "100 kt の EPR が基準の ±0.02（全開のレバー：EEC の最大。N1 の赤線で抑えたら下回る：その時は警告）", "dref": "laminar/B747/engines/display_EPR[0]", "op": "between", "rel": "epr_ref", "value": [-0.02, 0.02], "level": "warn" },
-    { "do": "check", "note": "表示の N1 は赤線（111.5 %）を超えない（EEC が抑える：推定）", "dref": "laminar/B747/engines/display_N1[0]", "op": "<", "value": 111.6 },
+    { "do": "check", "note": "表示の N1 は赤線（TCDS の離陸の LP の限界 110.5 %：3,900 rpm の目盛り）の手前。2026-11-25 の前の目盛りでは 30 ℃ で 111.0 % と本家の赤線 111.5 % のすぐ手前、TCDS の目盛りで約 102.5 %", "dref": "laminar/B747/engines/display_N1[0]", "op": "<", "value": 110.5 },
     { "do": "check", "note": "TO の基準は 4 ℃（s430：1.766）より下（RR の離陸 EPR の表の 30 ℃：1.71）", "dref": "sim/cockpit2/engine/actuators/EPR_target_bug[0]", "op": "<", "value": 1.745 },
+    { "do": "view", "name": "eicas" },
+    { "do": "shot", "name": "eicas_hot_takeoff_rr" },
     { "do": "set", "note": "離陸を止める：スラスト・レバー 4 本をアイドル", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0 },
     { "do": "set", "note": "パーキング・ブレーキ", "dref": "laminar/B747/flt_ctrls/parking_brake_ratio", "value": 1 },
     { "do": "wait", "note": "止まる", "dref": "sim/flightmodel/position/groundspeed", "op": "<", "value": 3, "timeout": 90 },
+    { "do": "view", "name": "forward" },
     { "do": "record_stop" }
   ]
 }

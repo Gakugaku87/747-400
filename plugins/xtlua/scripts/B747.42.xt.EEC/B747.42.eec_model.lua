@@ -212,13 +212,14 @@ M.PW_ALTN = {
 -- p.204); before, N2 at the display's 111.4
 M.REDLINE = {GE = {n1 = 117.5, n2 = 112.5}, PW = {n1 = 111.4, n2 = 104}}
 -- (2026-11-25, the RB211's rebuild) the RB211 on the P&W's scale (inp.rr):
--- its shown N1's red line (B747.40.xt.engines.lua's RPM LIM at 111.51), no
--- N2 (its N2 the IP spool's; B747.42.xt.EEC.RR.lua sets none). Estimate: no
--- source has the RB211's EEC; before, its own PID cut the thrust over a
--- shown N1 of 110.1 %. Its shown N1 counts 3,600 rpm as 100 % (the
--- upstream's; TCDS_RB211 p.10: 3,900 rpm), so a hot and high takeoff reaches
--- this before its rating (GAP_ANALYSIS.md N19-ENG-23)
-M.REDLINE.RR = {n1 = 111.5, n2 = 1000}
+-- its N1 at the TCDS's maximum take-off LP speed, 110.5 % (TCDS_RB211 p.18,
+-- 5 min) of 3,900 rpm (p.10), the shown N1's scale since the same day
+-- (B747.42.xt.EEC.RR.lua's N1_TCDS: GAP_ANALYSIS.md N19-ENG-23); no N2 (its
+-- N2 the IP spool's, only shown). Estimate: no source has the RB211's EEC;
+-- before, its own PID cut the thrust over a shown N1 of 110.1 %, then
+-- (the rebuild's first version) 111.5 % on the upstream's 3,600 rpm scale,
+-- which a takeoff at FAOR on a 30 C day nearly reached (111.0 %, s432)
+M.REDLINE.RR = {n1 = 110.5, n2 = 1000}
 M.RPM_MARGIN = 0.5                          -- %
 M.RPM_BAND = 2                              -- %
 -- (N19-ENG-05) PWN1: the P&W in its N1 mode, controlling N1 as the GE (its

@@ -80,12 +80,16 @@ M.OIL_HOT_ADD_C, M.OIL_HOT_S = 100, 60
 -- p.843-844, p.873): the readout and the tape turn red there. CF6-80C2:
 -- ATA70_80 p.395. PW4056: N1 111.4 % (4,012 rpm), N2 105.5 % (10,450 rpm)
 -- (PW_PPM p.7, TCDS E24NE p.3; 2026-11-20 N19-ENG-02: before, N2 the
--- panel's 111.4). RB211: no source, the panel's previous values
--- (the RB211's N3 tape 101.5 %; its readout used 111.4 %, P&W's).
+-- panel's 111.4). RB211: (2026-11-25, N19-ENG-23) N1 the TCDS's maximum
+-- take-off LP speed, 110.5 % of 3,900 rpm (TCDS_RB211 p.10, p.18; the shown
+-- N1's scale since that day; before, 111.4 %, P&W's); N2 (IP) 109.5 % and
+-- N3 (HP) 101.5 % the panel's previous values, the TCDS's 20 s overspeed
+-- limits (its take-off limits, 107.7 and 99.2, are not used: N3 is X-Plane's
+-- N2, 98-99 % on a takeoff, an estimate that would sit on that red line).
 M.RPM_RED = {
     GE = {n1 = 117.5, n2 = 112.5},
     PW = {n1 = 111.4, n2 = 105.5},
-    RR = {n1 = 111.4, n2 = 109.5, n3 = 101.5},
+    RR = {n1 = 110.5, n2 = 109.5, n3 = 101.5},
 }
 -- The P&W EPR tape turns red when max EPR is reached (FCOM p.834, p.873);
 -- the readout stays white (p.833). The EEC holds EPR within 0.002 of max EPR

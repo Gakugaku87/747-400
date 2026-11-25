@@ -85,6 +85,7 @@
     { "do": "wait", "note": "アイドルで落ち着けば始動限界の線が消える（CF6：ATA70_80 p.356-357。始動モデルの始動完了：N2 の変化が 0.15 %/秒未満で 5 秒）", "dref": "laminar/B747/engines/EGT/start_limit_on[3]", "op": "==", "value": 0, "timeout": 40 },
     { "do": "check", "note": "アイドルの EGT は白", "dref": "laminar/B747/engines/EGT/white_on[3]", "op": "==", "value": 1 },
     { "do": "snapshot", "note": "アイドルの RR の 3 軸", "drefs": [ "laminar/B747/engines/display_N1[3]", "laminar/B747/engines/display_N2[3]", "laminar/B747/engines/display_N3[3]", "sim/flightmodel/engine/ENGN_N2_[3]", "sim/flightmodel/engine/ENGN_N1_[3]" ] },
+    { "do": "check", "note": "アイドルの N1 は TCDS の目盛り（TCDS_RB211 p.10：100 % = 3,900 rpm。2026-11-25 から：前は本家の 3,600 rpm の目盛り）：22〜27 %（前の目盛りの 26.9 の 0.923 倍で約 24.8。TCDS は -524G・H の地上アイドルを書いていない：D4 は 22.6 +1.5/-0 %）", "dref": "laminar/B747/engines/display_N1[3]", "op": "between", "value": [22, 27] },
     { "do": "check", "note": "アイドルの N3（HP）は X-Plane の N2（60 % 以上）", "dref": "laminar/B747/engines/display_N3[3]", "op": ">=", "value": 59 },
     { "do": "check", "note": "アイドルの N2（IP）は N3 より下（表示だけ：IP の式）", "dref": "laminar/B747/engines/display_N2[3]", "op": "between", "value": [25, 59] },
     { "do": "check", "note": "始動が終わればスプール時間 5 秒", "dref": "sim/aircraft/engine/acf_spooltime_turbine", "op": "==", "value": 5 },

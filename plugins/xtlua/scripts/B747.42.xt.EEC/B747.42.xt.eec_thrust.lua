@@ -176,8 +176,9 @@ function B747_eec_update()
         B747DR_eec_CAS_advisory[ADV_ENG_CONTROL + n - 1] = flag(eec_out.control_alert[n])
         B747DR_eec_altn_light_out[n - 1] = flag(eec_out.altn_light[n])
         B747DR_eec_CAS_caution[CAUTION_LIM_PROT + n - 1] = flag(eec_out.lim_prot[n])
-        -- RR keeps its own (B747.40.xt.engines.lua)
-        if B747DR_engineType ~= 2 then B747DR_eec_CAS_advisory[ADV_RPM_LIM + n - 1] = flag(eec_out.rpm_lim[n]) end
+        -- (2026-11-25, N19-ENG-23) the RB211's too; before, its own in
+        -- B747.40.xt.engines.lua (its shown N1 at 111.51 %)
+        B747DR_eec_CAS_advisory[ADV_RPM_LIM + n - 1] = flag(eec_out.rpm_lim[n])
     end
     B747DR_eec_CAS_advisory[ADV_IDLE_DISAGREE] = flag(eec_out.idle_disagree)
     B747DR_eec_CAS_advisory[ADV_ENG_CONTROLS] = flag(eec_out.controls_alert)
