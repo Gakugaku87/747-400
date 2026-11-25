@@ -166,4 +166,57 @@ T.near(Gm.n1c(0, 0), 20.96, 1e-9, "zero thrust standing: the upstream's 20.96 %"
 T.check(Gm.n1c(0, 0.8) > Gm.n1c(0, 0.4), "zero thrust: higher at a higher Mach")
 T.near(Gm.n1c(40000, 0.95) - Gm.n1c(40000, 0.86), 36.93 * 0.09, 1e-9, "above M .86 only the zero thrust's Mach term moves")
 T.near(Gm.n1(30000 * LBF, 0.5, 0.6, 0.8), Gm.n1c(60000, 0.6) * math.sqrt(0.8), 1e-9, "n1: the corrected thrust is F / delta, the N1 times sqrt(theta)")
+-- (2026-11-25, notes/ATA-70-80.md §39) the low Mach (M.LOW): the takeoff
+-- N1's thrust falls with the Mach as the P&W EPR model's at its takeoff EPR
+-- (FPPM-fitted, ENG-1) with the fall times the bypass ratios' sqrt((1 +
+-- 5.1) / (1 + 4.7)) (ICAO_EEDB 1GE023, 1PW041); an approach's N1, the
+-- static and from M .438 up as the cubic's. Before, at the takeoff N1 5 %
+-- under the P&W's (X-Plane RJAA 160 kt: 199 against 208 kN an engine)
+do
+    local S = math.sqrt(6.1 / 5.7)
+    local function cubic(fc, m)
+        local mk = math.min(m, Gm.M_MAX)
+        local x = math.max(0, fc) / 10000
+        local k = Gm.K[1] + mk * (Gm.K[2] + mk * (Gm.K[3] + mk * Gm.K[4]))
+        return Gm.N0[1] + Gm.N0[2] * m + k * x ^ (Gm.Q[1] + Gm.Q[2] * mk)
+    end
+    local function fc_of(f, n, m)
+        local lo, hi = 0, 150000
+        for _ = 1, 80 do
+            local mid = (lo + hi) / 2
+            if f(mid, m) < n then lo = mid else hi = mid end
+        end
+        return (lo + hi) / 2
+    end
+    local f0 = fc_of(Gm.n1c, 103.8, 0)
+    local worst, wm = 0, 0
+    for m = 0.02, 0.29001, 0.01 do
+        local want = 1 - S * (1 - P.thrust(1.51, 1, m) / P.thrust(1.51, 1, 0))
+        local e = fc_of(Gm.n1c, 103.8, m) / f0 / want - 1
+        if math.abs(e) > math.abs(worst) then worst, wm = e, m end
+    end
+    T.check(math.abs(worst) < 0.004, string.format("the takeoff N1's thrust falls as the P&W's, times the bypass ratios' (M .02-.29): worst %+.2f %% at M %.2f", 100 * worst, wm))
+    local up = fc_of(Gm.n1c, 103.8, 0.242) / fc_of(cubic, 103.8, 0.242) - 1
+    T.check(up > 0.05 and up < 0.06, string.format("160 kt at sea level (M .242): 5-6 %% more thrust than the cubic alone gave (%+.1f %%)", 100 * up))
+    local kept, moved = 0, 0
+    for m = 0, 0.6, 0.01 do
+        kept = math.max(kept, math.abs(Gm.n1c(10000, m) - cubic(10000, m)))
+        moved = math.max(moved, math.abs(Gm.n1c(14000, m) - cubic(14000, m)))
+    end
+    T.check(kept < 1e-9, string.format("10,000 lbf corrected: the N1 the cubic's at M 0-.6 (only the power moves; at most %.1e %%)", kept))
+    T.check(moved < 0.3, string.format("an approach's 14,000 lbf corrected: within 0.3 %% of the cubic's N1 at M 0-.6 (at most %.3f %%)", moved))
+    local same = 0
+    for x = 0, 7, 0.25 do
+        same = math.max(same, math.abs(Gm.n1c(x * 1e4, 0) - cubic(x * 1e4, 0)))
+        for m = 0.438, 0.95, 0.01 do same = math.max(same, math.abs(Gm.n1c(x * 1e4, m) - cubic(x * 1e4, m))) end
+    end
+    T.equal(same, 0, "standing and from M .438 up: the cubic's, as before")
+    local jump = 0
+    for _, s in ipairs(Gm.LOW) do
+        for x = 0.5, 7, 0.5 do
+            jump = math.max(jump, math.abs(Gm.n1c(x * 1e4, s[1] + 1e-6) - Gm.n1c(x * 1e4, math.max(0, s[1] - 1e-6))))
+        end
+    end
+    T.check(jump < 0.001, string.format("no jump across the low Mach's stations (at most %.5f %%)", jump))
+end
 T.done()

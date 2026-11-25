@@ -61,6 +61,9 @@ ICAO_NDB	24_ICAO_Navigation_Database_Coding.pdf
 NTSB_WBM	25_NTSB_DCA13MA081_Structures_Attachment1_WBM_Excerpt.pdf
 NTSB_STR	26_NTSB_DCA13MA081_Structures_Group_Factual_Report.pdf
 WBM_SUP	27_Scribd_B747_WBM_Supplements.pdf
+PMDG_CRZ	28_PMDG_747-400_AOM_Cruise_and_Fuel_Planning.pdf
+RR_JET	29_Rolls-Royce_The_Jet_Engine.pdf
+NOISE101	30_UC_Davis_Aviation_Noise_101.pdf
 EOF
 
 tail -n +2 "$OUT/SOURCES.tsv" | while IFS=$'\t' read -r id file; do
