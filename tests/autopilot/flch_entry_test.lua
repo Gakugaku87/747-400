@@ -108,7 +108,9 @@ T.check(r.vs_end > 500, string.format("  still climbing (%.0f fpm)", r.vs_end))
 local r0 = run({target = 340, mcp = 35000, seconds = 150, no_way = true})
 T.check(r.vsmin > -50, string.format("  not down for the speed (%.0f fpm at the least; %.0f without the way)", r.vsmin, r0.vsmin))
 T.check(r0.vsmin < -300, string.format("  (without the way, as before: down to %.0f fpm)", r0.vsmin))
-T.check(r.t339 and r.t339 < r0.t339 + 10, string.format("  339 kt after %.1f s (%.1f)", r.t339 or -1, r0.t339 or -1))
+-- (2026-11-26; notes/ATA-22.md §74) all engines: half the climb kept for
+-- the gain (before, within 10 s of the airplane going down for it)
+T.check(r.t339 and r.t339 < r0.t339 + 35, string.format("  339 kt after %.1f s (%.1f; half the climb kept)", r.t339 or -1, r0.t339 or -1))
 -- a descent entry: the levers back to the aft stop, HOLD, the speed held
 r = run({mcp = 5000, seconds = 60})
 T.equal(r.fma, A.HOLD, "FLCH 5,000 ft down: HOLD at the aft stop")

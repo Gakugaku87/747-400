@@ -8,10 +8,13 @@
 -- kt/s), and the command's way over a second is what is checked:
 --  - VNAV SPD's climb (the FMC's phase 1) 68 kt under its target, the
 --    user's flight (272 kt for 340 at 10,000 ft): climbing 1,500 fpm the
---    command down for the speed at the law's own rate; at 600 fpm down to
---    near level, slower; at 100 fpm and gaining 0.5 kt/s held (before, down
---    at the law's rate: the airplane went down 300 ft); the speed not
---    gaining there, on down to level flight and held there;
+--    command down for the speed at the law's own rate; (2026-11-26, notes
+--    §74: all engines keep half the climb the thrust holds) at 600 fpm and
+--    gaining 0.5 kt/s up toward half of that (720 fpm), slowly; at 100 fpm
+--    and gaining 0.5 kt/s up toward it (470 fpm; before 2026-11-26 held on
+--    the near-level floor, and before 2026-11-12 down at the law's rate:
+--    the airplane went down 300 ft); the speed not gaining there, slowly on
+--    down to half of 100 fpm; level and not gaining, held;
 --  - VNAV SPD in the descent (speed intervention: the FMC's phase 3) 50 kt
 --    over its target: descending 2,000 fpm the command up; at 100 fpm of
 --    descent and slowing held (before, up: a climb); the early descent's
@@ -119,15 +122,15 @@ local d = moved(0)
 T.check(d < -0.3, string.format("VNAV SPD's climb at 1,500 fpm, 68 kt under: the command down at the law's own rate (%.3f in a second)", d))
 rt:set(VSI, 100 / FPM)
 d = moved(0.5)
-T.check(math.abs(d) < 0.01, string.format("at 100 fpm and gaining 0.5 kt/s: held (%.3f; before, down 0.35)", d))
+T.check(d > 0.1 and d < 0.25, string.format("at 100 fpm and gaining 0.5 kt/s: up toward half the climb the thrust holds, some 470 fpm (%.3f; before 2026-11-26 held near level)", d))
 d = moved(0)
-T.check(d < -0.02 and d > -0.06, string.format("the speed not gaining there: on down to level flight, slowly (%.3f)", d))
+T.check(d < -0.005 and d > -0.06, string.format("the speed not gaining there: slowly on down to half of 100 fpm (%.3f)", d))
 rt:set(VSI, 0 / FPM)
 d = moved(0)
 T.check(math.abs(d) < 0.01, string.format("level and not gaining: held, no altitude for the speed (%.3f)", d))
 rt:set(VSI, 600 / FPM)
 d = moved(0.5)
-T.check(d < -0.1 and d > -0.3, string.format("at 600 fpm: down to near level, slower than the law's own rate (%.3f)", d))
+T.check(d > 0.01 and d < 0.15, string.format("at 600 fpm and gaining 0.5 kt/s: up toward half the climb the thrust holds, some 720 fpm, slowly (%.3f; before 2026-11-26 down to near level)", d))
 
 -- VNAV SPD in the descent (speed intervention): the FMC's 250 kt, the
 -- airplane 50 kt over it
@@ -202,7 +205,7 @@ rt:set("laminar/B747/autopilot/ias_dial_value", 300)
 frames(30)
 T.near(rt:get(PITCH_TARGET), 300, 0.5, "the target the MCP's 300 kt")
 d = moved(0.5)
-T.check(math.abs(d) < 0.01, string.format("FLCH up to the MCP altitude at 100 fpm, gaining: held (%.3f)", d))
+T.check(d > 0.05 and d < 0.25, string.format("FLCH up to the MCP altitude at 100 fpm, gaining: up toward half the climb the thrust holds (%.3f; before 2026-11-26 held)", d))
 rt:set(MCP_ALT, 5000)
 rt:set(SIM_ALT, 5000)
 d = moved(0.5)

@@ -19,6 +19,8 @@
 --  - a descent the other way (the flaps coming out in VNAV SPD's descent,
 --    the target falling with them faster than the drag takes the speed):
 --    not over near level of descent;
+--  - (2026-11-26, §74) all engines: half the climb the thrust holds kept
+--    through the acceleration; an engine out: near level (FCTM p.118);
 --  - against the way as before: a Mach held in a climb (its IAS target
 --    falling) still keeps in step (afds_pitch_model_test.lua's); the speed
 --    under the minimum maneuvering speed still takes the path past level
@@ -40,6 +42,7 @@ local function fly(o)
     i.ias, i.spd_sel, i.mcp_ias, i.alt, i.flaps_up = o.from, o.from, o.from, o.alt or 3000, false
     i.tas = i.ias * 1.05
     i.v_min, i.v_max = 0, o.vmax0 or 0
+    i.eo = o.eo or false
     local gam = math.deg(math.asin(o.thr * KT / G))
     i.pitch, i.vs = gam + 4, i.tas * KT * math.sin(math.rad(gam)) / FT * 60
     local function step(thr)
@@ -70,9 +73,9 @@ end
 -- 15 s (20 to 10) and 6 s (10 to 5); the minimum maneuvering speed shown
 -- from the first retraction (the minimum speed model's at 390 t: 201.1 at
 -- flaps 10, 210.0 at 5)
-local function takeoff(ramped)
+local function takeoff(ramped, eo)
     local flaps, f_t = 20, nil
-    return fly({way = 1, from = 190, thr = 1.2, secs = 200, vmax0 = 230, run = function(t, i)
+    return fly({way = 1, from = 190, thr = 1.2, secs = 200, vmax0 = 230, eo = eo, run = function(t, i)
         if flaps == 20 and i.ias >= 202 then flaps, f_t = 10, t end
         if flaps == 10 and i.ias >= 222 then flaps, f_t = 5, t end
         local placard
@@ -94,6 +97,13 @@ T.check(r.lo >= 90, ("  the acceleration flap by flap, the target with the flaps
 T.near(r.ias, 255, 1, "  on to 255 kt (flaps 5's 260 less 5)")
 local st = takeoff(false)
 T.check(st.lo >= 90 and math.abs(st.lo - r.lo) < 30, ("  the target in steps (the lever's): the same (%.0f fpm)"):format(st.lo))
+-- (2026-11-26; notes/ATA-22.md §74) all engines keep half the climb the
+-- thrust holds through the acceleration (the pitch model's
+-- SPD_CLIMB_SHARE): the flaps' sink comes off that, not off near level;
+-- an engine out near level as before (FCTM p.118)
+T.check(r.lo > 0.4 * r.vs0, ("  all engines: half the climb kept (%.0f fpm at the least of %.0f)"):format(r.lo, r.vs0))
+local e = takeoff(true, true)
+T.check(e.lo >= 90 and e.lo < 0.25 * e.vs0, ("  an engine out: near level as before (%.0f fpm at the least)"):format(e.lo))
 
 -- the other way: VNAV SPD's descent at 240 kt where the drag takes 0.4 kt/s
 -- in level flight (535 fpm down holding the speed), the target falling 3 kt
