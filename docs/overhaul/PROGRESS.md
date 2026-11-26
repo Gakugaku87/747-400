@@ -6,7 +6,7 @@
 
 ## いまどこか
 
-- **Release `custom-2026.11.26`（2026-11-26 昼、利用者の「Release作って」）**：`custom` `c76ed649`（overhaul `19026d1b`：F/D だけのときの縦の指令、全発の加速の上昇の割合）から `make_release.sh` で作った（注釈付きタグ、コミット `769fe099`。2,006 ファイル・779 MB。前の版との違いは `B747.70.afds_pitch_model.lua` と `B747.70.xt.autopilot.lua` だけ）。タグは push 済み。内蔵ブラウザの GitHub のサインインが切れていたので、題「747-400 custom 2026-11-26（飛行用）」とノート（リポジトリの外の `D:\b747_review\release_check\notes_custom-2026.11.26.md`）を利用者に渡した。
+- **Release `custom-2026.11.26`（2026-11-26 昼、利用者の「Release作って」）**：`custom` `c76ed649`（overhaul `19026d1b`：F/D だけのときの縦の指令、全発の加速の上昇の割合）から `make_release.sh` で作った（注釈付きタグ、コミット `769fe099`。2,006 ファイル・779 MB。前の版との違いは `B747.70.afds_pitch_model.lua` と `B747.70.xt.autopilot.lua` だけ）。タグは push 済み。内蔵ブラウザの GitHub のサインインが切れていたので、題「747-400 custom 2026-11-26（飛行用）」とノート（リポジトリの外の `D:\b747_review\release_check\notes_custom-2026.11.26.md`）を利用者に渡し、利用者が GitHub で公開した（Latest）。
   - 確かめ（`D:\b747_review\release_check\run_check_1126.sh`、12:08〜12:55）：タグの中身を `Aircraft/747-400-release-test` に展開し、3D 一式と GE のリバリー（JAL JA8913）を重ねた。`r01` 4/0（エンジン型式 GE、CDU の IDENT CF6-80C2-B1F・AIRAC 2611、外からの写真）。既定のリバリー（P&W）で `v_300t_f20` 5/0、`s07` 7/0、`s334` 30/0、`s438` 14/0、`s109` 23/0（推力減の後の最低 161.4 kt）、`s440` 29/0 と警告 1（読み込み 10 秒後の重さ 379.2 t が目安の 380 t の少し下：開発の機体の回は同じ所で 380.0 t。加速の間の最低 +659.5 fpm）。開発の機体を読み込み直し（`s306` 2/0）、フォルダーを消した。Log.txt のエラーの行の種類は 11-25 の確かめと同じ 211、XTLua の誤りのファイルなし。X-Plane は開発の機体のまま動かしてある（`startup_running` 0・`has_joystick` 0 は利用者の値のまま）。
   - 前の版 `custom-2026.11.25`（2026-11-25 夜、`custom` `5e99e11d`、overhaul `d54e148e`：離着陸性能の窓ほか）は同じ手順で確かめ（`run_check_1125.sh`：`r01` 4/0、`v_300t_f20` 5/0、`s07` 7/0、`s334` 30/0、`s438` 14/0、`s306` 2/0）、利用者が GitHub で公開した（ここに書き漏れていた）。
 
