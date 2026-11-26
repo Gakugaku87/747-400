@@ -62,7 +62,7 @@
     { "do": "set", "note": "操縦輪を隠す（撮影のため）", "dref": "sim/graphics/view/hide_yoke", "value": 0 },
     { "do": "view", "note": "機長の PFD", "the": -24, "psi": -1, "fov": 24 },
     { "do": "shot", "name": "pfd_takeoff" },
-    { "do": "watch", "note": "その後も 6,000 ft の捕捉（ALT。T/O からは 800 ft より上）まで V2 + 5 から V2 + 30（前は 20 秒見てから捕捉を待ち、推力を戻すのが捕捉の後になることがあった）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "min": 165, "max": 190, "until": { "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9 }, "timeout": 150 },
+    { "do": "watch", "note": "その後も 6,000 ft の捕捉（ALT。T/O からは 800 ft より上）まで V2 から V2 + 30（前は 20 秒見てから捕捉を待ち、推力を戻すのが捕捉の後になることがあった。2026-11-26 に下限を V2 + 5 から V2 に：TO/GA のまま 15° の上昇で推力を手で減らすと、ピッチが下がるまで目標の 12 kt 下（V2 + 1.6）まで沈む。FCOM p.664 は目標速度だけで沈みの幅は無く、V2 を割らないことを条件にした。利用者の判断「実機でもあり得そう」。普通は加速高度で VNAV か FLCH：FCTM p.113。notes/ATA-22.md §72）", "dref": "laminar/B747/gauges/indicators/airspeed_kts_pilot", "min": 160, "max": 190, "until": { "dref": "laminar/B747/autopilot/FMA/active_pitch_mode", "op": "==", "value": 9 }, "timeout": 150 },
     { "do": "wait", "note": "捕捉の水平への引き起こしが終わりに近づく（上昇率 300 fpm 未満。それまで推力は Max Climb のまま）", "dref": "sim/flightmodel/position/vh_ind_fpm", "op": "<", "value": 300, "timeout": 120 },
     { "do": "cmd", "note": "EPR の保持をやめる", "name": "FlyWithLua/B747_epr_hold/stop" },
     { "do": "set", "note": "手の推力（FCTM p.124：速度を手の推力で保つ。A/T の SPD は推力制限が TO の間は入らない：ATA34_2 p.668）。レバー 0.42 は EPR 約 1.18・約 290 kN（s345 でレバー 0.40 が EPR 1.19・309 kN）で、フラップ 20・270 t の 185 kt の抗力（約 286 kN：s109 の上昇から）と 200 kt 付近で釣り合う見込み（0.6 は EPR 1.29・約 430 kN で、2026-11-20 20:35 の回は 259 kt まで速くなった）", "dref": "sim/cockpit2/engine/actuators/throttle_ratio_all", "value": 0.42 },
