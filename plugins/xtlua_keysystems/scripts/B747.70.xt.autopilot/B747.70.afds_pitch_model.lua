@@ -230,6 +230,16 @@ M.SPD_STEP_KT = 0.5
 -- acceleration segment near level and still a climb, the sources give no
 -- figure
 M.SPD_LEVEL_FPM = 100
+-- (2026-11-26; notes/ATA-22.md §74) with all engines the climb's
+-- acceleration keeps SPD_CLIMB_SHARE of the climb the thrust holds at the
+-- speed (`hold`): the near-level segment is FCTM p.118's for an engine
+-- out, and the sources give no figure for all engines (FCOM p.667,
+-- p.1255, FCTM p.112-113: an acceleration commanded, no rate). The user's
+-- choice (2026-11-26) after a heavy takeoff went down with the A/P: the
+-- acceleration on the near-level floor (+100 fpm) sank some 200 fpm at each
+-- flap retraction (the flaps' lift going), -101 fpm in s441 (about 386 t,
+-- the climb thrust from 1,500 ft). The half: an estimate
+M.SPD_CLIMB_SHARE = 0.5
 -- the speed laws' K_PATH times the IAS over SPD_K_KT, from SPD_K_MIN to all
 -- of it (150 kt: 0.15, 170 kt: 0.17, 250 kt up: 0.25; estimate)
 M.SPD_K_KT = 250
@@ -717,7 +727,11 @@ function M.update(s, inp, dt)
             if way > 0 then
                 local keep = math.min(0, tr) + math.max(0, M.protect(0, inp) - inp.ias) / M.SPD_TAU_S
                 local hold = gam + math.deg((s.ias_rate - keep) * KT / G)
-                dpath = math.max(dpath, math.min(level, math.max(hold - step, math.min(0, 2 * hold)) - gam))
+                local floor = math.min(level, math.max(hold - step, math.min(0, 2 * hold)) - gam)
+                -- (2026-11-26) all engines: SPD_CLIMB_SHARE of the climb the
+                -- thrust holds at the least (an engine out: near level)
+                if not inp.eo and hold > 0 then floor = math.max(floor, M.SPD_CLIMB_SHARE * hold - gam) end
+                dpath = math.max(dpath, floor)
             else
                 local keep = math.max(0, tr) + math.min(0, M.protect(math.huge, inp) - inp.ias) / M.SPD_TAU_S
                 local hold = gam + math.deg((s.ias_rate - keep) * KT / G)

@@ -300,7 +300,11 @@ local a = spd_step({from = 272, to = 340, thrust = 1.0, way = 1})
 T.check(a.vs0 > 1500, ("VNAV SPD's climb before the step: %.0f fpm"):format(a.vs0))
 T.check(a.lo >= P.SPD_LEVEL_FPM - 5, ("  272 to 340 kt: not under near level (%.0f fpm at the least)"):format(a.lo))
 T.check(a.lost < 1, ("  no altitude lost (%.1f ft)"):format(a.lost))
-T.check(a.t and a.t < 100 and a.t - b.t < 30, ("  within a knot of 340 kt after %.0f s (%.0f s going down for it)"):format(a.t or -1, b.t or -1))
+-- (2026-11-26; notes/ATA-22.md §74) all engines: half the climb the thrust
+-- holds kept (SPD_CLIMB_SHARE), the speed gained on the other half: about
+-- twice as long as on the near-level floor (85 s before)
+T.check(a.lo > 0.4 * a.vs0, ("  half the climb kept (%.0f fpm at the least of %.0f before the step)"):format(a.lo, a.vs0))
+T.check(a.t and a.t < 170, ("  within a knot of 340 kt after %.0f s (%.0f s going down for it)"):format(a.t or -1, b.t or -1))
 T.check(a.vmax < 342, ("  no overshoot over 2 kt (%.1f)"):format(a.vmax))
 T.near(a.ias, 340, 1, "  at 340 kt")
 T.check(a.vs > 1500, ("  climbing again (%.0f fpm)"):format(a.vs))
@@ -308,7 +312,7 @@ T.check(a.g <= P.SPD_G * 1.06, "  within SPD_G (" .. a.g .. ")")
 -- the record's thrust, 0.93 to 1.07 kt/s; FLCH the same
 for _, thr in ipairs({0.93, 1.07}) do
     local c = spd_step({from = 272, to = 340, thrust = thr, way = 1})
-    T.check(c.lo >= P.SPD_LEVEL_FPM - 5 and c.lost < 1 and c.t and c.t < 100 and c.vmax < 342,
+    T.check(c.lo >= P.SPD_LEVEL_FPM - 5 and c.lost < 1 and c.t and c.t < 170 and c.vmax < 342,
         ("  on %.2f kt/s: %.0f fpm at the least, %.1f ft lost, %.0f s, %.1f kt at the most"):format(thr, c.lo, c.lost, c.t or -1, c.vmax))
 end
 local f = spd_step({from = 272, to = 340, thrust = 1.0, way = 1, mode = "FLCH"})
@@ -316,11 +320,18 @@ T.check(f.lo >= P.SPD_LEVEL_FPM - 5 and f.lost < 1, ("  FLCH to an MCP altitude 
 -- the airplane 1.5 times as slow: still no descent
 local sl = spd_step({from = 272, to = 340, thrust = 1.0, way = 1, tau_t = 3, tau_g = 4.5})
 T.check(sl.lo >= 0 and sl.lost < 1, ("  1.5 times as slow: no descent (%.0f fpm at the least, %.1f ft lost)"):format(sl.lo, sl.lost))
-T.check(sl.vmax < 345 and sl.t and sl.t < 100, ("  and 340 kt within 5 kt after %.0f s (%.1f)"):format(sl.t or -1, sl.vmax))
+T.check(sl.vmax < 345 and sl.t and sl.t < 170, ("  and 340 kt within 5 kt after %.0f s (%.1f)"):format(sl.t or -1, sl.vmax))
 -- a light airplane (238 t: about 2 kt/s in level flight, more than the law
--- asks for): the path stays over near level, the way changes nothing
+-- asks for): the path stays over near level, the near-level floor changes
+-- nothing (2026-11-26: the all-engine climb share off for this, SPD_CLIMB_
+-- SHARE 0; with it, below)
+local share = P.SPD_CLIMB_SHARE
+P.SPD_CLIMB_SHARE = 0
 local l0 = spd_step({from = 272, to = 340, thrust = 2.0, way = 0})
 local l1 = spd_step({from = 272, to = 340, thrust = 2.0, way = 1})
+P.SPD_CLIMB_SHARE = share
+local l2 = spd_step({from = 272, to = 340, thrust = 2.0, way = 1})
+T.check(l2.lo > 0.45 * l2.vs0 and l2.lo > l1.lo and l2.vmax < 342, ("light, all engines' climb share: half the climb kept (%.0f fpm at the least of %.0f; %.0f without), %.1f kt at the most"):format(l2.lo, l2.vs0, l1.lo, l2.vmax))
 T.check(l1.lo > 500, ("light, 2.0 kt/s: climbing through the acceleration (%.0f fpm at the least)"):format(l1.lo))
 T.check(l1.lo == l0.lo and l1.t == l0.t and l1.vmax == l0.vmax and l1.ias == l0.ias,
     ("  as without a way (%.0f fpm, %.0f s, %.2f kt at the most)"):format(l0.lo, l0.t or -1, l0.vmax))
@@ -329,7 +340,7 @@ T.check(l1.lo == l0.lo and l1.t == l0.t and l1.vmax == l0.vmax and l1.ias == l0.
 local n0 = spd_step({from = 250, to = 280, thrust = 1.2, way = 0, mode = "FLCH", secs = 150})
 local n1 = spd_step({from = 250, to = 280, thrust = 1.2, way = 1, mode = "FLCH", secs = 150})
 T.check(n1.lo >= P.SPD_LEVEL_FPM - 5 and n1.lost < 1, ("250 to 280 kt on 1.2 kt/s: %.0f fpm at the least (%.0f without a way)"):format(n1.lo, n0.lo))
-T.check(n1.vmax < 282 and n1.t and n1.t < n0.t + 10, ("  no overshoot over 2 kt (%.1f), 280 kt after %.0f s (%.0f)"):format(n1.vmax, n1.t or -1, n0.t or -1))
+T.check(n1.vmax < 282 and n1.t and n1.t < n0.t + 30, ("  no overshoot over 2 kt (%.1f), 280 kt after %.0f s (%.0f; 2026-11-26: half the climb kept)"):format(n1.vmax, n1.t or -1, n0.t or -1))
 -- a descent at idle (1.2 kt/s lost in level flight), 300 to 250 kt: not
 -- turned into a climb (without a way: up to +500 fpm), the speed captured
 local d0 = spd_step({from = 300, to = 250, thrust = -1.2, way = 0, mode = "FLCH"})
@@ -401,7 +412,7 @@ T.check(o1.ias < 301, ("  and on to the target (%.1f kt)"):format(o1.ias))
 -- (166 fpm) near level's share of it for the gain, 66 fpm of climb left
 local m5 = spd_step({from = 270, to = 300, thrust = 0.05, way = 1, mode = "FLCH", secs = 300})
 T.check(m5.lo >= -5 and m5.lost < 5, ("0.05 kt/s to spare, 270 to 300 kt: level flight at the least (%.0f fpm, %.1f ft lost)"):format(m5.lo, m5.lost))
-T.check(m5.ias > 282 and m5.ias < 286, ("  the speed on what the thrust gives level (%.1f kt after 5 minutes)"):format(m5.ias))
+T.check(m5.ias > 276 and m5.ias < 280, ("  the speed on what half the climb leaves (%.1f kt after 5 minutes; 282 to 286 on level flight before 2026-11-26)"):format(m5.ias))
 local m5s = spd_step({from = 270, to = 300, thrust = 0.05, way = 1, mode = "FLCH", secs = 300, tau_t = 3, tau_g = 4.5})
 T.check(m5s.lo >= -20 and m5s.lost < 5, ("  1.5 times as slow: %.0f fpm at the least"):format(m5s.lo))
 local m10 = spd_step({from = 270, to = 300, thrust = 0.10, way = 1, mode = "FLCH", secs = 300})
